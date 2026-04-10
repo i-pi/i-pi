@@ -247,6 +247,7 @@ class Driver(DriverSocket):
         self.lastreq = None
         self.locked = False
         self.exit_on_disconnect = False
+        self.assume_consistent_status = False
 
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
@@ -551,7 +552,12 @@ class Driver(DriverSocket):
             return
 
         r["t_dispatched"] = time.time()
-        self.get_status()
+
+        # When assume_consistent_status is set, we trust the optimistic status
+        # set at the end of each successful dispatch and skip the redundant
+        # STATUS round-trip. Otherwise we always query.
+        if not (self.assume_consistent_status and (self.status & Status.Ready)):
+            self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
@@ -566,13 +572,20 @@ class Driver(DriverSocket):
         r["start"] = time.time()
         self.sendpos(r["pos"][r["active"]], r["cell"])
 
-        self.get_status()
-        if not (self.status & Status.HasData):
-            warning(
-                " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
-                verbosity.low,
-            )
-            return
+        if self.assume_consistent_status:
+            # Skip the STATUS→HAVEDATA round-trip.  After receiving POSDATA the
+            # client computes and then blocks on recv(); sending GETFORCE right
+            # away lets it respond as soon as the computation finishes, saving
+            # one full round-trip per dispatch.
+            self.status = Status.Up | Status.HasData
+        else:
+            self.get_status()
+            if not (self.status & Status.HasData):
+                warning(
+                    " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
+                    verbosity.low,
+                )
+                return
 
         try:
             r["result"] = self.getforce()
@@ -593,11 +606,14 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
 
-        # after getforce succeeds, the client is guaranteed to be ready
-        # by the protocol. Set status optimistically to avoid an extra
-        # round-trip; the get_status() at the start of the next dispatch()
-        # will confirm before sending new positions.
-        self.status = Status.Up | Status.Ready
+        if self.assume_consistent_status:
+            # after getforce succeeds, the client is guaranteed to be ready
+            # by the protocol. Set status optimistically to avoid an extra
+            # round-trip on the next dispatch.
+            self.status = Status.Up | Status.Ready
+        else:
+            # updates the status of the client before leaving
+            self.get_status()
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
@@ -646,7 +662,7 @@ class InterfaceSocket(object):
         exit_on_disconnect=False,
         max_workers=128,
         sockets_prefix="/tmp/ipi_",
-        consolidate_messages=False,
+        assume_consistent_status=False,
     ):
         """Initialises interface.
 
@@ -659,13 +675,12 @@ class InterfaceSocket(object):
            mode: An optional string giving the type of socket. Defaults to 'unix'.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
-           max_workers: Maximum number of threads launched concurrently
-              (only used when `consolidate_messages` is False).
-           consolidate_messages: If True, fuse the STATUS/POSDATA/GETFORCE
-              exchange into a single send and multiplex the FORCEREADY
-              responses on the poll thread via select(). Saves several
-              round-trips per dispatch and removes worker-thread GIL
-              contention, but assumes clients follow the protocol strictly.
+            max_workers: Maximum number of threads launched concurrently
+            assume_consistent_status: If True, skip the redundant STATUS
+              round-trips during dispatch and trust the optimistic status set
+              after each successful exchange.  Saves up to 3 round-trips per
+              dispatch but assumes the client follows the protocol strictly
+              and never changes state spontaneously.
 
         Raises:
            NameError: Raised if mode is not 'unix' or 'inet'.
@@ -683,7 +698,7 @@ class InterfaceSocket(object):
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
         self.max_workers = max_workers
-        self.consolidate_messages = consolidate_messages
+        self.assume_consistent_status = assume_consistent_status
         self.offset = 0.0  # a constant energy offset added to the results returned by the driver (hacky but simple)
 
     def open(self):
@@ -843,6 +858,7 @@ class InterfaceSocket(object):
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
                 driver = Driver(client)
+                driver.assume_consistent_status = self.assume_consistent_status
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)
@@ -881,13 +897,6 @@ class InterfaceSocket(object):
 
         # nothing to do if there are no pending requests and no running jobs
         if len(self.requests) == 0 and len(self.jobs) == 0:
-            return
-
-        # In consolidated-messaging mode the poll thread itself drives both
-        # send and receive via select(), so the legacy thread-pool path below
-        # is bypassed entirely.
-        if self.consolidate_messages:
-            self._pool_distribute_select()
             return
 
         ttotal = tdispatch = tcheck = 0
@@ -1133,28 +1142,21 @@ class InterfaceSocket(object):
 
             r["status"] = "Running"
             self.prlist.remove(r)
-            if verbosity.high:
-                info(
-                    " @interfacesocket.dispatch_free_client: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
-                    % (
-                        time.strftime("%y/%m/%d-%H:%M:%S"),
-                        match_ids,
-                        str(r["id"]),
-                        str(fc.lastreq),
-                        self.clients.index(fc),
-                        len(self.clients),
-                        str(fc.peername),
-                    ),
-                    verbosity.high,
-                )
-            if self.consolidate_messages:
-                if not fc.dispatch_send(r):
-                    self._requeue_disconnected(r, fc)
-                    return False
-                self.jobs.append([r, fc, None])
-            else:
-                fc_thread = self.executor.submit(fc.dispatch, r=r)
-                self.jobs.append([r, fc, fc_thread])
+            info(
+                " @interfacesocket.dispatch_free_client: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
+                % (
+                    time.strftime("%y/%m/%d-%H:%M:%S"),
+                    match_ids,
+                    str(r["id"]),
+                    str(fc.lastreq),
+                    self.clients.index(fc),
+                    len(self.clients),
+                    str(fc.peername),
+                ),
+                verbosity.high,
+            )
+            fc_thread = self.executor.submit(fc.dispatch, r=r)
+            self.jobs.append([r, fc, fc_thread])
             return True
 
         return False
