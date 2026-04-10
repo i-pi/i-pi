@@ -230,14 +230,12 @@ class InputFFSocket(InputForceField):
                 "help": "This gives the maximum number of job threads that are active simultaneously.",
             },
         ),
-        "consolidate_messages": (
+        "assume_consistent_status": (
             InputValue,
             {
                 "dtype": bool,
-                "default": True,
-                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
-                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
-                strictly follow the base protocol.""",
+                "default": False,
+                "help": "If True, skip the redundant STATUS round-trips during dispatch and trust the optimistic status set after each successful exchange. Saves up to 3 round-trips per dispatch but assumes the client follows the protocol strictly and never changes state spontaneously.",
             },
         ),
     }
@@ -300,7 +298,7 @@ class InputFFSocket(InputForceField):
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
         self.max_workers.store(ff.socket.max_workers)
-        self.consolidate_messages.store(ff.socket.consolidate_messages)
+        self.assume_consistent_status.store(ff.socket.assume_consistent_status)
         self.threaded.store(True)  # hard-coded
 
     def fetch(self):
@@ -339,7 +337,7 @@ class InputFFSocket(InputForceField):
                 match_mode=self.matching.fetch(),
                 max_workers=self.max_workers.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
-                consolidate_messages=self.consolidate_messages.fetch(),
+                assume_consistent_status=self.assume_consistent_status.fetch(),
             ),
         )
 
