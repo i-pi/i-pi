@@ -419,45 +419,40 @@ class Driver(DriverSocket):
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
 
-    def getforce(self):
-        """Gets the potential energy, force and virial from the driver.
+    def _recv_forceready(self):
+        """Receives the FORCEREADY header after GETFORCE has been sent.
 
         Raises:
-           InvalidStatus: Raised if the status is not HasData.
            Disconnected: Raised if the driver has disconnected.
-
-        Returns:
-           A list of the form [potential, force, virial, extra].
         """
+        reply = ""
+        while True:
+            try:
+                reply = self.recv_msg()
+            except socket.timeout:
+                warning(
+                    " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
+                )
+                continue
+            except:
+                warning(
+                    " @SOCKET:   Error while receiving message: %s" % (reply),
+                    verbosity.low,
+                )
+                raise Disconnected()
+            if reply == MESSAGE["forceready"]:
+                return
+            else:
+                warning(
+                    " @SOCKET:   Unexpected getforce reply: %s" % (reply),
+                    verbosity.low,
+                )
+            if reply == "":
+                raise Disconnected()
 
-        if self.status & Status.HasData:
-            self.send_msg("getforce")
-            reply = ""
-            while True:
-                try:
-                    reply = self.recv_msg()
-                except socket.timeout:
-                    warning(
-                        " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
-                    )
-                    continue
-                except:
-                    warning(
-                        " @SOCKET:   Error while receiving message: %s" % (reply),
-                        verbosity.low,
-                    )
-                    raise Disconnected()
-                if reply == MESSAGE["forceready"]:
-                    break
-                else:
-                    warning(
-                        " @SOCKET:   Unexpected getforce reply: %s" % (reply),
-                        verbosity.low,
-                    )
-                if reply == "":
-                    raise Disconnected()
-        else:
-            raise InvalidStatus("Status in getforce was " + str(self.status))
+    def _recv_force_data(self):
+        """Receives the [potential, force, virial, extra] payload that follows
+        the FORCEREADY header."""
 
         mu = np.float64()
         mu = self.recvall(mu)
@@ -506,6 +501,25 @@ class Driver(DriverSocket):
 
             mxtradict["raw"] = mxtra
         return [mu, mf, mvir, mxtradict]
+
+    def getforce(self):
+        """Gets the potential energy, force and virial from the driver.
+
+        Raises:
+           InvalidStatus: Raised if the status is not HasData.
+           Disconnected: Raised if the driver has disconnected.
+
+        Returns:
+           A list of the form [potential, force, virial, extra].
+        """
+
+        if self.status & Status.HasData:
+            self.send_msg("getforce")
+            self._recv_forceready()
+        else:
+            raise InvalidStatus("Status in getforce was " + str(self.status))
+
+        return self._recv_force_data()
 
     def dispatch(self, r):
         """Dispatches a request r and looks after it setting results
@@ -584,6 +598,95 @@ class Driver(DriverSocket):
         else:
             # updates the status of the client before leaving
             self.get_status()
+
+        # marks the request as done as the very last thing
+        r["status"] = "Done"
+        r._event_done.set()
+
+    def dispatch_send(self, r):
+        """Send phase of a split dispatch: POSDATA followed immediately by
+        GETFORCE. Used by the select-based single-threaded dispatcher.
+
+        Assumes assume_consistent_status=True (we skip the STATUS round-trips).
+
+        Returns True if the send succeeded and the client is now expected to
+        respond with FORCEREADY + data once it has finished computing.
+        Returns False if anything went wrong; in that case the caller should
+        not add this (client, request) pair to the pending-receive list.
+        """
+
+        if not (self.status & Status.Up):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (I)",
+                verbosity.low,
+            )
+            return False
+
+        r["t_dispatched"] = time.time()
+
+        # First-dispatch path: if we don't already know the client is Ready,
+        # query it. Subsequent dispatches skip this thanks to the optimistic
+        # status set at the end of dispatch_recv.
+        if not (self.status & Status.Ready):
+            self.get_status()
+        if self.status & Status.NeedsInit:
+            self.initialize(r["id"], r["pars"])
+            self.status = self.get_status()
+
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (II)",
+                verbosity.low,
+            )
+            return False
+
+        r["start"] = time.time()
+        try:
+            self.sendpos(r["pos"][r["active"]], r["cell"])
+            # Send GETFORCE immediately: the client will pick it up as soon as
+            # it finishes computing, with no extra round-trip.
+            self.send_msg("getforce")
+        except Exception as e:
+            warning(
+                " @SOCKET:   Error during dispatch_send: %s" % str(e),
+                verbosity.low,
+            )
+            self.status = Status.Disconnected
+            return False
+
+        self.status = Status.Up | Status.HasData
+        return True
+
+    def dispatch_recv(self, r):
+        """Receive phase of a split dispatch: reads FORCEREADY + force data and
+        marks the request Done. Assumes the caller has already determined that
+        the socket is readable (e.g. via select).
+        """
+
+        try:
+            self._recv_forceready()
+            r["result"] = self._recv_force_data()
+        except Disconnected:
+            self.status = Status.Disconnected
+            r["status"] = "Exit"
+            r._event_done.set()
+            return
+
+        r["result"][0] -= r["offset"]
+
+        if len(r["result"][1]) != len(r["pos"][r["active"]]):
+            raise InvalidSize
+
+        # If only a piece of the system is active, resize forces and reassign
+        if len(r["active"]) != len(r["pos"]):
+            rftemp = r["result"][1]
+            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1][r["active"]] = rftemp
+        r["t_finished"] = time.time()
+        self.lastreq = r["id"]
+
+        # After a successful getforce the client is back to READY by protocol.
+        self.status = Status.Up | Status.Ready
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
@@ -869,6 +972,13 @@ class InterfaceSocket(object):
         if len(self.requests) == 0 and len(self.jobs) == 0:
             return
 
+        # When assume_consistent_status is enabled, we route to the
+        # single-threaded select()-based dispatcher which avoids GIL contention
+        # between worker threads.
+        if self.assume_consistent_status:
+            self._pool_distribute_select()
+            return
+
         ttotal = tdispatch = tcheck = 0
         ttotal -= time.time()
 
@@ -943,6 +1053,110 @@ class InterfaceSocket(object):
         if nfinished > 0:
             # don't wait, just try again to distribute
             self.pool_distribute()
+
+    def _pool_distribute_select(self):
+        """Single-threaded dispatch + collect path.
+
+        Runs entirely in the poll thread. For each free client we send POSDATA
+        immediately followed by GETFORCE, then use select() to multiplex the
+        FORCEREADY + data receives as clients finish computing. This avoids
+        the GIL contention that serialises the thread-pool worker path.
+
+        Only used when assume_consistent_status=True, because we rely on the
+        optimistic status tracking to skip STATUS round-trips mid-dispatch.
+        """
+
+        # === Dispatch phase: send POSDATA + GETFORCE to free clients ===
+        busy = {id(c) for _, c, _ in self.jobs}
+        freec = [c for c in self.clients if id(c) not in busy]
+
+        if len(self.prlist) == 0 or len(freec) > len(self.prlist):
+            self.prlist = [r for r in self.requests if r["status"] == "Queued"]
+
+        if self.match_mode == "auto":
+            match_seq = ["match", "none", "free", "any"]
+        elif self.match_mode == "any":
+            match_seq = ["any"]
+        elif self.match_mode == "lock":
+            match_seq = ["match", "none"]
+
+        while len(freec) > 0 and len(self.prlist) > 0:
+            dispatched_this_round = False
+            for match_ids in match_seq:
+                for fc in freec[:]:
+                    if self.dispatch_free_client(fc, match_ids):
+                        freec.remove(fc)
+                        dispatched_this_round = True
+                    if len(self.prlist) == 0:
+                        break
+            if self.match_mode == "lock":
+                break
+            if len(freec) > 0:
+                self.prlist = [r for r in self.requests if r["status"] == "Queued"]
+            if not dispatched_this_round:
+                break
+
+        # If nothing is in flight, just check for disconnects and return.
+        if len(self.jobs) == 0:
+            for c in self.clients:
+                if c.status == Status.Disconnected:
+                    self.poll_iter = UPDATEFREQ
+                    return
+            return
+
+        # === Collect phase: loop on select() until all in-flight jobs finish ===
+        while self.jobs:
+            sockets = [c for _, c, _ in self.jobs]
+            try:
+                readable, _, _ = select.select(sockets, [], [], 0.01)
+            except (OSError, ValueError) as e:
+                warning(
+                    " @SOCKET: select error in _pool_distribute_select: %s"
+                    % str(e),
+                    verbosity.low,
+                )
+                break
+
+            if readable:
+                readable_ids = {id(c) for c in readable}
+                finished_ids = []
+                for ijob, [r, c, _] in enumerate(self.jobs):
+                    if id(c) in readable_ids:
+                        c.dispatch_recv(r)
+                        finished_ids.append(ijob)
+                        if c.status == Status.Disconnected:
+                            self.poll_iter = UPDATEFREQ
+                for ijob in reversed(finished_ids):
+                    del self.jobs[ijob]
+
+            # Timeout handling (matches check_job_finished semantics)
+            if self.timeout > 0 and self.jobs:
+                now = time.time()
+                timeout_ids = []
+                for ijob, [r, c, _] in enumerate(self.jobs):
+                    if r["start"] > 0 and now - r["start"] > self.timeout:
+                        warning(
+                            " @SOCKET:  Timeout! request has been running for "
+                            + str(now - r["start"])
+                            + " sec.",
+                            verbosity.low,
+                        )
+                        warning(
+                            " @SOCKET:   Client "
+                            + str(c.peername)
+                            + " died or got unresponsive(A). Disconnecting.",
+                            verbosity.low,
+                        )
+                        try:
+                            c.shutdown(socket.SHUT_RDWR)
+                        except socket.error:
+                            pass
+                        c.close()
+                        c.status = Status.Disconnected
+                        self.poll_iter = UPDATEFREQ
+                        timeout_ids.append(ijob)
+                for ijob in reversed(timeout_ids):
+                    del self.jobs[ijob]
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
