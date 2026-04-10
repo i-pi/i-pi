@@ -47,7 +47,7 @@ class ForceRequest(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._event = threading.Event()
+        self._event_done = threading.Event()
 
     def __eq__(self, y):
         """Overwrites the standard equals function."""
@@ -226,7 +226,7 @@ class ForceField:
                         {"raw": ""},
                     ]
                     r["status"] = "Done"
-                    r._event.set()
+                    r._event_done.set()
                     r["t_finished"] = time.time()
 
     def _poll_loop(self):
@@ -420,7 +420,7 @@ class FFEval(ForceField):
             {"raw": ""},
         ]
         request["status"] = "Done"
-        request._event.set()
+        request._event_done.set()
 
 
 class FFDirect(ForceField):
@@ -547,7 +547,7 @@ class FFDirect(ForceField):
 
         request["result"] = results
         request["status"] = "Done"
-        request._event.set()
+        request._event_done.set()
         request["t_finished"] = time.time()
 
     def launch_batch(self):
@@ -650,7 +650,7 @@ class FFLennardJones(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
 
 
 class FFdmd(FFEval):
@@ -751,7 +751,7 @@ class FFdmd(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
 
     def dmd_update(self):
         """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
@@ -832,7 +832,7 @@ class FFDebye(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -1013,7 +1013,7 @@ class FFPlumed(FFEval):
         # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, extras]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1171,7 +1171,7 @@ class FFYaff(FFEval):
 
         r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
 
 
 class FFsGDML(FFEval):
@@ -1306,7 +1306,7 @@ class FFsGDML(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -1622,7 +1622,7 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
-                    r._event.set()
+                    r._event_done.set()
 
 
 class FFRotations(ForceField):
@@ -1828,7 +1828,7 @@ class FFRotations(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
-                    r._event.set()
+                    r._event_done.set()
                     self.release(r, lock=False)
 
 
@@ -2238,7 +2238,7 @@ class FFCavPhSocket(FFSocket):
                     while softexit.exiting:
                         time.sleep(self.latency)
                     sys.exit()
-                self.request._event.wait(timeout=1.0)
+                self.request._event_done.wait(timeout=1.0)
 
             """
             with self._threadlock:

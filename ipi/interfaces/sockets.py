@@ -587,7 +587,7 @@ class Driver(DriverSocket):
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
-        r._event.set()
+        r._event_done.set()
 
 
 class InterfaceSocket(object):

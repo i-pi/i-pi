@@ -188,7 +188,7 @@ class ForceBead:
                 while softexit.exiting:
                     time.sleep(latency)
                 sys.exit()
-            request._event.wait(timeout=1.0)
+            request._event_done.wait(timeout=1.0)
 
         # print diagnostics about the elapsed time
         info(
