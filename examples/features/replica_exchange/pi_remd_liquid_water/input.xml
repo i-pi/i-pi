@@ -10,7 +10,8 @@
    <prng><seed>31415</seed></prng>
    <ffsocket name='qtip4pf' mode='unix' matching='any' pbc='false'>
        <address> f1 </address>
-       <latency> 1e-3 </latency> 
+       <latency> 1e-4 </latency>
+       <consolidate_messages> True </consolidate_messages>
    </ffsocket>
    <system_template>
        <labels>   [ IDX, TEMP, PRESSURE, INITFILE] </labels>
