@@ -234,7 +234,7 @@ class InputFFSocket(InputForceField):
             InputValue,
             {
                 "dtype": bool,
-                "default": False,
+                "default": True,
                 "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
                 a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
                 strictly follow the base protocol.""",
