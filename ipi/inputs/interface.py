@@ -77,12 +77,12 @@ class InputInterfaceSocket(Input):
                 "help": "This gives the maximum number of job threads that are active simultaneously.",
             },
         ),
-        "assume_consistent_status": (
+        "consolidate_messages": (
             InputValue,
             {
                 "dtype": bool,
                 "default": False,
-                "help": "If True, skip the redundant STATUS round-trips during dispatch and trust the optimistic status set after each successful exchange. Saves up to 3 round-trips per dispatch but assumes the client follows the protocol strictly and never changes state spontaneously.",
+                "help": "If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and multiplex the FORCEREADY responses on a single I/O thread via select(). Saves several round-trips per dispatch and removes worker-thread GIL contention, but assumes clients follow the protocol strictly (never spontaneously change state, never deviate from READY→HASDATA→READY).",
             },
         ),
         "timeout": (
@@ -133,7 +133,7 @@ class InputInterfaceSocket(Input):
         self.timeout.store(iface.timeout)
         self.pbc.store(iface.dopbc)
         self.max_workers.store(iface.max_workers)
-        self.assume_consistent_status.store(iface.assume_consistent_status)
+        self.consolidate_messages.store(iface.consolidate_messages)
 
     def fetch(self):
         """Creates an InterfaceSocket object.
@@ -153,7 +153,7 @@ class InputInterfaceSocket(Input):
             timeout=self.timeout.fetch(),
             dopbc=self.pbc.fetch(),
             max_workers=self.max_workers.fetch(),
-            assume_consistent_status=self.assume_consistent_status.fetch(),
+            consolidate_messages=self.consolidate_messages.fetch(),
         )
 
     def check(self):

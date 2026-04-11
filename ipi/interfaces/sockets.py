@@ -229,7 +229,6 @@ class Driver(DriverSocket):
         self.lastreq = None
         self.locked = False
         self.exit_on_disconnect = False
-        self.assume_consistent_status = False
 
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
@@ -430,9 +429,7 @@ class Driver(DriverSocket):
             try:
                 reply = self.recv_msg()
             except socket.timeout:
-                warning(
-                    " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
-                )
+                warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
                 continue
             except:
                 warning(
@@ -536,12 +533,7 @@ class Driver(DriverSocket):
             return
 
         r["t_dispatched"] = time.time()
-
-        # When assume_consistent_status is set, we trust the optimistic status
-        # set at the end of each successful dispatch and skip the redundant
-        # STATUS round-trip. Otherwise we always query.
-        if not (self.assume_consistent_status and (self.status & Status.Ready)):
-            self.get_status()
+        self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
@@ -556,20 +548,13 @@ class Driver(DriverSocket):
         r["start"] = time.time()
         self.sendpos(r["pos"][r["active"]], r["cell"])
 
-        if self.assume_consistent_status:
-            # Skip the STATUS→HAVEDATA round-trip.  After receiving POSDATA the
-            # client computes and then blocks on recv(); sending GETFORCE right
-            # away lets it respond as soon as the computation finishes, saving
-            # one full round-trip per dispatch.
-            self.status = Status.Up | Status.HasData
-        else:
-            self.get_status()
-            if not (self.status & Status.HasData):
-                warning(
-                    " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
-                    verbosity.low,
-                )
-                return
+        self.get_status()
+        if not (self.status & Status.HasData):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
+                verbosity.low,
+            )
+            return
 
         try:
             r["result"] = self.getforce()
@@ -588,31 +573,26 @@ class Driver(DriverSocket):
             r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
             r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
-        self.lastreq = r["id"]  #
+        self.lastreq = r["id"]
 
-        if self.assume_consistent_status:
-            # after getforce succeeds, the client is guaranteed to be ready
-            # by the protocol. Set status optimistically to avoid an extra
-            # round-trip on the next dispatch.
-            self.status = Status.Up | Status.Ready
-        else:
-            # updates the status of the client before leaving
-            self.get_status()
+        # updates the status of the client before leaving
+        self.get_status()
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
         r._event_done.set()
 
     def dispatch_send(self, r):
-        """Send phase of a split dispatch: POSDATA followed immediately by
-        GETFORCE. Used by the select-based single-threaded dispatcher.
+        """Sends a request to the client without waiting for the result.
 
-        Assumes assume_consistent_status=True (we skip the STATUS round-trips).
+        POSDATA is followed immediately by GETFORCE so that the client picks up
+        the force request as soon as the computation finishes, with no extra
+        STATUS round-trip in between. The matching FORCEREADY+payload is read
+        later by `dispatch_recv` once the socket becomes readable.
 
-        Returns True if the send succeeded and the client is now expected to
-        respond with FORCEREADY + data once it has finished computing.
-        Returns False if anything went wrong; in that case the caller should
-        not add this (client, request) pair to the pending-receive list.
+        Returns True on success, False if the client is in an unexpected state
+        or the send failed. On failure the client is marked Disconnected so
+        that the next pool_update prunes it.
         """
 
         if not (self.status & Status.Up):
@@ -624,9 +604,9 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        # First-dispatch path: if we don't already know the client is Ready,
-        # query it. Subsequent dispatches skip this thanks to the optimistic
-        # status set at the end of dispatch_recv.
+        # The very first dispatch on a fresh client may need a STATUS query
+        # and/or initialization; afterwards we trust the optimistic Ready
+        # state set by dispatch_recv.
         if not (self.status & Status.Ready):
             self.get_status()
         if self.status & Status.NeedsInit:
@@ -643,8 +623,6 @@ class Driver(DriverSocket):
         r["start"] = time.time()
         try:
             self.sendpos(r["pos"][r["active"]], r["cell"])
-            # Send GETFORCE immediately: the client will pick it up as soon as
-            # it finishes computing, with no extra round-trip.
             self.send_msg("getforce")
         except Exception as e:
             warning(
@@ -658,9 +636,14 @@ class Driver(DriverSocket):
         return True
 
     def dispatch_recv(self, r):
-        """Receive phase of a split dispatch: reads FORCEREADY + force data and
-        marks the request Done. Assumes the caller has already determined that
-        the socket is readable (e.g. via select).
+        """Reads the FORCEREADY header and force payload for a request that was
+        previously handed to `dispatch_send`.
+
+        The caller is expected to have determined that the socket is readable
+        (typically via select). Returns True on success, False if the client
+        disconnected mid-transfer; in the failure case the client is marked
+        Disconnected and the request is left untouched so the caller can
+        re-queue it.
         """
 
         try:
@@ -668,9 +651,7 @@ class Driver(DriverSocket):
             r["result"] = self._recv_force_data()
         except Disconnected:
             self.status = Status.Disconnected
-            r["status"] = "Exit"
-            r._event_done.set()
-            return
+            return False
 
         r["result"][0] -= r["offset"]
 
@@ -685,12 +666,14 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
 
-        # After a successful getforce the client is back to READY by protocol.
+        # By protocol, the client returns to READY immediately after sending
+        # the force payload, so the next dispatch_send can skip the STATUS query.
         self.status = Status.Up | Status.Ready
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
         r._event_done.set()
+        return True
 
 
 class InterfaceSocket(object):
@@ -735,7 +718,7 @@ class InterfaceSocket(object):
         exit_on_disconnect=False,
         max_workers=128,
         sockets_prefix="/tmp/ipi_",
-        assume_consistent_status=False,
+        consolidate_messages=False,
     ):
         """Initialises interface.
 
@@ -749,11 +732,12 @@ class InterfaceSocket(object):
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
             max_workers: Maximum number of threads launched concurrently
-            assume_consistent_status: If True, skip the redundant STATUS
-              round-trips during dispatch and trust the optimistic status set
-              after each successful exchange.  Saves up to 3 round-trips per
-              dispatch but assumes the client follows the protocol strictly
-              and never changes state spontaneously.
+              (only used when `consolidate_messages` is False).
+            consolidate_messages: If True, fuse the STATUS/POSDATA/GETFORCE
+              exchange into a single send and multiplex the FORCEREADY
+              responses on the poll thread via select(). Saves several
+              round-trips per dispatch and removes worker-thread GIL
+              contention, but assumes clients follow the protocol strictly.
 
         Raises:
            NameError: Raised if mode is not 'unix' or 'inet'.
@@ -771,7 +755,7 @@ class InterfaceSocket(object):
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
         self.max_workers = max_workers
-        self.assume_consistent_status = assume_consistent_status
+        self.consolidate_messages = consolidate_messages
         self.offset = 0.0  # a constant energy offset added to the results returned by the driver (hacky but simple)
 
     def open(self):
@@ -931,7 +915,6 @@ class InterfaceSocket(object):
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
                 driver = Driver(client)
-                driver.assume_consistent_status = self.assume_consistent_status
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)
@@ -972,10 +955,10 @@ class InterfaceSocket(object):
         if len(self.requests) == 0 and len(self.jobs) == 0:
             return
 
-        # When assume_consistent_status is enabled, we route to the
-        # single-threaded select()-based dispatcher which avoids GIL contention
-        # between worker threads.
-        if self.assume_consistent_status:
+        # In consolidated-messaging mode the poll thread itself drives both
+        # send and receive via select(), so the legacy thread-pool path below
+        # is bypassed entirely.
+        if self.consolidate_messages:
             self._pool_distribute_select()
             return
 
@@ -1055,18 +1038,20 @@ class InterfaceSocket(object):
             self.pool_distribute()
 
     def _pool_distribute_select(self):
-        """Single-threaded dispatch + collect path.
+        """Drives both dispatch and collection from the poll thread.
 
-        Runs entirely in the poll thread. For each free client we send POSDATA
-        immediately followed by GETFORCE, then use select() to multiplex the
-        FORCEREADY + data receives as clients finish computing. This avoids
-        the GIL contention that serialises the thread-pool worker path.
+        Each free client is given a request via `dispatch_send` (POSDATA +
+        GETFORCE in a single send), then `select()` multiplexes the
+        FORCEREADY+payload receives as the clients finish computing. Doing
+        all socket I/O on a single thread avoids the GIL contention that
+        otherwise serialises a worker-pool dispatch.
 
-        Only used when assume_consistent_status=True, because we rely on the
-        optimistic status tracking to skip STATUS round-trips mid-dispatch.
+        On client disconnect or timeout the request is put back on the queue
+        and the dead client is flagged so the next `pool_update` prunes it,
+        mirroring the recovery semantics of the legacy thread-pool path.
         """
 
-        # === Dispatch phase: send POSDATA + GETFORCE to free clients ===
+        # --- Dispatch phase: hand each free client a queued request ---
         busy = {id(c) for _, c, _ in self.jobs}
         freec = [c for c in self.clients if id(c) not in busy]
 
@@ -1096,7 +1081,7 @@ class InterfaceSocket(object):
             if not dispatched_this_round:
                 break
 
-        # If nothing is in flight, just check for disconnects and return.
+        # No in-flight work: just flag any dead clients for pool_update.
         if len(self.jobs) == 0:
             for c in self.clients:
                 if c.status == Status.Disconnected:
@@ -1104,35 +1089,39 @@ class InterfaceSocket(object):
                     return
             return
 
-        # === Collect phase: loop on select() until all in-flight jobs finish ===
+        # --- Collect phase: drain in-flight jobs as they become readable ---
         while self.jobs:
             sockets = [c for _, c, _ in self.jobs]
             try:
                 readable, _, _ = select.select(sockets, [], [], 0.01)
             except (OSError, ValueError) as e:
                 warning(
-                    " @SOCKET: select error in _pool_distribute_select: %s"
-                    % str(e),
+                    " @SOCKET: select error in _pool_distribute_select: %s" % str(e),
                     verbosity.low,
                 )
                 break
 
             if readable:
                 readable_ids = {id(c) for c in readable}
-                finished_ids = []
+                drop_ids = []
                 for ijob, [r, c, _] in enumerate(self.jobs):
-                    if id(c) in readable_ids:
-                        c.dispatch_recv(r)
-                        finished_ids.append(ijob)
-                        if c.status == Status.Disconnected:
-                            self.poll_iter = UPDATEFREQ
-                for ijob in reversed(finished_ids):
+                    if id(c) not in readable_ids:
+                        continue
+                    if c.dispatch_recv(r):
+                        drop_ids.append(ijob)
+                    else:
+                        # Client died mid-receive: re-queue the request and
+                        # let pool_update remove the client.
+                        self._requeue_disconnected(r, c)
+                        drop_ids.append(ijob)
+                for ijob in reversed(drop_ids):
                     del self.jobs[ijob]
 
-            # Timeout handling (matches check_job_finished semantics)
+            # Drop jobs whose client has gone past the timeout. The request
+            # is re-queued so it will be picked up by another client.
             if self.timeout > 0 and self.jobs:
                 now = time.time()
-                timeout_ids = []
+                drop_ids = []
                 for ijob, [r, c, _] in enumerate(self.jobs):
                     if r["start"] > 0 and now - r["start"] > self.timeout:
                         warning(
@@ -1153,10 +1142,22 @@ class InterfaceSocket(object):
                             pass
                         c.close()
                         c.status = Status.Disconnected
-                        self.poll_iter = UPDATEFREQ
-                        timeout_ids.append(ijob)
-                for ijob in reversed(timeout_ids):
+                        self._requeue_disconnected(r, c)
+                        drop_ids.append(ijob)
+                for ijob in reversed(drop_ids):
                     del self.jobs[ijob]
+
+    def _requeue_disconnected(self, r, c):
+        """Puts a request back on the queue after its assigned client died.
+
+        Resets the request bookkeeping so the next dispatch pass treats it
+        as fresh, and forces an early pool_update so the dead client is
+        pruned from the client list promptly.
+        """
+        r["status"] = "Queued"
+        r["start"] = -1
+        c.status = Status.Disconnected
+        self.poll_iter = UPDATEFREQ
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
@@ -1218,14 +1219,11 @@ class InterfaceSocket(object):
                 ),
                 verbosity.high,
             )
-            if self.assume_consistent_status:
-                # Single-threaded path: do the send inline in the poll thread.
-                # The corresponding receive will happen in _pool_distribute_select
-                # when the socket becomes readable.
+            if self.consolidate_messages:
+                # Send inline so the matching FORCEREADY can be picked up by
+                # _pool_distribute_select's select() loop.
                 if not fc.dispatch_send(r):
-                    # Send failed; put the request back in the queue so it can
-                    # be retried once clients recover.
-                    r["status"] = "Queued"
+                    self._requeue_disconnected(r, fc)
                     return False
                 self.jobs.append([r, fc, None])
             else:
