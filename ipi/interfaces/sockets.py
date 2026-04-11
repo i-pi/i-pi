@@ -64,6 +64,24 @@ class Disconnected(Exception):
     pass
 
 
+def _parse_extra(mxtra):
+    """Decodes the optional 'extra' JSON string returned by a force
+    calculation, returning a dict (empty if the payload is empty/whitespace
+    or fails to parse). The raw string is stashed under "raw"."""
+    if not mxtra or mxtra.isspace():
+        return {}
+    try:
+        mxtradict = json.loads(mxtra)
+    except Exception:
+        return {}
+    if "raw" in mxtradict:
+        raise ValueError(
+            "'raw' cannot be used as a field in a JSON-formatted extra string"
+        )
+    mxtradict["raw"] = mxtra
+    return mxtradict
+
+
 class InvalidSize(Exception):
     """Disconnected: Raised if client returns forces with inconsistent number of atoms."""
 
@@ -583,17 +601,15 @@ class Driver(DriverSocket):
         r._event_done.set()
 
     def dispatch_send(self, r):
-        """Sends a request to the client without waiting for the result.
+        """Sends POSDATA + cell + atoms + GETFORCE in a single sendall and
+        returns without waiting for the force payload, which is collected
+        later by `dispatch_recv` once the client socket becomes readable.
 
-        POSDATA is followed immediately by GETFORCE so that the client picks up
-        the force request as soon as the computation finishes, with no extra
-        STATUS round-trip in between. The matching FORCEREADY+payload is read
-        later by `dispatch_recv` once the socket becomes readable.
-
-        Returns True on success, False if the client is in an unexpected state
-        or the send failed. On failure the client is marked Disconnected so
-        that the next pool_update prunes it.
+        Returns True on success, False if the client is in an unexpected
+        state or the send failed; on failure the client is marked
+        Disconnected so the next pool_update can prune it.
         """
+        global TIMEOUT
 
         if not (self.status & Status.Up):
             warning(
@@ -604,9 +620,6 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        # The very first dispatch on a fresh client may need a STATUS query
-        # and/or initialization; afterwards we trust the optimistic Ready
-        # state set by dispatch_recv.
         if not (self.status & Status.Ready):
             self.get_status()
         if self.status & Status.NeedsInit:
@@ -621,9 +634,25 @@ class Driver(DriverSocket):
             return False
 
         r["start"] = time.time()
+        pos = r["pos"][r["active"]]
+        h_ih = r["cell"]
         try:
-            self.sendpos(r["pos"][r["active"]], r["cell"])
-            self.send_msg("getforce")
+            self.sendall(
+                MESSAGE["posdata"]
+                + h_ih[0].tobytes()
+                + h_ih[1].tobytes()
+                + np.int32(len(pos) // 3).tobytes()
+                + pos.tobytes()
+                + MESSAGE["getforce"]
+            )
+        except socket.timeout:
+            warning(
+                f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                verbosity.quiet,
+            )
+            self.status = Status.Timeout
+            TIMEOUT *= 2
+            return False
         except Exception as e:
             warning(
                 " @SOCKET:   Error during dispatch_send: %s" % str(e),
@@ -636,27 +665,23 @@ class Driver(DriverSocket):
         return True
 
     def dispatch_recv(self, r):
-        """Reads the FORCEREADY header and force payload for a request that was
-        previously handed to `dispatch_send`.
+        """Reads FORCEREADY and the force payload for a request previously
+        handed to `dispatch_send`. The caller must have determined that the
+        socket is readable.
 
-        The caller is expected to have determined that the socket is readable
-        (typically via select). Returns True on success, False if the client
-        disconnected mid-transfer; in the failure case the client is marked
-        Disconnected and the request is left untouched so the caller can
-        re-queue it.
+        Returns True on success, False if the client disconnected
+        mid-transfer; in that case the client is marked Disconnected and the
+        request is left untouched so the caller can re-queue it.
         """
 
+        natoms = len(r["pos"][r["active"]]) // 3
         try:
-            self._recv_forceready()
-            r["result"] = self._recv_force_data()
+            r["result"] = self._recv_forces_bulk(natoms)
         except Disconnected:
             self.status = Status.Disconnected
             return False
 
         r["result"][0] -= r["offset"]
-
-        if len(r["result"][1]) != len(r["pos"][r["active"]]):
-            raise InvalidSize
 
         # If only a piece of the system is active, resize forces and reassign
         if len(r["active"]) != len(r["pos"]):
@@ -666,14 +691,103 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
 
-        # By protocol, the client returns to READY immediately after sending
-        # the force payload, so the next dispatch_send can skip the STATUS query.
+        # The protocol guarantees the client is READY again after sending the
+        # force payload.
         self.status = Status.Up | Status.Ready
 
-        # marks the request as done as the very last thing
         r["status"] = "Done"
         r._event_done.set()
         return True
+
+    def _recv_forces_bulk(self, natoms):
+        """Reads FORCEREADY and the full force payload for a known atom
+        count, returning [mu, mf, mvir, mxtradict].
+
+        Wire layout right after GETFORCE:
+            FORCEREADY header           HDRLEN B
+            potential (float64)         8 B
+            atom count (int32)          4 B
+            forces (3*natoms float64)   24*natoms B
+            virial (3x3 float64)        72 B
+            extra-string length (int32) 4 B
+            extra string                variable
+        The fixed-size prefix is read in one go into the per-Driver scratch
+        buffer; the variable-length extra string, when present, is fetched
+        in a follow-up read.
+        """
+
+        fixed_size = HDRLEN + 8 + 4 + 24 * natoms + 72 + 4
+        if fixed_size > len(self._buf):
+            self._buf = np.zeros(fixed_size, np.byte)
+
+        view = memoryview(self._buf)
+        bpos = 0
+        ntimeout = 0
+        while bpos < fixed_size:
+            try:
+                bpart = self.recv_into(view[bpos:fixed_size], fixed_size - bpos)
+            except socket.timeout:
+                ntimeout += 1
+                if ntimeout > NTIMEOUT:
+                    warning(
+                        " @SOCKET:  Couldn't receive within %5d attempts. Time to give up!"
+                        % (NTIMEOUT),
+                        verbosity.low,
+                    )
+                    raise Disconnected()
+                continue
+            if bpart == 0:
+                raise Disconnected()
+            bpos += bpart
+
+        buf = self._buf
+        if bytes(buf[:HDRLEN]) != MESSAGE["forceready"]:
+            warning(
+                " @SOCKET:   Unexpected getforce reply: %s" % bytes(buf[:HDRLEN]),
+                verbosity.low,
+            )
+            raise Disconnected()
+
+        off = HDRLEN
+        mu = float(np.frombuffer(buf, dtype=np.float64, count=1, offset=off)[0])
+        off += 8
+        mlen = int(np.frombuffer(buf, dtype=np.int32, count=1, offset=off)[0])
+        off += 4
+        if mlen != natoms:
+            raise InvalidSize
+        # Copy out of the scratch buffer so the result outlives the next dispatch.
+        mf = np.frombuffer(buf, dtype=np.float64, count=3 * natoms, offset=off).copy()
+        off += 24 * natoms
+        mvir = (
+            np.frombuffer(buf, dtype=np.float64, count=9, offset=off)
+            .reshape(3, 3)
+            .copy()
+        )
+        off += 72
+        extra_len = int(np.frombuffer(buf, dtype=np.int32, count=1, offset=off)[0])
+
+        if extra_len > 0:
+            if extra_len > len(self._buf):
+                self._buf = np.zeros(extra_len, np.byte)
+            view = memoryview(self._buf)
+            bpos = 0
+            ntimeout = 0
+            while bpos < extra_len:
+                try:
+                    bpart = self.recv_into(view[bpos:extra_len], extra_len - bpos)
+                except socket.timeout:
+                    ntimeout += 1
+                    if ntimeout > NTIMEOUT:
+                        raise Disconnected()
+                    continue
+                if bpart == 0:
+                    raise Disconnected()
+                bpos += bpart
+            mxtra = bytes(self._buf[:extra_len]).decode("utf-8")
+        else:
+            mxtra = ""
+
+        return [mu, mf, mvir, _parse_extra(mxtra)]
 
 
 class InterfaceSocket(object):
@@ -1206,22 +1320,21 @@ class InterfaceSocket(object):
 
             r["status"] = "Running"
             self.prlist.remove(r)
-            info(
-                " @interfacesocket.dispatch_free_client: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
-                % (
-                    time.strftime("%y/%m/%d-%H:%M:%S"),
-                    match_ids,
-                    str(r["id"]),
-                    str(fc.lastreq),
-                    self.clients.index(fc),
-                    len(self.clients),
-                    str(fc.peername),
-                ),
-                verbosity.high,
-            )
+            if verbosity.high:
+                info(
+                    " @interfacesocket.dispatch_free_client: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
+                    % (
+                        time.strftime("%y/%m/%d-%H:%M:%S"),
+                        match_ids,
+                        str(r["id"]),
+                        str(fc.lastreq),
+                        self.clients.index(fc),
+                        len(self.clients),
+                        str(fc.peername),
+                    ),
+                    verbosity.high,
+                )
             if self.consolidate_messages:
-                # Send inline so the matching FORCEREADY can be picked up by
-                # _pool_distribute_select's select() loop.
                 if not fc.dispatch_send(r):
                     self._requeue_disconnected(r, fc)
                     return False
