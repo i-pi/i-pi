@@ -711,21 +711,22 @@ class Driver(DriverSocket):
             virial (3x3 float64)        72 B
             extra-string length (int32) 4 B
             extra string                variable
+
         The fixed-size prefix is read in one go into the per-Driver scratch
         buffer; the variable-length extra string, when present, is fetched
         in a follow-up read.
         """
 
-        fixed_size = HDRLEN + 8 + 4 + 24 * natoms + 72 + 4
-        if fixed_size > len(self._buf):
-            self._buf = np.zeros(fixed_size, np.byte)
+        full_size = HDRLEN + 8 + 4 + 24 * natoms + 72 + 4
+        if full_size > len(self._buf):
+            self._buf = np.zeros(full_size, np.byte)
 
         view = memoryview(self._buf)
         bpos = 0
         ntimeout = 0
-        while bpos < fixed_size:
+        while bpos < full_size:
             try:
-                bpart = self.recv_into(view[bpos:fixed_size], fixed_size - bpos)
+                bpart = self.recv_into(view[bpos:full_size], full_size - bpos)
             except socket.timeout:
                 ntimeout += 1
                 if ntimeout > NTIMEOUT:
@@ -845,9 +846,9 @@ class InterfaceSocket(object):
            mode: An optional string giving the type of socket. Defaults to 'unix'.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
-            max_workers: Maximum number of threads launched concurrently
+           max_workers: Maximum number of threads launched concurrently
               (only used when `consolidate_messages` is False).
-            consolidate_messages: If True, fuse the STATUS/POSDATA/GETFORCE
+           consolidate_messages: If True, fuse the STATUS/POSDATA/GETFORCE
               exchange into a single send and multiplex the FORCEREADY
               responses on the poll thread via select(). Saves several
               round-trips per dispatch and removes worker-thread GIL
@@ -1161,11 +1162,10 @@ class InterfaceSocket(object):
         otherwise serialises a worker-pool dispatch.
 
         On client disconnect or timeout the request is put back on the queue
-        and the dead client is flagged so the next `pool_update` prunes it,
-        mirroring the recovery semantics of the legacy thread-pool path.
+        and the dead client is flagged so the next `pool_update` prunes it.
         """
 
-        # --- Dispatch phase: hand each free client a queued request ---
+        # Dispatch phase: hand each free client a queued request
         busy = {id(c) for _, c, _ in self.jobs}
         freec = [c for c in self.clients if id(c) not in busy]
 
@@ -1195,7 +1195,7 @@ class InterfaceSocket(object):
             if not dispatched_this_round:
                 break
 
-        # No in-flight work: just flag any dead clients for pool_update.
+        # Flag any dead clients for pool_update.
         if len(self.jobs) == 0:
             for c in self.clients:
                 if c.status == Status.Disconnected:
@@ -1203,7 +1203,7 @@ class InterfaceSocket(object):
                     return
             return
 
-        # --- Collect phase: drain in-flight jobs as they become readable ---
+        # Collect phase: drain in-flight jobs as they become readable
         while self.jobs:
             sockets = [c for _, c, _ in self.jobs]
             try:

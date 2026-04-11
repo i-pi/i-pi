@@ -184,25 +184,24 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
+        fields = {
+            "id": reqid,
+            "pos": pbcpos,
+            "active": self.iactive,
+            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "pars": par_str,
+            "result": None,
+            "status": "Queued",
+            "start": -1,
+            "t_queued": time.time(),
+            "t_dispatched": 0,
+            "t_finished": 0,
+        }
         if template is None:
-            template = {}
-        template.update(
-            {
-                "id": reqid,
-                "pos": pbcpos,
-                "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
-                "pars": par_str,
-                "result": None,
-                "status": "Queued",
-                "start": -1,
-                "t_queued": time.time(),
-                "t_dispatched": 0,
-                "t_finished": 0,
-            }
-        )
-
-        newreq = ForceRequest(template)
+            newreq = ForceRequest(fields)
+        else:
+            template.update(fields)
+            newreq = ForceRequest(template)
 
         with self._threadlock:
             self.requests.append(newreq)
