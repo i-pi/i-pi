@@ -235,7 +235,9 @@ class InputFFSocket(InputForceField):
             {
                 "dtype": bool,
                 "default": False,
-                "help": "If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and multiplex the FORCEREADY responses on a single I/O thread via select(). Saves several round-trips per dispatch and removes worker-thread GIL contention, but assumes clients follow the protocol strictly (never spontaneously change state, never deviate from READY→HASDATA→READY).",
+                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
+                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
+                strictly follow the base protocol.""",
             },
         ),
     }
