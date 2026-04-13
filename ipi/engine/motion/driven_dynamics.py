@@ -49,6 +49,7 @@ class DrivenDynamics(Dynamics):
         self,
         efield=None,
         bec=None,
+        asr_threshold=1e-8,
         *argc,
         **argv,
     ):
@@ -75,16 +76,20 @@ class DrivenDynamics(Dynamics):
         self.Born_Charges = bec
         self.Electric_Dipole = ElectricDipole()
         self._time = depend_value(name="time", value=0)
+        self._asr_threshold = depend_value(name="asr_threshold", value=asr_threshold)
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         dpipe(dfrom=ens._time, dto=self._time)
         super().bind(ens, beads, nm, cell, bforce, prng, omaker)
         self.Electric_Dipole.bind(ens)
         self.Electric_Field.bind(self, self.enstype)
-        self.Born_Charges.bind(ens, self.enstype)
+        self.Born_Charges.bind(ens, self.enstype, self._asr_threshold)
 
 
-dproperties(DrivenDynamics, ["dt", "nmts", "splitting", "ntemp", "time", "efield_time"])
+dproperties(
+    DrivenDynamics,
+    ["dt", "nmts", "splitting", "ntemp", "time", "efield_time", "asr_threshold"],
+)
 
 
 class EDAIntegrator(DummyIntegrator):
@@ -195,21 +200,23 @@ class BEC:
     # The BEC tensors Z^* can be given to i-PI by an external driver through the extras strings in the forces
     # or they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
-    ASR_THRESHOLD = 1e-8
+    asr_threshold = 1e-8
 
-    def __init__(self, cbec=None, bec=None, mode="none"):
+    def __init__(self, cbec=None, bec=None, mode="none", asr_threshold=1e-8):
         self.cbec = cbec
         if bec is None:
             bec = np.full((0, 3), np.nan)
         self._bec = depend_array(name="bec", value=bec)
         self.mode = mode
+        self._asr_threshold = depend_value(name="asr_threshold", value=asr_threshold)
         pass
 
-    def bind(self, ensemble, enstype):
+    def bind(self, ensemble, enstype, asr_threshold):
         self.enstype = enstype
         self.nbeads = ensemble.beads.nbeads
         self.natoms = ensemble.beads.natoms
         self.forces = ensemble.forces
+        dpipe(dfrom=asr_threshold, dto=self._asr_threshold)
 
         if self.enstype in DrivenDynamics.driven_integrators and self.cbec:
             self._bec = depend_array(
@@ -232,6 +239,7 @@ class BEC:
         super(BEC, self).store(bec)
         self.cbec.store(bec.cbec)
         self.mode.store(bec.mode)
+        self.asr_threshold.store(bec.asr_threshold)
 
     def _get_driver_BEC(self, bead=None):
         """Return the BEC tensors (in cartesian coordinates), when computed by the driver"""
@@ -274,13 +282,13 @@ class BEC:
             sum_rule: np.ndarray = (
                 np.asarray(bec.reshape((self.natoms, 3, 3)).sum(axis=0)) / self.natoms
             )
-            threshold = BEC.ASR_THRESHOLD * self.natoms
+            threshold = BEC.asr_threshold * self.natoms
             if not np.allclose(sum_rule, 0, atol=threshold):
                 raise ValueError(
                     f"{msg}: BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
                     f"The sum over all the atoms should be zero, but it has exceeded the threshold of {threshold:.2e} per atom.\n"
                     f"The mean over all the atoms is {sum_rule.flatten().tolist()}.\n"
-                    "Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`."
+                    "Check your driver or modify `BEC.asr_threshold` in `ipi/engine/motion/driven_dynamics.py`."
                 )
 
             Z[n, :, :] = np.copy(bec)
@@ -307,7 +315,7 @@ class BEC:
             raise ValueError(line)
 
 
-dproperties(BEC, ["bec"])
+dproperties(BEC, ["bec", "asr_threshold"])
 
 
 class ElectricDipole:
