@@ -115,18 +115,6 @@ class InputBEC(InputArray):
         },
     )
 
-    # attribs["asr_threshold"] = (
-    #     InputValue,
-    #     {
-    #         "dtype": float,
-    #         "default": 1e-8,
-    #         "help": "Acoustic Sum Rule (ASR) threshold. "
-    #         + "The code will stop if the Born Effective Charges will not satisfy at ASR with that threshold. "
-    #         + "Pay attention that the threshold will be multiplied by the total number of atoms.",
-    #         "dimension": "number",
-    #     },
-    # )
-
     default_help = "Deals with the Born Effective Charges tensors"
     default_label = "BEC"
 
