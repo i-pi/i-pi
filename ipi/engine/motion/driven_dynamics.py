@@ -274,10 +274,11 @@ class BEC:
             sum_rule: np.ndarray = (
                 np.asarray(bec.reshape((self.natoms, 3, 3)).sum(axis=0)) / self.natoms
             )
-            if not np.allclose(sum_rule, 0, atol=BEC.ASR_THRESHOLD):
+            threshold = BEC.ASR_THRESHOLD * self.natoms
+            if not np.allclose(sum_rule, 0, atol=threshold):
                 raise ValueError(
                     f"{msg}: BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
-                    f"The sum over all the atoms should be zero, but it has exceeded the threshold of {BEC.ASR_THRESHOLD:.2e} per atom.\n"
+                    f"The sum over all the atoms should be zero, but it has exceeded the threshold of {threshold:.2e} per atom.\n"
                     f"The mean over all the atoms is {sum_rule.flatten().tolist()}.\n"
                     "Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`."
                 )
