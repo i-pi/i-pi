@@ -181,7 +181,6 @@ class InputBEC(InputArray):
             cbec=mode == "driver",
             bec=bec.reshape((-1, 3)),
             mode=mode,
-            # asr_threshold=self.asr_threshold.fetch(),
         )
 
 
