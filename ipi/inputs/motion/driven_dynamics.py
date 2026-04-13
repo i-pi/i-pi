@@ -136,7 +136,6 @@ class InputBEC(InputArray):
         # because `InputArray.store` sets `self.mode` to "manual":
         # self.mode.store("manual")
         self.mode.store(bec.mode)
-        # self.asr_threshold.store(bec.asr_threshold)
 
     def parse(self, xml=None, text=""):
         """Reads the data for an array from an xml file.
