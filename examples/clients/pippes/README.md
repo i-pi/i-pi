@@ -8,7 +8,9 @@ Runs an example using a PIP potential of CH5<sup>+</sup> for a simple gas-phase 
 (4) A Makefile is provided in `03_ch5p` to compile and install the client. It assumes gcc and gfortran compiler; change it if you use other compilers. Simply use command `make` to compile and install.  
 
 ## Running the Example
-Run the following to start the i-PI simulation:
-`i-pi input.xml &`  
-`sleep 5`  
-`i-pi-driver -u -h driver -m ch5p`  
+Run the following to start the i-PI simulation:  
+```bash
+i-pi input.xml &
+sleep 5  
+i-pi-driver -u -h driver -m ch5p
+```
