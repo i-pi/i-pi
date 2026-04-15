@@ -134,8 +134,6 @@ class ForceBead:
         self._f = depend_array(
             name="f", value=fbase, func=self.get_f, dependencies=[self._ufvx]
         )
-        self._f._timing_marker = f"WD{self.uid}"
-        self._f._timing_label = "ForceBead f"
 
         self._extra = depend_value(
             name="extra", func=self.get_extra, dependencies=[self._ufvx]

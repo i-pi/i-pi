@@ -4,7 +4,6 @@ import argparse
 import numpy as np
 from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
-from multiprocessing import resource_tracker, shared_memory
 
 
 description = """
@@ -95,20 +94,6 @@ def validate_force_payload(force, vir, pos):
         )
 
 
-def recv_fixed(sock, length):
-    """Receives an exact number of bytes."""
-
-    return recv_data(sock, np.empty(length, dtype=np.uint8)).tobytes()
-
-
-def attach_shared_memory(name):
-    """Attach to server-owned shared memory without tracking it for unlink."""
-
-    shm = shared_memory.SharedMemory(name=name)
-    resource_tracker.unregister(shm._name, "shared_memory")
-    return shm
-
-
 def run_driver(
     unix=False,
     address="",
@@ -116,7 +101,6 @@ def run_driver(
     driver=Dummy_driver(),
     f_verbose=False,
     sockets_prefix="/tmp/ipi_",
-    shm=False,
 ):
     """Minimal socket client for i-PI."""
 
@@ -135,17 +119,6 @@ def run_driver(
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
     extras = ""
-
-    cell_shm = None
-    icell_shm = None
-    pot_shm = None
-    pos_shm = None
-    f_shm = None
-    vir_shm = None
-    pot_snp = None
-    pos_snp = None
-    f_snp = None
-    vir_snp = None
 
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
@@ -168,94 +141,39 @@ def run_driver(
             if f_verbose:
                 print(rid, "Initing...")
 
-            if shm:
-                nat = recv_data(sock, np.int32())
-                nbeads = recv_data(sock, np.int32())
-                if nbeads != 1:
-                    raise RuntimeError(
-                        "run_driver(shm=True) only supports single-bead shm mode; "
-                        "use the MPI shm driver for batched mode"
-                    )
-
-                pos_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-                h_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-                ih_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-                pot_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-                f_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-                vir_bufname = recv_fixed(sock, HDRLEN).decode("utf-8").strip()
-
-                if f_verbose:
-                    print(rid, initstr)
-                    print(f"natoms, nbeads: {nat}, {nbeads}")
-                    print("Driver initing SHM with buffer names:")
-                    print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
-
-                cell_shm = attach_shared_memory(h_bufname)
-                icell_shm = attach_shared_memory(ih_bufname)
-                pot_shm = attach_shared_memory(pot_bufname)
-                pos_shm = attach_shared_memory(pos_bufname)
-                f_shm = attach_shared_memory(f_bufname)
-                vir_shm = attach_shared_memory(vir_bufname)
-
-                cell_snp = np.ndarray((3, 3), dtype=np.float64, buffer=cell_shm.buf)
-                icell_snp = np.ndarray((3, 3), dtype=np.float64, buffer=icell_shm.buf)
-                pot_snp = np.ndarray((1), dtype=np.float64, buffer=pot_shm.buf)
-                pos_snp = np.ndarray((nat * 3), dtype=np.float64, buffer=pos_shm.buf)
-                f_snp = np.ndarray((nat * 3), dtype=np.float64, buffer=f_shm.buf)
-                vir_snp = np.ndarray((3, 3), dtype=np.float64, buffer=vir_shm.buf)
-
             f_init = True  # we are initialized now
         elif header == Message("POSDATA"):
-            if shm:
-                pos = pos_snp
-                cell = cell_snp
-                icell = icell_snp
+            # receives structural information
+            cell = recv_data(sock, cell)
+            icell = recv_data(
+                sock, icell
+            )  # inverse of the cell. mostly useless legacy stuff
+            nat = recv_data(sock, np.int32())
+            if len(pos) == 0:
+                # shapes up the position array
+                pos.resize((nat, 3), refcheck=False)
+                force.resize((nat, 3), refcheck=False)
             else:
-                # receives structural information
-                cell = recv_data(sock, cell)
-                icell = recv_data(
-                    sock, icell
-                )  # inverse of the cell. mostly useless legacy stuff
-                nat = recv_data(sock, np.int32())
-                if len(pos) == 0:
-                    # shapes up the position array
-                    pos.resize((nat, 3), refcheck=False)
-                    force.resize((nat, 3), refcheck=False)
-                else:
-                    if len(pos) != nat:
-                        raise RuntimeError("Atom number changed during i-PI run")
-                pos = recv_data(sock, pos)
+                if len(pos) != nat:
+                    raise RuntimeError("Atom number changed during i-PI run")
+            pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
         elif header == Message("GETFORCE"):
             validate_force_payload(force, vir, pos)
-
-            if shm:
-                pot_snp[:] = pot
-                f_snp[:] = force
-                vir_snp[:] = vir
-                sock.sendall(Message("FORCEREADY"))
-            else:
-                sock.sendall(Message("FORCEREADY"))
-                send_data(sock, np.float64(pot))
-                send_data(sock, np.int32(nat))
-                send_data(sock, force)
-                send_data(sock, vir)
-                send_data(sock, np.int32(len(extras)))
-                sock.sendall(extras.encode("utf-8"))
+            sock.sendall(Message("FORCEREADY"))
+            send_data(sock, np.float64(pot))
+            send_data(sock, np.int32(nat))
+            send_data(sock, force)
+            send_data(sock, vir)
+            send_data(sock, np.int32(len(extras)))
+            sock.sendall(extras.encode("utf-8"))
 
             f_data = False
         elif header == Message("EXIT"):
             print("Received exit message from i-PI. Bye bye!")
-            if shm:
-                cell_shm.close()
-                icell_shm.close()
-                pot_shm.close()
-                pos_shm.close()
-                f_shm.close()
-                vir_shm.close()
             return
 
 
@@ -340,14 +258,9 @@ if __name__ == "__main__":
     d_f = cls(*driver_args, **driver_kwargs)
 
     if args.shm:
-        run_driver(
-            unix=True,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-            shm=True,
+        raise NotImplementedError(
+            "Non-batched shm mode is no longer supported by i-pi-py_driver. "
+            "Use i-pi-py_mpidriver with batched shm instead."
         )
     else:
         run_driver(

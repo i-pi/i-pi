@@ -401,6 +401,11 @@ class FFSocket(ForceField):
     def start(self):
         """Spawns a new thread."""
 
+        if self.socket.mode == "shm" and not self.batch:
+            raise NotImplementedError(
+                "Non-batched shm sockets are no longer supported. "
+                "Use batch='true' with mode='shm'."
+            )
         self.socket.open()
         super(FFSocket, self).start()
 

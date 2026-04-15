@@ -203,479 +203,6 @@ class DriverSocket(socket.socket):
         else:
             return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
-class _LegacySHMDriver(DriverSocket):
-    """Shared-memory driver client with socket-based control.
-
-    Uses the socket only for control/status messages and to exchange the
-    shared-memory buffer names during initialization. Bulk data (positions,
-    cell, forces, potential, virial) are transferred through named
-    ``multiprocessing.shared_memory`` blocks created on the first dispatch.
-
-    Attributes:
-       waitstatus: Boolean giving whether the driver is waiting to get a status answer.
-       status: Keeps track of the status of the driver.
-       lastreq: The ID of the last request processed by the client.
-       locked: Flag to mark if the client has been working consistently on one image.
-       first_dispatch: True until shared-memory buffers are allocated.
-       nat: Number of atoms inferred from the first request.
-       nbeads: Number of beads inferred from the first request.
-       *_bufname: Names of shared-memory blocks (pos/h/ih/pot/f/vir).
-       *_shm: SharedMemory handles for each buffer.
-       *_snp: Numpy views into shared-memory buffers.
-    """
-
-
-    def __init__(self, sock):
-        """Initialises an SHM-backed driver client.
-
-        Args:
-           socket: Control socket used for status/commands and buffer name exchange.
-              Shared-memory blocks are allocated on the first dispatch.
-        """
-
-        super(_LegacySHMDriver, self).__init__(sock)
-        self.waitstatus = False
-        self.status = Status.Up
-        self.lastreq = None
-        self.locked = False
-        self.exit_on_disconnect = False
-        self.first_dispatch = True
-
-        self.nat = None
-        self.nbeads = None
-
-        self.id = sock.fileno()
-        # must be uppercase!
-        self.pos_bufname = f"IPI-POS-{self.id}"
-        self.h_bufname = f"IPI-H-{self.id}"
-        self.ih_bufname = f"IPI-IH-{self.id}"
-        
-        self.pot_bufname = f"IPI-POT-{self.id}"
-        self.f_bufname = f"IPI-F-{self.id}"
-        self.vir_bufname = f"IPI-VIR-{self.id}"
-
-        info(
-            f" @SOCKET: SHMDriver initied with buffer: {self.pos_bufname}",
-            verbosity.low,
-        )
-
-        self.pos_shm = None
-        self.h_shm = None
-        self.ih_shm = None
-        self.pot_shm = None
-        self.f_shm = None
-        self.vir_shm = None
-
-        self.pos_snp = None
-        self.h_snp = None
-        self.ih_snp = None
-        self.pot_snp = None
-        self.f_snp = None
-        self.vir_snp = None
-
-
-    def shutdown(self, how=socket.SHUT_RDWR):
-        """Tries to send an exit message to clients to let them exit gracefully."""
-
-        if self.exit_on_disconnect:
-            trd = threading.Thread(
-                target=softexit.trigger, kwargs={"message": "Client shutdown."}
-            )
-            trd.daemon = True
-            trd.start()
-
-        self.send_msg("exit")
-        self.status = Status.Disconnected
-
-        self.pos_shm.close()
-        self.h_shm.close()
-        self.ih_shm.close()
-        self.pot_shm.close()
-        self.f_shm.close()
-        self.vir_shm.close()
-
-        self.pos_shm.unlink()
-        self.h_shm.unlink()
-        self.ih_shm.unlink()
-        self.pot_shm.unlink()
-        self.f_shm.unlink()
-        self.vir_shm.unlink()
-
-
-
-        super(DriverSocket, self).shutdown(how)
-
-    def _getstatus_select(self):
-        """Gets driver status. Uses socket.select to make sure one can read/write on the socket.
-
-        Returns:
-           An integer labelling the status via bitwise or of the relevant members
-           of Status.
-        """
-
-        if not self.waitstatus:
-            try:
-                # This can sometimes hang with no timeout.
-                readable, writable, errored = select.select(
-                    [], [self], [], SELECTTIMEOUT
-                )
-                if self in writable:
-                    self.send_msg("status")
-                    self.waitstatus = True
-            except socket.error:
-                return Status.Disconnected
-
-        try:
-            readable, writable, errored = select.select([self], [], [], SELECTTIMEOUT)
-            if self in readable:
-                reply = self.recv_msg(HDRLEN)
-                self.waitstatus = False  # got some kind of reply
-            else:
-                # This is usually due to VERY slow clients.
-                warning(
-                    f" @SOCKET: Couldn't find readable socket in {SELECTTIMEOUT}s, will try again",
-                    verbosity.low,
-                )
-                return Status.Busy
-        except socket.timeout:
-            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
-            return Status.Up | Status.Busy | Status.Timeout
-        except:
-            warning(
-                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
-                verbosity.debug,
-            )
-            return Status.Disconnected
-
-        if not len(reply) == HDRLEN:
-            return Status.Disconnected
-        elif reply == MESSAGE["ready"]:
-            return Status.Up | Status.Ready
-        elif reply == MESSAGE["needinit"]:
-            return Status.Up | Status.NeedsInit
-        elif reply == MESSAGE["havedata"]:
-            return Status.Up | Status.HasData
-        else:
-            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
-            return Status.Up
-
-    def _getstatus_direct(self):
-        """Gets driver status. Relies on blocking send/recv, which might lead to
-        timeouts with slow networks.
-
-        Returns:
-           An integer labelling the status via bitwise or of the relevant members
-           of Status.
-        """
-
-        if not self.waitstatus:
-            try:
-                self.send_msg("status")
-                self.waitstatus = True
-            except socket.error:
-                return Status.Disconnected
-        try:
-            reply = self.recv_msg(HDRLEN)
-            self.waitstatus = False  # got some kind of reply
-        except socket.timeout:
-            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
-            return Status.Up | Status.Busy | Status.Timeout
-        except:
-            warning(
-                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
-                verbosity.debug,
-            )
-            return Status.Disconnected
-
-        if not len(reply) == HDRLEN:
-            return Status.Disconnected
-        elif reply == MESSAGE["ready"]:
-            return Status.Up | Status.Ready
-        elif reply == MESSAGE["needinit"]:
-            return Status.Up | Status.NeedsInit
-        elif reply == MESSAGE["havedata"]:
-            return Status.Up | Status.HasData
-        else:
-            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
-            return Status.Up
-
-    # depending on the system either _select or _direct can be slightly faster
-    # if you're network limited it might be worth experimenting changing this
-    _getstatus = _getstatus_select
-
-    def get_status(self):
-        """Sets (and returns) the client internal status. Wait for an answer if
-        the client is busy."""
-        status = self._getstatus()
-        while status & Status.Busy:
-            status = self._getstatus()
-        self.status = status
-        return status
-
-    def initialize(self, rid, pars):
-        """Sends the initialisation string to the driver.
-
-        Args:
-           rid: The index of the request, i.e. the replica that
-              the force calculation is for.
-           pars: The parameter string to be sent to the driver.
-
-        Raises:
-           InvalidStatus: Raised if the status is not NeedsInit.
-        """
-
-        if self.status & Status.NeedsInit:
-            try:
-                # combines all messages in one to reduce latency
-                self.sendall(
-                    MESSAGE["init"]
-                    + np.int32(rid)
-                    + np.int32(len(pars))
-                    + pars.encode()
-                    + np.int32(self.nat)
-                    + np.int32(self.nbeads)
-                    + Message(self.pos_bufname)
-                    + Message(self.h_bufname)
-                    + Message(self.ih_bufname)
-                    + Message(self.pot_bufname)
-                    + Message(self.f_bufname)
-                    + Message(self.vir_bufname)
-                )
-            except:
-                self.get_status()
-                return
-        else:
-            raise InvalidStatus("Status in init was " + self.status)
-
-    def sendpos(self, r):
-        """Sends the position and cell data to the driver.
-
-        Args:
-           r: Request dict containing ``pos`` and ``cell`` data. The data are
-              written to shared memory before sending the control header.
-
-        Raises:
-           InvalidStatus: Raised if the status is not Ready.
-        """
-        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
-        # this is to handle the batch mode for multiple bead positions
-        timers.start
-        
-        if self.status & Status.Ready:
-            try:
-                self.np_to_shm(r) 
-                self.sendall(
-                    MESSAGE["posdata"]  # header
-                )
-                self.status = Status.Up | Status.Busy
-            except socket.timeout:
-                warning(
-                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
-                    verbosity.quiet,
-                )
-                self.status = Status.Timeout
-                TIMEOUT *= 2
-                return
-            except Exception as exc:
-                warning(
-                    f"Other exception during posdata receive: {exc}", verbosity.quiet
-                )
-                raise exc
-        else:
-            raise InvalidStatus("Status in sendpos was " + self.status)
-
-    def getforce(self):
-        """Gets the potential energy, force and virial from the driver.
-
-        For SHM drivers the socket is only used to synchronize when the shared
-        buffers are ready; data are read from shared memory.
-
-        Raises:
-           InvalidStatus: Raised if the status is not HasData.
-           Disconnected: Raised if the driver has disconnected.
-
-        Returns:
-           A list of the form [potential, force, virial, extra].
-        """
-
-        if self.status & Status.HasData:
-            self.send_msg("getforce")
-            reply = ""
-            while True:
-                try:
-                    reply = self.recv_msg()
-                except socket.timeout:
-                    warning(
-                        " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
-                    )
-                    continue
-                except:
-                    warning(
-                        " @SOCKET:   Error while receiving message: %s" % (reply),
-                        verbosity.low,
-                    )
-                    raise Disconnected()
-                if reply == MESSAGE["forceready"]:
-                    break
-                else:
-                    warning(
-                        " @SOCKET:   Unexpected getforce reply: %s" % (reply),
-                        verbosity.low,
-                    )
-                if reply == "":
-                    raise Disconnected()
-        else:
-            raise InvalidStatus("Status in getforce was " + str(self.status))
-
-
-        return self.shm_to_np()
-
-    
-    def alloc_shm(self, r):
-        """Allocate and map shared-memory buffers for the first request.
-
-        Initializes shared-memory blocks sized to match the current request
-        data layout and creates NumPy views into those buffers.
-
-        Args:
-           r: Request dict with ``pos`` and ``cell`` data. ``pos`` may be
-              shape (3*nat,) for a single bead or (nbeads, 3*nat).
-
-        Raises:
-           Exception: Propagates allocation/mapping errors.
-        """
-        try:
-            if r["pos"].ndim == 1:
-                self.nat = len(r["pos"]) // 3
-                self.nbeads = 1
-            else:
-                self.nat = r["pos"].shape[1] // 3
-                self.nbeads = r["pos"].shape[0]
-            
-            # assuming float64 in size*8
-            self.pos_shm =  shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.pos_bufname)
-            self.h_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.h_bufname)
-            self.ih_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.ih_bufname)
-            
-            self.pot_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*8, name=self.pot_bufname)
-            self.f_shm = shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.f_bufname)
-            self.vir_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*9*8, name=self.vir_bufname)
-
-            self.pos_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf)
-            self.h_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.h_shm.buf)
-            self.ih_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.ih_shm.buf)
-            
-            self.pot_snp =np.ndarray((self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf)
-            self.f_snp =np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
-            self.vir_snp =np.ndarray((self.nbeads,3,3), dtype=np.float64, buffer=self.vir_shm.buf)
-        except Exception as exc:
-            warning(
-                f"Exception occured:: {exc}", verbosity.quiet
-            )
-            raise exc
-
-
-    def np_to_shm(self, r):
-        """Write request data into shared-memory buffers.
-
-        Args:
-           r: Request dict with ``pos`` and ``cell`` (h, ih) data.
-        """
-        self.pos_snp, self.h_snp, self.ih_snp = r["pos"], r["cell"][0], r["cell"][1]
-
-    def shm_to_np(self):
-        """Read potential, forces, and virial from shared memory.
-
-        Returns:
-           List ``[potential, force, virial, extra]`` matching Driver semantics.
-           ``extra`` (``mxtradict``) is currently a placeholder and not yet implemented.
-        """
-        mxtradict = ""
-        if self.nbeads == 1:
-            return [float(self.pot_snp), self.f_snp.squeeze(), self.vir_snp.squeeze(), mxtradict]
-        else:
-            return [self.pot_snp, self.f_snp, self.vir_snp, mxtradict]
-        
-
-    def dispatch(self, r):
-        """Dispatches a request r and looks after it setting results
-        once it has been evaluated. This is meant to be launched as a
-        separate thread, and takes care of all the communication related to
-        the request.
-
-        On the first dispatch, shared-memory buffers are allocated and their
-        names are sent to the driver during initialization.
-        """
-        
-        if self.first_dispatch:
-            self.alloc_shm(r)
-            self.first_dispatch = False
-
-        #timers.start("[++++++]Get Stat1")
-        if not self.status & Status.Up:
-            warning(
-                " @SOCKET:   Inconsistent client state in dispatch thread! (I)",
-                verbosity.low,
-            )
-            return
-        r["t_dispatched"] = time.time()
-
-        self.get_status()
-        if self.status & Status.NeedsInit:
-            self.initialize(r["id"], r["pars"]) # also sending here buffer names to find shm on driver
-            self.status = self.get_status()
-
-        if not (self.status & Status.Ready):
-            warning(
-                " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
-                verbosity.low,
-            )
-            return
-
-        r["start"] = time.time()
-
-        self.sendpos(r)
-
-        self.get_status()
-        if not (self.status & Status.HasData):
-            warning(
-                " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
-                verbosity.low,
-            )
-            return
-        
-        try:
-            r["result"] = self.getforce()
-        except Disconnected:
-            self.status = Status.Disconnected
-            return
-        except Exception as exc:
-            warning(
-                f"Other exception during force receive: {exc}", verbosity.quiet
-            )
-            raise exc
-
-
-        r["result"][0] -= r["offset"]
-
-        if len(r["result"][1]) != len(r["active"]):
-            raise InvalidSize
-
-        # If only a piece of the system is active, resize forces and reassign
-        if len(r["active"]) != len(r["pos"]):
-            rftemp = r["result"][1]
-            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
-            r["result"][1] = r["result"][1].at[r["active"]].set(rftemp)
-        r["t_finished"] = time.time()
-        self.lastreq = r["id"]  #
-
-        # updates the status of the client before leaving
-        self.get_status()
-
-        # marks the request as done as the very last thing
-        r["status"] = "Done"
-
-
 class Driver(DriverSocket):
     """Deals with communication between the client and driver code.
 
@@ -1136,12 +663,8 @@ class Driver(DriverSocket):
         """Validates result sizes for the current transport."""
 
         if self.shm:
-            if self.nbeads == 1:
-                if len(r["result"][1]) != len(r["active"]):
-                    raise InvalidSize
-            else:
-                if r["result"][1].shape != r["pos"].shape:
-                    raise InvalidSize
+            if r["result"][1].shape != r["pos"].shape:
+                raise InvalidSize
         elif r["pos"].ndim == 2:
             if r["result"][1].shape != r["pos"].shape:
                 raise InvalidSize
@@ -1152,12 +675,7 @@ class Driver(DriverSocket):
     def dispatch_resize_result(self, r):
         """Expands active-subset forces back to the full system if needed."""
 
-        if self.shm:
-            if self.nbeads == 1 and len(r["active"]) != len(r["pos"]):
-                rftemp = r["result"][1]
-                r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
-                r["result"][1] = r["result"][1].at[r["active"]].set(rftemp)
-        elif r["pos"].ndim == 2:
+        if self.shm or r["pos"].ndim == 2:
             return
         elif len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
@@ -1165,12 +683,10 @@ class Driver(DriverSocket):
             r["result"][1][r["active"]] = rftemp
 
     def alloc_shm(self, r):
-        if r["pos"].ndim == 1:
-            self.nat = len(r["pos"]) // 3
-            self.nbeads = 1
-        else:
-            self.nat = r["pos"].shape[1] // 3
-            self.nbeads = r["pos"].shape[0]
+        if r["pos"].ndim != 2:
+            raise ValueError("shm mode only supports batched position arrays")
+        self.nat = r["pos"].shape[1] // 3
+        self.nbeads = r["pos"].shape[0]
 
         
         self.external_pos_shm = False
@@ -1270,13 +786,6 @@ class Driver(DriverSocket):
 
     def shm_to_np(self):
         mxtradict = ""
-        if self.nbeads == 1:
-            return [
-                float(self.pot_snp),
-                self.f_snp.squeeze(),
-                self.vir_snp.squeeze(),
-                mxtradict,
-            ]
         return [self.pot_snp, self.f_snp, self.vir_snp, mxtradict]
 
     def dispatch(self, r):
@@ -1310,26 +819,18 @@ class Driver(DriverSocket):
             return
 
         r["start"] = time.time()
-        wd_marker = f"WD{r['id']}"
-        timers.start(f"[{wd_marker}]Server->Driver transfer")
         self.dispatch_sendpos(r)
-        timers.stop(f"[{wd_marker}]Server->Driver transfer")
 
-        timers.start(f"[{wd_marker}]Driver compute/wait")
         self.get_status()
         if not (self.status & Status.HasData):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
                 verbosity.low,
             )
-            timers.stop(f"[{wd_marker}]Driver compute/wait")
             return
-        timers.stop(f"[{wd_marker}]Driver compute/wait")
 
         try:
-            timers.start(f"[{wd_marker}]Driver->Server transfer")
             r["result"] = self.getforce()
-            timers.stop(f"[{wd_marker}]Driver->Server transfer")
         except Disconnected:
             self.status = Status.Disconnected
             return
