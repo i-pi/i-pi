@@ -18,7 +18,7 @@ from numpy.testing import assert_equal
 from ..common.folder import local
 from ipi.utils.units import unit_to_internal
 from ipi.utils.io import iter_file, read_file, print_file
-from ipi.utils.parsing import read_output
+from ipi.scripting import read_output
 
 
 pos_xyz = np.array([i for i in range(3 * 3)])
