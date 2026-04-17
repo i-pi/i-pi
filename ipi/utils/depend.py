@@ -122,14 +122,17 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        # Bypass __init__ (signatures differ between depend_value and
-        # depend_array, and re-running __init__ would wire up dependencies
-        # twice). Copy every instance attribute from self, substituting a
-        # fresh RLock since the old one isn't picklable.
+        # Data-only copy: `_value`/`_tainted`/`_name` are deepcopied while
+        # graph-link attrs are shared by reference. Deepcopying `_func`
+        # (a bound method) would recurse into its `__self__`, which can
+        # hold non-picklable state such as a `threading.Lock`.
         newone = type(self).__new__(type(self))
+        shared = {"_func", "_synchro", "_dependants", "_parent"}
         for member, value in self.__dict__.items():
             if member == "_threadlock":
                 newone._threadlock = threading.RLock()
+            elif member in shared:
+                setattr(newone, member, value)
             else:
                 setattr(newone, member, deepcopy(value, memo))
         return newone
