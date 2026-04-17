@@ -122,17 +122,15 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        # Data-only copy: `_value`/`_tainted`/`_name` are deepcopied while
-        # graph-link attrs are shared by reference. Deepcopying `_func`
-        # (a bound method) would recurse into its `__self__`, which can
-        # hold non-picklable state such as a `threading.Lock`.
+        # Deepcopy every attribute except `_threadlock` (unpicklable RLock)
+        # and `_func` (a bound method whose `__self__` may hold non-picklable
+        # state such as a `threading.Lock`; the copy shares the reference).
         newone = type(self).__new__(type(self))
-        shared = {"_func", "_synchro", "_dependants", "_parent"}
         for member, value in self.__dict__.items():
             if member == "_threadlock":
                 newone._threadlock = threading.RLock()
-            elif member in shared:
-                setattr(newone, member, value)
+            elif member == "_func":
+                newone._func = value
             else:
                 setattr(newone, member, deepcopy(value, memo))
         return newone
