@@ -122,12 +122,16 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        # RLock is not picklable; rebuild a fresh instance and copy members.
-        newone = type(self)(None)
-        for member in newone.__dict__:
+        # Bypass __init__ (signatures differ between depend_value and
+        # depend_array, and re-running __init__ would wire up dependencies
+        # twice). Copy every instance attribute from self, substituting a
+        # fresh RLock since the old one isn't picklable.
+        newone = type(self).__new__(type(self))
+        for member, value in self.__dict__.items():
             if member == "_threadlock":
-                continue
-            setattr(newone, member, deepcopy(getattr(self, member), memo))
+                newone._threadlock = threading.RLock()
+            else:
+                setattr(newone, member, deepcopy(value, memo))
         return newone
 
     def add_synchro(self, synchro=None):
