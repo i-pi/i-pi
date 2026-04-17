@@ -833,7 +833,7 @@ class InterfaceSocket(object):
         exit_on_disconnect=False,
         max_workers=128,
         sockets_prefix="/tmp/ipi_",
-        consolidate_messages=False,
+        consolidate_messages=True,
     ):
         """Initialises interface.
 
