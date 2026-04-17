@@ -30,7 +30,10 @@ import operator as _op
 
 import numpy as np
 
-from ipi.utils.messages import verbosity, warning, info
+# NOTE: the info()/warning() calls below are disabled because they
+# add measurable cost in the hot path. Re-enable
+# manually when debugging tainting/synchronizer issues.
+# from ipi.utils.messages import verbosity, warning, info
 
 
 __all__ = [
@@ -184,9 +187,6 @@ class depend_base(object):
         For synchronized peers, `_func` is a dict keyed by peer name; the
         value for the manually-set peer is invoked.
         """
-        # NOTE: the info()/warning() calls below are disabled because they
-        # add measurable cost in the hot path. Re-enable
-        # manually when debugging tainting/synchronizer issues.
         if self._synchro is not None:
             if self._name != self._synchro.manual:
                 self.set(self._func[self._synchro.manual](), manual=False)
@@ -206,7 +206,7 @@ class depend_base(object):
         to auto-computed quantities."""
         if self._synchro is not None:
             self._taint_synchro()
-            info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
+            # info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
         elif self._func is not None:
             raise NameError(
                 "Cannot set manually the value of the automatically-computed property <"
