@@ -691,9 +691,9 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
 
-        # Usually the client goes back to Ready after sending forces,
-        # but it can also transition to NeedsInit — let dispatch_send probe.
-        self.status = Status.Up
+        # Probe the real post-force status: most clients go back to Ready,
+        # but some (e.g. ASE-backed) transition to NeedsInit each step.
+        self.get_status()
 
         r["status"] = "Done"
         r._event_done.set()
