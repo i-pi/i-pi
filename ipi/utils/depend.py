@@ -296,6 +296,7 @@ class depend_array(depend_base):
         dependencies=None,
         tainted=None,
         base=None,
+        parent=None,
     ):
         if base is not None:
             # Slice-view: wrap an already-allocated view of the parent.
@@ -307,6 +308,13 @@ class depend_array(depend_base):
             self._value = value
         else:
             self._value = np.asarray(value)
+
+        # Slice-views keep a reference to the parent so that refreshing a
+        # stale slice delegates the recompute to the parent (which owns
+        # the full-shape `_value`). Without this, `update_auto` on a
+        # slice would try to assign a full-shape result into the slice's
+        # narrower view.
+        self._parent = parent
 
         super().__init__(name, synchro, func, dependants, dependencies, tainted)
 
@@ -429,6 +437,7 @@ class depend_array(depend_base):
             synchro=self._synchro,
             dependants=self._dependants,
             tainted=self._tainted,
+            parent=self,
         )
 
     def flatten(self):
@@ -459,6 +468,7 @@ class depend_array(depend_base):
             synchro=self._synchro,
             dependants=self._dependants,
             tainted=self._tainted,
+            parent=self,
         )
 
     def __setitem__(self, index, value):
@@ -482,6 +492,20 @@ class depend_array(depend_base):
         if self._tainted[0]:
             self._refresh()
         return self
+
+    def _refresh(self):
+        """Slice-view aware refresh.
+
+        A slice-view shares `_tainted` with its parent but its `_value`
+        is only a narrow view. Recomputing through `update_auto` must
+        happen on the parent, which owns the full-shape storage; the
+        slice's `_value` (a view) then observes the refreshed data for
+        free, and the shared `_tainted` flag is cleared by the parent.
+        """
+        if self._parent is not None:
+            self._parent._refresh()
+        else:
+            super()._refresh()
 
     # ------------------------------------------------------------------
     # len / iter / repr / bool
