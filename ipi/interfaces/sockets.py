@@ -691,9 +691,9 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
 
-        # The protocol guarantees the client is READY again after sending the
-        # force payload.
-        self.status = Status.Up | Status.Ready
+        # Usually the client goes back to Ready after sending forces,
+        # but it can also transition to NeedsInit — let dispatch_send probe.
+        self.status = Status.Up
 
         r["status"] = "Done"
         r._event_done.set()
