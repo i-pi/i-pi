@@ -1,6 +1,6 @@
 """Dependency tracking, lazy caching, and automatic update of variables.
 
-This module provides a small data and storage class used throughout i-PI to
+This module provides a small data and storage class used throughout i-PI to 
 represent physical quantities. Two concrete classes wrap values:
 
 - `depend_value`: wraps an arbitrary Python value.
@@ -122,17 +122,12 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        # Deepcopy every attribute except `_threadlock` (unpicklable RLock)
-        # and `_func` (a bound method whose `__self__` may hold non-picklable
-        # state such as a `threading.Lock`; the copy shares the reference).
-        newone = type(self).__new__(type(self))
-        for member, value in self.__dict__.items():
+        # RLock is not picklable; rebuild a fresh instance and copy members.
+        newone = type(self)(None)
+        for member in newone.__dict__:
             if member == "_threadlock":
-                newone._threadlock = threading.RLock()
-            elif member == "_func":
-                newone._func = value
-            else:
-                setattr(newone, member, deepcopy(value, memo))
+                continue
+            setattr(newone, member, deepcopy(getattr(self, member), memo))
         return newone
 
     def add_synchro(self, synchro=None):
@@ -192,6 +187,9 @@ class depend_base(object):
         For synchronized peers, `_func` is a dict keyed by peer name; the
         value for the manually-set peer is invoked.
         """
+        # NOTE: the info()/warning() calls below are disabled because they
+        # add measurable cost in the hot path. Re-enable
+        # manually when debugging tainting/synchronizer issues.
         if self._synchro is not None:
             if self._name != self._synchro.manual:
                 self.set(self._func[self._synchro.manual](), manual=False)
@@ -211,7 +209,7 @@ class depend_base(object):
         to auto-computed quantities."""
         if self._synchro is not None:
             self._taint_synchro()
-            # info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
+            info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
         elif self._func is not None:
             raise NameError(
                 "Cannot set manually the value of the automatically-computed property <"
@@ -272,8 +270,6 @@ class depend_value(depend_base):
 
 def _is_scalar_index(index, ndim):
     """True if `array[index]` returns a scalar for an array of rank `ndim`."""
-    if isinstance(index, (slice, type(Ellipsis))):
-        return False
     if hasattr(index, "__len__"):
         if len(index) == ndim and isinstance(index, tuple):
             for i in index:
@@ -315,13 +311,6 @@ class depend_array(depend_base):
             self._value = value
         else:
             self._value = np.asarray(value)
-
-        # Slice-views keep a reference to the parent so that refreshing a
-        # stale slice delegates the recompute to the parent (which owns
-        # the full-shape `_value`). Without this, `update_auto` on a
-        # slice would try to assign a full-shape result into the slice's
-        # narrower view.
-        self._parent = parent
 
         super().__init__(name, synchro, func, dependants, dependencies, tainted)
 
@@ -435,22 +424,15 @@ class depend_array(depend_base):
     # Shape helpers (explicit so they return the intended type)
     # ------------------------------------------------------------------
 
-    def reshape(self, *shape):
-        """Return a reshaped depend_array sharing memory with self.
-
-        Accepts both `da.reshape((2, 3))` and `da.reshape(2, 3)`, matching
-        numpy's signature.
-        """
-        if len(shape) == 1:
-            shape = shape[0]
+    def reshape(self, newshape):
+        """Return a reshaped depend_array sharing memory with self."""
         return depend_array(
             value=None,
-            base=self._value.reshape(shape),
+            base=self._value.reshape(newshape),
             name=self._name,
             synchro=self._synchro,
             dependants=self._dependants,
             tainted=self._tainted,
-            parent=self,
         )
 
     def flatten(self):
@@ -481,7 +463,6 @@ class depend_array(depend_base):
             synchro=self._synchro,
             dependants=self._dependants,
             tainted=self._tainted,
-            parent=self,
         )
 
     def __setitem__(self, index, value):
@@ -494,13 +475,7 @@ class depend_array(depend_base):
             self.taint(taintme=False)
 
     def set(self, value, manual=True):
-        """Full-array assignment. `manual=False` is used by `update_auto`.
-
-        Note: this writes through `_value[...] = value` so child slice-views
-        (which hold references to the same underlying buffer) stay valid.
-        Do NOT replace `self._value` with a new ndarray — that would
-        silently desync any existing slice's `_value` from the parent's.
-        """
+        """Full-array assignment. `manual=False` is used by `update_auto`."""
         with self._threadlock:
             self._value[...] = value
             if manual and (self._synchro is not None or self._func is not None):
@@ -511,20 +486,6 @@ class depend_array(depend_base):
         if self._tainted[0]:
             self._refresh()
         return self
-
-    def _refresh(self):
-        """Slice-view aware refresh.
-
-        A slice-view shares `_tainted` with its parent but its `_value`
-        is only a narrow view. Recomputing through `update_auto` must
-        happen on the parent, which owns the full-shape storage; the
-        slice's `_value` (a view) then observes the refreshed data for
-        free, and the shared `_tainted` flag is cleared by the parent.
-        """
-        if self._parent is not None:
-            self._parent._refresh()
-        else:
-            super()._refresh()
 
     # ------------------------------------------------------------------
     # len / iter / repr / bool
