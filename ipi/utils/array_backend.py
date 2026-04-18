@@ -1,69 +1,81 @@
-"""Array-API backend resolution for i-PI.
+"""Array-API backend for i-PI.
 
 Exposes a single, process-global namespace `xp` that the numeric modules
-use instead of `numpy` directly. Defaults to numpy (via
-`array_api_compat.numpy`) so that existing behavior is unchanged.
+use in place of `numpy`. Consumers do:
 
-Switch backends with `set_default_backend("torch")` (or pass the module
-itself). Optional backends (torch, jax) are imported lazily on demand,
-so they are not required unless the user asks for them.
+    from ipi.utils.array_backend import xp
+
+    y = xp.asarray(...)
+
+The selected backend is fixed for the lifetime of the process. It is
+resolved once, in this order:
+
+1. the value of the environment variable ``IPI_ARRAY_BACKEND``
+   (``numpy`` / ``torch`` / ``jax``), if set
+2. otherwise, numpy
+
+``set_array_backend(...)`` can override the choice programmatically, but
+only if it runs *before* any numeric module has done
+``from ipi.utils.array_backend import xp`` — otherwise those modules
+have already captured the previous binding. The ``i-pi`` CLI honours a
+``--array-backend`` flag by setting ``IPI_ARRAY_BACKEND`` in the
+environment before any ipi import, so this restriction never bites
+end users of the command-line tool.
+
+Mid-run backend swaps are not supported: cached matrices, RNG state and
+similar are bound to whatever backend was active at construction.
 
 I/O and socket code paths keep using numpy directly and convert with
-`to_numpy()` at the boundary.
+``to_numpy()`` at the boundary.
 """
+
+import os
 
 import numpy as np
 
-
 __all__ = [
-    "get_xp",
-    "set_default_backend",
+    "xp",
+    "set_array_backend",
     "array_namespace",
     "to_numpy",
-    "asarray",
 ]
 
 
-_default_xp = None  # resolved lazily on first get_xp() call
+def _load_backend(name):
+    if name == "numpy":
+        import array_api_compat.numpy as _numpy_backend
+
+        return _numpy_backend
+    if name == "torch":
+        import array_api_compat.torch as _torch_backend
+
+        return _torch_backend
+    if name == "jax":
+        import array_api_compat.jax.numpy as _jax_backend
+
+        return _jax_backend
+    raise ValueError(f"Unknown array backend: {name!r}")
 
 
-def _load_numpy_backend():
-    import array_api_compat.numpy as xp_numpy
-
-    return xp_numpy
+xp = _load_backend(os.environ.get("IPI_ARRAY_BACKEND", "numpy"))
 
 
-def get_xp():
-    """Return the current default array-API namespace."""
-    global _default_xp
-    if _default_xp is None:
-        _default_xp = _load_numpy_backend()
-    return _default_xp
+def set_array_backend(backend):
+    """Rebind the process-global array backend.
 
+    ``backend`` is either a backend name (``"numpy"``/``"torch"``/``"jax"``)
+    or an already-imported array-API-compatible module. torch/jax are
+    only imported if explicitly requested, so users who don't opt in
+    never pay the dependency.
 
-def set_default_backend(backend):
-    """Set the process-global array backend.
-
-    `backend` can be the string "numpy"/"torch"/"jax" or an already-
-    imported array-api-compatible module. torch/jax are only imported
-    if explicitly requested here.
+    Must be called before any numeric module has imported ``xp``; see
+    the module docstring.
     """
-    global _default_xp
+    global xp
     if isinstance(backend, str):
-        if backend == "numpy":
-            _default_xp = _load_numpy_backend()
-        elif backend == "torch":
-            import array_api_compat.torch as xp_torch
-
-            _default_xp = xp_torch
-        elif backend == "jax":
-            import array_api_compat.jax.numpy as xp_jax
-
-            _default_xp = xp_jax
-        else:
-            raise ValueError(f"Unknown backend: {backend!r}")
+        xp = _load_backend(backend)
     else:
-        _default_xp = backend
+        xp = backend
 
 
 def array_namespace(*xs):
@@ -74,9 +86,9 @@ def array_namespace(*xs):
 
 
 def to_numpy(x):
-    """Convert an array to a plain `numpy.ndarray`.
+    """Convert an array to a plain ``numpy.ndarray``.
 
-    No-op if `x` is already a numpy array or a plain scalar. Used at
+    No-op if ``x`` is already a numpy array or a plain scalar. Used at
     I/O and socket boundaries where numpy is expected.
     """
     if isinstance(x, np.ndarray):
@@ -87,11 +99,3 @@ def to_numpy(x):
         from array_api_compat import to_device
 
         return np.asarray(to_device(x, "cpu"))
-
-
-def asarray(x, dtype=None):
-    """Convert an object to an array in the default backend."""
-    xp = get_xp()
-    if dtype is None:
-        return xp.asarray(x)
-    return xp.asarray(x, dtype=dtype)
