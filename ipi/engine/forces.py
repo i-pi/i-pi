@@ -821,11 +821,11 @@ class Forces:
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
 
             # the beads positions for this force components are obtained
-            # automatically, when needed, as a contraction of the full beads
+            # automatically, when needed, as a contraction of the full beads.
+            # Per-bead slices (b._q for b in newbeads) delegate their
+            # `_refresh` to the parent via `depend_array._parent`, so we
+            # only need to install `_func` on the parent.
             newbeads._q._func = make_rpc(newrpc, beads)
-            for b in newbeads:
-                # must update also indirect access to the beads coordinates
-                b._q._func = newbeads._q._func
 
             # makes newbeads.q depend from beads.q
             beads._q.add_dependant(newbeads._q)

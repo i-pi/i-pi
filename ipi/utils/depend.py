@@ -1,22 +1,19 @@
-"""Tools that deal with the dependency detection, value caching and automatic
-updating of variables.
+"""Dependency tracking, lazy caching, and automatic update of variables.
 
-The classes defined in this module overload the standard __get__ and __set__
-routines of the numpy ndarray class and standard library object class so that
-they automatically keep track of whether anything they depend on has been
-altered, and so only recalculate their value when necessary.
+This module provides a small data and storage class used throughout i-PI to 
+represent physical quantities. Two concrete classes wrap values:
 
-Basic quantities that depend on nothing else can be manually altered in the
-usual way, all other quantities are updated automatically and cannot be changed
-directly.
+- `depend_value`: wraps an arbitrary Python value.
+- `depend_array`: wraps an array/tensor
 
-The exceptions to this are synchronized properties, which are in effect
-multiple basic quantities all related to each other, for example the bead and
-normal mode representations of the positions and momenta. In this case any of
-the representations can be set manually, and all the other representations
-must keep in step.
+Both share the machinery defined in `depend_base`: a tainted flag, an
+optional recompute function `_func`, an optional `synchronizer` that links
+equivalent quantities (e.g. cartesian vs normal-mode bead coordinates), and
+a list of dependants to notify on change.
 
-For a more detailed discussion, see the reference manual.
+Values are recomputed lazily: when an access finds the tainted flag set,
+`_func` is called and the cached value is refreshed. Writes push: they
+taint all downstream dependants eagerly.
 """
 
 # This file is part of i-PI.
@@ -29,9 +26,14 @@ import threading
 
 from copy import deepcopy
 
+import operator as _op
+
 import numpy as np
 
-from ipi.utils.messages import verbosity, warning, info
+# NOTE: the info()/warning() calls below are disabled because they
+# add measurable cost in the hot path. Re-enable
+# manually when debugging tainting/synchronizer issues.
+# from ipi.utils.messages import verbosity, warning, info
 
 
 __all__ = [
@@ -49,56 +51,31 @@ __all__ = [
 
 
 class synchronizer(object):
-    """Class to implement synched objects.
+    """Registry of synchronized peer depend objects.
 
-    Holds the objects used to keep two or more objects in step with each other.
-    This is shared between all the synched objects.
-
-    Attributes:
-        synched: A dictionary containing all the synched objects, of the form
-            {"name": depend object}.
-        manual: A string containing the name of the object being manually
-            changed.
+    Peers share state: setting one makes the others stale (tainted) until
+    they are read, at which point they rebuild themselves from the manually
+    set peer via a per-peer entry in `_func`. `manual` tracks which peer was
+    last written.
     """
 
     def __init__(self, deps=None):
-        """Initialises synchronizer.
-
-        Args:
-           deps: Optional dictionary giving the synched objects of the form
-                 {"name": depend object}.
-        """
-
-        if deps is None:
-            self.synced = dict()
-        else:
-            self.synced = deps
-
+        self.synced = dict() if deps is None else deps
         self.manual = None
 
 
-# TODO put some error checks in the init to make sure that the object is initialized from consistent synchro and func states
 class depend_base(object):
-    """Base class for dependency handling.
-
-    Builds the majority of the machinery required for the different depend
-    objects. Contains functions to add and remove dependencies, the tainting
-    mechanism by which information about which objects have been updated is
-    passed around the dependency network, and the manual and automatic update
-    functions to check that depend objects with functions are not manually
-    updated and that synchronized objects are kept in step with the one
-    manually changed.
+    """Shared tainting, dependency, and synchronization machinery.
 
     Attributes:
-        _tainted: An array containing one boolean, which is True if one of the
-            dependencies has been changed since the last time the value was
-            cached.
-        _func: A function name giving the method of calculating the value,
-            if required. None otherwise.
-        _name: The name of the depend base object.
-        _synchro: A synchronizer object to deal with synched objects, if
-            required. None otherwise.
-        _dependants: A list containing all objects dependent on the self.
+        _tainted: 1-element bool ndarray; True if value must be recomputed.
+        _func: Callable (or dict of callables for synchronizer peers) used
+            to recompute the value when tainted.
+        _name: Human-readable name (used for diagnostics and synchronizer
+            lookup).
+        _synchro: Optional `synchronizer` linking peer quantities.
+        _dependants: Weak references to objects that must be tainted when
+            this one changes.
     """
 
     def __init__(
@@ -110,34 +87,6 @@ class depend_base(object):
         dependencies=None,
         tainted=None,
     ):
-        """Initialises depend_base.
-
-        An unusual initialisation routine, as it has to be able to deal with
-        the depend array mechanism for returning slices as new depend arrays.
-
-        This is the reason for the penultimate if statement; it automatically
-        taints objects created from scratch but does nothing to slices which
-        are not tainted.
-
-        Also, the last if statement makes sure that if a synchronized property
-        is sliced, this initialization routine does not automatically set it to
-        the manually updated property.
-
-        Args:
-            name: A string giving the name of self.
-            tainted: An optional array containing one boolean which is True if
-                one of the dependencies has been changed.
-            func: An optional argument that can be specified either by a
-                function name, or for synchronized values a dictionary of the
-                form {"name": function name}; where "name" is one of the other
-                synched objects and function name is the name of a function to
-                get the object "name" from self.
-            synchro: An optional synchronizer object.
-            dependants: An optional list containing objects that depend on self.
-            dependencies: An optional list containing objects that self
-                depends upon.
-        """
-
         if tainted is None:
             tainted = np.array([True], bool)
         if dependants is None:
@@ -154,18 +103,18 @@ class depend_base(object):
 
         self.add_synchro(synchro)
 
+        # set up dependencies and dependants given on initialization
         for item in dependencies:
             item.add_dependant(self, tainted)
 
-        # Convert dependants to weakreferences consistently
         for item in dependants:
             if not isinstance(item, weakref.ref):
                 dependants.remove(item)
                 dependants.append(weakref.ref(item))
         self._dependants = dependants
 
-        # Don't taint self if the object is a primitive one.
-        # However, do propagate tainting to dependants if required.
+        # Primitive objects start untainted; computed objects inherit the
+        # incoming tainted flag.
         if tainted[0]:
             if self._func is None:
                 self.taint(taintme=False)
@@ -173,159 +122,121 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        """Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK"""
-
-        newone = type(self)(None)
-
-        for member in newone.__dict__:
+        # Deepcopy every attribute except `_threadlock` (unpicklable RLock)
+        # and `_func` (a bound method whose `__self__` may hold non-picklable
+        # state such as a `threading.Lock`; the copy shares the reference).
+        newone = type(self).__new__(type(self))
+        for member, value in self.__dict__.items():
             if member == "_threadlock":
-                continue
-            setattr(newone, member, deepcopy(getattr(self, member), memo))
-
+                newone._threadlock = threading.RLock()
+            elif member == "_func":
+                newone._func = value
+            else:
+                setattr(newone, member, deepcopy(value, memo))
         return newone
 
     def add_synchro(self, synchro=None):
-        """Links depend object to a synchronizer."""
-
         assert (
             self._synchro is None
         ), "This object must not have a previous synchronizer!"
-
         self._synchro = synchro
         if self._synchro is not None and self._name not in self._synchro.synced:
             self._synchro.synced[self._name] = self
             self._synchro.manual = self._name
 
     def add_dependant(self, newdep, tainted=True):
-        """Adds a dependant property.
-
-        Args:
-            newdep: The depend object to be added to the dependency list.
-            tainted: A boolean that decides whether newdep should be tainted.
-               True by default.
-        """
-
         newdep.add_dependency(self, tainted=tainted)
 
     def add_dependency(self, newdep, tainted=True):
-        """Adds a dependency.
-
-        Args:
-            newdep: The depend object self now depends upon.
-            tainted: A boolean that decides whether self should
-                be tainted. True by default.
-        """
-
         newdep._dependants.append(weakref.ref(self))
         if tainted:
             self.taint(taintme=True)
 
     def taint(self, taintme=True):
-        """Recursively sets tainted flag on dependent objects.
-
-        The main function dealing with the dependencies. Taints all objects
-        further down the dependency tree until either all objects have been
-        tainted, or it reaches only objects that have already been tainted.
-        Note that in the case of a dependency loop the initial setting of
-        _tainted to True prevents an infinite loop occuring.
-
-        Also, in the case of a synchro object, the manually set quantity is not
-        tainted, as it is assumed that synchro objects only depend on each
-        other.
-
-        Args:
-           taintme: A boolean giving whether self should be tainted at the end.
-              True by default.
-        """
-
-        # propagates dependency
+        """Plain directed acyclic graph walk: taint dependants, optionally self."""
         for item in self._dependants:
             item = item()
+            if item is None:
+                continue
             if not item._tainted[0]:
                 item.taint()
+        self._tainted[0] = taintme
 
+    def _taint_synchro(self):
+        """Mark peer synchronized quantities as stale.
+
+        Called from setter paths when `_synchro` is present. Sets
+        `_synchro.manual` to self and taints all other peers (and their
+        dependants) while leaving self clean.
+        """
         if self._synchro is None:
-            self._tainted[0] = taintme
-        else:
-            self._tainted[0] = False
-            for v in self._synchro.synced.values():
-                if not v._tainted[0]:
-                    v._tainted[0] = v._name != self._synchro.manual
-                    # do the propagation on the dependants here
-                    # so we don't iterate multiple times over synchro
-                    for item in v._dependants:
-                        item = item()
-                        if not item._tainted[0]:
-                            item.taint()
-            self._tainted[0] = taintme and (not self._name == self._synchro.manual)
+            return
+        self._synchro.manual = self._name
+        for v in self._synchro.synced.values():
+            if v is self or v._tainted[0]:
+                continue
+            v._tainted[0] = True
+            for item in v._dependants:
+                item = item()
+                if item is None:
+                    continue
+                if not item._tainted[0]:
+                    item.taint()
 
     def tainted(self):
-        """Returns tainted flag."""
-
         return self._tainted[0]
 
     def update_auto(self):
-        """Automatic update routine.
+        """Recompute from `_func` when tainted.
 
-        Updates the value when get has been called and self has been tainted.
+        For synchronized peers, `_func` is a dict keyed by peer name; the
+        value for the manually-set peer is invoked.
         """
-
         if self._synchro is not None:
-            if not self._name == self._synchro.manual:
+            if self._name != self._synchro.manual:
                 self.set(self._func[self._synchro.manual](), manual=False)
-                info(f" @depend: Set value for {self._name} (syncro)", verbosity.debug)
+                # info(f" @depend: Set value for {self._name} (syncro)", verbosity.debug)
             else:
-                warning(
-                    self._name + " probably shouldn't be tainted (synchro)",
-                    verbosity.low,
-                )
+                # warning(self._name + " probably shouldn't be tainted (synchro)", verbosity.low)
+                pass
         elif self._func is not None:
             self.set(self._func(), manual=False)
-            info(f" @depend: Set value for {self._name} (auto)", verbosity.debug)
+            # info(f" @depend: Set value for {self._name} (auto)", verbosity.debug)
         else:
-            warning(
-                self._name + " probably shouldn't be tainted (value)", verbosity.low
-            )
+            # warning(self._name + " probably shouldn't be tainted (value)", verbosity.low)
+            pass
 
     def update_man(self):
-        """Manual update routine.
-
-        Updates the value when the value has been manually set. Also raises an
-        exception if a calculated quantity has been manually set. Also starts
-        the tainting routine.
-
-        Raises:
-            NameError: If a calculated quantity has been manually set.
-        """
-
+        """Post-manual-write hook: propagate synchro state or reject writes
+        to auto-computed quantities."""
         if self._synchro is not None:
-            self._synchro.manual = self._name
-            info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
+            self._taint_synchro()
+            # info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
         elif self._func is not None:
             raise NameError(
                 "Cannot set manually the value of the automatically-computed property <"
                 + self._name
                 + ">"
             )
-        self.taint(taintme=False)
 
     def set(self, value, manual=False):
-        """Dummy setting routine."""
-
         raise ValueError("Undefined set function for base depend class")
 
     def get(self):
-        """Dummy getting routine."""
-
         raise ValueError("Undefined get function for base depend class")
+
+    def _refresh(self):
+        """Cold-path recompute. Callers are expected to gate with
+        `if self._tainted[0]: self._refresh()` so the fast path stays inline.
+        Double-checks under the lock to make the update thread-safe."""
+        with self._threadlock:
+            if self._tainted[0]:
+                self.update_auto()
+                self.taint(taintme=False)
 
 
 class depend_value(depend_base):
-    """Depend class for scalar values.
-
-    Attributes:
-        _value: The value associated with self.
-    """
+    """Depend wrapper around a scalar/Python value."""
 
     def __init__(
         self,
@@ -337,100 +248,48 @@ class depend_value(depend_base):
         dependencies=None,
         tainted=None,
     ):
-        """Initialises depend_value.
-
-        Args:
-            name: A string giving the name of self.
-            value: The value of the object. Optional.
-            tainted: An optional array giving the tainted flag. Default is [True].
-            func: An optional argument that can be specified either by a function
-                name, or for synchronized values a dictionary of the form
-                {"name": function name}; where "name" is one of the other
-                synched objects and function name is the name of a function to
-                get the object "name" from self.
-            synchro: An optional synchronizer object.
-            dependants: An optional list containing objects that depend on self.
-            dependencies: An optional list containing objects that self
-                depends upon.
-        """
-
         self._value = value
-        super(depend_value, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted
-        )
+        super().__init__(name, synchro, func, dependants, dependencies, tainted)
 
     def get(self):
-        """Returns value, after recalculating if necessary."""
-
         return self.__get__(self, self.__class__)
 
     def __get__(self, instance=None, owner=None):
-        """Overwrites standard get function
-
-        Returns a cached value, recomputing only if the value is tainted.
-        """
-
         if self._tainted[0]:
-            with self._threadlock:
-                self.update_auto()
-                self.taint(taintme=False)
-
+            self._refresh()
         return self._value
 
     def set(self, value, manual=True):
-        """Alters value and taints dependencies.
-
-        Overwrites the standard method of setting value, so that dependent
-        quantities are tainted, and so we check that computed quantities are not
-        manually updated.
-        """
-
         with self._threadlock:
             self._value = value
             if manual:
                 self.update_man()
+            self.taint(taintme=False)
 
     def __set__(self, instance, value):
-        """Overwrites standard set function."""
-
         self.set(value)
 
 
-class depend_array(np.ndarray, depend_base):
-    """Depend class for arrays.
+def _is_scalar_index(index, ndim):
+    """True if `array[index]` returns a scalar for an array of rank `ndim`."""
+    if hasattr(index, "__len__"):
+        if len(index) == ndim and isinstance(index, tuple):
+            for i in index:
+                if isinstance(i, slice):
+                    return False
+            return True
+        return False
+    return ndim <= 1
 
-    Differs from depend_value as arrays handle getting items in a different
-    way to scalar quantities, and as there needs to be support for slicing an
-    array. Initialisation is also done in a different way for ndarrays.
 
-    Attributes:
-        _bval: The base deparray storage space. Equal to dstrip(self) unless
-            self is a slice.
+class depend_array(depend_base):
+    """Depend wrapper around an ndarray (composition, not inheritance).
+
+    The underlying array lives in `self._value`. Slice-views share memory
+    with the parent's `_value` and share the parent's `_tainted` flag and
+    `_dependants` list, so writing through a slice taints the parent's
+    downstream consumers.
     """
-
-    def __new__(
-        cls,
-        value,
-        name,
-        synchro=None,
-        func=None,
-        dependants=None,
-        dependencies=None,
-        tainted=None,
-        base=None,
-    ):
-        """Creates a new array from a template.
-
-        Called whenever a new instance of depend_array is created. Casts the
-        array base into an appropriate form before passing it to
-        __array_finalize__().
-
-        Args:
-           See __init__().
-        """
-
-        obj = np.asarray(value).view(cls)
-        return obj
 
     def __init__(
         self,
@@ -442,326 +301,360 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
+        parent=None,
     ):
-        """Initialises depend_array.
-
-        Note that this is only called when a new array is created by an
-        explicit constructor.
-
-        Args:
-            name: A string giving the name of self.
-            value: The (numpy) array to serve as the memory base.
-            tainted: An optional array giving the tainted flag. Default is [True].
-            func: An optional argument that can be specified either by a function
-                name, or for synchronized values a dictionary of the form
-                {"name": function name}; where "name" is one of the other
-                synched objects and function name is the name of a function to
-                get the object "name" from self.
-            synchro: An optional synchronizer object.
-            dependants: An optional list containing objects that depend on self.
-            dependencies: An optional list containing objects that self
-                depends upon.
-        """
-
-        super(depend_array, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted
-        )
-
-        if base is None:
-            self._bval = value
+        if base is not None:
+            # Slice-view: wrap an already-allocated view of the parent.
+            self._value = base
+        elif value is None:
+            # Sentinel used by __deepcopy__; members will be overwritten.
+            self._value = np.empty(0)
+        elif isinstance(value, np.ndarray):
+            self._value = value
         else:
-            self._bval = base
+            self._value = np.asarray(value)
 
-    def copy(self, order="C", maskna=None):
-        """Wrapper for numpy copy mechanism."""
+        # Slice-views keep a reference to the parent so that refreshing a
+        # stale slice delegates the recompute to the parent (which owns
+        # the full-shape `_value`). Without this, `update_auto` on a
+        # slice would try to assign a full-shape result into the slice's
+        # narrower view.
+        self._parent = parent
 
-        # Sets a flag and hands control to the numpy copy
-        self._fcopy = True
-        return super(depend_array, self).copy(order)
+        super().__init__(name, synchro, func, dependants, dependencies, tainted)
 
-    def __array_finalize__(self, obj):
-        """Deals with properly creating some arrays.
+    # ------------------------------------------------------------------
+    # numpy interop
+    # ------------------------------------------------------------------
 
-        In the case where a function acting on a depend array returns a ndarray,
-        this casts it into the correct form and gives it the
-        depend machinery for other methods to be able to act upon it. New
-        depend_arrays will next be passed to __init__ ()to be properly
-        initialized, but some ways of creating arrays do not call __new__() or
-        __init__(), so need to be initialized.
+    def __array__(self, dtype=None, copy=None):
+        """Lets np.asarray / np.* accept us transparently.
+
+        Zero-copy fast path when the dtype matches.
         """
+        if self._tainted[0]:
+            self._refresh()
+        v = self._value
+        if dtype is None or dtype == v.dtype:
+            return v
+        return v.astype(dtype)
 
-        depend_base.__init__(self, name="")
-
-        if type(obj) is depend_array:
-            # We are in a view cast or in new from template. Unfortunately
-            # there is no sure way to tell (or so it seems). Hence we need to
-            # handle special cases, and hope we are in a view cast otherwise.
-            if hasattr(obj, "_fcopy"):
-                del obj._fcopy  # removes the "copy flag"
-                self._bval = dstrip(self)
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """Unwrap depend_array inputs, run the ufunc on raw arrays."""
+        unwrapped = []
+        for x in inputs:
+            if isinstance(x, depend_array):
+                if x._tainted[0]:
+                    x._refresh()
+                unwrapped.append(x._value)
             else:
-                # Assumes we are in view cast, so copy over the attributes from the
-                # parent object. Typical case: when transpose is performed as a
-                # view.
-                super(depend_array, self).__init__(
-                    obj._name,
-                    obj._synchro,
-                    obj._func,
-                    obj._dependants,
-                    None,
-                    obj._tainted,
-                )
-                self._bval = obj._bval
-        else:
-            # Most likely we came here on the way to init.
-            # Just sets a defaults for safety
-            self._bval = dstrip(self)
-
-    def __array_prepare__(self, arr, context=None):
-        """Prepare output array for ufunc.
-
-        Depending on the context we try to understand if we are doing an
-        in-place operation (in which case we want to keep the return value a
-        deparray) or we are generating a new array as a result of the ufunc.
-        In this case there is no way to know if dependencies should be copied,
-        so we strip and return a ndarray.
-        """
-
-        if context is None or len(context) < 2 or not type(context[0]) is np.ufunc:
-            # It is not clear what we should do. If in doubt, strip dependencies.
-            return np.ndarray.__array_prepare__(
-                self.view(np.ndarray), arr.view(np.ndarray), context
+                unwrapped.append(x)
+        if "out" in kwargs:
+            kwargs["out"] = tuple(
+                o._value if isinstance(o, depend_array) else o for o in kwargs["out"]
             )
-        elif len(context[1]) > context[0].nin and context[0].nout > 0:
-            # We are being called by a ufunc with a output argument, which is being
-            # actually used. Most likely, something like an increment,
-            # so we pass on a deparray
-            return super(depend_array, self).__array_prepare__(arr, context)
-        else:
-            # Apparently we are generating a new array.
-            # We have no way of knowing its
-            # dependencies, so we'd better return a ndarray view!
-            return np.ndarray.__array_prepare__(
-                self.view(np.ndarray), arr.view(np.ndarray), context
-            )
+        return getattr(ufunc, method)(*unwrapped, **kwargs)
 
-    def __array_wrap__(self, arr, context=None):
-        """Wraps up output array from ufunc.
+    # ------------------------------------------------------------------
+    # Propagate common array attributes to allow direct access without unwrapping.
+    # ------------------------------------------------------------------
 
-        See docstring of __array_prepare__().
-        """
+    @property
+    def shape(self):
+        return self._value.shape
 
-        if context is None or len(context) < 2 or not type(context[0]) is np.ufunc:
-            return np.ndarray.__array_wrap__(
-                self.view(np.ndarray), arr.view(np.ndarray), context
-            )
-        elif len(context[1]) > context[0].nin and context[0].nout > 0:
-            return super(depend_array, self).__array_wrap__(arr, context)
-        else:
-            return np.ndarray.__array_wrap__(
-                self.view(np.ndarray), arr.view(np.ndarray), context
-            )
+    @property
+    def dtype(self):
+        return self._value.dtype
 
-    # whenever possible in compound operations just return a regular ndarray
-    __array_priority__ = -1.0
+    @property
+    def ndim(self):
+        return self._value.ndim
+
+    @property
+    def size(self):
+        return self._value.size
+
+    @property
+    def T(self):
+        return self._value.T
+
+    @property
+    def flat(self):
+        return self._value.flat
+
+    @property
+    def nbytes(self):
+        return self._value.nbytes
+
+    @property
+    def itemsize(self):
+        return self._value.itemsize
+
+    @property
+    def real(self):
+        return self._value.real
+
+    @property
+    def imag(self):
+        return self._value.imag
+
+    # ------------------------------------------------------------------
+    # Cover any other attribute (.astype, .copy, .tobytes, .ctypes, .view, ...)
+    # ------------------------------------------------------------------
+
+    def __getattr__(self, name):
+        # Called only when normal lookup fails. Guard against recursion during
+        # partial initialization: _value may not exist yet.
+        if name.startswith("_"):
+            raise AttributeError(name)
+        try:
+            value = object.__getattribute__(self, "_value")
+        except AttributeError:
+            raise AttributeError(name)
+        return getattr(value, name)
+
+    # ------------------------------------------------------------------
+    # Arithmetic / comparison dunders
+    #
+    # Delegate to the underlying `_value`'s native operators so the result
+    # type matches the backend.
+    # ------------------------------------------------------------------
+
+    # Arithmetic / comparison dunders are attached after the class body
+    # (see `_install_depend_array_operators`). Each dunder inlines the
+    # tainted-check + other-unwrap to avoid an extra Python call per
+    # operation on the hot path.
+
+    # Required because we override __eq__.
+    __hash__ = None
+
+    # ------------------------------------------------------------------
+    # Shape helpers (explicit so they return the intended type)
+    # ------------------------------------------------------------------
 
     def reshape(self, newshape):
-        """Changes the shape of the base array.
-
-        Args:
-           newshape: A tuple giving the desired shape of the new array.
-
-        Returns:
-           A depend_array with the dimensions given by newshape.
-        """
-
+        """Return a reshaped depend_array sharing memory with self."""
         return depend_array(
-            dstrip(self).reshape(newshape),
+            value=None,
+            base=self._value.reshape(newshape),
             name=self._name,
             synchro=self._synchro,
-            func=self._func,
             dependants=self._dependants,
             tainted=self._tainted,
-            base=self._bval,
+            parent=self,
         )
 
     def flatten(self):
-        """Makes the base array one dimensional.
+        """Return a 1D depend_array sharing memory with self."""
+        return self.reshape(self._value.size)
 
-        Returns:
-            A flattened array.
-        """
-
-        return self.reshape(self.size)
-
-    @staticmethod
-    def __scalarindex(index, depth=1):
-        """Checks if an index points at a scalar value.
-
-        Used so that looking up one item in an array returns a scalar, whereas
-        looking up a slice of the array returns a new array with the same
-        dependencies as the original, so that changing the slice also taints
-        the global array.
-
-        Arguments:
-            index: the index to be checked.
-            depth: the rank of the array which is being accessed. Default value
-                is 1.
-
-        Returns:
-            A logical stating whether a __get__ instruction based
-            on index would return a scalar.
-        """
-
-        if hasattr(index, "__len__"):
-            if len(index) == depth and isinstance(index, tuple):
-                # if the index is a tuple check it does not contain slices
-                for i in index:
-                    if isinstance(i, slice):
-                        return False
-                return True
-        elif depth <= 1:
-            return True
-
-        return False
-
-    def __getitem__(self, index):
-        """Returns value[index], after recalculating if necessary.
-
-        Overwrites the standard method of getting value, so that value
-        is recalculated if tainted. Scalar slices are returned as an ndarray,
-        so without depend machinery. If you need a "scalar depend" which
-        behaves as a slice, just create a 1x1 matrix, e.g b=a(7,1:2)
-
-        Args:
-           index: A slice variable giving the appropriate slice to be read.
-        """
-
-        if self._tainted[0]:
-            with self._threadlock:
-                self.update_auto()
-                self.taint(taintme=False)
-
-        if self.__scalarindex(index, self.ndim):
-            return self.view(np.ndarray)[index]
-        else:
-            return super(depend_array, self).__getitem__(index)
-
-    def __getslice__(self, i, j):
-        """Overwrites standard get function."""
-
-        return self.__getitem__(slice(i, j, None))
-
-    def get(self):
-        """Alternative to standard get function."""
-
-        return self.__getitem__(slice(None, None, None))
+    # ------------------------------------------------------------------
+    # Descriptor + indexing
+    # ------------------------------------------------------------------
 
     def __get__(self, instance=None, owner=None):
-        """Overwrites standard get function."""
-
-        # It is worth duplicating this code that is also used in __getitem__ as this
-        # is called most of the time, and we avoid creating a load of copies pointing to the same depend_array
-
         if self._tainted[0]:
-            with self._threadlock:
-                self.update_auto()
-                self.taint(taintme=False)
-
+            self._refresh()
         return self
 
-    def __setitem__(self, index, value, manual=True):
-        """Alters value[index] and taints dependencies.
+    def __set__(self, instance, value):
+        self.set(value, manual=True)
 
-        Overwrites the standard method of setting value, so that dependent
-        quantities are tainted, and so we check that computed quantities are not
-        manually updated.
+    def __getitem__(self, index):
+        if self._tainted[0]:
+            self._refresh()
+        if _is_scalar_index(index, self._value.ndim):
+            return self._value[index]
+        return depend_array(
+            value=None,
+            base=self._value[index],
+            name=self._name,
+            synchro=self._synchro,
+            dependants=self._dependants,
+            tainted=self._tainted,
+            parent=self,
+        )
 
-        Args:
-           index: A slice variable giving the appropriate slice to be read.
-           value: The new value of the slice.
-           manual: Optional boolean giving whether the value has been changed
-              manually. True by default.
-        """
-
+    def __setitem__(self, index, value):
         with self._threadlock:
-            if manual:
-                self.view(np.ndarray)[index] = value
+            self._value[index] = value
+            # Skip update_man() on plain leaf-storage arrays (no synchro,
+            # no computed func) — there is nothing for it to do.
+            if self._synchro is not None or self._func is not None:
                 self.update_man()
-            elif index == slice(None, None, None):
-                self._bval[index] = value
-                self.taint(taintme=False)
-            else:
-                raise IndexError(
-                    "Automatically computed arrays should span the whole parent"
-                )
-
-    def __setslice__(self, i, j, value):
-        """Overwrites standard set function."""
-
-        return self.__setitem__(slice(i, j), value)
+            self.taint(taintme=False)
 
     def set(self, value, manual=True):
-        """Alterative to standard set function.
+        """Full-array assignment. `manual=False` is used by `update_auto`."""
+        with self._threadlock:
+            self._value[...] = value
+            if manual and (self._synchro is not None or self._func is not None):
+                self.update_man()
+            self.taint(taintme=False)
 
-        Args:
-            See __setitem__().
+    def get(self):
+        if self._tainted[0]:
+            self._refresh()
+        return self
+
+    def _refresh(self):
+        """Slice-view aware refresh.
+
+        A slice-view shares `_tainted` with its parent but its `_value`
+        is only a narrow view. Recomputing through `update_auto` must
+        happen on the parent, which owns the full-shape storage; the
+        slice's `_value` (a view) then observes the refreshed data for
+        free, and the shared `_tainted` flag is cleared by the parent.
         """
+        if self._parent is not None:
+            self._parent._refresh()
+        else:
+            super()._refresh()
 
-        self.__setitem__(slice(None, None), value=value, manual=manual)
+    # ------------------------------------------------------------------
+    # len / iter / repr / bool
+    # ------------------------------------------------------------------
 
-    def __set__(self, instance, value):
-        """Overwrites standard set function."""
+    def __len__(self):
+        return len(self._value)
 
-        self.__setitem__(slice(None, None), value=value)
+    def __iter__(self):
+        if self._tainted[0]:
+            self._refresh()
+        return iter(self._value)
+
+    def __repr__(self):
+        return f"depend_array({self._name!r}, {self._value!r})"
+
+    def __bool__(self):
+        if self._tainted[0]:
+            self._refresh()
+        return bool(self._value)
+
+    # ------------------------------------------------------------------
+    # Support pickling by ignoring the unpicklable threadlock and rebuilding it on unpickle.
+    # ------------------------------------------------------------------
+
+    def __getstate__(self):
+        state = {k: v for k, v in self.__dict__.items() if k != "_threadlock"}
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._threadlock = threading.RLock()
 
 
-# BEGINS NUMPY FUNCTIONS OVERRIDE
-# np.dot and other numpy.linalg functions have the nasty habit to
-# view cast to generate the output. Since we don't want to pass on
-# dependencies to the result of these functions, and we can't use
-# the ufunc mechanism to demote the class type to ndarray, we must
-# overwrite np.dot and other similar functions.
+# ----------------------------------------------------------------------
+# Install arithmetic / comparison dunders on depend_array.
+#
+# Factored here (not in the class body) so a single template generates
+# all ~25 dunders. Each generated method inlines the tainted-check +
+# operand-unwrap, so the hot path costs one Python call (the dunder
+# itself) plus one bool check.
+# ----------------------------------------------------------------------
 
-# ** np.dot
+
+def _make_binop(op):
+    def method(self, other):
+        if self._tainted[0]:
+            self._refresh()
+        if isinstance(other, depend_array):
+            if other._tainted[0]:
+                other._refresh()
+            other = other._value
+        return op(self._value, other)
+
+    method.__name__ = f"__{op.__name__.strip('_')}__"
+    return method
+
+
+def _make_rbinop(op):
+    def method(self, other):
+        if self._tainted[0]:
+            self._refresh()
+        if isinstance(other, depend_array):
+            if other._tainted[0]:
+                other._refresh()
+            other = other._value
+        return op(other, self._value)
+
+    method.__name__ = f"__r{op.__name__.strip('_')}__"
+    return method
+
+
+def _make_unop(op, name):
+    def method(self):
+        if self._tainted[0]:
+            self._refresh()
+        return op(self._value)
+
+    method.__name__ = name
+    return method
+
+
+_BINOPS = [
+    ("__add__", "__radd__", _op.add),
+    ("__sub__", "__rsub__", _op.sub),
+    ("__mul__", "__rmul__", _op.mul),
+    ("__truediv__", "__rtruediv__", _op.truediv),
+    ("__floordiv__", "__rfloordiv__", _op.floordiv),
+    ("__mod__", "__rmod__", _op.mod),
+    ("__pow__", "__rpow__", _op.pow),
+    ("__matmul__", "__rmatmul__", _op.matmul),
+    ("__and__", "__rand__", _op.and_),
+    ("__or__", "__ror__", _op.or_),
+    ("__xor__", "__rxor__", _op.xor),
+]
+
+for _fwd, _rev, _fn in _BINOPS:
+    setattr(depend_array, _fwd, _make_binop(_fn))
+    setattr(depend_array, _rev, _make_rbinop(_fn))
+
+for _name, _fn in (
+    ("__eq__", _op.eq),
+    ("__ne__", _op.ne),
+    ("__lt__", _op.lt),
+    ("__le__", _op.le),
+    ("__gt__", _op.gt),
+    ("__ge__", _op.ge),
+):
+    setattr(depend_array, _name, _make_binop(_fn))
+
+setattr(depend_array, "__neg__", _make_unop(_op.neg, "__neg__"))
+setattr(depend_array, "__pos__", _make_unop(_op.pos, "__pos__"))
+setattr(depend_array, "__abs__", _make_unop(abs, "__abs__"))
+
+
+# ----------------------------------------------------------------------
+# Module-level helpers
+# ----------------------------------------------------------------------
+
+
+# Kept for backward compatibility with callers that imported `noddot`.
+# The historical `np.dot = noddot` global patch is removed: `__array_ufunc__`
+# now handles `np.dot` correctly for depend_array inputs.
 noddot = np.dot
 
 
 def ddot(da, db):
-    a = dstrip(da)
-    b = dstrip(db)
-
-    return noddot(a, b)
-
-
-# activate this to have safe dstripping
-# np.dot = ddot
-# activate this if you want to assume dot will almost always be applied on dstripped vectors
-np.dot = noddot
-
-# ENDS NUMPY FUNCTIONS OVERRIDE
+    """`np.dot` on the unwrapped operands."""
+    return np.dot(dstrip(da), dstrip(db))
 
 
 def dstrip(da):
-    """Removes dependencies from a depend_array.
+    """Return the underlying array/value without depend machinery.
 
-    Takes a depend_array and returns its value as a ndarray, effectively
-    stripping the dependencies from the ndarray. This speeds up a lot of
-    calculations involving these arrays. Must only be used if the value of the
-    array is not going to be changed.
-
-    Args:
-        deparray: A depend_array.
-
-    Returns:
-        A ndarray with the same value as deparray.
+    Passes non-depend inputs through unchanged. This is needed because
+    a computed `depend_value`/`depend_array` accessed via the
+    `dproperties` descriptor returns the raw ndarray/scalar (not the
+    wrapper), and several call sites `dstrip` that result a second
+    time. The historical low-verbosity warning for the non-depend case
+    has been removed.
     """
-
-    try:
-        return da.view(np.ndarray)
-    except:  # TODO: remove all remaining stray dstrip so we don't need to check here
-        warning("dstrip should only be called on `depend_array`s", verbosity.low)
-        return da
+    if isinstance(da, (depend_array, depend_value)):
+        return da._value
+    return da
 
 
 def dpipe(dfrom, dto, item=-1):
@@ -795,8 +688,6 @@ def dcopy(dfrom, dto):
     dto.add_synchro(dfrom._synchro)
     dto._tainted = dfrom._tainted
     dto._func = dfrom._func
-    if hasattr(dfrom, "_bval"):
-        dto._bval = dfrom._bval
 
 
 def depraise(exception):
@@ -804,28 +695,33 @@ def depraise(exception):
 
 
 def _inject_depend_property(cls, attr_name):
+    """Adds a property `<attr_name>` to `cls` that forwards to the depend member
+    `_<attr_name>`. The depend member must already exist on the class; this is
+    intended to be used with `depend_value` or `depend_array` members defined in
+    the class body, and is used by `dproperties` to expose them as attributes."""
     private_name = f"_{attr_name}"
 
     def getter(self):
-        return getattr(self, private_name).__get__(self, cls)
+        dep = self.__dict__[private_name]
+        if dep._tainted[0]:
+            dep._refresh()
+        return dep._value if type(dep) is depend_value else dep
 
+    # `__set__` on both depend_value and depend_array just forwards to
+    # `.set(value)`; call it directly.
     def setter(self, value):
-        return getattr(self, private_name).__set__(self, value)
+        self.__dict__[private_name].set(value)
 
     setattr(cls, attr_name, property(getter, setter))
 
 
 def dproperties(cls, attr_names):
-    """
-    Adds to a class property wrappers to access its depend members.
-    Assumes that depend objects are named with an underscore prefix, and
-    creates getters and setters with the given names.
+    """Expose depend members `_<name>` as attributes `<name>` on `cls`.
 
-    If a class `A` contains a `_val` depend object, one should use
-    `dproperties(A, ["val"])`.
+    Example: `dproperties(A, ["val"])` on a class with `self._val =
+    depend_value(...)` makes `obj.val` read/write through the descriptor.
     """
     if not isinstance(attr_names, list):
         attr_names = [attr_names]
-
     for attr_name in attr_names:
         _inject_depend_property(cls, attr_name)
