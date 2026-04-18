@@ -1,5 +1,6 @@
 black==24.8.0
 numpy<3
+array_api_compat
 pathlib
 pytest
 pytest-mock
