@@ -216,9 +216,10 @@ class Random(object):
             import torch
 
             if size is None:
-                return low + (high - low) * torch.rand(
-                    (), generator=self._torch_gen
-                ).item()
+                return (
+                    low
+                    + (high - low) * torch.rand((), generator=self._torch_gen).item()
+                )
             shape = _normalise_size(size)
             out = torch.empty(shape)
             out.uniform_(low, high, generator=self._torch_gen)

@@ -12,8 +12,6 @@ from array_api_compat import is_numpy_namespace
 from ipi.utils.array_backend import xp
 from ipi.utils.depend import dstrip
 
-# Transient compat imports: remove once depend stores xp natively.
-from ipi.utils.depend import to_xp
 from ipi.utils.messages import verbosity, info, warning
 
 
@@ -203,7 +201,9 @@ class nm_trans(object):
         if len(self._open) > 0:
             # atoms flagged as open paths use the open-path matrix instead
             for io in self._open:
-                qnm[:, 3 * io] = xp.tensordot(self._b2o_nm, q[:, 3 * io], axes=([1], [0]))
+                qnm[:, 3 * io] = xp.tensordot(
+                    self._b2o_nm, q[:, 3 * io], axes=([1], [0])
+                )
                 qnm[:, 3 * io + 1] = xp.tensordot(
                     self._b2o_nm, q[:, 3 * io + 1], axes=([1], [0])
                 )
@@ -223,7 +223,9 @@ class nm_trans(object):
         q = xp.tensordot(self._nm2b, qnm, axes=([1], [0]))
         if len(self._open) > 0:
             for io in self._open:
-                q[:, 3 * io] = xp.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=([1], [0]))
+                q[:, 3 * io] = xp.tensordot(
+                    self._o_nm2b, qnm[:, 3 * io], axes=([1], [0])
+                )
                 q[:, 3 * io + 1] = xp.tensordot(
                     self._o_nm2b, qnm[:, 3 * io + 1], axes=([1], [0])
                 )
@@ -280,7 +282,7 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = xp.asarray(to_xp(dstrip(q)), copy=True)
+            q_scal = xp.asarray(dstrip(q), copy=True)
         else:
             # applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
             q_scal = xp.tensordot(self._b1tob2, q, axes=([1], [0]))
@@ -312,7 +314,7 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = xp.asarray(to_xp(dstrip(q)), copy=True)
+            q_scal = xp.asarray(dstrip(q), copy=True)
         else:
             # see b1tob2 for the rationale for dealing with open path transformations
             q_scal = xp.tensordot(self._b2tob1, q, axes=([1], [0]))
@@ -588,7 +590,9 @@ class nm_fft(
         real_part[0, :] = qnm[0, :]
         if not odd:
             real_part[1:-1, :] = qnm[1:nmodes, :] * isqrt2
-            imag_part[1:-1, :] = xp.flip(qnm[nmodes + 1 : nbeads, :], axis=(0,)) * isqrt2
+            imag_part[1:-1, :] = (
+                xp.flip(qnm[nmodes + 1 : nbeads, :], axis=(0,)) * isqrt2
+            )
             real_part[nmodes, :] = qnm[nmodes, :]
         else:
             real_part[1:, :] = qnm[1 : nmodes + 1, :] * isqrt2

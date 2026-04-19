@@ -30,7 +30,7 @@ import operator as _op
 
 import numpy as np
 
-from ipi.utils.array_backend import xp as _xp, to_numpy as _to_numpy
+from ipi.utils.array_backend import xp
 
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
@@ -49,8 +49,6 @@ __all__ = [
     "dproperties",
     "ddot",
     "noddot",
-    "to_xp",
-    "from_xp",
 ]
 
 
@@ -312,11 +310,14 @@ class depend_array(depend_base):
             self._value = base
         elif value is None:
             # Sentinel used by __deepcopy__; members will be overwritten.
-            self._value = np.empty(0)
-        elif isinstance(value, np.ndarray):
-            self._value = value
+            self._value = xp.empty(0)
         else:
-            self._value = np.asarray(value)
+            arr = np.asarray(value)
+            # xp only handles numeric dtypes; strings/objects stay as numpy.
+            if arr.dtype.kind in "biufc":
+                self._value = xp.asarray(arr)
+            else:
+                self._value = arr
 
         # Slice-views keep a reference to the parent so that refreshing a
         # stale slice delegates the recompute to the parent (which owns
@@ -326,38 +327,6 @@ class depend_array(depend_base):
         self._parent = parent
 
         super().__init__(name, synchro, func, dependants, dependencies, tainted)
-
-    # ------------------------------------------------------------------
-    # numpy interop
-    # ------------------------------------------------------------------
-
-    def __array__(self, dtype=None, copy=None):
-        """Lets np.asarray / np.* accept us transparently.
-
-        Zero-copy fast path when the dtype matches.
-        """
-        if self._tainted[0]:
-            self._refresh()
-        v = self._value
-        if dtype is None or dtype == v.dtype:
-            return v
-        return v.astype(dtype)
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        """Unwrap depend_array inputs, run the ufunc on raw arrays."""
-        unwrapped = []
-        for x in inputs:
-            if isinstance(x, depend_array):
-                if x._tainted[0]:
-                    x._refresh()
-                unwrapped.append(x._value)
-            else:
-                unwrapped.append(x)
-        if "out" in kwargs:
-            kwargs["out"] = tuple(
-                o._value if isinstance(o, depend_array) else o for o in kwargs["out"]
-            )
-        return getattr(ufunc, method)(*unwrapped, **kwargs)
 
     # ------------------------------------------------------------------
     # Propagate common array attributes to allow direct access without unwrapping.
@@ -451,7 +420,7 @@ class depend_array(depend_base):
 
     def flatten(self):
         """Return a 1D depend_array sharing memory with self."""
-        return self.reshape(self._value.size)
+        return self.reshape(-1)
 
     # ------------------------------------------------------------------
     # Descriptor + indexing
@@ -661,21 +630,6 @@ def dstrip(da):
     return da
 
 
-# Transient compat shims. Right now depend stores numpy internally and
-# callers that want xp arrays at their boundaries must convert
-# explicitly. Once depend is ported to store xp natively, the
-# conversions will move inside depend and every `to_xp`/`from_xp` call
-# site can be deleted without changing behaviour.
-def to_xp(x):
-    """Numpy-side value -> active xp backend."""
-    return _xp.asarray(x)
-
-
-def from_xp(x):
-    """Active xp backend -> numpy ndarray."""
-    return _to_numpy(x)
-
-
 def dpipe(dfrom, dto, item=-1):
     """Synchonizes two depend objects.
 
@@ -690,7 +644,7 @@ def dpipe(dfrom, dto, item=-1):
     """
 
     if item < 0:
-        dto._func = lambda: dfrom.__get__(dfrom, dfrom.__class__)
+        dto._func = lambda: dstrip(dfrom.__get__(dfrom, dfrom.__class__))
     else:
         dto._func = lambda i=item: dfrom.__getitem__(i)
     dto.add_dependency(dfrom)

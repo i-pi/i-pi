@@ -22,6 +22,8 @@ from copy import copy
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
 
@@ -1255,6 +1257,9 @@ class InputArray(InputValue):
         else:
             value = value.reshape(self.shape.fetch()).copy()
 
+        # I/O boundary: hand off to the active array backend.
+        if isinstance(value, np.ndarray) and value.dtype.kind in "biufc":
+            value = xp.asarray(value)
         return value
 
     def write(self, name="", indent=""):
