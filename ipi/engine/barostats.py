@@ -35,6 +35,24 @@ from ipi.engine.cell import Cell
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
+def _kstress_mts_core(q, qc, fall, pc, m_inv, nbeads, is_last):
+    """Pure-tensor kernel of BaroBZP.kstress_mts, split out for torch.compile."""
+    qqc = (q - qc).reshape((-1, 3))
+    fall_r = fall.reshape((-1, 3))
+    kst = -qqc.T @ fall_r
+    if is_last:
+        pc_r = pc.reshape((-1, 3))
+        diag = ((pc_r ** 2).T @ m_inv) * nbeads
+        kst.reshape(-1)[::4] += diag
+    return kst
+
+
+if xp.__name__.endswith("torch"):
+    import torch as _torch
+
+    _kstress_mts_core = _torch.compile(_kstress_mts_core, dynamic=False)
+
+
 def mask_from_fix(fix):
     """Builds a mask for the cell velocities based on a list of strings
     that indicates the entries that should be held fixed"""
@@ -311,20 +329,15 @@ class Barostat:
             fall = fall + dstrip(self.bias.f)
 
         beads = self.beads
-        qqc = (dstrip(beads.q) - dstrip(beads.qc)).reshape((-1, 3))
-        fall = fall.reshape((-1, 3))
-
-        kst = -qqc.T @ fall
-
-        if level == self.nmtslevels - 1:
-            pc = dstrip(beads.pc).reshape((-1, 3))
-            m_inv = dstrip(beads.m_inv)
-            diag = ((pc**2).T @ m_inv) * beads.nbeads
-            # write the 3 diagonals via a single strided view
-            # (torch scalar writes cost ~5 us each; strided is ~5 us total)
-            kst.reshape(-1)[::4] += diag
-
-        return kst
+        return _kstress_mts_core(
+            dstrip(beads.q),
+            dstrip(beads.qc),
+            fall,
+            dstrip(beads.pc),
+            dstrip(beads.m_inv),
+            beads.nbeads,
+            level == self.nmtslevels - 1,
+        )
 
     def get_kstress_sc(self):
         """Calculates the high order part of the Suzuki-Chin
