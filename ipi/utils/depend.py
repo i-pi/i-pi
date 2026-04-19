@@ -312,12 +312,14 @@ class depend_array(depend_base):
             # Sentinel used by __deepcopy__; members will be overwritten.
             self._value = xp.empty(0)
         else:
-            arr = np.asarray(value)
             # xp only handles numeric dtypes; strings/objects stay as numpy.
-            if arr.dtype.kind in "biufc":
-                self._value = xp.asarray(arr)
-            else:
-                self._value = arr
+            # Try xp first so torch tensors (possibly on non-CPU devices)
+            # pass through without a numpy round-trip that would force a
+            # device->host copy and fail on CUDA.
+            try:
+                self._value = xp.asarray(value)
+            except (TypeError, ValueError, RuntimeError):
+                self._value = np.asarray(value)
 
         # Slice-views keep a reference to the parent so that refreshing a
         # stale slice delegates the recompute to the parent (which owns
