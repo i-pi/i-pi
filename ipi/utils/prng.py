@@ -5,6 +5,12 @@ These are used in initialising the velocities and in stochastic thermostats.
 The state of the random number generator is kept track of, so that the if the
 simulation is restarted from a checkpoint, we will see the same dynamics as if
 it had not been stopped.
+
+A single stream drives every draw, so the full trajectory is reproducible
+from the seed. Under the torch array backend the stream is a
+``torch.Generator``; under numpy it is ``numpy.random.Generator`` (MT19937).
+Checkpoints tag the state with the active backend — restart requires the
+same backend as the run that produced it.
 """
 
 # This file is part of i-PI.
@@ -12,32 +18,32 @@ it had not been stopped.
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
-import concurrent.futures
+import math
 import time
+import concurrent.futures
+
+import numpy as np
+from array_api_compat import is_torch_namespace
+
+from ipi.utils.array_backend import xp
+from ipi.utils.messages import warning
 
 __all__ = ["Random"]
 
 _MIN_STEP_THREADED = 100  # minimum stride to use multithreaded prng
+_IS_TORCH_BACKEND = is_torch_namespace(xp)
 
 
 class Random(object):
-    """Class to interface with the standard pseudo-random number generator.
-
-    Initialises the standard numpy pseudo-random number generator from a seed
-    at the beginning of the simulation, and keeps track of the state so that
-    it can be output to the checkpoint files throughout the simulation.
+    """Class to interface with a single-stream pseudo-random generator.
 
     Attributes:
-        rng: The random number generator to be used.
         seed: The seed number to start the generator.
-        state: A tuple of five objects giving the current state of the random
-            number generator. The first is the type of random number generator,
-            here 'MT19937', the second is an array of 624 integers, the third
-            is the current position in the array that is being read from, the
-            fourth gives whether it has a gaussian random number stored, and
-            the fifth is this stored Gaussian random number, or else the last
-            Gaussian random number returned.
+        rng: Under the numpy backend, the list of ``numpy.random.Generator``
+            streams (one per thread). ``None`` under torch.
+        n_threads: Number of threads used for bulk gaussian fills. Forced to
+            1 under the torch backend (single stream is mandatory for
+            reproducibility).
     """
 
     def __init__(self, seed=-1, state=None, n_threads=1):
@@ -45,21 +51,34 @@ class Random(object):
 
         Args:
             seed: An optional seed giving an integer to initialise the state with.
-            state: An optional state tuple to initialise the state with.
-            n_threads: Whether to use multi-threaded generation (only useful if
-                    arrays to be filled are large!)
+            state: An optional state to initialise the state with.
+            n_threads: Number of threads for parallel gaussian fills (numpy
+                backend only). Ignored (with a warning) under torch.
         """
 
-        # Here we make the seed random if it has not been specified in the input file
         if seed == -1:
             seed = int(time.time() * 1000)
 
         self.seed = seed
 
-        self.rng = [
-            np.random.Generator(np.random.MT19937(s))
-            for s in np.random.SeedSequence(seed).spawn(n_threads)
-        ]
+        if _IS_TORCH_BACKEND:
+            import torch
+
+            if n_threads != 1:
+                warning(
+                    "torch backend uses a single PRNG stream; "
+                    "threaded PRNG is disabled (n_threads forced to 1)."
+                )
+                n_threads = 1
+            self._torch_gen = torch.Generator()
+            self._torch_gen.manual_seed(int(seed))
+            self.rng = None
+        else:
+            self.rng = [
+                np.random.Generator(np.random.MT19937(s))
+                for s in np.random.SeedSequence(seed).spawn(n_threads)
+            ]
+            self._torch_gen = None
 
         self.n_threads = n_threads
         if self.n_threads == 1:
@@ -74,17 +93,41 @@ class Random(object):
             self.state = state
 
     def get_state(self):
-        """Interface to the standard get_state() function."""
+        """Current state of the random stream.
 
+        Tagged with the active backend so cross-backend restarts can be
+        detected and rejected.
+        """
+
+        if _IS_TORCH_BACKEND:
+            data = self._torch_gen.get_state().cpu().numpy().tolist()
+            return {"backend": "torch", "data": data}
         return [r.bit_generator.state for r in self.rng]
 
     def set_state(self, value):
-        """Interface to the standard set_state() function.
+        """Restore a previously saved state.
 
-        Should only be used with states generated from another similar random
-        number generator, such as one from a previous run.
+        Raises ``ValueError`` if the saved state was produced by a different
+        array backend — those states are not interchangeable.
         """
 
+        saved_is_torch = isinstance(value, dict) and value.get("backend") == "torch"
+        if _IS_TORCH_BACKEND:
+            if not saved_is_torch:
+                raise ValueError(
+                    "PRNG state was saved under the numpy backend; restart "
+                    "requires the same array backend as the original run."
+                )
+            import torch
+
+            data = torch.tensor(value["data"], dtype=torch.uint8)
+            self._torch_gen.set_state(data)
+            return
+        if saved_is_torch:
+            raise ValueError(
+                "PRNG state was saved under the torch backend; restart "
+                "requires the same array backend as the original run."
+            )
         for r, s in zip(self.rng, value):
             r.bit_generator.state = s
 
@@ -92,101 +135,149 @@ class Random(object):
 
     @property
     def u(self):
-        """Interface to the standard random_sample() function.
+        """A scalar draw from U(0, 1)."""
 
-        Returns:
-            A pseudo-random number from a uniform distribution from 0-1.
-        """
+        if _IS_TORCH_BACKEND:
+            import torch
 
+            return torch.rand((), generator=self._torch_gen).item()
         return self.rng[0].uniform()
 
     @property
     def g(self):
-        """Interface to the standard standard_normal() function.
+        """A scalar draw from the standard normal."""
 
-        Returns:
-            A pseudo-random number from a normal Gaussian distribution.
-        """
+        if _IS_TORCH_BACKEND:
+            import torch
 
+            return torch.randn((), generator=self._torch_gen).item()
         return self.rng[0].standard_normal()
 
     def gamma(self, k, theta=1.0, size=None):
-        """Interface to the standard gamma() function.
+        """Draw from a gamma distribution (shape ``k``, scale ``theta``).
 
-        Args:
-            k: Shape parameter for the gamma distribution.
-            theta: Mean of the distribution.
-
-        Returns:
-            A random number from a gamma distribution with a shape k and a
-            mean value theta.
+        Torch's ``distributions.Gamma.sample`` does not accept a generator,
+        so under torch we implement Marsaglia-Tsang manually against the
+        single stream. Only scalar sampling (``size=None``) is currently
+        needed by i-PI under torch.
         """
 
+        if _IS_TORCH_BACKEND:
+            if size is not None:
+                raise NotImplementedError(
+                    "prng.gamma(size=...) is not implemented under the torch "
+                    "backend; only scalar sampling is supported."
+                )
+            return float(theta) * self._gamma_scalar_torch(float(k))
         return self.rng[0].gamma(k, theta, size)
 
+    def _gamma_scalar_torch(self, k):
+        """Scalar gamma(k, 1) via Marsaglia-Tsang, consuming self._torch_gen."""
+
+        import torch
+
+        if k < 1.0:
+            # boost: X ~ Gamma(k) <=> X = Y * U**(1/k) with Y ~ Gamma(k+1)
+            y = self._gamma_scalar_torch(k + 1.0)
+            u = torch.rand((), generator=self._torch_gen).item()
+            return y * (u ** (1.0 / k))
+        d = k - 1.0 / 3.0
+        c = 1.0 / math.sqrt(9.0 * d)
+        while True:
+            x = torch.randn((), generator=self._torch_gen).item()
+            v = (1.0 + c * x) ** 3
+            if v <= 0.0:
+                continue
+            u = torch.rand((), generator=self._torch_gen).item()
+            x2 = x * x
+            if u < 1.0 - 0.0331 * x2 * x2:
+                return d * v
+            if math.log(u) < 0.5 * x2 + d * (1.0 - v + math.log(v)):
+                return d * v
+
     def poisson(self, lam=1.0, size=None):
-        """Interface to the standard poisson() function.
+        """Draw from a Poisson distribution with mean ``lam``."""
 
-        Args:
-            lam: Mean of the Poisson distribution
+        if _IS_TORCH_BACKEND:
+            import torch
 
-        Returns:
-            A random number from a Poisson distribution
-        """
-
+            shape = _normalise_size(size)
+            rates = torch.full(shape, float(lam)) if shape else torch.tensor(float(lam))
+            out = torch.poisson(rates, generator=self._torch_gen)
+            if size is None:
+                return int(out.item())
+            return out.to(torch.int64).cpu().numpy()
         return self.rng[0].poisson(lam, size)
 
     def uniform(self, low=0.0, high=1.0, size=None):
-        """Interface to the standard uniform() function.
+        """Uniform reals on [low, high)."""
 
-        Args:
-            Same as numpy.Generator.uniform
+        if _IS_TORCH_BACKEND:
+            import torch
 
-        Returns:
-            Uniform random reals in the prescribed interval
-        """
-
+            if size is None:
+                return low + (high - low) * torch.rand(
+                    (), generator=self._torch_gen
+                ).item()
+            shape = _normalise_size(size)
+            out = torch.empty(shape)
+            out.uniform_(low, high, generator=self._torch_gen)
+            return out.cpu().numpy()
         return self.rng[0].uniform(low, high, size)
 
     def integers(self, low, high=None, size=None, dtype=np.int64, endpoint=False):
-        """Interface to the standard integers() function.
+        """Random integers in the prescribed interval."""
 
-        Args:
-            Same as numpy.Generator.integers
+        if _IS_TORCH_BACKEND:
+            import torch
 
-        Returns:
-            Random integers in the prescribed interval
-        """
-
+            # numpy convention: integers(high) draws from [0, high); integers(low, high)
+            # draws from [low, high). Mirror that.
+            if high is None:
+                lo, hi = 0, low
+            else:
+                lo, hi = low, high
+            if endpoint:
+                hi = hi + 1
+            shape = _normalise_size(size)
+            out = torch.randint(
+                int(lo), int(hi), shape, generator=self._torch_gen, dtype=torch.int64
+            )
+            if size is None:
+                return int(out.item())
+            return out.cpu().numpy().astype(dtype, copy=False)
         return self.rng[0].integers(low, high, size, dtype, endpoint)
 
     def shuffle(self, x, axis=0):
-        """Interface to the standard shuffle() function.
+        """In-place shuffle along ``axis``."""
 
-        Args:
-            Same as numpy.Generator.shuffle
+        if _IS_TORCH_BACKEND:
+            import torch
 
-        Returns:
-            None
-        """
-
+            n = x.shape[axis]
+            perm = torch.randperm(n, generator=self._torch_gen).cpu().numpy()
+            x[...] = np.take(x, perm, axis=axis)
+            return
         self.rng[0].shuffle(x, axis)
 
     def gfill_serial(self, out):
-        """Fills a pre-allocated array serially
+        """Fills a pre-allocated array serially.
 
         Args:
-            out: The array to be filled.
+            out: The array (numpy) to be filled.
         """
 
+        if _IS_TORCH_BACKEND:
+            import torch
+
+            buf = torch.empty(tuple(out.shape))
+            buf.normal_(generator=self._torch_gen)
+            out[...] = buf.cpu().numpy()
+            return
         self.rng[0].standard_normal(out=out)
 
     def gfill_threaded(self, out):
-        """Fills a pre-allocated array in parallel
-
-        Args:
-            out: The array to be filled.
-        """
+        """Fills a pre-allocated array in parallel (numpy backend only)."""
 
         out_flat = out.flatten()
         step_size = np.ceil(len(out_flat) / self.n_threads).astype(int)
@@ -194,7 +285,6 @@ class Random(object):
             # falls back to serial if the vector is too small
             self.gfill_serial(out)
         else:
-            # threaded execution
             futures = {}
             for i in range(self.n_threads):
                 futures[
@@ -206,32 +296,31 @@ class Random(object):
             concurrent.futures.wait(futures)
 
     def gvec_serial(self, shape):
-        """Interface to the standard_normal array function.
+        """Gaussian array in the active backend (serial)."""
 
-        Args:
-            shape: The shape of the array to be returned.
+        if _IS_TORCH_BACKEND:
+            import torch
 
-        Returns:
-            An array with the required shape where each element is taken from
-            a normal Gaussian distribution.
-        """
-
+            out = torch.empty(tuple(shape) if not isinstance(shape, int) else (shape,))
+            out.normal_(generator=self._torch_gen)
+            return out
         rvec = np.empty(shape=shape)
         self.gfill_serial(rvec)
-        return rvec
+        return xp.asarray(rvec)
 
     def gvec_threaded(self, shape):
-        """Interface to the standard_normal array function.
-
-        Args:
-            shape: The shape of the array to be returned.
-
-        Returns:
-            An array with the required shape where each element is taken from
-            a normal Gaussian distribution.
-        """
+        """Gaussian array in the active backend (numpy-threaded)."""
 
         rvec = np.empty(shape=shape)
         self.gfill_threaded(rvec)
+        return xp.asarray(rvec)
 
-        return rvec
+
+def _normalise_size(size):
+    """numpy-style ``size`` argument to a tuple shape (``()`` for scalar)."""
+
+    if size is None:
+        return ()
+    if isinstance(size, int):
+        return (size,)
+    return tuple(size)

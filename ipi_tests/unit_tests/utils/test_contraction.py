@@ -11,6 +11,9 @@ from numpy.testing import assert_almost_equal
 
 from ipi.utils import nmtransform
 
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import to_xp, from_xp
+
 
 def check_up_and_down_scaling(n, q):
     """Check if q expanding and then contracting a ring polymer is a no-op.
@@ -25,11 +28,11 @@ def check_up_and_down_scaling(n, q):
     print(q, q.shape, (q.shape[0], n))
 
     # rescale up to the n beads
-    beads_n = rescale.b1tob2(q)
+    beads_n = from_xp(rescale.b1tob2(to_xp(q)))
     print("Upscaled to %d beads:" % n)
     print(beads_n, beads_n.shape)
 
-    beads_final = rescale.b2tob1(beads_n)
+    beads_final = from_xp(rescale.b2tob1(to_xp(beads_n)))
     print("Final position of the beads:")
     print(beads_final)
 
@@ -48,9 +51,9 @@ def check_rpc_consistency(n, q):
     rescale1 = nmtransform.nm_rescale(q.shape[0], n)
     rescale2 = nmtransform.nm_rescale(n, q.shape[0])
 
-    beads_n = rescale1.b1tob2(q)
-    beads_1 = rescale1.b2tob1(beads_n)
-    beads_2 = rescale2.b1tob2(beads_n)
+    beads_n = from_xp(rescale1.b1tob2(to_xp(q)))
+    beads_1 = from_xp(rescale1.b2tob1(to_xp(beads_n)))
+    beads_2 = from_xp(rescale2.b1tob2(to_xp(beads_n)))
 
     assert_almost_equal(beads_1, beads_2)
 

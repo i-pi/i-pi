@@ -7,8 +7,17 @@
 
 import numpy as np
 
+from array_api_compat import is_numpy_namespace
+
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import dstrip
+
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import to_xp
 from ipi.utils.messages import verbosity, info, warning
+
+
+_IS_NUMPY_BACKEND = is_numpy_namespace(xp)
 
 
 __all__ = [
@@ -174,13 +183,13 @@ class nm_trans(object):
            nbeads: The number of beads.
         """
 
-        self._b2nm = mk_nm_matrix(nbeads)
+        self._b2nm = xp.asarray(mk_nm_matrix(nbeads))
         self._nm2b = self._b2nm.T
         if open_paths is None:
             open_paths = []
         self._open = open_paths
-        # definition of the transformation also with the open path matrx
-        self._b2o_nm = mk_o_nm_matrix(nbeads)
+        # open-path normal-mode matrix, used atom-by-atom below
+        self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
 
     def b2nm(self, q):
@@ -190,19 +199,16 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the bead representation.
         """
 
-        qnm = np.tensordot(self._b2nm, q, axes=(1, 0))
+        qnm = xp.tensordot(self._b2nm, q, axes=([1], [0]))
         if len(self._open) > 0:
-            for (
-                io
-            ) in (
-                self._open
-            ):  # does separately the transformation for the atom that are marked as open paths
-                qnm[:, 3 * io] = np.tensordot(self._b2o_nm, q[:, 3 * io], axes=(1, 0))
-                qnm[:, 3 * io + 1] = np.tensordot(
-                    self._b2o_nm, q[:, 3 * io + 1], axes=(1, 0)
+            # atoms flagged as open paths use the open-path matrix instead
+            for io in self._open:
+                qnm[:, 3 * io] = xp.tensordot(self._b2o_nm, q[:, 3 * io], axes=([1], [0]))
+                qnm[:, 3 * io + 1] = xp.tensordot(
+                    self._b2o_nm, q[:, 3 * io + 1], axes=([1], [0])
                 )
-                qnm[:, 3 * io + 2] = np.tensordot(
-                    self._b2o_nm, q[:, 3 * io + 2], axes=(1, 0)
+                qnm[:, 3 * io + 2] = xp.tensordot(
+                    self._b2o_nm, q[:, 3 * io + 2], axes=([1], [0])
                 )
 
         return qnm
@@ -214,15 +220,15 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the normal mode representation.
         """
 
-        q = np.tensordot(self._nm2b, qnm, axes=(1, 0))
+        q = xp.tensordot(self._nm2b, qnm, axes=([1], [0]))
         if len(self._open) > 0:
             for io in self._open:
-                q[:, 3 * io] = np.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=(1, 0))
-                q[:, 3 * io + 1] = np.tensordot(
-                    self._o_nm2b, qnm[:, 3 * io + 1], axes=(1, 0)
+                q[:, 3 * io] = xp.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=([1], [0]))
+                q[:, 3 * io + 1] = xp.tensordot(
+                    self._o_nm2b, qnm[:, 3 * io + 1], axes=([1], [0])
                 )
-                q[:, 3 * io + 2] = np.tensordot(
-                    self._o_nm2b, qnm[:, 3 * io + 2], axes=(1, 0)
+                q[:, 3 * io + 2] = xp.tensordot(
+                    self._o_nm2b, qnm[:, 3 * io + 2], axes=([1], [0])
                 )
 
         return q
@@ -259,10 +265,10 @@ class nm_rescale(object):
             self.noop = True
         else:
             self.noop = False
-            self._b1tob2 = mk_rs_matrix(nbeads1, nbeads2)
+            self._b1tob2 = xp.asarray(mk_rs_matrix(nbeads1, nbeads2))
             self._b2tob1 = self._b1tob2.T * (float(nbeads1) / float(nbeads2))
-            # definition of the scaling also using the open case normal mode matrix transformations
-            self._o_b1tob2 = mk_o_rs_matrix(nbeads1, nbeads2)
+            # open-path equivalents
+            self._o_b1tob2 = xp.asarray(mk_o_rs_matrix(nbeads1, nbeads2))
             self._o_b2tob1 = self._o_b1tob2.T * (float(nbeads1) / float(nbeads2))
 
     def b1tob2(self, q):
@@ -274,28 +280,26 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = dstrip(q).copy()
+            q_scal = xp.asarray(to_xp(dstrip(q)), copy=True)
         else:
-            # this applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
-            q_scal = np.tensordot(self._b1tob2, q, axes=(1, 0))
+            # applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
+            q_scal = xp.tensordot(self._b1tob2, q, axes=([1], [0]))
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
                     for io in self._open:
-                        q_scal[:, 3 * io] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io], axes=(1, 0)
+                        q_scal[:, 3 * io] = xp.tensordot(
+                            self._o_b1tob2, q[:, 3 * io], axes=([1], [0])
                         )
-                        q_scal[:, 3 * io + 1] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io + 1], axes=(1, 0)
+                        q_scal[:, 3 * io + 1] = xp.tensordot(
+                            self._o_b1tob2, q[:, 3 * io + 1], axes=([1], [0])
                         )
-                        q_scal[:, 3 * io + 2] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io + 2], axes=(1, 0)
+                        q_scal[:, 3 * io + 2] = xp.tensordot(
+                            self._o_b1tob2, q[:, 3 * io + 2], axes=([1], [0])
                         )
                 else:
-                    # this applies the open path contraction to EVERYTHING because otherwise we don't know how to handle
-                    # the fact that only some beads are open. clearly this is a hack, and in practice the point is that
-                    # a "per bead" NM transformation of the potential is not well-defined when different beads have different
-                    # NM transformations
-                    q_scal = np.tensordot(self._o_b1tob2, q, axes=(1, 0))
+                    # applies the open-path contraction to EVERYTHING: a "per bead" NM transformation
+                    # of e.g. the potential isn't well-defined when different beads have different NM transformations
+                    q_scal = xp.tensordot(self._o_b1tob2, q, axes=([1], [0]))
 
         return q_scal
 
@@ -308,24 +312,24 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = dstrip(q).copy()
+            q_scal = xp.asarray(to_xp(dstrip(q)), copy=True)
         else:
-            # see b1tob2 for an explanation of the rationale for dealing with open path transformations
-            q_scal = np.tensordot(self._b2tob1, q, axes=(1, 0))
+            # see b1tob2 for the rationale for dealing with open path transformations
+            q_scal = xp.tensordot(self._b2tob1, q, axes=([1], [0]))
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
                     for io in self._open:
-                        q_scal[:, 3 * io] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io], axes=(1, 0)
+                        q_scal[:, 3 * io] = xp.tensordot(
+                            self._o_b2tob1, q[:, 3 * io], axes=([1], [0])
                         )
-                        q_scal[:, 3 * io + 1] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io + 1], axes=(1, 0)
+                        q_scal[:, 3 * io + 1] = xp.tensordot(
+                            self._o_b2tob1, q[:, 3 * io + 1], axes=([1], [0])
                         )
-                        q_scal[:, 3 * io + 2] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io + 2], axes=(1, 0)
+                        q_scal[:, 3 * io + 2] = xp.tensordot(
+                            self._o_b2tob1, q[:, 3 * io + 2], axes=([1], [0])
                         )
                     else:
-                        q_scal = np.tensordot(self._o_b2tob1, q, axes=(1, 0))
+                        q_scal = xp.tensordot(self._o_b2tob1, q, axes=([1], [0]))
         return q_scal
 
 
@@ -364,9 +368,18 @@ class nm_fft(
         if open_paths is None:
             open_paths = []
         self._open = open_paths
-        # for atoms with open path we still use the matrix transformation
-        self._b2o_nm = mk_o_nm_matrix(nbeads)
+
+        # open-path matrix is stored in the active backend
+        self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
+
+        if _IS_NUMPY_BACKEND:
+            self._init_numpy_fft()
+        # non-numpy backends use xp.fft.rfft/irfft directly inside b2nm/nm2b
+
+    def _init_numpy_fft(self):
+        nbeads = self.nbeads
+        natoms = self.natoms
         try:
             import pyfftw
 
@@ -448,6 +461,25 @@ class nm_fft(
 
         if self.nbeads == 1:
             return q
+        if _IS_NUMPY_BACKEND:
+            return self._b2nm_numpy(q)
+        return self._b2nm_xp(q)
+
+    def nm2b(self, qnm):
+        """Transforms a matrix to the bead representation.
+
+        Args:
+           qnm: A matrix with nbeads rows and 3*natoms columns,
+              in the normal mode representation.
+        """
+
+        if self.nbeads == 1:
+            return qnm
+        if _IS_NUMPY_BACKEND:
+            return self._nm2b_numpy(qnm)
+        return self._nm2b_xp(qnm)
+
+    def _b2nm_numpy(self, q):
         self.qdummy[:] = q
         self.fft()
         if self.nbeads == 2:
@@ -473,27 +505,15 @@ class nm_fft(
                 self.qnmdummy[1:, :].imag,
             )
 
-        for (
-            io
-        ) in (
-            self._open
-        ):  # does separately the transformation for the atom that are marked as open paths
+        # atoms flagged as open paths use the open-path matrix instead
+        for io in self._open:
             qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
             qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
             qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
         return qnm
 
-    def nm2b(self, qnm):
-        """Transforms a matrix to the bead representation.
-
-        Args:
-           qnm: A matrix with nbeads rows and 3*natoms columns,
-              in the normal mode representation.
-        """
-
+    def _nm2b_numpy(self, qnm):
         nbeads = self.nbeads
-        if nbeads == 1:
-            return qnm
         if nbeads == 2:
             self.qnmdummy[:] = qnm
             self.ifft()
@@ -515,12 +535,74 @@ class nm_fft(
 
         self.ifft()
         q = self.qdummy * np.sqrt(nbeads)
-        for (
-            io
-        ) in (
-            self._open
-        ):  # does separately the transformation for the atom that are marked as open paths
+        for io in self._open:
             q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
             q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
             q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+        return q
+
+    def _b2nm_xp(self, q):
+        # rfft along the bead axis produces (nbeads//2+1, 3*natoms) complex tensor
+        qnm_complex = xp.fft.rfft(q, axis=0)
+        if self.nbeads == 2:
+            return qnm_complex.real / np.sqrt(self.nbeads)
+
+        nmodes = self.nbeads // 2
+        qnm_complex = qnm_complex / np.sqrt(self.nbeads)
+        qnm = xp.zeros(q.shape, dtype=q.dtype)
+        qnm[0, :] = qnm_complex[0, :].real
+
+        if self.nbeads % 2 == 0:
+            mid = qnm_complex[1:-1, :] * np.sqrt(2)
+            qnm[1:nmodes, :] = mid.real
+            qnm[nmodes + 1 : self.nbeads, :] = xp.flip(mid.imag, axis=(0,))
+            qnm[nmodes, :] = qnm_complex[nmodes, :].real
+        else:
+            mid = qnm_complex[1:, :] * np.sqrt(2)
+            qnm[1 : nmodes + 1, :] = mid.real
+            qnm[nmodes + 1 : self.nbeads, :] = xp.flip(mid.imag, axis=(0,))
+
+        for io in self._open:
+            qnm[:, 3 * io] = xp.tensordot(self._b2o_nm, q[:, 3 * io], axes=([1], [0]))
+            qnm[:, 3 * io + 1] = xp.tensordot(
+                self._b2o_nm, q[:, 3 * io + 1], axes=([1], [0])
+            )
+            qnm[:, 3 * io + 2] = xp.tensordot(
+                self._b2o_nm, q[:, 3 * io + 2], axes=([1], [0])
+            )
+        return qnm
+
+    def _nm2b_xp(self, qnm):
+        nbeads = self.nbeads
+        if nbeads == 2:
+            qc = xp.astype(qnm, xp.complex128) if hasattr(xp, "astype") else qnm + 0j
+            return xp.fft.irfft(qc, n=nbeads, axis=0) * np.sqrt(nbeads)
+
+        nmodes = nbeads // 2
+        odd = nbeads - 2 * nmodes
+        isqrt2 = np.sqrt(0.5)
+
+        # assemble the complex rfft input from the real-valued NM layout
+        real_part = xp.zeros((nbeads // 2 + 1, qnm.shape[1]), dtype=qnm.dtype)
+        imag_part = xp.zeros((nbeads // 2 + 1, qnm.shape[1]), dtype=qnm.dtype)
+        real_part[0, :] = qnm[0, :]
+        if not odd:
+            real_part[1:-1, :] = qnm[1:nmodes, :] * isqrt2
+            imag_part[1:-1, :] = xp.flip(qnm[nmodes + 1 : nbeads, :], axis=(0,)) * isqrt2
+            real_part[nmodes, :] = qnm[nmodes, :]
+        else:
+            real_part[1:, :] = qnm[1 : nmodes + 1, :] * isqrt2
+            imag_part[1:, :] = xp.flip(qnm[nmodes + 1 : nbeads, :], axis=(0,)) * isqrt2
+
+        qnm_complex = real_part + 1j * imag_part
+        q = xp.fft.irfft(qnm_complex, n=nbeads, axis=0) * np.sqrt(nbeads)
+
+        for io in self._open:
+            q[:, 3 * io] = xp.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=([1], [0]))
+            q[:, 3 * io + 1] = xp.tensordot(
+                self._o_nm2b, qnm[:, 3 * io + 1], axes=([1], [0])
+            )
+            q[:, 3 * io + 2] = xp.tensordot(
+                self._o_nm2b, qnm[:, 3 * io + 2], axes=([1], [0])
+            )
         return q

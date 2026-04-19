@@ -15,6 +15,10 @@ in the normal mode representation under the ring polymer Hamiltonian.
 import numpy as np
 
 from ipi.utils.depend import *
+
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import to_xp, from_xp
+
 from ipi.utils import units
 from ipi.utils import nmtransform
 from ipi.utils.messages import verbosity, warning, info
@@ -198,29 +202,33 @@ class NormalModes:
         self._qnm = depend_array(
             name="qnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func={"q": (lambda: self.transform.b2nm(dstrip(self.beads.q)))},
+            func={"q": (lambda: from_xp(self.transform.b2nm(to_xp(dstrip(self.beads.q)))))},
             synchro=sync_q,
         )
         self._pnm = depend_array(
             name="pnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func={"p": (lambda: self.transform.b2nm(dstrip(self.beads.p)))},
+            func={"p": (lambda: from_xp(self.transform.b2nm(to_xp(dstrip(self.beads.p)))))},
             synchro=sync_p,
         )
 
         # must overwrite the functions
-        self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))}
-        self.beads._p._func = {"pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))}
+        self.beads._q._func = {
+            "qnm": (lambda: from_xp(self.transform.nm2b(to_xp(dstrip(self.qnm)))))
+        }
+        self.beads._p._func = {
+            "pnm": (lambda: from_xp(self.transform.nm2b(to_xp(dstrip(self.pnm)))))
+        }
         self.beads._q.add_synchro(sync_q)
         self.beads._p.add_synchro(sync_p)
 
         # also within the "atomic" interface to beads
         for b in range(self.nbeads):
             self.beads._blist[b]._q._func = {
-                "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
+                "qnm": (lambda: from_xp(self.transform.nm2b(to_xp(dstrip(self.qnm)))))
             }
             self.beads._blist[b]._p._func = {
-                "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
+                "pnm": (lambda: from_xp(self.transform.nm2b(to_xp(dstrip(self.pnm)))))
             }
             self.beads._blist[b]._q.add_synchro(sync_q)
             self.beads._blist[b]._p.add_synchro(sync_p)
@@ -235,7 +243,7 @@ class NormalModes:
             self._fnm = depend_array(
                 name="fnm",
                 value=np.zeros((self.nbeads, 3 * self.natoms), float),
-                func=(lambda: self.transform.b2nm(dstrip(self.forces.f))),
+                func=(lambda: from_xp(self.transform.b2nm(to_xp(dstrip(self.forces.f))))),
                 dependencies=[self.forces._f],
             )
         else:  # have a fall-back plan when we don't want to initialize a force mechanism, e.g. for ring-polymer initialization
@@ -781,7 +789,7 @@ class NormalModes:
                     ).sum()
 
             vspring *= 0.5
-            fspring += self.transform.nm2b(fspringnm)
+            fspring += from_xp(self.transform.nm2b(to_xp(fspringnm)))
 
         if len(self.bosons) > 0:
             vspring_b, fspring_b = self.exchange_potential.vspring_and_fspring

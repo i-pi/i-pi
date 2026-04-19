@@ -13,6 +13,10 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 import numpy as np
 
 from ipi.utils.depend import *
+
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import from_xp
+
 from ipi.utils.units import *
 from ipi.utils.mathtools import matrix_exp, stab_cholesky, root_herm
 from ipi.utils.prng import Random
@@ -224,7 +228,7 @@ class ThermoLangevin(Thermostat):
         p = dstrip(self.p) * dstrip(self.T_on_sm)
 
         deltah = noddot(p, p) / (self.T**2)  # must correct for the "pre-damping"
-        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
+        p += self.S * from_xp(self.prng.gvec(len(p)))  # random part (in ms coordinates)
         deltah -= noddot(p, p)  # new energy
 
         self.p[:] = p * dstrip(
@@ -730,7 +734,7 @@ class ThermoGLE(Thermostat):
                 verbosity.low,
             )
             SC = stab_cholesky(self.C * Constants.kb)
-            self.s[:] = np.dot(SC, self.prng.gvec(self.s.shape))
+            self.s[:] = np.dot(SC, from_xp(self.prng.gvec(self.s.shape)))
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -741,7 +745,7 @@ class ThermoGLE(Thermostat):
 
         self.ethermo += np.dot(self.s[0], self.s[0]) * 0.5
         self.s[:] = np.dot(self.T, self.s) + np.dot(
-            self.S, self.prng.gvec(self.s.shape)
+            self.S, from_xp(self.prng.gvec(self.s.shape))
         )
         self.ethermo -= np.dot(self.s[0], self.s[0]) * 0.5
 
@@ -871,7 +875,7 @@ class ThermoNMGLE(Thermostat):
             )
             for b in range(self.nb):
                 SC = stab_cholesky(self.C[b] * Constants.kb)
-                self.s[b] = np.dot(SC, self.prng.gvec(self.s[b].shape))
+                self.s[b] = np.dot(SC, from_xp(self.prng.gvec(self.s[b].shape)))
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -1104,7 +1108,7 @@ class ThermoCL(Thermostat):
 
         et += np.dot(p, p) * 0.5
         p *= self.T
-        p += self.S * self.prng.gvec(len(p))
+        p += self.S * from_xp(self.prng.gvec(len(p)))
         et -= np.dot(p, p) * 0.5
 
         p *= sm
@@ -1188,7 +1192,7 @@ class ThermoFFL(ThermoLangevin):
 
         # Do standard langevin thermostatting
         p *= self.T
-        p += self.S * self.prng.gvec(len(p))
+        p += self.S * from_xp(self.prng.gvec(len(p)))
 
         # Check whether to flip momenta back
         if self.flip == "soft":

@@ -30,6 +30,8 @@ import operator as _op
 
 import numpy as np
 
+from ipi.utils.array_backend import xp as _xp, to_numpy as _to_numpy
+
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
 # manually when debugging tainting/synchronizer issues.
@@ -47,6 +49,8 @@ __all__ = [
     "dproperties",
     "ddot",
     "noddot",
+    "to_xp",
+    "from_xp",
 ]
 
 
@@ -655,6 +659,21 @@ def dstrip(da):
     if isinstance(da, (depend_array, depend_value)):
         return da._value
     return da
+
+
+# Transient compat shims. Right now depend stores numpy internally and
+# callers that want xp arrays at their boundaries must convert
+# explicitly. Once depend is ported to store xp natively, the
+# conversions will move inside depend and every `to_xp`/`from_xp` call
+# site can be deleted without changing behaviour.
+def to_xp(x):
+    """Numpy-side value -> active xp backend."""
+    return _xp.asarray(x)
+
+
+def from_xp(x):
+    """Active xp backend -> numpy ndarray."""
+    return _to_numpy(x)
 
 
 def dpipe(dfrom, dto, item=-1):

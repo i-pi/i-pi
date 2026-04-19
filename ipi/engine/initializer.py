@@ -23,6 +23,9 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.messages import verbosity, warning, info
 
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import to_xp, from_xp
+
 
 __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
 
@@ -288,9 +291,11 @@ def set_vector(iif, dq, rq):
                 verbosity.low,
             )
         if iif.index < 0:
-            dq[:] = res.b1tob2(rq)
+            dq[:] = from_xp(res.b1tob2(to_xp(rq)))
         else:  # we are initializing a specific atom
-            dq[:, 3 * iif.index : 3 * (iif.index + 1)] = res.b1tob2(rq)
+            dq[:, 3 * iif.index : 3 * (iif.index + 1)] = from_xp(
+                res.b1tob2(to_xp(rq))
+            )
     else:  # we are initializing a specific bead
         if iif.index < 0:
             dq[iif.bead] = rq

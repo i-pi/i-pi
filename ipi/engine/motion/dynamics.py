@@ -12,12 +12,16 @@ appropriate conserved energy quantity for the ensemble of choice.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
+
+# Transient compat imports: remove once depend stores xp natively.
+from ipi.utils.depend import to_xp, from_xp
 
 
 class Dynamics(Motion):
@@ -256,11 +260,12 @@ class DummyIntegrator:
         return self.dt * 0.5 / self.inmts
 
     def get_pdt(self):
-        dtl = 1.0 / self.nmts
-        for i in range(1, len(dtl)):
-            dtl[i] *= dtl[i - 1]
-        dtl *= self.dt * 0.5
-        return dtl
+        nmts = to_xp(self.nmts)
+        dtl = 1.0 / nmts
+        for i in range(1, dtl.shape[0]):
+            dtl[i] = dtl[i] * dtl[i - 1]
+        dtl = dtl * (self.dt * 0.5)
+        return from_xp(dtl)
 
     def get_tdt(self):
         if self.splitting == "obabo":
@@ -307,7 +312,7 @@ class DummyIntegrator:
             self.activeatoms_mask = False
 
         # total number of iteration in the inner-most MTS loop
-        self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
+        self._inmts = depend_value(name="inmts", func=lambda: int(xp.prod(to_xp(self.nmts))))
         self._nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
         # these are the time steps to be used for the different parts of the integrator
         self._qdt = depend_value(
@@ -318,7 +323,7 @@ class DummyIntegrator:
         self._qdt_on_m = depend_array(
             name="qdt_on_m",
             value=np.zeros(3 * self.beads.natoms),
-            func=lambda: self.qdt / dstrip(self.beads.m3)[0],
+            func=lambda: from_xp(self.qdt / to_xp(dstrip(self.beads.m3)[0])),
         )
         self._pdt = depend_array(
             name="pdt",
@@ -341,9 +346,12 @@ class DummyIntegrator:
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
-            self.coeffsc = np.ones((self.beads.nbeads, 3 * self.beads.natoms), float)
-            self.coeffsc[::2] /= -3.0
-            self.coeffsc[1::2] /= 3.0
+            coeffsc = xp.ones(
+                (self.beads.nbeads, 3 * self.beads.natoms), dtype=xp.float64
+            )
+            coeffsc[::2] = coeffsc[::2] / -3.0
+            coeffsc[1::2] = coeffsc[1::2] / 3.0
+            self.coeffsc = coeffsc
 
         # check stress tensor
         self._stresscheck = True
@@ -376,21 +384,22 @@ class DummyIntegrator:
         beads = self.beads
         if self.fixcom:
             nb = beads.nbeads
-            p = dstrip(beads.p)
-            m3 = dstrip(beads.m3).reshape((-1, 3))
+            p = to_xp(dstrip(beads.p))
+            m3 = to_xp(dstrip(beads.m3)).reshape((-1, 3))
             M = beads[0].M
             Mnb = M * nb
 
-            vcom = np.sum(p.reshape(-1, 3), axis=0) / Mnb
-            beads.p -= (m3 * vcom).reshape(nb, -1)
+            vcom = xp.sum(p.reshape((-1, 3)), axis=0) / Mnb
+            beads.p -= from_xp((m3 * vcom).reshape((nb, -1)))
 
-            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
+            self.ensemble.eens += float(xp.sum(vcom**2) * 0.5 * Mnb)  # COM kinetic energy.
 
         if len(self.fixatoms_dof) > 0:
-            m3 = dstrip(beads.m3)
-            p = dstrip(beads.p)
-            self.ensemble.eens += 0.5 * np.sum(
-                p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
+            m3 = to_xp(dstrip(beads.m3))
+            p = to_xp(dstrip(beads.p))
+            self.ensemble.eens += float(
+                0.5
+                * xp.sum(p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof])
             )
             beads.p[:, self.fixatoms_dof] = 0.0
 
@@ -421,25 +430,27 @@ class NVEIntegrator(DummyIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
 
+        pdt = self.pdt[level]
         # halfdt/alpha
         if len(self.fixatoms_dof) > 0:
-            self.beads.p[:, self.activeatoms_mask] += (
-                dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_mask]
-                * self.pdt[level]
-            )
+            mask = self.activeatoms_mask
+            f_active = to_xp(dstrip(self.forces.mts_forces[level].f))[:, mask]
+            self.beads.p[:, mask] += from_xp(f_active * pdt)
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-                self.beads.p[:, self.activeatoms_mask] += (
-                    dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
-                )
+                b_active = to_xp(dstrip(self.bias.f))[:, mask]
+                self.beads.p[:, mask] += from_xp(b_active * pdt)
         else:
-            self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+            f = to_xp(dstrip(self.forces.mts_forces[level].f))
+            self.beads.p[:] += from_xp(f * pdt)
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-                self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
+                self.beads.p[:] += from_xp(to_xp(dstrip(self.bias.f)) * pdt)
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
+        pnm0 = to_xp(dstrip(self.nm.pnm))[0, :]
+        qdt_on_m = to_xp(dstrip(self.qdt_on_m))
+        self.nm.qnm[0, :] += from_xp(pnm0 * qdt_on_m)
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -571,10 +582,7 @@ class NVTCCIntegrator(NVTIntegrator):
         """Velocity Verlet momenta propagator."""
 
         # propagates in NM coordinates
-        self.nm.pnm += dstrip(self.nm.fnm) * (self.dt * 0.5)
-        # self.beads.p += dstrip(self.forces.f)*(self.dt*0.5)
-        # also adds the bias force
-        # self.beads.p += dstrip(self.bias.f)*(self.dt*0.5)
+        self.nm.pnm += from_xp(to_xp(dstrip(self.nm.fnm)) * (self.dt * 0.5))
 
     def step(self, step=None):
         """Does one simulation time step."""
@@ -582,9 +590,9 @@ class NVTCCIntegrator(NVTIntegrator):
         self.thermostat.step()
         self.pconstraints()
         # NB we only have to take into account the energy balance of zeroing centroid velocity when we had added energy through the thermostat
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
+        pnm0 = to_xp(self.nm.pnm[0])
+        dynm30 = to_xp(self.nm.dynm3[0])
+        self.ensemble.eens += float(0.5 * xp.vecdot(pnm0, pnm0 / dynm30))
         self.nm.pnm[0, :] = 0.0
 
         self.pstep()
@@ -601,9 +609,9 @@ class NVTCCIntegrator(NVTIntegrator):
         self.pconstraints()
 
         self.thermostat.step()
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
+        pnm0 = to_xp(self.nm.pnm[0])
+        dynm30 = to_xp(self.nm.dynm3[0])
+        self.ensemble.eens += float(0.5 * xp.vecdot(pnm0, pnm0 / dynm30))
         self.nm.pnm[0, :] = 0.0
         self.pconstraints()
 
@@ -622,8 +630,8 @@ class NPTIntegrator(NVTIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if self._stresscheck and np.array_equiv(
-            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        if self._stresscheck and bool(
+            xp.all(to_xp(dstrip(self.forces.vir)) == 0)
         ):
             warning(
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
@@ -716,42 +724,42 @@ class SCIntegrator(NVTIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
+        pdt = self.pdt[level]
         if level == 0:
             # bias goes in the outer loop
-            self.beads.p += dstrip(self.bias.f) * self.pdt[level]
+            self.beads.p += from_xp(to_xp(dstrip(self.bias.f)) * pdt)
         # just integrate the Trotter force scaled with the SC coefficients, which is a cheap approx to the SC force
-        self.beads.p += (
-            self.forces.mts_forces[level].f
-            * (1.0 + self.forces.coeffsc_part_1)
-            * self.pdt[level]
-        )
+        f = to_xp(dstrip(self.forces.mts_forces[level].f))
+        coeff = to_xp(self.forces.coeffsc_part_1)
+        self.beads.p += from_xp(f * (1.0 + coeff) * pdt)
 
     def step(self, step=None):
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
         # if nmts is not specified, this is just the same as doing the full SC integration
 
+        half_dt = self.dt * 0.5
         if self.splitting == "obabo":
             # thermostat is applied for dt/2
             self.tstep()
             self.pconstraints()
 
             # forces are integerated for dt with MTS.
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
             self.mtsprop(0)
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
 
             # thermostat is applied for dt/2
             self.tstep()
             self.pconstraints()
 
         elif self.splitting == "baoab":
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
             self.mtsprop_ba(0)
             # thermostat is applied for dt
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
 
 
 class SCNPTIntegrator(SCIntegrator):
@@ -767,8 +775,8 @@ class SCNPTIntegrator(SCIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if self._stresscheck and np.array_equiv(
-            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        if self._stresscheck and bool(
+            xp.all(to_xp(dstrip(self.forces.vir)) == 0)
         ):
             warning(
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
@@ -799,6 +807,7 @@ class SCNPTIntegrator(SCIntegrator):
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
         # if nmts is not specified, this is just the same as doing the full SC integration
 
+        half_dt = self.dt * 0.5
         if self.splitting == "obabo":
             # thermostat is applied for dt/2
             self.tstep()
@@ -806,10 +815,10 @@ class SCNPTIntegrator(SCIntegrator):
 
             # forces are integerated for dt with MTS.
             self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
             self.mtsprop(0)
             self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
 
             # thermostat is applied for dt/2
             self.tstep()
@@ -817,11 +826,11 @@ class SCNPTIntegrator(SCIntegrator):
 
         elif self.splitting == "baoab":
             self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
             self.mtsprop_ba(0)
             # thermostat is applied for dt
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
             self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+            self.beads.p += from_xp(to_xp(dstrip(self.forces.fsc_part_2)) * half_dt)
