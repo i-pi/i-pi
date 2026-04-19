@@ -56,11 +56,11 @@ def mk_nm_matrix(nbeads):
 
 
 def nm_eva(nbeads):
-    return 2 * np.array([np.sin(k * np.pi / nbeads) for k in range(nbeads)])
+    return 2 * xp.asarray([np.sin(k * np.pi / nbeads) for k in range(nbeads)])
 
 
 def o_nm_eva(nbeads):
-    return 2 * np.array([np.sin(k * np.pi / (2 * nbeads)) for k in range(nbeads)])
+    return 2 * xp.asarray([np.sin(k * np.pi / (2 * nbeads)) for k in range(nbeads)])
 
 
 def mk_o_nm_matrix(nbeads):
@@ -280,9 +280,10 @@ class nm_rescale(object):
            q: A matrix with nbeads1 rows, in the bead representation.
         """
 
+        q = dstrip(q)
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = xp.asarray(dstrip(q), copy=True)
+            q_scal = xp.asarray(q, copy=True)
         else:
             # applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
             q_scal = xp.tensordot(self._b1tob2, q, axes=([1], [0]))
