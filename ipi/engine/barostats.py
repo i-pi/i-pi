@@ -35,17 +35,6 @@ from ipi.engine.cell import Cell
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
-def _kstress_mts_core(q, qc, fall, pc, m_inv, nbeads, is_last):
-    """Pure-tensor kernel of BaroBZP.kstress_mts, split out for torch.compile."""
-    qqc = (q - qc).reshape((-1, 3))
-    fall_r = fall.reshape((-1, 3))
-    kst = -qqc.T @ fall_r
-    if is_last:
-        pc_r = pc.reshape((-1, 3))
-        diag = ((pc_r ** 2).T @ m_inv) * nbeads
-        kst.reshape(-1)[::4] += diag
-    return kst
-
 def mask_from_fix(fix):
     """Builds a mask for the cell velocities based on a list of strings
     that indicates the entries that should be held fixed"""
@@ -322,15 +311,23 @@ class Barostat:
             fall = fall + dstrip(self.bias.f)
 
         beads = self.beads
-        return _kstress_mts_core(
-            dstrip(beads.q),
-            dstrip(beads.qc),
-            fall,
-            dstrip(beads.pc),
-            dstrip(beads.m_inv),
-            beads.nbeads,
-            level == self.nmtslevels - 1,
-        )
+        nbeads = beads.nbeads
+
+        if nbeads > 1:
+            q = dstrip(beads.q)
+            qc = dstrip(beads.qc)
+
+            qqc = (q - qc).reshape((-1, 3))
+            fall_r = fall.reshape((-1, 3))
+            kst = -qqc.T @ fall_r
+        else:
+            kst = xp.zeros((3, 3), dtype=xp.float64)
+
+        if level == self.nmtslevels - 1:
+            pc = dstrip(beads.pc).reshape((-1, 3))
+            m_inv = dstrip(beads.m_inv)
+            kst.reshape(-1)[::4] += ((pc**2).T @ m_inv) * nbeads
+        return kst
 
     def get_kstress_sc(self):
         """Calculates the high order part of the Suzuki-Chin
@@ -359,7 +356,9 @@ class Barostat:
         if self.bias is not None:
             bvir = bvir + dstrip(self.bias.vir)
 
-        return (dstrip(self.kstress) + dstrip(self.forces.virs) + bvir) / dstrip(self.cell.V)
+        return (dstrip(self.kstress) + dstrip(self.forces.virs) + bvir) / dstrip(
+            self.cell.V
+        )
 
     def get_stress_sc(self):
         """Calculates the high order part of the Suzuki-Chin internal stress tensor."""

@@ -499,13 +499,13 @@ class NormalModes:
         """
 
         dt = self.dt
-        pqk = np.zeros((self.nbeads, 2, 2), float)
-        pqk[0] = np.array([[1, 0], [dt, 1]])
+        pqk = xp.zeros((self.nbeads, 2, 2), dtype=xp.float64)
+        pqk[0] = xp.asarray([[1, 0], [dt, 1]])
 
         # Note that the propagator uses mass-scaled momenta.
         if self.propagator == "cayley":
             for b in range(1, self.nbeads):
-                sk = np.sqrt(self.nm_factor[b])
+                sk = xp.sqrt(self.nm_factor[b])
                 square = (self.omegak[b] * dt / 2) ** 2
                 pqk[b, 0, 0] = (1 - square) / (1 + square)
                 pqk[b, 1, 1] = (1 - square) / (1 + square)
@@ -513,10 +513,10 @@ class NormalModes:
                 pqk[b, 1, 0] = dt / sk / (1 + square)
         else:  # exact propagator
             for b in range(1, self.nbeads):
-                sk = np.sqrt(self.nm_factor[b])
+                sk = xp.sqrt(self.nm_factor[b])
                 dtomegak = self.omegak[b] * dt / sk
-                c = np.cos(dtomegak)
-                s = np.sin(dtomegak)
+                c = xp.cos(dtomegak)
+                s = xp.sin(dtomegak)
                 pqk[b, 0, 0] = c
                 pqk[b, 1, 1] = c
                 pqk[b, 0, 1] = -s * self.omegak[b] * sk
@@ -527,8 +527,8 @@ class NormalModes:
         """Combines the propagator with the atom masses to make a single array
         that can be multiplied to propagate the normal modes dynamics"""
 
-        pq_ms = np.zeros((2, 2, self.nbeads, self.natoms * 3))
-        pq_ms[:] = np.moveaxis(dstrip(self.prop_pq), 0, -1)[:, :, :, np.newaxis]
+        pq_ms = xp.zeros((2, 2, self.nbeads, self.natoms * 3))
+        pq_ms[:] = xp.moveaxis(dstrip(self.prop_pq), 0, -1)[:, :, :, None]
         pq_ms[0, 1] *= dstrip(self.beads.m3)
         pq_ms[1, 0] /= dstrip(self.beads.m3)
 
@@ -736,7 +736,7 @@ class NormalModes:
         """Returns the total spring energy and spring force."""
 
         # classical simulation - do nothing!
-        vspring, fspring = 0.0, np.zeros_like(self.qnm)
+        vspring, fspring = 0.0, xp.zeros_like(dstrip(self.qnm))
         if self.nbeads == 1:
             return vspring, fspring
 
