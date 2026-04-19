@@ -50,7 +50,9 @@ def _kstress_mts_core(q, qc, fall, pc, m_inv, nbeads, is_last):
 if xp.__name__.endswith("torch"):
     import torch as _torch
 
-    _kstress_mts_core = _torch.compile(_kstress_mts_core, dynamic=False)
+    _kstress_mts_core = _torch.compile(
+        _kstress_mts_core, dynamic=False, backend="aot_eager"
+    )
 
 
 def mask_from_fix(fix):
@@ -364,9 +366,9 @@ class Barostat:
 
         bvir = xp.zeros((3, 3), dtype=xp.float64)
         if self.bias is not None:
-            bvir = bvir + self.bias.vir
+            bvir = bvir + dstrip(self.bias.vir)
 
-        return (self.kstress + self.forces.virs + bvir) / self.cell.V
+        return (dstrip(self.kstress) + dstrip(self.forces.virs) + bvir) / dstrip(self.cell.V)
 
     def get_stress_sc(self):
         """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
