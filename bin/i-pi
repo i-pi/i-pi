@@ -20,12 +20,54 @@ file should be formatted, see the reference manual.
 
 import sys
 import os
+import argparse
 
 # Check that we have the import path for this i-PI set and if not, add it.
 dir_root = os.path.realpath(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
 if not dir_root in sys.path:
     sys.path.insert(0, dir_root)
+
+
+def _build_parser():
+    parser = argparse.ArgumentParser(
+        prog='i-pi',
+        description='The main i-PI executable used to run a simulation, '
+                    'given an XML input file.',
+    )
+    parser.add_argument('input', help='XML input file.')
+    parser.add_argument('-p', '--profile', dest='do_yappi',
+                        action='store_true', default=False,
+                        help='Profile this run using yappi.')
+    parser.add_argument('--profiler-clock', dest='yappi_clock', default='cpu',
+                        choices=['cpu', 'wall'],
+                        help='Profiling timing type: `wall` for wall-clock, '
+                             '`cpu` for CPU.')
+    parser.add_argument('--profiler-output', dest='yappi_prefix',
+                        default='profile',
+                        help='Prefix for profiler files.')
+    parser.add_argument('-V', '--verbosity', dest='verbosity', default=None,
+                        choices=['quiet', 'low', 'medium', 'high', 'debug'],
+                        help='Verbosity level.')
+    parser.add_argument('-S', '--sockets_prefix', dest='sockets_prefix',
+                        default=None, help='Prefix for socket files.')
+    parser.add_argument('-A', '--array-backend', dest='array_backend',
+                        default=None, choices=['numpy', 'torch', 'jax'],
+                        help='Array backend for numeric modules (default: '
+                             'numpy, or the value of $IPI_ARRAY_BACKEND).')
+    return parser
+
+
+# Argument parsing must happen before any ipi module is imported: the
+# array backend is resolved once, at `ipi.utils.array_backend` import
+# time, from the IPI_ARRAY_BACKEND env var. Setting it here guarantees
+# numeric modules see the right namespace when they load below.
+if __name__ == '__main__':
+    _options = _build_parser().parse_args()
+    if _options.array_backend is not None:
+        os.environ['IPI_ARRAY_BACKEND'] = _options.array_backend
+    if not os.path.exists(_options.input):
+        sys.exit('Input file not found: {:s}'.format(_options.input))
 
 from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
@@ -71,45 +113,4 @@ def main(fn_input, options):
 
 
 if __name__ == '__main__':
-
-    # TODO: Use argparse once we move to Python 2.7.
-
-    from optparse import OptionParser
-
-    parser = OptionParser(usage='%prog [options] <input file>',
-                          description='The main i-PI executable used to run '
-                                      'a simulation, given an XML input file.'
-                          )
-
-    parser.add_option('-p', '--profile',
-                      action='store_true', dest='do_yappi', default=False,
-                      help='Profile this run using yappi.')
-
-    parser.add_option('--profiler-clock', dest='yappi_clock', default="cpu",
-                      choices=['cpu', 'wall'],
-                      help='Type of profiling timing: `wall` for wall-clock timing, and `cpu` for CPU timing.')
-    
-    parser.add_option('--profiler-output', dest='yappi_prefix', default="profile",                      
-                      help='Prefix for profiler files.')
-
-    parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
-                      choices=['quiet', 'low', 'medium', 'high', 'debug'],
-                      help='Define the verbosity level.')
-
-    parser.add_option('-S', '--sockets_prefix', dest='sockets_prefix', default=None,
-                      help='Prefix for profiler files.')
-
-    options, args = parser.parse_args()
-
-    # make sure that we have exactly one input file and it exists
-    if len(args) == 0:
-        parser.error('No input file name provided.')
-    elif len(args) > 1:
-        parser.error('Provide only one input file name.')
-    else:
-        fn_in = args[0]
-        if not os.path.exists(fn_in):
-            parser.error('Input file not found: {:s}'.format(fn_in))
-
-    # Everything is ready. Go!
-    main(args[0], options)
+    main(_options.input, _options)

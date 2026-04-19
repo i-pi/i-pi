@@ -10,6 +10,7 @@ from importlib import resources
 
 import numpy as np
 
+from ipi.utils.array_backend import array_namespace
 from ipi.utils.messages import verbosity, warning
 
 __all__ = [
@@ -73,21 +74,22 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
        The matrix exponential of M.
     """
 
+    xp = array_namespace(M)
     n = M.shape[1]
-    tc = np.zeros(ntaylor + 1)
-    tc[0] = 1.0
+    # Taylor coefficients as plain Python floats: tiny, no reason to put on device.
+    tc = [1.0]
     for i in range(ntaylor):
-        tc[i + 1] = tc[i] / (i + 1)
+        tc.append(tc[-1] / (i + 1))
 
-    SM = np.copy(M) / 2.0**nsquare
+    SM = M / 2.0**nsquare
 
-    EM = np.identity(n, float) * tc[ntaylor]
+    eye = xp.eye(n, dtype=M.dtype)
+    EM = eye * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
-        EM = np.dot(SM, EM)
-        EM += np.identity(n) * tc[i]
+        EM = SM @ EM + eye * tc[i]
 
-    for i in range(nsquare):
-        EM = np.dot(EM, EM)
+    for _ in range(nsquare):
+        EM = EM @ EM
     return EM
 
 
@@ -412,17 +414,20 @@ def root_herm(A):
     return rv
 
 
-def _sinch(x):
-    """Computes sinh(x)/x in a way that is stable for x->0"""
+def sinch(x):
+    """Element-wise sinh(x)/x, stable near x=0.
 
+    Branches globally on ``max|x|`` rather than per element: the
+    per-element branch (``np.vectorize(lambda x: ...)``) would force a
+    host-side Python loop that is fine under numpy but fails for
+    device-resident torch/jax arrays.
+    """
+
+    xp = array_namespace(x)
     x2 = x * x
-    if x2 < 1e-12:
-        return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
-    else:
-        return np.sinh(x) / x
-
-
-sinch = np.vectorize(_sinch)
+    if float(xp.max(xp.abs(x))) < 1e-6:
+        return 1.0 + (x2 / 6.0) * (1.0 + (x2 / 20.0) * (1.0 + (x2 / 42.0)))
+    return xp.sinh(x) / x
 
 
 def mat_taylor(x, function):
@@ -436,20 +441,14 @@ def mat_taylor(x, function):
     if not (x.shape[0] == x.shape[1]):
         warning("input matrix is not squared")
         return None
+    xp = array_namespace(x)
     dim = x.shape[0]
-    I = np.identity(dim)
+    I = xp.eye(dim, dtype=x.dtype)
     if function == "sinhx/x":
         # compute sinhx/x by directly taylor
-        x2 = np.linalg.matrix_power(x, 2)
-        return I + np.matmul(
-            x2 / (2.0 * 3.0),
-            (
-                I
-                + np.matmul(
-                    x2 / (4.0 * 5.0),
-                    (I + np.matmul(x2 / (6.0 * 7.0), (I + x2 / (8.0 * 9.0)))),
-                )
-            ),
+        x2 = x @ x
+        return I + (x2 / (2.0 * 3.0)) @ (
+            I + (x2 / (4.0 * 5.0)) @ (I + (x2 / (6.0 * 7.0)) @ (I + x2 / (8.0 * 9.0)))
         )
 
     else:
