@@ -22,7 +22,7 @@ from copy import copy
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, to_numpy
 
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
@@ -1233,8 +1233,11 @@ class InputArray(InputValue):
               in.
         """
 
+        # Route through to_numpy so non-numpy backends (e.g. CUDA torch
+        # tensors) are brought to host memory before numpy takes over.
         super(InputArray, self).store(
-            value=np.array(value, dtype=self.type).flatten().copy(), units=units
+            value=np.array(to_numpy(value), dtype=self.type).flatten().copy(),
+            units=units,
         )
         self.shape.store(value.shape)
 
