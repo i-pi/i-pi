@@ -47,8 +47,18 @@ def _load_backend(name):
 
         return _numpy_backend
     if name == "torch":
+        import torch
         import array_api_compat.torch as _torch_backend
 
+        # IPI_DEVICE / IPI_DTYPE apply only to torch. Setting the defaults
+        # here makes subsequent xp.zeros/xp.asarray land on the right
+        # device and dtype without plumbing them through every call site.
+        device = os.environ.get("IPI_DEVICE")
+        if device:
+            torch.set_default_device(device)
+        dtype = os.environ.get("IPI_DTYPE")
+        if dtype:
+            torch.set_default_dtype(getattr(torch, dtype))
         return _torch_backend
     if name == "jax":
         import array_api_compat.jax.numpy as _jax_backend

@@ -55,6 +55,17 @@ def _build_parser():
                         default=None, choices=['numpy', 'torch', 'jax'],
                         help='Array backend for numeric modules (default: '
                              'numpy, or the value of $IPI_ARRAY_BACKEND).')
+    parser.add_argument('-D', '--device', dest='device', default=None,
+                        help='Device for the array backend (e.g. cpu, cuda, '
+                             'cuda:0, mps). Applied only when the backend '
+                             'supports it (torch). Default: $IPI_DEVICE or '
+                             'the backend default.')
+    parser.add_argument('-P', '--dtype', dest='dtype', default=None,
+                        choices=['float32', 'float64'],
+                        help='Default floating-point dtype for the array '
+                             'backend. Applied only when the backend '
+                             'supports it (torch). Default: $IPI_DTYPE or '
+                             'the backend default.')
     return parser
 
 
@@ -66,6 +77,10 @@ if __name__ == '__main__':
     _options = _build_parser().parse_args()
     if _options.array_backend is not None:
         os.environ['IPI_ARRAY_BACKEND'] = _options.array_backend
+    if _options.device is not None:
+        os.environ['IPI_DEVICE'] = _options.device
+    if _options.dtype is not None:
+        os.environ['IPI_DTYPE'] = _options.dtype
     if not os.path.exists(_options.input):
         sys.exit('Input file not found: {:s}'.format(_options.input))
 
