@@ -284,11 +284,11 @@ class PropertyOutput(BaseOutput):
                     quantity = unit_to_user(dimension, unit, quantity)
             except KeyError:
                 raise KeyError(what + " is not a recognized property")
-            if not hasattr(quantity, "__len__"):
-                self.out.write(write_type(float, quantity) + "   ")
+            if not hasattr(quantity, "__len__") or getattr(quantity, "ndim", 1) == 0:
+                self.out.write(write_type(float, float(quantity)) + "   ")
             else:
                 for el in quantity:
-                    self.out.write(write_type(float, el) + " ")
+                    self.out.write(write_type(float, float(el)) + " ")
 
         self.out.write("\n")
 
@@ -630,15 +630,15 @@ class TrajectoryOutput(BaseOutput):
             "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data[b]
+            fatom.names[:] = dstrip(self.system.beads.names)
+            fatom.q[:] = dstrip(data)[b]
         else:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data
+            fatom.names[:] = dstrip(self.system.beads.names)
+            fatom.q[:] = dstrip(data)
 
         fcell = Cell()
-        fcell.h = self.system.cell.h
+        fcell.h = dstrip(self.system.cell.h)
 
         if units == "":
             units = "automatic"

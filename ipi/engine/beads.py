@@ -13,6 +13,8 @@ centroid coordinate is required.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
 
@@ -112,6 +114,12 @@ class Beads:
             func=self.m3tosm3,
             dependencies=[self._m3],
         )
+        self._m_inv = depend_array(
+            name="m_inv",
+            value=np.zeros(natoms, float),
+            func=self.mtominv,
+            dependencies=[self._m],
+        )
 
         # positions and momenta. bead representation, base storage used everywhere
         self._q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
@@ -179,16 +187,21 @@ class Beads:
             nbeads = self.nbeads
 
         newbd = Beads(self.natoms, nbeads)
-        newbd.q[:] = self.q[:nbeads]
-        newbd.p[:] = self.p[:nbeads]
-        newbd.m[:] = self.m
-        newbd.names[:] = self.names
+        newbd.q[:] = dstrip(self.q)[:nbeads]
+        newbd.p[:] = dstrip(self.p)[:nbeads]
+        newbd.m[:] = dstrip(self.m)
+        newbd.names[:] = dstrip(self.names)
         return newbd
 
     def m3tosm3(self):
         """Takes the mass array and returns the square rooted mass array."""
 
-        return np.sqrt(dstrip(self.m3))
+        return xp.sqrt(dstrip(self.m3))
+
+    def mtominv(self):
+        """Inverse per-atom mass; cached so hot paths avoid a per-step divide."""
+
+        return 1.0 / dstrip(self.m)
 
     def mtom3(self):
         """Takes the mass array for each bead and returns one with an element
@@ -199,8 +212,8 @@ class Beads:
            to the mass associated with the appropriate degree of freedom in q.
         """
 
-        m3 = np.zeros((self.nbeads, 3 * self.natoms), float)
-        m3[:, 0 : 3 * self.natoms : 3] = self.m
+        m3 = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
+        m3[:, 0 : 3 * self.natoms : 3] = dstrip(self.m)
         m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         return m3
@@ -208,14 +221,12 @@ class Beads:
     def get_qc(self):
         """Gets the centroid coordinates."""
 
-        return np.sum(dstrip(self.q), axis=0) / self.nbeads
-        # return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
+        return xp.sum(dstrip(self.q), axis=0) / self.nbeads
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
-        return np.sum(dstrip(self.p), axis=0) / self.nbeads
-        # return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
+        return xp.sum(dstrip(self.p), axis=0) / self.nbeads
 
     def kin_gather(self):
         """Gets the kinetic energy for all the replicas.
@@ -224,7 +235,7 @@ class Beads:
            A list of the kinetic energy for each system.
         """
 
-        return np.array([b.kin for b in self._blist])
+        return xp.asarray([b.kin for b in self._blist])
 
     def get_kin(self):
         """Gets the total kinetic energy of all the replicas.
@@ -248,9 +259,9 @@ class Beads:
            The sum of the kinetic stress tensor of each replica.
         """
 
-        ks = np.zeros((3, 3), float)
+        ks = xp.zeros((3, 3), dtype=xp.float64)
         for b in range(self.nbeads):
-            ks += self[b].kstress
+            ks = ks + self[b].kstress
         return ks
 
     def get_vpath(self):
@@ -341,10 +352,10 @@ class Beads:
            value: The Atoms object that holds the new values.
         """
 
-        self._blist[index].p[:] = value.p
-        self._blist[index].q[:] = value.q
-        self._blist[index].m[:] = value.m
-        self._blist[index].names[:] = value.names
+        self._blist[index].p[:] = dstrip(value.p)
+        self._blist[index].q[:] = dstrip(value.q)
+        self._blist[index].m[:] = dstrip(value.m)
+        self._blist[index].names[:] = dstrip(value.names)
 
 
 dproperties(
@@ -356,6 +367,7 @@ dproperties(
         "qc",
         "m",
         "m3",
+        "m_inv",
         "names",
         "sm3",
         "kin",

@@ -7,7 +7,11 @@
 
 from copy import deepcopy
 
+import array_api_compat
+
 import numpy as np
+
+from ipi.utils.array_backend import xp
 
 import ipi.utils.mathtools as mt
 import ipi.engine.initializer as ei
@@ -98,7 +102,8 @@ class InputInitBase(InputValue):
         if self.mode.fetch() == "manual":
             if "[" in value and "]" in value:  # value appears to be a list
                 if self._storageclass is float:
-                    value = io_xml.read_array(float, value)
+                    # I/O boundary: hand array off to the active backend.
+                    value = xp.asarray(io_xml.read_array(float, value))
                 else:
                     value = io_xml.read_list(value)
             else:
@@ -312,14 +317,14 @@ class InputInitCell(InputInitBase):
             h = io_xml.read_array(float, ibase.value)
 
             if mode == "abc":
-                if h.size != 3:
+                if array_api_compat.size(h) != 3:
                     raise ValueError(
                         "If you are initializing cell from cell side lengths you must pass the 'cell' tag an array of 3 floats."
                     )
                 else:
                     h = mt.abc2h(h[0], h[1], h[2], np.pi / 2, np.pi / 2, np.pi / 2)
             elif mode == "abcABC":
-                if h.size != 6:
+                if array_api_compat.size(h) != 6:
                     raise ValueError(
                         "If you are initializing cell from cell side lengths and angles you must pass the 'cell' tag an array of 6 floats."
                     )
@@ -333,13 +338,13 @@ class InputInitCell(InputInitBase):
                         h[5] * np.pi / 180.0,
                     )
 
-            h.shape = (9,)
+            h = xp.reshape(h, (9,))
             ibase.value = h
             mode = "manual"
 
         if mode == "manual":
             h = ibase.value
-            if h.size != 9:
+            if array_api_compat.size(h) != 9:
                 raise ValueError(
                     "Cell objects must contain a 3x3 matrix describing the cell vectors."
                 )

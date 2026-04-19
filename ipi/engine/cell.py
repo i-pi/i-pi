@@ -10,6 +10,7 @@ Used for implementing the minimum image convention.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 
@@ -52,7 +53,7 @@ class Cell:
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
-        return Cell(dstrip(self.h).copy())
+        return Cell(xp.asarray(dstrip(self.h), copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""

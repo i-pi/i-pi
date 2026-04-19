@@ -9,6 +9,8 @@ prepares them for output.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
@@ -1144,7 +1146,9 @@ class Properties:
 
             elif self.motion.fixcom:
                 eff_number_fixed_dof = (
-                    3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
+                    3
+                    * xp.sum(dstrip(self.beads.m)[atom_ids])
+                    / xp.sum(dstrip(self.beads.m))
                 )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
 
             if nm != "":

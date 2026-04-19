@@ -13,6 +13,8 @@ appropriate conserved energy quantity for the ensemble of choice.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.utils.messages import warning
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
@@ -97,9 +99,11 @@ class Ensemble:
         else:
             self.temp = -1.0
 
-        self._stressext = depend_array(name="stressext", value=np.zeros((3, 3), float))
+        self._stressext = depend_array(
+            name="stressext", value=xp.zeros((3, 3), dtype=xp.float64)
+        )
         if stressext is not None:
-            self.stressext = np.reshape(np.asarray(stressext), (3, 3))
+            self.stressext = xp.reshape(xp.asarray(stressext), (3, 3))
         else:
             self.stressext = -1.0
 

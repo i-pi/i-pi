@@ -6,6 +6,7 @@
 
 
 import re
+from ipi.utils.array_backend import xp
 from ipi.utils.messages import verbosity, info
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
@@ -122,10 +123,11 @@ def process_units(
     data *= unit_to_internal(dimension, units, 1)  # units transformation
 
     # Return data as i-PI structures
-    cell = Cell(cell)
+    # I/O boundary: move numeric file data to the active array backend.
+    cell = Cell(xp.asarray(cell))
     atoms = Atoms(natoms)
-    atoms.q[:] = data
+    atoms.q[:] = xp.asarray(data)
     atoms.names[:] = names
-    atoms.m[:] = masses
+    atoms.m[:] = xp.asarray(masses)
 
     return {"atoms": atoms, "cell": cell, "comment": comment}
