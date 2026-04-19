@@ -101,11 +101,25 @@ def to_numpy(x):
     No-op if ``x`` is already a numpy array or a plain scalar. Used at
     I/O and socket boundaries where numpy is expected.
     """
+    # Unwrap depend_array so we see the raw backend array.
+    if hasattr(x, "_value"):
+        x = x._value
     if isinstance(x, np.ndarray):
         return x
     try:
         return np.asarray(x)
     except TypeError:
-        from array_api_compat import to_device
+        pass
+    # Non-numpy array (e.g. torch on CUDA): move to CPU via the native
+    # API. array_api_compat.to_device expects an array-api wrapper, so
+    # for plain torch tensors we use .cpu() directly.
+    try:
+        import torch
 
-        return np.asarray(to_device(x, "cpu"))
+        if isinstance(x, torch.Tensor):
+            return x.detach().cpu().numpy()
+    except ImportError:
+        pass
+    from array_api_compat import to_device
+
+    return np.asarray(to_device(x, "cpu"))
