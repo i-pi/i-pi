@@ -46,15 +46,6 @@ def _kstress_mts_core(q, qc, fall, pc, m_inv, nbeads, is_last):
         kst.reshape(-1)[::4] += diag
     return kst
 
-
-if xp.__name__.endswith("torch"):
-    import torch as _torch
-
-    _kstress_mts_core = _torch.compile(
-        _kstress_mts_core, dynamic=False, backend="aot_eager"
-    )
-
-
 def mask_from_fix(fix):
     """Builds a mask for the cell velocities based on a list of strings
     that indicates the entries that should be held fixed"""
