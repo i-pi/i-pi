@@ -35,6 +35,8 @@ import numpy as np
 
 __all__ = [
     "xp",
+    "device",
+    "dtype",
     "set_array_backend",
     "array_namespace",
     "to_numpy",
@@ -42,10 +44,15 @@ __all__ = [
 
 
 def _load_backend(name):
+    """Load backend namespace and return (namespace, device, dtype).
+
+    `device` and `dtype` are the resolved defaults (strings / backend
+    dtype objects, or None where the backend has no notion of them).
+    """
     if name == "numpy":
         import array_api_compat.numpy as _numpy_backend
 
-        return _numpy_backend
+        return _numpy_backend, "cpu", None
     if name == "torch":
         import torch
         import array_api_compat.torch as _torch_backend
@@ -53,21 +60,20 @@ def _load_backend(name):
         # IPI_DEVICE / IPI_DTYPE apply only to torch. Setting the defaults
         # here makes subsequent xp.zeros/xp.asarray land on the right
         # device and dtype without plumbing them through every call site.
-        device = os.environ.get("IPI_DEVICE")
-        if device:
-            torch.set_default_device(device)
-        dtype = os.environ.get("IPI_DTYPE")
-        if dtype:
-            torch.set_default_dtype(getattr(torch, dtype))
-        return _torch_backend
+        dev = os.environ.get("IPI_DEVICE", "cpu")
+        torch.set_default_device(dev)
+        dt_name = os.environ.get("IPI_DTYPE")
+        if dt_name:
+            torch.set_default_dtype(getattr(torch, dt_name))
+        return _torch_backend, dev, torch.get_default_dtype()
     if name == "jax":
         import array_api_compat.jax.numpy as _jax_backend
 
-        return _jax_backend
+        return _jax_backend, None, None
     raise ValueError(f"Unknown array backend: {name!r}")
 
 
-xp = _load_backend(os.environ.get("IPI_ARRAY_BACKEND", "numpy"))
+xp, device, dtype = _load_backend(os.environ.get("IPI_ARRAY_BACKEND", "numpy"))
 
 
 def set_array_backend(backend):
@@ -81,9 +87,9 @@ def set_array_backend(backend):
     Must be called before any numeric module has imported ``xp``; see
     the module docstring.
     """
-    global xp
+    global xp, device, dtype
     if isinstance(backend, str):
-        xp = _load_backend(backend)
+        xp, device, dtype = _load_backend(backend)
     else:
         xp = backend
 

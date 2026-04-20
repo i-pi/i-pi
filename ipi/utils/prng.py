@@ -25,7 +25,7 @@ import concurrent.futures
 import numpy as np
 from array_api_compat import is_torch_namespace
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, device as _xp_device
 from ipi.utils.messages import warning
 
 __all__ = ["Random"]
@@ -70,7 +70,10 @@ class Random(object):
                     "threaded PRNG is disabled (n_threads forced to 1)."
                 )
                 n_threads = 1
-            self._torch_gen = torch.Generator()
+            # Generator must live on the device where sampled tensors
+            # are allocated (torch's default device). Mismatched devices
+            # raise at sample time.
+            self._torch_gen = torch.Generator(device=_xp_device)
             self._torch_gen.manual_seed(int(seed))
             self.rng = None
         else:
