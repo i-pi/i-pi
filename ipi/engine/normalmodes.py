@@ -480,7 +480,7 @@ class NormalModes:
            The first element is the centroid frequency (0.0).
         """
 
-        return self.omegak / np.sqrt(self.nm_factor)
+        return self.omegak / xp.sqrt(self.nm_factor)
 
     def get_prop_pq(self):
         """Gets the exact or Cayley-transformed normal mode propagator matrix.
@@ -957,7 +957,7 @@ class NormalModes:
         """
 
         # computes mass and nm_scaling-scaled momenta
-        spnm = (dstrip(self.pnm) / np.sqrt(dstrip(self.nm_factor)[:, None])) / dstrip(
+        spnm = (dstrip(self.pnm) / xp.sqrt(dstrip(self.nm_factor)[:, None])) / dstrip(
             self.beads.sm3
         )
         spnm = spnm.reshape(-1, 3)  # reshape for quick outer product
