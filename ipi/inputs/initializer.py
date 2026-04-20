@@ -102,7 +102,8 @@ class InputInitBase(InputValue):
         if self.mode.fetch() == "manual":
             if "[" in value and "]" in value:  # value appears to be a list
                 if self._storageclass is float:
-                    # I/O boundary: hand array off to the active backend.
+                    # Float array flowing into physics storage: promote
+                    # to the active backend here (mirrors InputArray.fetch).
                     value = xp.asarray(io_xml.read_array(float, value))
                 else:
                     value = io_xml.read_list(value)
