@@ -10,7 +10,7 @@ from importlib import resources
 
 import numpy as np
 
-from ipi.utils.array_backend import array_namespace
+from ipi.utils.array_backend import array_namespace, xp
 from ipi.utils.messages import verbosity, warning
 
 __all__ = [
@@ -166,12 +166,20 @@ def h2abc(h):
        A list containing the lattice vector lengths and the angles between them.
     """
 
-    a = float(h[0, 0])
-    b = math.sqrt(h[0, 1] ** 2 + h[1, 1] ** 2)
-    c = math.sqrt(h[0, 2] ** 2 + h[1, 2] ** 2 + h[2, 2] ** 2)
-    gamma = math.acos(h[0, 1] / b)
-    beta = math.acos(h[0, 2] / c)
-    alpha = math.acos(np.dot(h[:, 1], h[:, 2]) / (b * c))
+    h00 = float(h[0, 0])
+    h01 = float(h[0, 1])
+    h02 = float(h[0, 2])
+    h11 = float(h[1, 1])
+    h12 = float(h[1, 2])
+    h22 = float(h[2, 2])
+
+    a = h00
+    b = math.sqrt(h01**2 + h11**2)
+    c = math.sqrt(h02**2 + h12**2 + h22**2)
+    gamma = math.acos(h01 / b)
+    beta = math.acos(h02 / c)
+    # upper-triangular: h[2,1] == 0, so column dot reduces to these two terms
+    alpha = math.acos((h01 * h02 + h11 * h12) / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
