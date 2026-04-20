@@ -526,7 +526,7 @@ class Initializer:
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
                     * xp.sqrt(dstrip(rnm.dynm3))
-                    * xp.sqrt(rbeads.nbeads * rtemp * Constants.kb)
+                    * np.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
                 if v.index < 0:
@@ -580,7 +580,7 @@ class Initializer:
                 else:
                     for ev in rv:
                         ev *= simul.beads.m3[0]
-                rv *= xp.sqrt(self.nbeads / nbeads)
+                rv *= np.sqrt(self.nbeads / nbeads)
                 set_vector(v, simul.beads.p, rv)
                 fmom = True
             elif k == "gle":
