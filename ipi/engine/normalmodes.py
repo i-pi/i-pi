@@ -120,7 +120,7 @@ class NormalModes:
             name="transform_method", value=transform_method
         )
         self._propagator = depend_value(name="propagator", value=propagator)
-        self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
+        self._nm_freqs = depend_array(name="nm_freqs", value=freqs)
         self.fft_threads = fft_threads
         self.fft_float32 = fft_float32
 
