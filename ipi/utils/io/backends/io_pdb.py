@@ -13,6 +13,7 @@ import copy
 import numpy as np
 
 import ipi.utils.mathtools as mt
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
@@ -39,17 +40,19 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     )
     fmt_conect = "CONECT%5i%5i\n"
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    h = to_numpy(cell.h) * cell_conv
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(h)
 
     z = 1  # What even is this parameter?
     filedesc.write(fmt_cryst % (a, b, c, alpha, beta, gamma, " P 1        ", z))
 
     natoms = beads.natoms
     nbeads = beads.nbeads
+    qs_all = (to_numpy(beads.q) * atoms_conv).reshape(nbeads, natoms, 3)
+    lab = dstrip(beads.names)
     for j in range(nbeads):
+        qs = qs_all[j]
         for i in range(natoms):
-            qs = dstrip(beads.q) * atoms_conv
-            lab = dstrip(beads.names)
             data = (
                 j * natoms + i + 1,
                 lab[i],
@@ -58,9 +61,9 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
                 " ",
                 1,
                 " ",
-                qs[j][3 * i],
-                qs[j][3 * i + 1],
-                qs[j][3 * i + 2],
+                qs[i, 0],
+                qs[i, 1],
+                qs[i, 2],
                 0.0,
                 0.0,
                 "  ",
@@ -103,13 +106,14 @@ def print_pdb(
     if title != "":
         filedesc.write("TITLE   %70s\n" % (title))
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    h = to_numpy(cell.h) * cell_conv
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(h)
 
     z = 1
     filedesc.write(fmt_cryst % (a, b, c, alpha, beta, gamma, " P 1        ", z))
 
     natoms = atoms.natoms
-    qs = dstrip(atoms.q) * atoms_conv
+    qs = (to_numpy(atoms.q) * atoms_conv).reshape(natoms, 3)
     lab = dstrip(atoms.names)
     for i in range(natoms):
         data = (
@@ -120,9 +124,9 @@ def print_pdb(
             " ",
             1,
             " ",
-            qs[3 * i],
-            qs[3 * i + 1],
-            qs[3 * i + 2],
+            qs[i, 0],
+            qs[i, 1],
+            qs[i, 2],
             0.0,
             0.0,
             "  ",

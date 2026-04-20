@@ -13,6 +13,7 @@ import re
 import numpy as np
 
 import ipi.utils.mathtools as mt
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
@@ -34,21 +35,25 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
         filedesc: An open writable file object. Defaults to standard output.
     """
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    # I/O boundary: pull into numpy once, reshape to (nbeads, natoms, 3)
+    # so the inner loop is a plain row access.
+    h = to_numpy(cell.h) * cell_conv
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(h)
 
-    fmt_header = (
-        "%d\n# bead: %d CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f \n"
-    )
     natoms = beads.natoms
     nbeads = beads.nbeads
+    qs_all = (to_numpy(beads.q) * atoms_conv).reshape(nbeads, natoms, 3)
+    lab = dstrip(beads.names)
     for j in range(nbeads):
-        filedesc.write(fmt_header % (natoms, j, a, b, c, alpha, beta, gamma))
+        filedesc.write(
+            f"{natoms}\n# bead: {j} CELL(abcABC): "
+            f"{a:10.5f}  {b:10.5f}  {c:10.5f}  "
+            f"{alpha:10.5f}  {beta:10.5f}  {gamma:10.5f} \n"
+        )
+        qs = qs_all[j]
         for i in range(natoms):
-            qs = dstrip(beads.q) * atoms_conv
-            lab = dstrip(beads.names)
             filedesc.write(
-                "%8s %12.5e %12.5e %12.5e\n"
-                % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])
+                f"{lab[i]:>8s} {qs[i, 0]:12.5e} {qs[i, 1]:12.5e} {qs[i, 2]:12.5e}\n"
             )
 
 
@@ -64,20 +69,22 @@ def print_xyz(
         title: This gives a string to be appended to the comment line.
     """
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    # I/O boundary: pull into numpy once, reshape to (natoms, 3) so the
+    # inner loop is a plain row access.
+    h = to_numpy(cell.h) * cell_conv
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(h)
 
     natoms = atoms.natoms
-    fmt_header = (
-        "%d\n# CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %s\n"
+    filedesc.write(
+        f"{natoms}\n# CELL(abcABC): "
+        f"{a:10.5f}  {b:10.5f}  {c:10.5f}  "
+        f"{alpha:10.5f}  {beta:10.5f}  {gamma:10.5f}  {title}\n"
     )
-    filedesc.write(fmt_header % (natoms, a, b, c, alpha, beta, gamma, title))
-    # direct access to avoid unnecessary slow-down
-    qs = dstrip(atoms.q) * atoms_conv
+    qs = (to_numpy(atoms.q) * atoms_conv).reshape(natoms, 3)
     lab = dstrip(atoms.names)
     for i in range(natoms):
         filedesc.write(
-            "%8s %12.5e %12.5e %12.5e\n"
-            % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2])
+            f"{lab[i]:>8s} {qs[i, 0]:12.5e} {qs[i, 1]:12.5e} {qs[i, 2]:12.5e}\n"
         )
 
 
