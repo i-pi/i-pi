@@ -13,6 +13,7 @@ overwrite data given elsewhere.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.ensembles import Ensemble
@@ -524,8 +525,8 @@ class Initializer:
                 # with (possibly) shifted-frequencies NM
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
-                    * np.sqrt(rnm.dynm3)
-                    * np.sqrt(rbeads.nbeads * rtemp * Constants.kb)
+                    * xp.sqrt(rnm.dynm3)
+                    * xp.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
                 if v.index < 0:
@@ -552,7 +553,7 @@ class Initializer:
                         )
                     simul.beads.resize(natoms, self.nbeads)
 
-                rp *= np.sqrt(self.nbeads / nbeads)
+                rp *= xp.sqrt(self.nbeads / nbeads)
                 set_vector(v, simul.beads.p, rp)
                 fmom = True
             elif k == "velocities":
@@ -579,7 +580,7 @@ class Initializer:
                 else:
                     for ev in rv:
                         ev *= simul.beads.m3[0]
-                rv *= np.sqrt(self.nbeads / nbeads)
+                rv *= xp.sqrt(self.nbeads / nbeads)
                 set_vector(v, simul.beads.p, rv)
                 fmom = True
             elif k == "gle":
