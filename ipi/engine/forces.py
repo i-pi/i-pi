@@ -331,9 +331,9 @@ class ForceComponent:
         self.nbeads = nbeads
         self._weight = depend_value(name="weight", value=weight)
         if mts_weights is None:
-            self.mts_weights = np.asarray([])
+            self.mts_weights = xp.asarray([])
         else:
-            self.mts_weights = np.asarray(mts_weights)
+            self.mts_weights = xp.asarray(mts_weights)
         if interpolate_extras is None:
             self.interpolate_extras = []
         else:
@@ -472,7 +472,7 @@ class ForceComponent:
         # we enforce the type and numpy will raise an error if not.
         for e in self.interpolate_extras:
             try:
-                fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
+                fc_extra[e] = xp.asarray(fc_extra[e], dtype=float)
             except KeyError:
                 raise KeyError(
                     "interpolate_extras required "

@@ -133,7 +133,7 @@ class Ensemble:
         if bweights is None or len(bweights) == 0:
             bweights = np.ones(len(self.bcomp))
 
-        self._bweights = depend_array(name="bweights", value=np.asarray(bweights))
+        self._bweights = depend_array(name="bweights", value=bweights)
 
         # weights of the Hamiltonian scaling
         if hweights is None:
