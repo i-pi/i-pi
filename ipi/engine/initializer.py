@@ -525,7 +525,7 @@ class Initializer:
                 # with (possibly) shifted-frequencies NM
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
-                    * xp.sqrt(rnm.dynm3)
+                    * xp.sqrt(dstrip(rnm.dynm3))
                     * xp.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
