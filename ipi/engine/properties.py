@@ -9,7 +9,7 @@ prepares them for output.
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, to_numpy
 
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import dstrip
@@ -373,7 +373,7 @@ class Properties:
                 "dimension": "energy",
                 "help": "The Suzuki-Chin operator estimator for the potential energy of the physical system.",
                 "func": (
-                    lambda: 2.0 / self.beads.nbeads * np.sum(self.forces.pots[::2])
+                    lambda: 2.0 / self.beads.nbeads * xp.sum(self.forces.pots[::2])
                 ),
             },
             "potential_tdsc": {
@@ -463,9 +463,9 @@ class Properties:
                        will print the force associated with the specified bead.""",
                 "func": (
                     lambda bead="-1": (
-                        np.linalg.norm(self.forces.f) / self.beads.nbeads
+                        xp.linalg.vector_norm(self.forces.f) / self.beads.nbeads
                         if int(bead) < 0
-                        else np.linalg.norm(self.forces.f[int(bead)])
+                        else xp.linalg.vector_norm(self.forces.f[int(bead)])
                     )
                 ),
             },
@@ -651,7 +651,7 @@ class Properties:
                 "dimension": "pressure",
                 "help": "The pressure of the (extended) classical system.",
                 "func": (
-                    lambda: np.trace(
+                    lambda: xp.linalg.trace(
                         (self.forces.vir + self.get_kstress_md()) / (3.0 * self.cell.V)
                     )
                 ),
@@ -696,7 +696,7 @@ class Properties:
                 "dimension": "pressure",
                 "help": "The Suzuki-Chin thermodynamic estimator for pressure of the physical system.",
                 "func": (
-                    lambda: np.trace(
+                    lambda: xp.linalg.trace(
                         self.forces.vir + self.forces.virsc + self.kstress_sctd()
                     )
                     / (3.0 * self.cell.V * self.beads.nbeads)
@@ -706,7 +706,7 @@ class Properties:
                 "dimension": "pressure",
                 "help": "The Suzuki-Chin thermodynamic estimator for pressure of the physical system.",
                 "func": (
-                    lambda: np.trace(self.forces.vir + self.forces.virsc)
+                    lambda: xp.linalg.trace(self.forces.vir + self.forces.virsc)
                     / (3.0 * self.cell.V * self.beads.nbeads)
                 ),
             },
@@ -714,7 +714,7 @@ class Properties:
                 "dimension": "pressure",
                 "help": "The Suzuki-Chin thermodynamic estimator for pressure of the physical system.",
                 "func": (
-                    lambda: np.trace(self.kstress_sctd())
+                    lambda: xp.linalg.trace(self.kstress_sctd())
                     / (3.0 * self.cell.V * self.beads.nbeads)
                 ),
             },
@@ -722,7 +722,7 @@ class Properties:
                 "dimension": "pressure",
                 "help": "The quantum estimator for pressure of the physical system.",
                 "func": (
-                    lambda: np.trace(self.forces.vir + self.kstress_cv())
+                    lambda: xp.linalg.trace(self.forces.vir + self.kstress_cv())
                     / (3.0 * self.cell.V * self.beads.nbeads)
                 ),
             },
@@ -1039,7 +1039,7 @@ class Properties:
         containing the elements [xx, yy, zz, xy, xz, yz].
         """
 
-        return np.array(
+        return xp.stack(
             [
                 tensor[0, 0],
                 tensor[1, 1],
