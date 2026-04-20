@@ -13,6 +13,7 @@ import json
 import numpy as np
 
 import ipi.utils.mathtools as mt
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import dstrip
 
 
@@ -45,11 +46,11 @@ def print_json(
         title: This gives a string to be appended to the comment line.
     """
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    h = to_numpy(cell.h) * cell_conv
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(h)
 
     natoms = atoms.natoms
-    # direct access to avoid unnecessary slow-down
-    qs = dstrip(atoms.q) * atoms_conv
+    qs = to_numpy(atoms.q) * atoms_conv
     lab = dstrip(atoms.names)
 
     data = {}
