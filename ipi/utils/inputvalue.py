@@ -1260,8 +1260,11 @@ class InputArray(InputValue):
         else:
             value = value.reshape(self.shape.fetch()).copy()
 
-        # I/O boundary: hand off to the active array backend.
-        if isinstance(value, np.ndarray) and value.dtype.kind in "biufc":
+        # Promote only float/complex arrays to the active backend: these
+        # flow into physics storage (positions, masses, cell) that may
+        # live on a non-CPU device. Integer/bool arrays (atom indices,
+        # flags) stay numpy so downstream numpy-only call sites work.
+        if isinstance(value, np.ndarray) and value.dtype.kind in "fc":
             value = xp.asarray(value)
         return value
 
