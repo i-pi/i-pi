@@ -19,4 +19,5 @@ __all__ = [
     "tools",
     "io",
     "constrtools",
+    "timing",
 ]
