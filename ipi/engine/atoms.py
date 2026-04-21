@@ -12,6 +12,7 @@ arrays of atoms and for individual atoms.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 
 __all__ = ["Atoms", "Atom"]
@@ -55,7 +56,8 @@ class Atom:
     def kin(self):
         """Calculates the contribution of the atom to the kinetic energy."""
 
-        return np.dot(self.p, self.p) / (2.0 * self.m)
+        p = dstrip(self.p)
+        return (p @ p) / (2.0 * self.m)
 
     @property
     def kstress(self):
@@ -64,7 +66,7 @@ class Atom:
         """
 
         p = dstrip(self.p)
-        ks = np.zeros((3, 3), float)
+        ks = xp.zeros((3, 3), dtype=p.dtype)
         for i in range(3):
             for j in range(i, 3):
                 ks[i, j] = p[i] * p[j]
@@ -237,8 +239,9 @@ class Atoms:
            by the mass.
         """
 
-        m3 = np.zeros(3 * self.natoms, float)
-        m3[0 : 3 * self.natoms : 3] = self.m
+        m = dstrip(self.m)
+        m3 = xp.zeros(3 * self.natoms, dtype=m.dtype)
+        m3[0 : 3 * self.natoms : 3] = m
         m3[1 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
         m3[2 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
         return m3
@@ -247,7 +250,7 @@ class Atoms:
         """Calculates the total kinetic energy of the system."""
 
         p = dstrip(self.p)
-        return 0.5 * np.dot(p, p / dstrip(self.m3))
+        return 0.5 * (p @ (p / dstrip(self.m3)))
 
     def get_kstress(self):
         """Calculates the total contribution of the atoms to the kinetic stress
@@ -260,13 +263,13 @@ class Atoms:
         py = p[1::3]
         pz = p[2::3]
 
-        ks = np.zeros((3, 3), float)
-        ks[0, 0] = np.dot(px, px / m)
-        ks[1, 1] = np.dot(py, py / m)
-        ks[2, 2] = np.dot(pz, pz / m)
-        ks[0, 1] = np.dot(px, py / m)
-        ks[0, 2] = np.dot(px, pz / m)
-        ks[1, 2] = np.dot(py, pz / m)
+        ks = xp.zeros((3, 3), dtype=p.dtype)
+        ks[0, 0] = px @ (px / m)
+        ks[1, 1] = py @ (py / m)
+        ks[2, 2] = pz @ (pz / m)
+        ks[0, 1] = px @ (py / m)
+        ks[0, 2] = px @ (pz / m)
+        ks[1, 2] = py @ (pz / m)
         return ks
 
 

@@ -13,6 +13,7 @@ import ipi.engine.initializer as initializer
 import ipi.utils.mathtools as mt
 
 from ipi.utils.units import Elements
+from ipi.utils.array_backend import xp, to_numpy
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 
@@ -76,8 +77,10 @@ def create_xyz_sample_file(request):
     ratoms = []
     for _fr in range(frames):
         ratoms.append(Atoms(natoms))
-        ratoms[-1].q = xyz[_fr * natoms * 3 : 3 * (_fr + 1) * natoms] * units_conv_at
-        ratoms[-1].m = masses[_fr * natoms : (_fr + 1) * natoms]
+        ratoms[-1].q = xp.asarray(
+            xyz[_fr * natoms * 3 : 3 * (_fr + 1) * natoms] * units_conv_at
+        )
+        ratoms[-1].m = xp.asarray(masses[_fr * natoms : (_fr + 1) * natoms])
         ratoms[-1].names = atoms_names[_fr * natoms : (_fr + 1) * natoms]
 
     cell = Cell(expected_cell * units_conv_cell)
@@ -97,8 +100,12 @@ def test_init_file(create_xyz_sample_file):
     ret = initializer.init_file("xyz", tmp_file.name)
 
     for _ii, atoms in enumerate(ret[0]):
-        npt.assert_array_almost_equal(expected_ratoms[_ii].q, atoms.q, 5)
+        npt.assert_array_almost_equal(
+            to_numpy(expected_ratoms[_ii].q), to_numpy(atoms.q), 5
+        )
         npt.assert_array_equal(expected_ratoms[_ii].names, atoms.names)
-        npt.assert_array_almost_equal(expected_ratoms[_ii].m, atoms.m, 5)
+        npt.assert_array_almost_equal(
+            to_numpy(expected_ratoms[_ii].m), to_numpy(atoms.m), 5
+        )
 
-    npt.assert_array_almost_equal(expected_cell.h, ret[1].h, 5)
+    npt.assert_array_almost_equal(to_numpy(expected_cell.h), to_numpy(ret[1].h), 5)

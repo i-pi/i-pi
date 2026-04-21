@@ -74,7 +74,8 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
        The matrix exponential of M.
     """
 
-    xp = array_namespace(M)
+    from array_api_compat import device as _device_of
+
     n = M.shape[1]
     # Taylor coefficients as plain Python floats: tiny, no reason to put on device.
     tc = [1.0]
@@ -83,7 +84,12 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
 
     SM = M / 2.0**nsquare
 
-    eye = xp.eye(n, dtype=M.dtype)
+    # `eye` must share M's device for the matmul inside the loop to work
+    # on any backend. Using the module-level `xp` proxy *plus* an explicit
+    # device from `M` is belt-and-braces: the proxy injects the active
+    # backend default, but a caller might have built `M` on a non-default
+    # device (e.g. when mixing CPU control-flow tensors with GPU work).
+    eye = xp.eye(n, dtype=M.dtype, device=_device_of(M))
     EM = eye * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
         EM = SM @ EM + eye * tc[i]
@@ -259,15 +265,17 @@ def invert_ut3x3(h):
     """Inverts a 3*3 upper triangular matrix.
 
     Args:
-       h: An upper triangular 3*3 matrix.
+       h: An upper triangular 3*3 matrix (numpy ndarray or backend tensor).
 
     Returns:
-       The inverse matrix of h.
+       The inverse matrix of h, in the same namespace as h.
     """
 
-    ih = np.zeros((3, 3), float)
-    for i in range(3):
-        ih[i, i] = 1.0 / h[i, i]
+    # Allocate in the same namespace as h so writes don't cross backends.
+    ih = xp.zeros((3, 3), dtype=h.dtype)
+    ih[0, 0] = 1.0 / h[0, 0]
+    ih[1, 1] = 1.0 / h[1, 1]
+    ih[2, 2] = 1.0 / h[2, 2]
     ih[0, 1] = -ih[0, 0] * h[0, 1] * ih[1, 1]
     ih[1, 2] = -ih[1, 1] * h[1, 2] * ih[2, 2]
     ih[0, 2] = -ih[1, 2] * h[0, 1] * ih[0, 0] - ih[0, 0] * h[0, 2] * ih[2, 2]

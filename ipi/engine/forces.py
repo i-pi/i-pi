@@ -992,7 +992,7 @@ class Forces:
         self._virsc = depend_value(
             name="virsc",
             dependencies=[self._potssc],
-            func=(lambda: np.sum(self.virssc, axis=0)),
+            func=(lambda: xp.sum(dstrip(self.virssc), axis=0)),
         )
 
         # Add dependencies from the force weights, that are applied here when the total

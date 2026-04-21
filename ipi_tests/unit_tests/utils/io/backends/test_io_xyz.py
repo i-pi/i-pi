@@ -18,6 +18,7 @@ import ipi.utils.mathtools as mt
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.utils.units import Elements
+from ipi.utils.array_backend import xp
 
 #
 # Testing reading xyz #
@@ -248,9 +249,9 @@ def create_random_xyz_traj_to_write(request):
     for _fr in range(frames):
         cell = Cell(expected_cell)
         atoms = Atoms(natoms)
-        atoms.q[:] = xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3]
+        atoms.q[:] = xp.asarray(xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3])
         atoms.names = atom_names[_fr * natoms : (_fr + 1) * natoms]
-        atoms.m[:] = masses[_fr * natoms : (_fr + 1) * natoms]
+        atoms.m[:] = xp.asarray(masses[_fr * natoms : (_fr + 1) * natoms])
         atoms_list.append(atoms)
         cell_list.append(cell)
 

@@ -480,7 +480,7 @@ class NormalModes:
            The first element is the centroid frequency (0.0).
         """
 
-        return self.omegak / xp.sqrt(self.nm_factor)
+        return dstrip(self.omegak) / xp.sqrt(dstrip(self.nm_factor))
 
     def get_prop_pq(self):
         """Gets the exact or Cayley-transformed normal mode propagator matrix.

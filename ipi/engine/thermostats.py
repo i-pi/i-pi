@@ -170,11 +170,15 @@ class ThermoLangevin(Thermostat):
     def get_T(self):
         """Calculates the coefficient of the overall drift of the velocities."""
 
-        return np.exp(-self.dt / self.tau)
+        # xp.asarray normalises both Python scalars (normal Langevin) and
+        # 0-d tensors (PILE, where `tau` is `tauk[k-1]` on the backend)
+        # before the exp. array_api_compat.torch.exp does not accept a
+        # raw Python float.
+        return xp.exp(xp.asarray(-self.dt / self.tau))
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
+        return xp.sqrt(xp.asarray(Constants.kb * self.temp * (1.0 - self.T**2)))
 
     def get_T_on_sm(self):
         """Calculates the combined mass scaling and thermostat damping."""
@@ -416,13 +420,10 @@ class ThermoPILE_L(Thermostat):
            An array with the damping time scales for the non-centroid modes.
         """
 
-        # Also include an optional scaling factor to reduce the intensity of NM thermostats
-        return np.array(
-            [
-                1.0 / (2 * self.pilescale * self.nm.dynomegak[k])
-                for k in range(1, len(self._thermos))
-            ]
-        )
+        # Also include an optional scaling factor to reduce the intensity of NM thermostats.
+        # Vectorised: dynomegak[0] is the centroid (always 0); the rest are the
+        # non-centroid normal modes that this thermostat drives.
+        return 1.0 / (2.0 * self.pilescale * dstrip(self.nm.dynomegak)[1:])
 
     def get_ethermo(self):
         """Computes the total energy transferred to the heat bath for all the
@@ -495,7 +496,8 @@ class ThermoSVR(Thermostat):
         Journal of Chemical Physics 126, 014101 (2007)
         """
 
-        K = np.dot(dstrip(self.p), dstrip(self.p) / dstrip(self.m)) * 0.5
+        p = dstrip(self.p)
+        K = float(0.5 * (p @ (p / dstrip(self.m))))
 
         # rescaling is un-defined if the KE is zero
         if K == 0.0:
