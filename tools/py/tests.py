@@ -4,6 +4,7 @@
 This script runs calls pytest to run of the tests that are provided with i-pi.
 For details of usage call it with "-h" option.
 """
+
 import argparse
 from argparse import RawTextHelpFormatter
 from pathlib import Path

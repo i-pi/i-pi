@@ -23,7 +23,6 @@ import os
 from help import help, objects
 from help_list import help_list, list_objects
 
-
 if not os.path.exists("input_docs"):
     os.mkdir("input_docs")
 

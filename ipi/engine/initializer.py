@@ -25,7 +25,6 @@ from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, warning, info
 
-
 __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
 
 

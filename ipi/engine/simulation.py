@@ -20,6 +20,7 @@ from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_wri
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
+from ipi.utils.torch_profiling import build_profiler, summarize
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 import threading
@@ -353,6 +354,8 @@ class Simulation:
         # tqtime = 0.0
         # tttime = 0.0
         ttot = 0.0
+        torch_prof, torch_prof_trace = build_profiler()
+        torch_prof.__enter__()
         # main MD loop
         for self.step in range(self.step, self.tsteps):
             # stores the state before doing a step.
@@ -368,6 +371,8 @@ class Simulation:
                 self.chk.store()
 
             self.run_step(self.step)
+            if torch_prof_trace is not None:
+                torch_prof.step()
 
             if softexit.triggered:
                 # Don't write if we are about to exit.
@@ -424,6 +429,11 @@ class Simulation:
                     " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
                 )
                 break
+
+        torch_prof.__exit__(None, None, None)
+        if torch_prof_trace is not None:
+            for line in summarize(torch_prof, torch_prof_trace):
+                info(line, verbosity.low)
 
         self.rollback = False
 

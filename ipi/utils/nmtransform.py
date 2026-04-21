@@ -14,7 +14,6 @@ from ipi.utils.depend import dstrip
 
 from ipi.utils.messages import verbosity, info, warning
 
-
 _IS_NUMPY_BACKEND = is_numpy_namespace(xp)
 
 

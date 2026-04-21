@@ -28,7 +28,6 @@ import sys
 import autopep8
 import pycodestyle
 
-
 if __name__ == "__main__":
     # Description of the program after using -h
     parser = argparse.ArgumentParser(

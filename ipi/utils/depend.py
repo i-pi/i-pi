@@ -1,15 +1,18 @@
 """Dependency tracking, lazy caching, and automatic update of variables.
 
-This module provides a small data and storage class used throughout i-PI to 
+This module provides a small data and storage class used throughout i-PI to
 represent physical quantities. Two concrete classes wrap values:
 
 - `depend_value`: wraps an arbitrary Python value.
-- `depend_array`: wraps an array/tensor
+- `depend_array`: wraps an array/tensor.
 
-Both share the machinery defined in `depend_base`: a tainted flag, an
-optional recompute function `_func`, an optional `synchronizer` that links
-equivalent quantities (e.g. cartesian vs normal-mode bead coordinates), and
-a list of dependants to notify on change.
+Both share the machinery defined in `depend_base`: a `_status` bundle
+carrying the tainted flag, the list of dependants, an optional
+`synchronizer` that links equivalent quantities (e.g. cartesian vs
+normal-mode bead coordinates), and the write-side threadlock. The
+`_status` instance is shared by reference between a `depend_array` and
+its slice-views so tainting and dependant notification propagate
+transparently across them.
 
 Values are recomputed lazily: when an access finds the tainted flag set,
 `_func` is called and the cached value is refreshed. Writes push: they
@@ -41,6 +44,7 @@ from ipi.utils.array_backend import xp
 __all__ = [
     "depend_value",
     "depend_array",
+    "depend_status",
     "synchronizer",
     "dpipe",
     "dcopy",
@@ -61,24 +65,56 @@ class synchronizer(object):
     last written.
     """
 
+    __slots__ = ("synced", "manual")
+
     def __init__(self, deps=None):
         self.synced = dict() if deps is None else deps
         self.manual = None
+
+
+class depend_status(object):
+    """Shared per-dependency-group state.
+
+    Slice-views of a `depend_array` and their parent point at the same
+    `depend_status` instance, so tainting the parent taints the view (and vice
+    versa), and both share the same dependant list and threadlock.
+    """
+
+    __slots__ = ("tainted", "dependants", "synchro", "threadlock")
+
+    def __init__(self, tainted=True, dependants=None, synchro=None):
+        self.tainted = bool(tainted)
+        self.dependants = [] if dependants is None else dependants
+        self.synchro = synchro
+        self.threadlock = threading.RLock()
+
+    def __getstate__(self):
+        # threadlock is unpicklable; recreate it on load.
+        return (self.tainted, self.dependants, self.synchro)
+
+    def __setstate__(self, state):
+        self.tainted, self.dependants, self.synchro = state
+        self.threadlock = threading.RLock()
 
 
 class depend_base(object):
     """Shared tainting, dependency, and synchronization machinery.
 
     Attributes:
-        _tainted: 1-element bool ndarray; True if value must be recomputed.
-        _func: Callable (or dict of callables for synchronizer peers) used
-            to recompute the value when tainted.
         _name: Human-readable name (used for diagnostics and synchronizer
             lookup).
-        _synchro: Optional `synchronizer` linking peer quantities.
-        _dependants: Weak references to objects that must be tainted when
-            this one changes.
+        _func: Callable (or dict of callables for synchronizer peers) used
+            to recompute the value when tainted.
+        _status: Shared `depend_status` bundle holding the tainted flag, the
+            dependants list, the synchronizer reference, and the write-side
+            threadlock. Slice-views share this instance with their parent.
     """
+
+    # `__weakref__` is needed so `weakref.ref(self)` works (used when we
+    # register ourselves as a dependant of another node). Without it,
+    # `__slots__` would suppress the weakref support slot that Python
+    # normally adds to every class.
+    __slots__ = ("_name", "_func", "_status", "__weakref__")
 
     def __init__(
         self,
@@ -87,106 +123,128 @@ class depend_base(object):
         func=None,
         dependants=None,
         dependencies=None,
-        tainted=None,
+        status=None,
     ):
-        if tainted is None:
-            tainted = np.array([True], bool)
-        if dependants is None:
-            dependants = []
-        if dependencies is None:
-            dependencies = []
-
-        self._tainted = tainted
-        self._func = func
         self._name = name
-        self._threadlock = threading.RLock()
-        self._dependants = []
-        self._synchro = None
+        self._func = func
+        # A fresh Status unless a caller passes one in (e.g. slice-view
+        # construction, or `dcopy` sharing state between peers).
+        if status is None:
+            status = depend_status(
+                tainted=True,
+                dependants=[] if dependants is None else dependants,
+                synchro=synchro,
+            )
+        else:
+            # Caller-provided status takes precedence; seed dependants/synchro
+            # only if we're asked to *add* them. Currently nothing passes both.
+            if dependants is not None:
+                status.dependants = dependants
+            if synchro is not None and status.synchro is None:
+                status.synchro = synchro
+        self._status = status
 
-        self.add_synchro(synchro)
+        self.add_synchro(status.synchro)
 
-        # set up dependencies and dependants given on initialization
-        for item in dependencies:
-            item.add_dependant(self, tainted)
+        # set up dependencies (reverse edges from upstream sources).
+        if dependencies is not None:
+            for item in dependencies:
+                item.add_dependant(self, tainted=True)
 
-        for item in dependants:
+        # Coerce any raw dependants into weakrefs (slice-view dependants
+        # come through already-wrapped; user-constructed ones may not).
+        deps = self._status.dependants
+        for i, item in enumerate(deps):
             if not isinstance(item, weakref.ref):
-                dependants.remove(item)
-                dependants.append(weakref.ref(item))
-        self._dependants = dependants
+                deps[i] = weakref.ref(item)
 
-        # Primitive objects start untainted; computed objects inherit the
-        # incoming tainted flag.
-        if tainted[0]:
-            if self._func is None:
-                self.taint(taintme=False)
-            else:
-                self.taint(taintme=tainted)
+        # Primitive objects start untainted; computed objects stay tainted.
+        if self._func is None:
+            self._status.tainted = False
 
     def __deepcopy__(self, memo):
-        # Deepcopy every attribute except `_threadlock` (unpicklable RLock)
-        # and `_func` (a bound method whose `__self__` may hold non-picklable
-        # state such as a `threading.Lock`; the copy shares the reference).
+        """Slot-aware deepcopy.
+
+        Mirrors the historical behaviour: rebuild a fresh instance, copy
+        every slot, but (a) share `_func` by reference (bound methods
+        often carry unpicklable state like threading.Lock on the
+        ``__self__``), and (b) give the copy a fresh threadlock inside
+        the copied `depend_status`.
+        """
         newone = type(self).__new__(type(self))
-        for member, value in self.__dict__.items():
-            if member == "_threadlock":
-                newone._threadlock = threading.RLock()
-            elif member == "_func":
-                newone._func = value
-            else:
-                setattr(newone, member, deepcopy(value, memo))
+        for cls in type(self).__mro__:
+            for name in getattr(cls, "__slots__", ()):
+                try:
+                    val = getattr(self, name)
+                except AttributeError:
+                    continue
+                if name == "_func":
+                    setattr(newone, name, val)
+                elif name == "_status":
+                    copied = depend_status.__new__(depend_status)
+                    copied.tainted = deepcopy(val.tainted, memo)
+                    copied.dependants = deepcopy(val.dependants, memo)
+                    copied.synchro = deepcopy(val.synchro, memo)
+                    copied.threadlock = threading.RLock()
+                    setattr(newone, name, copied)
+                else:
+                    setattr(newone, name, deepcopy(val, memo))
         return newone
 
     def add_synchro(self, synchro=None):
+        if synchro is None:
+            return
+        status = self._status
         assert (
-            self._synchro is None
+            status.synchro is None or status.synchro is synchro
         ), "This object must not have a previous synchronizer!"
-        self._synchro = synchro
-        if self._synchro is not None and self._name not in self._synchro.synced:
-            self._synchro.synced[self._name] = self
-            self._synchro.manual = self._name
+        status.synchro = synchro
+        if self._name not in synchro.synced:
+            synchro.synced[self._name] = self
+            synchro.manual = self._name
 
     def add_dependant(self, newdep, tainted=True):
         newdep.add_dependency(self, tainted=tainted)
 
     def add_dependency(self, newdep, tainted=True):
-        newdep._dependants.append(weakref.ref(self))
+        newdep._status.dependants.append(weakref.ref(self))
         if tainted:
             self.taint(taintme=True)
 
     def taint(self, taintme=True):
         """Plain directed acyclic graph walk: taint dependants, optionally self."""
-        for item in self._dependants:
+        for item in self._status.dependants:
             item = item()
             if item is None:
                 continue
-            if not item._tainted[0]:
+            if not item._status.tainted:
                 item.taint()
-        self._tainted[0] = taintme
+        self._status.tainted = taintme
 
     def _taint_synchro(self):
         """Mark peer synchronized quantities as stale.
 
-        Called from setter paths when `_synchro` is present. Sets
-        `_synchro.manual` to self and taints all other peers (and their
+        Called from setter paths when the synchronizer is present. Sets
+        `synchro.manual` to self and taints all other peers (and their
         dependants) while leaving self clean.
         """
-        if self._synchro is None:
+        synchro = self._status.synchro
+        if synchro is None:
             return
-        self._synchro.manual = self._name
-        for v in self._synchro.synced.values():
-            if v is self or v._tainted[0]:
+        synchro.manual = self._name
+        for v in synchro.synced.values():
+            if v is self or v._status.tainted:
                 continue
-            v._tainted[0] = True
-            for item in v._dependants:
+            v._status.tainted = True
+            for item in v._status.dependants:
                 item = item()
                 if item is None:
                     continue
-                if not item._tainted[0]:
+                if not item._status.tainted:
                     item.taint()
 
     def tainted(self):
-        return self._tainted[0]
+        return self._status.tainted
 
     def update_auto(self):
         """Recompute from `_func` when tainted.
@@ -194,9 +252,10 @@ class depend_base(object):
         For synchronized peers, `_func` is a dict keyed by peer name; the
         value for the manually-set peer is invoked.
         """
-        if self._synchro is not None:
-            if self._name != self._synchro.manual:
-                self.set(self._func[self._synchro.manual](), manual=False)
+        synchro = self._status.synchro
+        if synchro is not None:
+            if self._name != synchro.manual:
+                self.set(self._func[synchro.manual](), manual=False)
                 # info(f" @depend: Set value for {self._name} (syncro)", verbosity.debug)
             else:
                 # warning(self._name + " probably shouldn't be tainted (synchro)", verbosity.low)
@@ -211,7 +270,7 @@ class depend_base(object):
     def update_man(self):
         """Post-manual-write hook: propagate synchro state or reject writes
         to auto-computed quantities."""
-        if self._synchro is not None:
+        if self._status.synchro is not None:
             self._taint_synchro()
             # info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
         elif self._func is not None:
@@ -229,16 +288,19 @@ class depend_base(object):
 
     def _refresh(self):
         """Cold-path recompute. Callers are expected to gate with
-        `if self._tainted[0]: self._refresh()` so the fast path stays inline.
-        Double-checks under the lock to make the update thread-safe."""
-        with self._threadlock:
-            if self._tainted[0]:
+        `if self._status.tainted: self._refresh()` so the fast path stays
+        inline. Double-checks under the lock to make the update thread-safe."""
+        status = self._status
+        with status.threadlock:
+            if status.tainted:
                 self.update_auto()
                 self.taint(taintme=False)
 
 
 class depend_value(depend_base):
     """Depend wrapper around a scalar/Python value."""
+
+    __slots__ = ("_value",)
 
     def __init__(
         self,
@@ -248,21 +310,22 @@ class depend_value(depend_base):
         func=None,
         dependants=None,
         dependencies=None,
-        tainted=None,
+        status=None,
     ):
         self._value = value
-        super().__init__(name, synchro, func, dependants, dependencies, tainted)
+        super().__init__(name, synchro, func, dependants, dependencies, status)
 
     def get(self):
         return self.__get__(self, self.__class__)
 
     def __get__(self, instance=None, owner=None):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return self._value
 
     def set(self, value, manual=True):
-        with self._threadlock:
+        status = self._status
+        with status.threadlock:
             self._value = value
             if manual:
                 self.update_man()
@@ -288,10 +351,21 @@ class depend_array(depend_base):
     """Depend wrapper around an ndarray (composition, not inheritance).
 
     The underlying array lives in `self._value`. Slice-views share memory
-    with the parent's `_value` and share the parent's `_tainted` flag and
-    `_dependants` list, so writing through a slice taints the parent's
-    downstream consumers.
+    with the parent's `_value` and share the parent's `_status` (and thus
+    the tainted flag, dependants list, synchronizer, and threadlock), so
+    writing through a slice taints the parent's downstream consumers.
+
+    Passing ``on_host=True`` pins the storage to the host (`device="cpu"`
+    in array-API terms). Under torch the value is still a `torch.Tensor`
+    so the surrounding code stays backend-agnostic, but it lives on CPU
+    and reading scalars out of it (`.item()`, `int()`, `bool()`, `%`,
+    `==`) does not trigger `cudaStreamSynchronize`. Intended for small
+    control-flow arrays (MTS counts, index masks) that are only touched
+    for Python branching. Do **not** set it for arrays that get combined
+    with backend-native tensors on the hot path (e.g. `pdt`, `qdt_on_m`).
     """
+
+    __slots__ = ("_value", "_parent", "_on_host")
 
     def __init__(
         self,
@@ -301,23 +375,27 @@ class depend_array(depend_base):
         func=None,
         dependants=None,
         dependencies=None,
-        tainted=None,
+        status=None,
         base=None,
         parent=None,
+        on_host=False,
     ):
+        self._on_host = bool(on_host)
+        asarray_kwargs = {"device": "cpu"} if self._on_host else {}
         if base is not None:
-            # Slice-view: wrap an already-allocated view of the parent.
+            # Slice-view: wrap an already-allocated view of the parent;
+            # storage location is inherited automatically.
             self._value = base
         elif value is None:
             # Sentinel used by __deepcopy__; members will be overwritten.
-            self._value = xp.empty(0)
+            self._value = xp.empty(0, **asarray_kwargs)
         else:
             # xp only handles numeric dtypes; strings/objects stay as numpy.
             # Try xp first so torch tensors (possibly on non-CPU devices)
             # pass through without a numpy round-trip that would force a
             # device->host copy and fail on CUDA.
             try:
-                self._value = xp.asarray(value)
+                self._value = xp.asarray(value, **asarray_kwargs)
             except (TypeError, ValueError, RuntimeError):
                 self._value = np.asarray(value)
 
@@ -328,7 +406,7 @@ class depend_array(depend_base):
         # narrower view.
         self._parent = parent
 
-        super().__init__(name, synchro, func, dependants, dependencies, tainted)
+        super().__init__(name, synchro, func, dependants, dependencies, status)
 
     # ------------------------------------------------------------------
     # Propagate common array attributes to allow direct access without unwrapping.
@@ -414,9 +492,7 @@ class depend_array(depend_base):
             value=None,
             base=self._value.reshape(newshape),
             name=self._name,
-            synchro=self._synchro,
-            dependants=self._dependants,
-            tainted=self._tainted,
+            status=self._status,
             parent=self,
         )
 
@@ -429,7 +505,7 @@ class depend_array(depend_base):
     # ------------------------------------------------------------------
 
     def __get__(self, instance=None, owner=None):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return self
 
@@ -437,7 +513,7 @@ class depend_array(depend_base):
         self.set(value, manual=True)
 
     def __getitem__(self, index):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         if _is_scalar_index(index, self._value.ndim):
             return self._value[index]
@@ -445,42 +521,42 @@ class depend_array(depend_base):
             value=None,
             base=self._value[index],
             name=self._name,
-            synchro=self._synchro,
-            dependants=self._dependants,
-            tainted=self._tainted,
+            status=self._status,
             parent=self,
         )
 
     def __setitem__(self, index, value):
-        with self._threadlock:
+        status = self._status
+        with status.threadlock:
             self._value[index] = value
             # Skip update_man() on plain leaf-storage arrays (no synchro,
             # no computed func) — there is nothing for it to do.
-            if self._synchro is not None or self._func is not None:
+            if status.synchro is not None or self._func is not None:
                 self.update_man()
             self.taint(taintme=False)
 
     def set(self, value, manual=True):
         """Full-array assignment. `manual=False` is used by `update_auto`."""
-        with self._threadlock:
+        status = self._status
+        with status.threadlock:
             self._value[...] = value
-            if manual and (self._synchro is not None or self._func is not None):
+            if manual and (status.synchro is not None or self._func is not None):
                 self.update_man()
             self.taint(taintme=False)
 
     def get(self):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return self
 
     def _refresh(self):
         """Slice-view aware refresh.
 
-        A slice-view shares `_tainted` with its parent but its `_value`
+        A slice-view shares `_status` with its parent but its `_value`
         is only a narrow view. Recomputing through `update_auto` must
         happen on the parent, which owns the full-shape storage; the
         slice's `_value` (a view) then observes the refreshed data for
-        free, and the shared `_tainted` flag is cleared by the parent.
+        free, and the shared `tainted` flag is cleared by the parent.
         """
         if self._parent is not None:
             self._parent._refresh()
@@ -495,7 +571,7 @@ class depend_array(depend_base):
         return len(self._value)
 
     def __iter__(self):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return iter(self._value)
 
@@ -503,21 +579,15 @@ class depend_array(depend_base):
         return f"depend_array({self._name!r}, {self._value!r})"
 
     def __bool__(self):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return bool(self._value)
 
     # ------------------------------------------------------------------
-    # Support pickling by ignoring the unpicklable threadlock and rebuilding it on unpickle.
+    # Pickling: `depend_status.__getstate__` already omits the threadlock, and
+    # slot classes pickle naturally via `__reduce_ex__`. No custom methods
+    # needed.
     # ------------------------------------------------------------------
-
-    def __getstate__(self):
-        state = {k: v for k, v in self.__dict__.items() if k != "_threadlock"}
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self._threadlock = threading.RLock()
 
 
 # ----------------------------------------------------------------------
@@ -532,10 +602,10 @@ class depend_array(depend_base):
 
 def _make_binop(op):
     def method(self, other):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         if isinstance(other, depend_array):
-            if other._tainted[0]:
+            if other._status.tainted:
                 other._refresh()
             other = other._value
         return op(self._value, other)
@@ -546,10 +616,10 @@ def _make_binop(op):
 
 def _make_rbinop(op):
     def method(self, other):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         if isinstance(other, depend_array):
-            if other._tainted[0]:
+            if other._status.tainted:
                 other._refresh()
             other = other._value
         return op(other, self._value)
@@ -560,7 +630,7 @@ def _make_rbinop(op):
 
 def _make_unop(op, name):
     def method(self):
-        if self._tainted[0]:
+        if self._status.tainted:
             self._refresh()
         return op(self._value)
 
@@ -653,16 +723,20 @@ def dpipe(dfrom, dto, item=-1):
 
 
 def dcopy(dfrom, dto):
-    """Copies the dependencies of one depend object to another.
+    """Share dependency state between two depend objects.
 
-    Args:
-        see dpipe.
+    After this call `dto` observes the same tainted flag, dependants list,
+    synchronizer and threadlock as `dfrom` (they point to the same
+    `depend_status` instance). `_func` is shared by reference. Used for
+    attributes such as `fx`/`fy`/`fz` that are views into `_f` and must
+    invalidate alongside it.
     """
-    dto._dependants = dfrom._dependants
-    dto._synchro = dfrom._synchro
-    dto.add_synchro(dfrom._synchro)
-    dto._tainted = dfrom._tainted
+    dto._status = dfrom._status
     dto._func = dfrom._func
+    # Register dto under its own name in the shared synchronizer, if any.
+    synchro = dfrom._status.synchro
+    if synchro is not None and dto._name not in synchro.synced:
+        synchro.synced[dto._name] = dto
 
 
 def depraise(exception):
@@ -678,7 +752,7 @@ def _inject_depend_property(cls, attr_name):
 
     def getter(self):
         dep = self.__dict__[private_name]
-        if dep._tainted[0]:
+        if dep._status.tainted:
             dep._refresh()
         return dep._value if type(dep) is depend_value else dep
 
