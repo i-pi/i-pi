@@ -19,8 +19,6 @@ from ase.outputs import _defineprop, all_outputs
 from ipi.pes._ase import ASEDriver
 from ipi.utils.timing import Timer, timeit
 from ipi.pes.tools import JSONLogger, ModelResults, Parent
-from ipi.utils.messages import warning, verbosity
-from ipi.utils.units import unit_to_user
 
 
 # --------------------------------------- #
@@ -86,7 +84,7 @@ class MACE_driver(ASEDriver):
     def check_parameters(self):
         """Initialize the MACE calculator from the provided model and settings."""
 
-        self.batched_calculator = MACECalculator(
+        self.batched_calculator = BatchedMACE(
             model_paths=self.model,
             device=self.device,
             get_extras=lambda: self.extra,
@@ -108,8 +106,8 @@ class MACE_driver(ASEDriver):
             self.all_templates = [self.template.copy() for _ in range(Nstructures)]
         elif len(self.all_templates) < Nstructures:
             Nalready = len(self.all_templates)
-            self.all_templates.append(
-                [self.template.copy() for _ in range(Nstructures - Nalready)]
+            self.all_templates.extend(
+                self.template.copy() for _ in range(Nstructures - Nalready)
             )
 
         for _, (atoms, c, p) in enumerate(zip(self.all_templates, cell, pos)):
@@ -119,7 +117,7 @@ class MACE_driver(ASEDriver):
             volume = atoms.get_volume()
             if volume > MAX_VOLUME:
                 raise ValueError(
-                    f"The provided structure has a volume of {volume}, which seems wrongs."
+                    f"Unphysical structure volume detected: {volume:.3f} Å³"
                 )
 
         return self.all_templates[:Nstructures]
@@ -147,7 +145,7 @@ class MACE_driver(ASEDriver):
 
 
 # --------------------------------------- #
-class MACECalculator(MACECalculator):
+class BatchedMACE(MACECalculator):
     """
     Extended ase Calculator for MACE:
      - supports batched evaluation of many atomic structures
@@ -174,7 +172,6 @@ class MACECalculator(MACECalculator):
         log = self.instructions.pop("log_results", None)
         self.results_logger = JSONLogger(log)
         self.batch_size = self.instructions.pop("batch_size", 1)
-        self.instructions = instructions
         if "arrays_keys" not in kwargs:
             kwargs["arrays_keys"] = {}
         if "oxn" not in kwargs["arrays_keys"]:
@@ -233,7 +230,7 @@ class MACECalculator(MACECalculator):
                     node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
                         num_atoms_arange, node_heads
                     ]
-                except:
+                except Exception:
                     # older versions of MACE
                     node_e0 = self.models[0].atomic_energies_fn(
                         batch["node_attrs"], node_heads
@@ -326,17 +323,16 @@ class MACECalculator(MACECalculator):
 
                 # collect the results
                 with self.logger.section("postprocess pt.1"):
+                    ignored = set(to_ignore_properties)
+                    if "ignore" in self.instructions:
+                        ignored |= set(self.instructions["ignore"])
+
                     results_tensors = {}
+
                     for key, value in out.items():
-                        if value is None:
+                        if value is None or key in ignored:
                             continue
-                        if (
-                            "ignore" in self.instructions
-                            and key in self.instructions["ignore"]
-                        ) or key in to_ignore_properties:
-                            continue
-                        if key not in results_tensors:
-                            results_tensors[key] = [None] * len(self.models)
+
                         results_tensors[key] = value.detach().cpu().numpy()
 
                     model_results[i].store(Natoms, results_tensors)
@@ -358,10 +354,6 @@ class MACECalculator(MACECalculator):
         training: bool,
         compute_bec: bool,
     ) -> Dict[str, torch.Tensor]:
-
-        if "dipole" in data:
-            mu = data["dipole"]
-            # mu = proper_dipole(mu, data["displacement"])
 
         data = self.get_forces_stress(data, batch, training)
 
@@ -385,7 +377,7 @@ class MACECalculator(MACECalculator):
             if data[keyword] is not None:
                 raise ValueError(f"'{keyword}' in 'data' should be None.")
 
-        forces, virials, stress, hessian, edge_forces = get_outputs(
+        forces, _, stress, hessian, edge_forces = get_outputs(
             energy=data["energy"],
             positions=batch["positions"],
             cell=batch["cell"],
@@ -396,7 +388,6 @@ class MACECalculator(MACECalculator):
 
         to_assign = {
             "forces": forces,
-            # "virials": virials,
             "stress": stress,
             "hessian": hessian,
             "edge_forces": edge_forces,
@@ -464,7 +455,6 @@ class MACECalculator(MACECalculator):
 
 # --------------------------------------- #
 # Function taken from https://github.com/davkovacs/mace/tree/mu_alpha
-# ToDo: this could be improved and generalized to higher dimensional tensors.
 def compute_dielectric_gradients(
     dielectric: torch.Tensor, inputs: List[torch.Tensor], clean: Optional[bool] = False
 ) -> List[torch.Tensor]:
@@ -479,7 +469,7 @@ def compute_dielectric_gradients(
     Returns:
         List[torch.Tensor]: For each input tensor, the gradient d(dielectric)/d(input).
     """
-    d_dielectric_dr = d_dielectric_dr = [
+    d_dielectric_dr = [
         [None for _ in range(dielectric.shape[-1])] for _ in range(len(inputs))
     ]
     grad_outputs: List[torch.Tensor] = [
