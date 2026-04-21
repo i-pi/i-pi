@@ -406,7 +406,7 @@ class BatchedMACE(MACECalculator):
             )
         try:
             batch["positions"]
-        except:
+        except Exception:
             raise ValueError(
                 f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.keys())}"
             )
