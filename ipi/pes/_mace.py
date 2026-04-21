@@ -42,7 +42,7 @@ ase_like_properties = {
     "atomic_dipoles": ("natoms", 3),
     "atomic-oxn-dipole": ("natoms", 3),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
-    "piezoelectric": (3, 3, 3),
+    # "piezoelectric": (3, 3, 3),
 }
 
 to_ignore_properties = ["interaction_energy", "node_feats", "node_energy"]
@@ -322,6 +322,8 @@ class MACECalculator(MACECalculator):
                         **forward_kwargs,
                     )
 
+                    out = self.augment_output(out, batch, training, compute_bec)
+
                 # collect the results
                 with self.logger.section("postprocess pt.1"):
                     results_tensors = {}
@@ -347,6 +349,117 @@ class MACECalculator(MACECalculator):
                 for n, a in enumerate(out)
             ]
         return out
+
+    @timeit("augment_output")
+    def augment_output(
+        self,
+        data: Dict[str, torch.Tensor],
+        batch: Batch,
+        training: bool,
+        compute_bec: bool,
+    ) -> Dict[str, torch.Tensor]:
+
+        if "dipole" in data:
+            mu = data["dipole"]
+            # mu = proper_dipole(mu, data["displacement"])
+
+        data = self.get_forces_stress(data, batch, training)
+
+        if compute_bec and "BEC" not in data:
+            bec = self.compute_dmu_dR(data, batch)
+            # store to output results
+            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
+            data["BEC"] = bec.moveaxis(0, 1)
+
+        return data
+
+    @timeit("get_forces_stress")
+    def get_forces_stress(
+        self, data: Dict[str, torch.Tensor], batch: Batch, training: bool
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Compute forces and stress from the energy.
+        """
+
+        for keyword in ["forces", "stress"]:  # "virials"
+            if data[keyword] is not None:
+                raise ValueError(f"'{keyword}' in 'data' should be None.")
+
+        forces, virials, stress, hessian, edge_forces = get_outputs(
+            energy=data["energy"],
+            positions=batch["positions"],
+            cell=batch["cell"],
+            displacement=data["displacement"],
+            **self.instructions["forward_kwargs"],
+            training=training,
+        )
+
+        to_assign = {
+            "forces": forces,
+            # "virials": virials,
+            "stress": stress,
+            "hessian": hessian,
+            "edge_forces": edge_forces,
+        }
+        del data["virials"]  # virials should be computed from the stress tensor
+
+        for keyword, value in to_assign.items():
+            if keyword in data and data[keyword] is not None:
+                raise ValueError(f"'{keyword}' in 'data' should be None.")
+            if value is not None:
+                data[keyword] = value
+
+        return data
+
+    @timeit("compute_dmu_dR")
+    def compute_dmu_dR(
+        self, data: Dict[str, torch.Tensor], batch: Batch
+    ) -> torch.Tensor:
+        """
+        Compute the derivative of the dipole (mu) w.r.t. the positions (R) and lattice displacements (eta).
+        The derivatives w.r.t. the positions returns the Born Effective Charges,
+        while the derivatives w.r.t. the lattice displacements returns a tensor that can be related to the piezoelectric tensor.
+        The conversion from this tensor to the piezoelectric one is performed in 'augment_output'.
+        """
+
+        if "dipole" not in data:
+            raise ValueError(
+                f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
+            )
+        try:
+            batch["positions"]
+        except:
+            raise ValueError(
+                f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.keys())}"
+            )
+        dipole_components = 3
+        mu = data["dipole"][:, :dipole_components]  # just for debugging
+        pos = batch["positions"]
+        if not isinstance(mu, torch.Tensor):
+            raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
+        if not isinstance(pos, torch.Tensor):
+            raise ValueError(
+                f"The positions are not a torch.Tensor rather a {type(pos)}"
+            )
+
+        bec = compute_dielectric_gradients(mu, [pos])[0]
+
+        if not isinstance(bec, torch.Tensor):
+            raise ValueError(
+                f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
+            )
+        if tuple(bec.shape) != (dipole_components, *pos.shape):
+            raise ValueError(
+                f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
+            )
+
+        # Attention:
+        # The tensor 'bec' has 3 dimensions.
+        # Its shape is (3,*pos.shape).
+        # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
+        # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
+
+        return bec
 
 
 # --------------------------------------- #
