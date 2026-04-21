@@ -1,46 +1,41 @@
 #!/usr/bin/env python
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
+import argparse
 import json
-import torch
-import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
+import numpy as np
+import torch
+from ase import Atoms
+from ase.io import read, write
+from ase.outputs import _defineprop, all_outputs
 from mace import data
-from mace.tools.torch_geometric.dataloader import DataLoader
-from mace.tools.torch_geometric.batch import Batch
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
-
-from ase import Atoms
-from ase.io import read
-from ase.outputs import _defineprop, all_outputs
+from mace.tools.torch_geometric.batch import Batch
+from mace.tools.torch_geometric.dataloader import DataLoader
 
 from ipi.pes._ase import ASEDriver
-from ipi.utils.timing import Timer, timeit
 from ipi.pes.tools import JSONLogger, ModelResults, Parent
-
+from ipi.utils.timing import Timer, timeit
 
 # --------------------------------------- #
 __DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
 
-DEBUG = False
 MAX_VOLUME = 1e12
 
 ase_like_properties = {
     "energy": (),
     "interaction_energy": (),
-    # "node_energy": ("natoms",),
     "forces": ("natoms", 3),
     "displacement": (3, 3),
     "stress": (3, 3),
     "virials": (3, 3),
     "dipole": (3,),
     "atomic_dipoles": ("natoms", 3),
-    "atomic-oxn-dipole": ("natoms", 3),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
-    # "piezoelectric": (3, 3, 3),
 }
 
 to_ignore_properties = ["interaction_energy", "node_feats", "node_energy"]
@@ -147,9 +142,8 @@ class MACE_driver(ASEDriver):
 # --------------------------------------- #
 class BatchedMACE(MACECalculator):
     """
-    Extended ase Calculator for MACE:
+    Batched evaluation for MACE:
      - supports batched evaluation of many atomic structures
-     - supports the inclusion of external electric fields
      - can be used with a i-PI driver or as a standalone
     """
 
@@ -256,11 +250,6 @@ class BatchedMACE(MACECalculator):
         forward_kwargs["compute_force"] = False
         forward_kwargs["compute_stress"] = False
         forward_kwargs["compute_displacement"] = compute_stress
-
-        # disable Born Effective Charges computation if implemented in the model
-        # if self.model_type in ["EnergyDipoleMACE"]:
-        #     forward_kwargs["compute_bec"] = False
-
         forward_kwargs["compute_virials"] = False
         forward_kwargs["compute_edge_forces"] = False
 
@@ -354,7 +343,7 @@ class BatchedMACE(MACECalculator):
         training: bool,
         compute_bec: bool,
     ) -> Dict[str, torch.Tensor]:
-
+        """Augment the output of the MACE model with derived properties such as forces, stress, and Born Effective Charges."""
         data = self.get_forces_stress(data, batch, training)
 
         if compute_bec and "BEC" not in data:
@@ -407,10 +396,8 @@ class BatchedMACE(MACECalculator):
         self, data: Dict[str, torch.Tensor], batch: Batch
     ) -> torch.Tensor:
         """
-        Compute the derivative of the dipole (mu) w.r.t. the positions (R) and lattice displacements (eta).
-        The derivatives w.r.t. the positions returns the Born Effective Charges,
-        while the derivatives w.r.t. the lattice displacements returns a tensor that can be related to the piezoelectric tensor.
-        The conversion from this tensor to the piezoelectric one is performed in 'augment_output'.
+        Compute the derivative of the dipole (mu) w.r.t. the positions (R),
+        i.e. the Born Effective Charges, or Atomic Polar Tensors.
         """
 
         if "dipole" not in data:
@@ -498,9 +485,6 @@ def compute_dielectric_gradients(
 # Script entry point
 # -----------------------------------------------------------
 if __name__ == "__main__":
-    import argparse
-    from ase.io import write
-
     argv = {
         "metavar": "\b",
     }
