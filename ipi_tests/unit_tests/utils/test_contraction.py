@@ -10,9 +10,15 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from ipi.utils import nmtransform
+from ipi.utils.array_backend import xp, to_numpy
 
-# Transient compat imports: remove once depend stores xp natively.
-from ipi.utils.depend import to_xp, from_xp
+
+def _as_backend(q):
+    """Test inputs live as numpy literals for readability; convert to the
+    active array namespace before handing them to `nmtransform`. Under
+    torch, the transform's internal matrices are backend-native and its
+    aten ops reject numpy RHS."""
+    return xp.asarray(q)
 
 
 def check_up_and_down_scaling(n, q):
@@ -28,15 +34,15 @@ def check_up_and_down_scaling(n, q):
     print(q, q.shape, (q.shape[0], n))
 
     # rescale up to the n beads
-    beads_n = from_xp(rescale.b1tob2(to_xp(q)))
+    beads_n = rescale.b1tob2(_as_backend(q))
     print("Upscaled to %d beads:" % n)
     print(beads_n, beads_n.shape)
 
-    beads_final = from_xp(rescale.b2tob1(to_xp(beads_n)))
+    beads_final = rescale.b2tob1(beads_n)
     print("Final position of the beads:")
     print(beads_final)
 
-    assert_almost_equal(q, beads_final)
+    assert_almost_equal(q, to_numpy(beads_final))
     return beads_n
 
 
@@ -51,11 +57,11 @@ def check_rpc_consistency(n, q):
     rescale1 = nmtransform.nm_rescale(q.shape[0], n)
     rescale2 = nmtransform.nm_rescale(n, q.shape[0])
 
-    beads_n = from_xp(rescale1.b1tob2(to_xp(q)))
-    beads_1 = from_xp(rescale1.b2tob1(to_xp(beads_n)))
-    beads_2 = from_xp(rescale2.b1tob2(to_xp(beads_n)))
+    beads_n = rescale1.b1tob2(_as_backend(q))
+    beads_1 = rescale1.b2tob1(beads_n)
+    beads_2 = rescale2.b1tob2(beads_n)
 
-    assert_almost_equal(beads_1, beads_2)
+    assert_almost_equal(to_numpy(beads_1), to_numpy(beads_2))
 
 
 def check_centroid_pos(n, q):
@@ -71,7 +77,7 @@ def check_centroid_pos(n, q):
     rescale_big = nmtransform.mk_rs_matrix(n, 1)
     rescale_q = nmtransform.mk_rs_matrix(q.shape[0], 1)
 
-    centroid_big = np.dot(rescale_big, beads_big)
+    centroid_big = np.dot(rescale_big, to_numpy(beads_big))
     centroid_q = np.dot(rescale_q, q)
 
     assert_almost_equal(centroid_q, centroid_big)

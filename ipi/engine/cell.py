@@ -65,67 +65,31 @@ class Cell:
         return det_ut3x3(self.h)
 
     def apply_pbc(self, atom):
-        """Uses the minimum image convention to return a particle to the
-           unit cell.
+        """Minimum-image wrap of a single atom's position into the cell."""
 
-        Args:
-           atom: An Atom object.
-
-        Returns:
-           An array giving the position of the image that is inside the
-           system box.
-        """
-
-        s = np.dot(self.ih, atom.q)
-
-        for i in range(3):
-            s[i] = s[i] - round(s[i])
-
-        return np.dot(self.h, s)
+        s = dstrip(self.ih) @ dstrip(atom.q)
+        s = s - xp.round(s)
+        return dstrip(self.h) @ s
 
     def array_pbc(self, pos):
-        """Uses the minimum image convention to return a list of particles to the
-           unit cell.
+        """Minimum-image wrap of a position array (n_atoms*3,) in place."""
 
-        Args:
-           atom: An Atom object.
-
-        Returns:
-           An array giving the position of the image that is inside the
-           system box.
-        """
-
-        s = dstrip(pos).copy().reshape(-1, 3)
-
-        s = np.dot(dstrip(self.ih), s.T)
-        s = s - np.round(s)
-
-        s = np.dot(dstrip(self.h), s).T
-
+        s = dstrip(pos).reshape(-1, 3)
+        s = dstrip(self.ih) @ s.T
+        s = s - xp.round(s)
+        s = (dstrip(self.h) @ s).T
         pos[:] = s.reshape(-1)
 
     def minimum_distance(self, atom1, atom2):
-        """Takes two atoms and tries to find the smallest vector between two
-        images.
+        """Minimum-image vector between two atoms.
 
-        This is only rigorously accurate in the case of a cubic cell,
-        but gives the correct results as long as the cut-off radius is defined
-        as smaller than the smallest width between parallel faces even for
-        triclinic cells.
-
-        Args:
-           atom1: An Atom object.
-           atom2: An Atom object.
-
-        Returns:
-           An array giving the minimum distance between the positions of atoms
-           atom1 and atom2 in the minimum image convention.
+        Only rigorously accurate for a cubic cell but correct up to a cutoff
+        shorter than the smallest width between parallel cell faces.
         """
 
-        s = np.dot(self.ih, atom1.q - atom2.q)
-        for i in range(3):
-            s[i] -= round(s[i])
-        return np.dot(self.h, s)
+        s = dstrip(self.ih) @ (dstrip(atom1.q) - dstrip(atom2.q))
+        s = s - xp.round(s)
+        return dstrip(self.h) @ s
 
 
 dproperties(Cell, ["h", "ih", "V"])
@@ -161,17 +125,17 @@ class GenericCell(Cell):
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
-        return GenericCell(dstrip(self.h).copy())
+        return GenericCell(xp.asarray(dstrip(self.h), copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
 
-        return np.linalg.inv(self.h)
+        return xp.linalg.inv(dstrip(self.h))
 
     def get_volume(self):
         """Calculates the volume of the system box."""
 
-        return np.linalg.det(self.h)
+        return xp.linalg.det(dstrip(self.h))
 
 
 dproperties(GenericCell, ["h", "ih", "V"])

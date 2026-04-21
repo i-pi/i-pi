@@ -922,7 +922,12 @@ class BaroRGB(Barostat):
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         self._hmask = depend_array(name="hmask", value=hmask)
         # number of ones in the UT part of the mask
-        self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
+        # Store as a backend-native tensor so arithmetic with `self.p` and
+        # cell quantities stays on the active backend (numpy / torch).
+        self.L = xp.asarray(
+            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()]),
+            dtype=xp.float64,
+        )
 
         if stressext is not None:
             self.stressext = stressext
@@ -956,7 +961,7 @@ class BaroRGB(Barostat):
             name="m",
             value=np.atleast_1d(0.0),
             func=(
-                lambda: np.asarray(
+                lambda: xp.asarray(
                     [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
@@ -966,7 +971,7 @@ class BaroRGB(Barostat):
         self._m6 = depend_array(
             name="m6",
             value=np.zeros(6, float),
-            func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
+            func=(lambda: xp.ones(6, dtype=xp.float64) * self.m[0]),
             dependencies=[self._m],
         )
 
@@ -1012,23 +1017,25 @@ class BaroRGB(Barostat):
         )
 
     def get_3x3to6(self):
-        rp = np.zeros(6, float)
-        rp[0] = self.p[0, 0]
-        rp[1] = self.p[1, 1]
-        rp[2] = self.p[2, 2]
-        rp[3] = self.p[0, 1]
-        rp[4] = self.p[0, 2]
-        rp[5] = self.p[1, 2]
+        p = dstrip(self.p)
+        rp = xp.zeros(6, dtype=p.dtype)
+        rp[0] = p[0, 0]
+        rp[1] = p[1, 1]
+        rp[2] = p[2, 2]
+        rp[3] = p[0, 1]
+        rp[4] = p[0, 2]
+        rp[5] = p[1, 2]
         return rp
 
     def get_6to3x3(self):
-        rp = np.zeros((3, 3), float)
-        rp[0, 0] = self.p6[0]
-        rp[1, 1] = self.p6[1]
-        rp[2, 2] = self.p6[2]
-        rp[0, 1] = self.p6[3]
-        rp[0, 2] = self.p6[4]
-        rp[1, 2] = self.p6[5]
+        p6 = dstrip(self.p6)
+        rp = xp.zeros((3, 3), dtype=p6.dtype)
+        rp[0, 0] = p6[0]
+        rp[1, 1] = p6[1]
+        rp[2, 2] = p6[2]
+        rp[0, 1] = p6[3]
+        rp[0, 2] = p6[4]
+        rp[1, 2] = p6[5]
         return rp
 
     def get_pot(self):
@@ -1220,7 +1227,12 @@ class BaroMTK(Barostat):
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         self._hmask = depend_array(name="hmask", value=hmask)
         # number of ones in the UT part of the mask
-        self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
+        # Store as a backend-native tensor so arithmetic with `self.p` and
+        # cell quantities stays on the active backend (numpy / torch).
+        self.L = xp.asarray(
+            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()]),
+            dtype=xp.float64,
+        )
 
         if pext is not None:
             self.pext = pext
@@ -1254,7 +1266,7 @@ class BaroMTK(Barostat):
             name="m",
             value=np.atleast_1d(0.0),
             func=(
-                lambda: np.asarray(
+                lambda: xp.asarray(
                     [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
@@ -1264,7 +1276,7 @@ class BaroMTK(Barostat):
         self._m6 = depend_array(
             name="m6",
             value=np.zeros(6, float),
-            func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
+            func=(lambda: xp.ones(6, dtype=xp.float64) * self.m[0]),
             dependencies=[self._m],
         )
 
@@ -1302,23 +1314,25 @@ class BaroMTK(Barostat):
         )
 
     def get_3x3to6(self):
-        rp = np.zeros(6, float)
-        rp[0] = self.p[0, 0]
-        rp[1] = self.p[1, 1]
-        rp[2] = self.p[2, 2]
-        rp[3] = self.p[0, 1]
-        rp[4] = self.p[0, 2]
-        rp[5] = self.p[1, 2]
+        p = dstrip(self.p)
+        rp = xp.zeros(6, dtype=p.dtype)
+        rp[0] = p[0, 0]
+        rp[1] = p[1, 1]
+        rp[2] = p[2, 2]
+        rp[3] = p[0, 1]
+        rp[4] = p[0, 2]
+        rp[5] = p[1, 2]
         return rp
 
     def get_6to3x3(self):
-        rp = np.zeros((3, 3), float)
-        rp[0, 0] = self.p6[0]
-        rp[1, 1] = self.p6[1]
-        rp[2, 2] = self.p6[2]
-        rp[0, 1] = self.p6[3]
-        rp[0, 2] = self.p6[4]
-        rp[1, 2] = self.p6[5]
+        p6 = dstrip(self.p6)
+        rp = xp.zeros((3, 3), dtype=p6.dtype)
+        rp[0, 0] = p6[0]
+        rp[1, 1] = p6[1]
+        rp[2, 2] = p6[2]
+        rp[0, 1] = p6[3]
+        rp[0, 2] = p6[4]
+        rp[1, 2] = p6[5]
         return rp
 
     def get_pot(self):
@@ -1397,7 +1411,13 @@ class BaroMTK(Barostat):
         else:
             eigvals, eigvecs = xp.linalg.eig(v)
             ieigvecs = xp.linalg.inv(eigvecs)
+            # xp.linalg.eig returns complex even when the input (an
+            # upper-triangular real matrix) has real eigenvalues. Numpy
+            # would silently cast back to real in the downstream matmul;
+            # torch is strict about dtype, so drop the (zero) imaginary
+            # part explicitly before mixing with real momenta.
             sinh = halfdt * (eigvecs @ (xp.diag(sinch(halfdt * eigvals)) @ ieigvecs))
+            sinh = xp.real(sinh)
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 
         natoms = self.beads.natoms
