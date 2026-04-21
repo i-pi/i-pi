@@ -19,7 +19,6 @@ from ipi.utils.inputvalue import *
 from ipi.utils.io.inputs import io_xml
 from ipi.utils.messages import verbosity, warning
 
-
 __all__ = [
     "InputInitializer",
     "InputInitFile",

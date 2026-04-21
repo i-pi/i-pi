@@ -17,7 +17,6 @@ from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
-
 __all__ = ["print_pdb_path", "print_pdb", "read_pdb"]
 
 

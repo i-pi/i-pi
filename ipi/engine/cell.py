@@ -14,7 +14,6 @@ from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 
-
 __all__ = ["Cell", "GenericCell"]
 
 

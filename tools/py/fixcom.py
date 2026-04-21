@@ -11,7 +11,6 @@ Syntax:
    mergebeadspdb.py prefix
 """
 
-
 import numpy as np
 import sys
 import glob

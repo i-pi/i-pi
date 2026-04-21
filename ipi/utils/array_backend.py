@@ -43,6 +43,62 @@ __all__ = [
 ]
 
 
+_CREATION_FNS = frozenset(
+    {
+        "asarray",
+        "zeros",
+        "zeros_like",
+        "ones",
+        "ones_like",
+        "empty",
+        "empty_like",
+        "full",
+        "full_like",
+        "arange",
+        "linspace",
+        "eye",
+    }
+)
+
+
+class _XpWithDevice:
+    """Thin proxy that injects ``device=`` into array-creation functions.
+
+    Avoids calling ``torch.set_default_device(...)``, which installs a
+    global ``__torch_function__`` mode that fires on every aten op and
+    adds ~3 us of Python dispatch overhead per kernel. Non-creation
+    attributes are forwarded as-is; creation functions get a thin
+    closure that sets ``device=`` if the caller didn't pass one.
+    """
+
+    __slots__ = ("_xp", "_device", "_cache")
+
+    def __init__(self, xp, device):
+        self._xp = xp
+        self._device = device
+        # Cache attribute lookups so hot-path code that reads `xp.foo`
+        # repeatedly doesn't keep repaying the wrapping cost.
+        self._cache = {}
+
+    def __getattr__(self, name):
+        cache = self._cache
+        hit = cache.get(name)
+        if hit is not None:
+            return hit
+        attr = getattr(self._xp, name)
+        if name in _CREATION_FNS and callable(attr):
+            device = self._device
+
+            def wrapped(*args, **kwargs):
+                kwargs.setdefault("device", device)
+                return attr(*args, **kwargs)
+
+            cache[name] = wrapped
+            return wrapped
+        cache[name] = attr
+        return attr
+
+
 def _load_backend(name):
     """Load backend namespace and return (namespace, device, dtype).
 
@@ -57,15 +113,18 @@ def _load_backend(name):
         import torch
         import array_api_compat.torch as _torch_backend
 
-        # IPI_DEVICE / IPI_DTYPE apply only to torch. Setting the defaults
-        # here makes subsequent xp.zeros/xp.asarray land on the right
-        # device and dtype without plumbing them through every call site.
+        # IPI_DEVICE / IPI_DTYPE apply only to torch. We avoid
+        # `torch.set_default_device`: it installs a global
+        # ``__torch_function__`` mode that fires on *every* aten op
+        # and adds measurable per-kernel dispatch overhead. Instead,
+        # wrap the backend namespace so that the handful of creation
+        # functions (``asarray``, ``zeros``, ``empty``, ...) receive
+        # ``device=`` transparently.
         dev = os.environ.get("IPI_DEVICE", "cpu")
-        torch.set_default_device(dev)
         dt_name = os.environ.get("IPI_DTYPE")
         if dt_name:
             torch.set_default_dtype(getattr(torch, dt_name))
-        return _torch_backend, dev, torch.get_default_dtype()
+        return _XpWithDevice(_torch_backend, dev), dev, torch.get_default_dtype()
     if name == "jax":
         import array_api_compat.jax.numpy as _jax_backend
 

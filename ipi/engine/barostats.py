@@ -31,7 +31,6 @@ from ipi.utils.mathtools import (
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
-
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
@@ -577,7 +576,7 @@ class BaroBZP(Barostat):
         V = self.cell.V
 
         # accumulate all three contributions and apply to the piston once
-        press = float(xp.linalg.trace(self.stress_mts(level))) / 3.0
+        press = xp.linalg.trace(self.stress_mts(level)) / 3.0
         delta = dt * 3.0 * (V * press)
 
         if level == self.nmtslevels - 1:
@@ -595,11 +594,12 @@ class BaroBZP(Barostat):
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
-        # cast to python float: keeps math.exp fast and strips 0-d tensor dispatch
-        v = float(self.p[0] / self.m[0])
+        # Stay in the array namespace: xp.exp on a 0-d tensor avoids the
+        # per-step cudaStreamSynchronize that float() would force.
+        v = self.p[0] / self.m[0]
         halfdt = self.qdt
-        expq = math.exp(v * halfdt)
-        expp = math.exp(-v * halfdt)
+        expq = xp.exp(v * halfdt)
+        expp = xp.exp(-v * halfdt)
         sinh_coef = (expq - expp) / (2.0 * v)
 
         m = dstrip(self.beads.m3)[0]
@@ -764,7 +764,7 @@ class BaroSCBZP(Barostat):
         high order part of the Suzuki-Chin stress"""
 
         # integrates with respect to the "high order" part of the stress with a timestep of dt /2
-        press = float(xp.linalg.trace(self.stress_sc)) / 3.0
+        press = xp.linalg.trace(self.stress_sc) / 3.0
         self.p += self.dt / 2 * 3.0 * (self.cell.V * press)
 
     def pstep(self, level=0):
@@ -778,7 +778,7 @@ class BaroSCBZP(Barostat):
         dt3 = dt**3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
-        press = float(xp.linalg.trace(self.stress_mts_sc(level))) / 3.0
+        press = xp.linalg.trace(self.stress_mts_sc(level)) / 3.0
         self.p += dt * 3.0 * (self.cell.V * press)
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
@@ -810,11 +810,12 @@ class BaroSCBZP(Barostat):
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
-        # cast to python float: keeps math.exp fast and strips 0-d tensor dispatch
-        v = float(self.p[0] / self.m[0])
+        # Stay in the array namespace: xp.exp on a 0-d tensor avoids the
+        # per-step cudaStreamSynchronize that float() would force.
+        v = self.p[0] / self.m[0]
         halfdt = self.qdt
-        expq = math.exp(v * halfdt)
-        expp = math.exp(-v * halfdt)
+        expq = xp.exp(v * halfdt)
+        expp = xp.exp(-v * halfdt)
         sinh_coef = (expq - expp) / (2.0 * v)
 
         m = dstrip(self.beads.m3)[0]

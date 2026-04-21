@@ -18,7 +18,6 @@ from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
 
-
 __all__ = ["Beads"]
 
 

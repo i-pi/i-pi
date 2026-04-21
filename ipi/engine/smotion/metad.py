@@ -9,7 +9,6 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 
 from ipi.engine.smotion import Smotion
 
-
 __all__ = ["MetaDyn"]
 
 

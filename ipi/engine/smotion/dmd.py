@@ -10,7 +10,6 @@ Should work with PBC.
 
 from ipi.engine.smotion import Smotion
 
-
 __all__ = ["DMD"]
 
 

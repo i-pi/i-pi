@@ -36,16 +36,29 @@ def _build_parser():
                     'given an XML input file.',
     )
     parser.add_argument('input', help='XML input file.')
-    parser.add_argument('-p', '--profile', dest='do_yappi',
-                        action='store_true', default=False,
-                        help='Profile this run using yappi.')
+    parser.add_argument('-p', '--profile', dest='profile',
+                        nargs='?', const='auto', default=None,
+                        choices=['auto', 'yappi', 'torch'],
+                        help='Profile this run. `yappi` is a CPU/wall '
+                             'Python profiler; `torch` uses torch.profiler '
+                             'and captures CUDA kernels and host/device '
+                             'transfers (requires `-A torch`). `auto` (the '
+                             'default when `-p` is passed without a value) '
+                             'picks torch when the backend is torch, else '
+                             'yappi.')
     parser.add_argument('--profiler-clock', dest='yappi_clock', default='cpu',
                         choices=['cpu', 'wall'],
-                        help='Profiling timing type: `wall` for wall-clock, '
+                        help='yappi timing type: `wall` for wall-clock, '
                              '`cpu` for CPU.')
     parser.add_argument('--profiler-output', dest='yappi_prefix',
                         default='profile',
-                        help='Prefix for profiler files.')
+                        help='Prefix for profiler output files.')
+    parser.add_argument('--profiler-schedule', dest='torch_profile_schedule',
+                        default='5,5,40', metavar='WAIT,WARMUP,ACTIVE',
+                        help='torch.profiler schedule: skip WAIT steps, '
+                             'warm up for WARMUP steps, then record ACTIVE '
+                             'steps (default: 5,5,40). Only used with '
+                             '`-p torch`.')
     parser.add_argument('-V', '--verbosity', dest='verbosity', default=None,
                         choices=['quiet', 'low', 'medium', 'high', 'debug'],
                         help='Verbosity level.')
@@ -89,7 +102,7 @@ from ipi.engine.simulation import Simulation
 
 def profile_exit(prefix="profile"):
     # write out the outputs of the profiler
-    import yappi            
+    import yappi
     yappi.stop()
     #yappi.get_thread_stats().print_all()
     yfs = yappi.get_func_stats()
@@ -99,20 +112,42 @@ def profile_exit(prefix="profile"):
     ypo.close()
 
 
+def _resolve_profile_mode(options):
+    """Turn `--profile auto` into concrete `yappi`/`torch` based on backend."""
+    if options.profile != 'auto':
+        return options.profile
+    return 'torch' if os.environ.get('IPI_ARRAY_BACKEND') == 'torch' else 'yappi'
+
+
 def main(fn_input, options):
     """Loads and runs the simulation stored in `fn_input`."""
 
+    profile_mode = _resolve_profile_mode(options)
+
     # optionally profile this run - set up
-    if options.do_yappi:
+    if profile_mode == 'yappi':
         try:
             import yappi
             yappi.set_clock_type(options.yappi_clock)
             yappi.start(builtins=True, profile_threads=True)
-            # register the output function for the profiler so it is 
+            # register the output function for the profiler so it is
             # called whatever the way i-PI ends
             softexit.register_function(profile_exit, prefix=options.yappi_prefix)
         except ImportError:
-            raise ImportError('Profiling requires the `yappi` package.')            
+            raise ImportError('Profiling requires the `yappi` package.')
+    elif profile_mode == 'torch':
+        if os.environ.get('IPI_ARRAY_BACKEND') != 'torch':
+            sys.exit('`-p torch` requires `-A torch`.')
+        # Pass the schedule + output prefix through to Simulation.run
+        # via module-level config on the torch_profiling helper. This
+        # keeps Simulation.run backend-agnostic and avoids plumbing a
+        # new argument through load_from_xml.
+        from ipi.utils import torch_profiling
+        torch_profiling.configure(
+            enabled=True,
+            schedule=options.torch_profile_schedule,
+            prefix=options.yappi_prefix,
+        )
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)

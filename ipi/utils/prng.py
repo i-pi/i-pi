@@ -143,7 +143,7 @@ class Random(object):
         if _IS_TORCH_BACKEND:
             import torch
 
-            return torch.rand((), generator=self._torch_gen).item()
+            return torch.rand((), generator=self._torch_gen, device=_xp_device).item()
         return self.rng[0].uniform()
 
     @property
@@ -153,7 +153,7 @@ class Random(object):
         if _IS_TORCH_BACKEND:
             import torch
 
-            return torch.randn((), generator=self._torch_gen).item()
+            return torch.randn((), generator=self._torch_gen, device=_xp_device).item()
         return self.rng[0].standard_normal()
 
     def gamma(self, k, theta=1.0, size=None):
@@ -182,16 +182,16 @@ class Random(object):
         if k < 1.0:
             # boost: X ~ Gamma(k) <=> X = Y * U**(1/k) with Y ~ Gamma(k+1)
             y = self._gamma_scalar_torch(k + 1.0)
-            u = torch.rand((), generator=self._torch_gen).item()
+            u = torch.rand((), generator=self._torch_gen, device=_xp_device).item()
             return y * (u ** (1.0 / k))
         d = k - 1.0 / 3.0
         c = 1.0 / math.sqrt(9.0 * d)
         while True:
-            x = torch.randn((), generator=self._torch_gen).item()
+            x = torch.randn((), generator=self._torch_gen, device=_xp_device).item()
             v = (1.0 + c * x) ** 3
             if v <= 0.0:
                 continue
-            u = torch.rand((), generator=self._torch_gen).item()
+            u = torch.rand((), generator=self._torch_gen, device=_xp_device).item()
             x2 = x * x
             if u < 1.0 - 0.0331 * x2 * x2:
                 return d * v
@@ -205,7 +205,11 @@ class Random(object):
             import torch
 
             shape = _normalise_size(size)
-            rates = torch.full(shape, float(lam)) if shape else torch.tensor(float(lam))
+            rates = (
+                torch.full(shape, float(lam), device=_xp_device)
+                if shape
+                else torch.tensor(float(lam), device=_xp_device)
+            )
             out = torch.poisson(rates, generator=self._torch_gen)
             if size is None:
                 return int(out.item())
@@ -221,10 +225,13 @@ class Random(object):
             if size is None:
                 return (
                     low
-                    + (high - low) * torch.rand((), generator=self._torch_gen).item()
+                    + (high - low)
+                    * torch.rand(
+                        (), generator=self._torch_gen, device=_xp_device
+                    ).item()
                 )
             shape = _normalise_size(size)
-            out = torch.empty(shape)
+            out = torch.empty(shape, device=_xp_device)
             out.uniform_(low, high, generator=self._torch_gen)
             return out.cpu().numpy()
         return self.rng[0].uniform(low, high, size)
@@ -245,7 +252,12 @@ class Random(object):
                 hi = hi + 1
             shape = _normalise_size(size)
             out = torch.randint(
-                int(lo), int(hi), shape, generator=self._torch_gen, dtype=torch.int64
+                int(lo),
+                int(hi),
+                shape,
+                generator=self._torch_gen,
+                dtype=torch.int64,
+                device=_xp_device,
             )
             if size is None:
                 return int(out.item())
@@ -259,8 +271,13 @@ class Random(object):
             import torch
 
             n = x.shape[axis]
-            perm = torch.randperm(n, generator=self._torch_gen).cpu().numpy()
-            x[...] = np.take(x, perm, axis=axis)
+            # Single-stream invariant: `_torch_gen` lives on `_xp_device`,
+            # and a CUDA generator can only drive a CUDA-resident output.
+            # We draw on-device and hop to CPU for numpy consumers. These
+            # callers (KMC, atom swap, scphonons) are cold paths, so the
+            # round-trip is negligible and preserves the single RNG stream.
+            perm = torch.randperm(n, generator=self._torch_gen, device=_xp_device)
+            x[...] = np.take(x, perm.cpu().numpy(), axis=axis)
             return
         self.rng[0].shuffle(x, axis)
 
@@ -274,7 +291,7 @@ class Random(object):
         if _IS_TORCH_BACKEND:
             import torch
 
-            buf = torch.empty(tuple(out.shape))
+            buf = torch.empty(tuple(out.shape), device=_xp_device)
             buf.normal_(generator=self._torch_gen)
             out[...] = buf.cpu().numpy()
             return
@@ -305,7 +322,10 @@ class Random(object):
         if _IS_TORCH_BACKEND:
             import torch
 
-            out = torch.empty(tuple(shape) if not isinstance(shape, int) else (shape,))
+            out = torch.empty(
+                tuple(shape) if not isinstance(shape, int) else (shape,),
+                device=_xp_device,
+            )
             out.normal_(generator=self._torch_gen)
             return out
         rvec = np.empty(shape=shape)

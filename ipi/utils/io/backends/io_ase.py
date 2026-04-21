@@ -13,7 +13,6 @@ import numpy as np
 from ipi.utils.array_backend import to_numpy
 from ipi.utils.units import Constants
 
-
 try:
     import ase
 except ImportError:

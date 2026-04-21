@@ -20,7 +20,6 @@ Syntax:
    remdsort.py inputfile.xml
 """
 
-
 import sys
 from copy import deepcopy
 import numpy as np

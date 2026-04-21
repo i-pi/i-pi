@@ -84,10 +84,17 @@ class Dynamics(Motion):
                 )
             self.thermostat = thermostat
 
+        # MTS counts are read for Python control flow on the hot path
+        # (mtsprop_ba/ab); keep them on host so scalar extracts don't
+        # force a cudaStreamSynchronize under CUDA.
         if nmts is None or len(nmts) == 0:
-            self._nmts = depend_array(name="nmts", value=np.asarray([1], int))
+            self._nmts = depend_array(
+                name="nmts", value=np.asarray([1], int), on_host=True
+            )
         else:
-            self._nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
+            self._nmts = depend_array(
+                name="nmts", value=np.asarray(nmts, int), on_host=True
+            )
 
         if barostat is None:
             self.barostat = Barostat()

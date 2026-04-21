@@ -238,7 +238,7 @@ def min_brent(fdf, fdf0, x0, tol, itmax, init_step):
     e = 0.0  # Size of step before last
 
     # Call initial bracketing routine
-    (ax, bx, cx, fb, dfb) = bracket(fdf, fdf0, x0, init_step)
+    ax, bx, cx, fb, dfb = bracket(fdf, fdf0, x0, init_step)
 
     # Set bracket points
     if ax < cx:
@@ -1263,7 +1263,7 @@ def min_brent_neb(fdf, fdf0=None, x0=0.0, tol=1.0e-6, itmax=100, init_step=1.0e-
     e = 0.0  # Step size for step before last
     d = 0.0
 
-    (ax, bx, cx, fb) = bracket_neb(fdf, fdf0, x0, init_step)
+    ax, bx, cx, fb = bracket_neb(fdf, fdf0, x0, init_step)
 
     # Set bracket points
     if ax < cx:

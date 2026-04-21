@@ -37,7 +37,6 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
-
 __all__ = ["InstantonMotion"]
 
 

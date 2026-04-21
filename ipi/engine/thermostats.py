@@ -22,7 +22,6 @@ from ipi.utils.prng import Random
 from ipi.utils.messages import verbosity, warning, info
 from ipi.engine.normalmodes import NormalModes
 
-
 __all__ = [
     "Thermostat",
     "ThermoLangevin",
@@ -213,27 +212,36 @@ class ThermoLangevin(Thermostat):
         )
 
     def step(self):
-        """Updates the bound momentum vector with a langevin thermostat."""
+        """Updates the bound momentum vector with a langevin thermostat.
 
-        # This performs the following steps
-        # p <- p*exp(-dt/tau)+xi sqrt(C(1-exp-2dt/tau))
-        # where dt is the thermostat time step (half of the MD step)
-        # and C is the equilibrium fluctuations. to have a single
-        # coefficient (and facilitate computing the kinetic energy)
-        # the change in kinetic energy is computed to accumulate the work made
-        # by the thermostat
+        Integrates  p <- p*T + xi*S  with  T = exp(-dt/tau)  and
+        S = sqrt(kT(1 - T^2)), in mass-scaled coords. The heat
+        exchanged with the bath accumulates into `self.ethermo` so
+        that `H + ethermo` is conserved.
+        """
 
-        # goes in a single step to mass scaled coordinates and applies damping
-        p = dstrip(self.p) * dstrip(self.T_on_sm)
+        # Cache depend handles once per call.
+        p_src = dstrip(self.p)  # physical momentum
+        T_on_sm = dstrip(self.T_on_sm)  # T / sm
+        sm = dstrip(self.sm)  # sqrt(mass)
+        S = self.S  # sqrt(kT (1 - T^2))
+        invT2 = 1.0 / (self.T * self.T)  # 1 / T^2
 
-        deltah = (p @ p) / (self.T**2)  # must correct for the "pre-damping"
-        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
-        deltah -= p @ p  # new energy
-
-        self.p[:] = p * dstrip(
-            self.sm
-        )  # back to physical momentum and updates actual p
-        self.ethermo += deltah * 0.5
+        # Damping + switch to ms coords.
+        p = p_src * T_on_sm
+        # Pre-noise KE (x2). `* invT2` strips the extra T^2 factor
+        # introduced by computing p@p on the already-damped vector,
+        # so we don't need a second pass over p_src.
+        pre = (p @ p) * invT2
+        # OU noise in ms coords.
+        p += S * self.prng.gvec(p_src.shape[0])
+        # Post-noise KE (x2).
+        post = p @ p
+        # Back to physical momenta.
+        p *= sm
+        self.p[:] = p
+        # Heat exchanged with the bath.
+        self.ethermo += (pre - post) * 0.5
 
 
 dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
