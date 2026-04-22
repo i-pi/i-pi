@@ -45,6 +45,10 @@ class ForceRequest(dict):
     This is useful for the `in` operator, which uses equality to test membership.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._event_done = threading.Event()
+
     def __eq__(self, y):
         """Overwrites the standard equals function."""
         return self is y
@@ -180,25 +184,24 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
+        fields = {
+            "id": reqid,
+            "pos": pbcpos,
+            "active": self.iactive,
+            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "pars": par_str,
+            "result": None,
+            "status": "Queued",
+            "start": -1,
+            "t_queued": time.time(),
+            "t_dispatched": 0,
+            "t_finished": 0,
+        }
         if template is None:
-            template = {}
-        template.update(
-            {
-                "id": reqid,
-                "pos": pbcpos,
-                "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
-                "pars": par_str,
-                "result": None,
-                "status": "Queued",
-                "start": -1,
-                "t_queued": time.time(),
-                "t_dispatched": 0,
-                "t_finished": 0,
-            }
-        )
-
-        newreq = ForceRequest(template)
+            newreq = ForceRequest(fields)
+        else:
+            template.update(fields)
+            newreq = ForceRequest(template)
 
         with self._threadlock:
             self.requests.append(newreq)
@@ -222,6 +225,7 @@ class ForceField:
                         {"raw": ""},
                     ]
                     r["status"] = "Done"
+                    r._event_done.set()
                     r["t_finished"] = time.time()
 
     def _poll_loop(self):
@@ -415,6 +419,7 @@ class FFEval(ForceField):
             {"raw": ""},
         ]
         request["status"] = "Done"
+        request._event_done.set()
 
 
 class FFDirect(ForceField):
@@ -541,6 +546,7 @@ class FFDirect(ForceField):
 
         request["result"] = results
         request["status"] = "Done"
+        request._event_done.set()
         request["t_finished"] = time.time()
 
     def launch_batch(self):
@@ -643,6 +649,7 @@ class FFLennardJones(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
+        r._event_done.set()
 
 
 class FFdmd(FFEval):
@@ -743,6 +750,7 @@ class FFdmd(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
+        r._event_done.set()
 
     def dmd_update(self):
         """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
@@ -823,6 +831,7 @@ class FFDebye(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -1003,6 +1012,7 @@ class FFPlumed(FFEval):
         # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, extras]
         r["status"] = "Done"
+        r._event_done.set()
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1160,6 +1170,7 @@ class FFYaff(FFEval):
 
         r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
+        r._event_done.set()
 
 
 class FFsGDML(FFEval):
@@ -1294,6 +1305,7 @@ class FFsGDML(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -1609,6 +1621,7 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event_done.set()
 
 
 class FFRotations(ForceField):
@@ -1814,6 +1827,7 @@ class FFRotations(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event_done.set()
                     self.release(r, lock=False)
 
 
@@ -2223,7 +2237,7 @@ class FFCavPhSocket(FFSocket):
                     while softexit.exiting:
                         time.sleep(self.latency)
                     sys.exit()
-                time.sleep(self.latency)
+                self.request._event_done.wait(timeout=1.0)
 
             """
             with self._threadlock:
