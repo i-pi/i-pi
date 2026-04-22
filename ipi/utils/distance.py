@@ -6,6 +6,8 @@
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 __all__ = ["vector_separation"]
 
 
@@ -33,10 +35,10 @@ def vector_separation(cell_h, cell_ih, qi, qj):
        rij: The distances between atoms i and {j}.
     """
 
-    sij = np.dot(cell_ih, (qi - qj).T)  # column vectors needed
+    sij = (cell_ih) @ ((qi - qj).T)  # column vectors needed
     sij -= np.rint(sij)
 
-    dij = np.dot(cell_h, sij).T  # back to i-pi shape
-    rij = np.linalg.norm(dij, axis=1)
+    dij = ((cell_h) @ (sij)).T  # back to i-pi shape
+    rij = xp.linalg.norm(dij, axis=1)
 
     return dij, rij

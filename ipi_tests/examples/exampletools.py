@@ -7,9 +7,9 @@ from pathlib import Path
 from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
 
 
-def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
-    """This function looks for iteratively for examples and includes
-    them if they don't appear in the excluded_file"""
+def find_examples(parent, excluded_file="excluded_test.txt"):
+    """Recursively find examples under `parent` that are not listed in
+    `excluded_file`. Returns a fresh list (no accumulator mutation)."""
 
     excluded = list()
     if excluded_file is not None:
@@ -25,6 +25,7 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
     folders = [x[0] for x in os.walk(parent)]
 
+    examples = []
     for ff in folders:
         if os.path.isfile(Path(ff) / "input.xml"):
             if ff not in excluded and "broken" not in ff:

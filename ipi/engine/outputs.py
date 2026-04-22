@@ -9,9 +9,11 @@ and the restart files.
 # See the "licenses" directory for full license information.
 
 import os
+import math
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit
@@ -386,7 +388,9 @@ class TrajectoryOutput(BaseOutput):
         # including underscore
         fmt_bead = (
             "{0:0"
-            + str(int(1 + np.floor(np.log(self.system.beads.nbeads) / np.log(10))))
+            + str(
+                int(1 + math.floor(math.log(self.system.beads.nbeads) / math.log(10)))
+            )
             + "d}"
         )
 

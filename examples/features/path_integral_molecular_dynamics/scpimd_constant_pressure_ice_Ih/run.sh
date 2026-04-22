@@ -1,5 +1,5 @@
 ipi=i-pi
-lmp=lmp_mpi 
+lmp=lmp_base
 sleep_time=10
 
 ${ipi} input.xml > log.i-pi & 

@@ -14,8 +14,7 @@ except:
 examples_folder = Path(__file__).resolve().parents[2] / "examples"
 excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
 
-examples = []
-examples = find_examples(examples_folder, excluded_file, examples)
+examples = find_examples(examples_folder, excluded_file)
 if __name__ != "__main__":
     print("We have found {} examples".format(len(examples)))
 
@@ -88,14 +87,14 @@ if __name__ == "__main__":
         for folder in args.folder:
             path = Path(__file__).resolve().parents[2] / folder
             print("Looking for examples inside {}".format(str(path)))
-            examples.extend(find_examples(path, excluded_file, examples))
+            examples.extend(find_examples(path, excluded_file))
         print("\nWe will run tests in:")
         for i in examples:
             print(i)
         print("")
     except:
         print("We will run all tests\n")
-        examples = find_examples(examples_folder, excluded_file, examples)
+        examples = find_examples(examples_folder, excluded_file)
 
     errors = list()
     for ex in examples:

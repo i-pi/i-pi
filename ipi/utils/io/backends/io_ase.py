@@ -10,7 +10,7 @@ using the Atomic Simulation Environment
 import sys
 import re
 import numpy as np
-from ipi.utils.array_backend import to_numpy
+from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils.units import Constants
 
 try:
@@ -117,7 +117,8 @@ def read_ase(filedesc):
         )
 
     if all(atoms.get_pbc()):
-        # We want to make the cell conform
+        # We want to make the cell conform. ASE geometry ops are numpy-only,
+        # so keep this block in numpy — the reader is an I/O boundary.
         a = atoms.cell[0]
         atoms.rotate(a, "x", rotate_cell=True)  # a along x
         b = atoms.cell[1]

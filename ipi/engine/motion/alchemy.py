@@ -11,6 +11,7 @@ appropriate conserved energy quantity.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dproperties, depend_value, dstrip
 from ipi.utils.units import Constants
@@ -128,7 +129,7 @@ class AlchemyMC(Motion):
             difspring = (atomspring[i] - atomspring[j]) * (
                 self.beads.m[axlist[j]] - self.beads.m[axlist[i]]
             )
-            pexchange = np.exp(-betaP * difspring)
+            pexchange = xp.exp(-betaP * difspring)
 
             # attemps the exchange
             if pexchange > self.prng.u:
@@ -146,10 +147,10 @@ class AlchemyMC(Motion):
                 self.beads.m[axlist[j]] *= massratio
 
                 # adjust the (classical) momenta to conserve ke
-                self.beads.p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
+                self.beads.p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= xp.sqrt(
                     massratio
                 )
-                self.beads.p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
+                self.beads.p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= xp.sqrt(
                     massratio
                 )
 

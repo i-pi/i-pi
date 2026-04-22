@@ -22,6 +22,7 @@ __all__ = ["SCPhononsMover"]
 
 import os
 import numpy as np
+from ipi.utils.array_backend import xp
 from ipi.engine.motion.motion import Motion
 
 from ipi.utils.depend import dstrip
@@ -138,13 +139,13 @@ class SCPhononsMover(Motion):
 
         # Sets temperature.
         self.temp = self.ensemble.temp
-        self.m = dstrip(self.beads.m).copy()
+        self.m = xp.asarray(dstrip(self.beads.m), copy=True)
 
         # Initializes mass related arrays.
         self.m3 = dstrip(self.beads.m3)[-1]
         self.im3 = np.divide(1.0, self.m3)
-        self.sqm3 = np.sqrt(self.m3)
-        self.isqm3 = np.sqrt(self.im3)
+        self.sqm3 = xp.sqrt(self.m3)
+        self.isqm3 = xp.sqrt(self.im3)
 
         # Initializes mass related diagonal matrices.
         self.M = np.diag(self.m3)
@@ -348,7 +349,7 @@ class SCPhononator(DummyPhononator):
                 x = x[self.dm.random_shuffle]
 
                 # Transforms the "normal" random number and stores it.
-                x = np.dot(self.dm.isqM, np.dot(self.dm.sqtD, x))
+                x = (self.dm.isqM) @ (((self.dm.sqtD) @ (x)))
                 self.x[self.dm.isc, self.dm.imc - 1] = (self.dm.beads.q + x.T)[-1]
                 self.dm.imc += 1
 
@@ -402,8 +403,8 @@ class SCPhononator(DummyPhononator):
             x = self.x[self.dm.isc, imcmin:imcmax]
             self.dm.dbeads.q = x
 
-            v = dstrip(self.dm.dforces.pots).copy()
-            f = dstrip(self.dm.dforces.f).copy()
+            v = xp.asarray(dstrip(self.dm.dforces.pots), copy=True)
+            f = xp.asarray(dstrip(self.dm.dforces.f), copy=True)
 
             self.v[self.dm.isc, imcmin:imcmax] = v[:]
             self.f[self.dm.isc, imcmin:imcmax] = f[:]
@@ -462,13 +463,13 @@ class SCPhononator(DummyPhononator):
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
-            fnm = np.dot(self.dm.V.T, f)
+            fnm = (self.dm.V.T) @ (f)
 
             # Assumes error = standard error.
-            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
+            fnm_err = xp.sqrt(((self.dm.V.T**2) @ (f_err**2)))
             fnm[self.z] = 0.0
 
-            if np.all(np.abs(fnm) < fnm_err):
+            if xp.all(xp.abs(fnm) < fnm_err):
                 info(
                     " @SCP: All the average force components are statistically insignificant.",
                     verbosity.medium,
@@ -488,12 +489,10 @@ class SCPhononator(DummyPhononator):
             k = self.weighted_hessian()
 
             # Displaces.
-            self.dm.beads.q += np.dot(self.dm.D, f) * self.dm.tau
+            self.dm.beads.q += ((self.dm.D) @ (f)) * self.dm.tau
 
             # Calculates the new dynamical matrix.
-            self.dm.dynmatrix = np.dot(
-                self.dm.isqM, np.dot((k + k.T) / 2.0, self.dm.isqM)
-            )
+            self.dm.dynmatrix = (self.dm.isqM) @ ((((k + k.T) / 2.0) @ (self.dm.isqM)))
 
             # Applies acoustic sum rule to project out zero modes.
             # Applies a high pass filter to zero out low frequency modes.
@@ -504,7 +503,7 @@ class SCPhononator(DummyPhononator):
 
             info(
                 " @SCP: <f> =  %10.8f +/-  %10.8f: "
-                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                % (xp.linalg.norm(f).item(), xp.linalg.norm(f_err).item()),
                 verbosity.medium,
             )
             info(
@@ -519,13 +518,11 @@ class SCPhononator(DummyPhononator):
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
-            self.dm.beads.q += np.dot(self.dm.iK, f)
+            self.dm.beads.q += (self.dm.iK) @ (f)
 
             # Calculates the new dynamical matrix.
             k = self.weighted_hessian()
-            self.dm.dynmatrix = np.dot(
-                self.dm.isqM, np.dot((k + k.T) / 2.0, self.dm.isqM)
-            )
+            self.dm.dynmatrix = (self.dm.isqM) @ ((((k + k.T) / 2.0) @ (self.dm.isqM)))
 
             # Applies acoustic sum rule to project out zero modes.
             # Applies a high pass filter to zero out low frequency modes.
@@ -536,7 +533,7 @@ class SCPhononator(DummyPhononator):
 
             info(
                 " @SCP: <f> =  %10.8f +/-  %10.8f: "
-                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                % (xp.linalg.norm(f).item(), xp.linalg.norm(f_err).item()),
                 verbosity.medium,
             )
             info(
@@ -554,9 +551,7 @@ class SCPhononator(DummyPhononator):
 
             # Calculates the new dynamical matrix.
             k = self.weighted_hessian()
-            self.dm.dynmatrix = np.dot(
-                self.dm.isqM, np.dot((k + k.T) / 2.0, self.dm.isqM)
-            )
+            self.dm.dynmatrix = (self.dm.isqM) @ ((((k + k.T) / 2.0) @ (self.dm.isqM)))
 
             # Applies acoustic sum rule to project out zero modes.
             # Applies a high pass filter to zero out low frequency modes.
@@ -568,17 +563,17 @@ class SCPhononator(DummyPhononator):
             # Calculates the force along normal moces.
             # Zeros the forces along the known "zero modes".
             # Estimates the error.
-            fnm = np.dot(self.dm.V.T, f)
+            fnm = (self.dm.V.T) @ (f)
             fnm[self.z] = 0.0
-            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
+            fnm_err = xp.sqrt(((self.dm.V.T**2) @ (f_err**2)))
 
             # Zeros the displacement along "insignificant" normal modes.
             iKfnm = self.dm.iw2 * fnm
-            iKfnm[np.abs(fnm) < fnm_err] = 0.0
+            iKfnm[xp.abs(fnm) < fnm_err] = 0.0
             dqnm = iKfnm
             dqnm[self.z] = 0.0
 
-            self.dm.beads.q += np.dot(self.dm.V, dqnm)
+            self.dm.beads.q += (self.dm.V) @ (dqnm)
 
             # Calculates the new forces.
             f, f_err, batch_w = self.weighted_force()
@@ -586,8 +581,8 @@ class SCPhononator(DummyPhononator):
             info(
                 " @SCP: <f> =  %10.8f +/-  %10.8f: : number of batch weights > %10.8f =  %8d / %8d"
                 % (
-                    np.linalg.norm(f),
-                    np.linalg.norm(f_err),
+                    xp.linalg.norm(f),
+                    xp.linalg.norm(f_err),
                     self.wthreshold,
                     sum(batch_w > self.wthreshold),
                     len(batch_w),
@@ -623,12 +618,12 @@ class SCPhononator(DummyPhononator):
                         scale_forces /= 1.1
 
                     # Computes the force along the normal modes.
-                    fnm = np.dot(self.dm.V.T, f)
+                    fnm = (self.dm.V.T) @ (f)
                     fnm[self.z] = 0.0
-                    fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
+                    fnm_err = xp.sqrt(((self.dm.V.T**2) @ (f_err**2)))
 
                     # Breaks if all the forces are statistically insignificant.
-                    if np.all(np.abs(fnm) < fnm_err):
+                    if xp.all(xp.abs(fnm) < fnm_err):
                         info(
                             " @SCP: All forces are statistically insignificant.",
                             verbosity.medium,
@@ -651,15 +646,15 @@ class SCPhononator(DummyPhononator):
                     # Moves only if forces are statistically insignificant.
                     # Does not move along zero modes.
                     dqnm = self.dm.iw2 * fnm * scale_forces / self.dm.dof
-                    dqnm[np.abs(fnm) < fnm_err] = 0.0
+                    dqnm[xp.abs(fnm) < fnm_err] = 0.0
                     dqnm[self.z] = 0.0
 
-                    self.dm.beads.q += np.dot(self.dm.V, dqnm)
+                    self.dm.beads.q += (self.dm.V) @ (dqnm)
                     info(
                         " @SCP: <f> =  %10.8f +/-  %10.8f : number of batch weights > %10.8f =  %8d / %8d : largest batch weight = %10.8e"
                         % (
-                            np.linalg.norm(f),
-                            np.linalg.norm(f_err),
+                            xp.linalg.norm(f),
+                            xp.linalg.norm(f_err),
                             self.wthreshold,
                             sum(batch_w > self.wthreshold),
                             len(batch_w),
@@ -672,8 +667,8 @@ class SCPhononator(DummyPhononator):
                 # Applies a high pass filter to zero out low frequency modes.
                 # Calculates the displacement correction matrix.
                 k = self.weighted_hessian()
-                self.dm.dynmatrix = np.dot(
-                    self.dm.isqM, np.dot((k + k.T) / 2.0, self.dm.isqM)
+                self.dm.dynmatrix = (self.dm.isqM) @ (
+                    (((k + k.T) / 2.0) @ (self.dm.isqM))
                 )
                 self.dm.dynmatrix = apply_asr(
                     self.dm.asr, self.dm.dynmatrix, self.dm.beads
@@ -687,12 +682,12 @@ class SCPhononator(DummyPhononator):
                 # Recalculates the new forces in normal mode coordinates..
                 f, f_err, batch_w = self.weighted_force()
                 f_err = f_err
-                fnm = np.dot(self.dm.V.T, f)
+                fnm = (self.dm.V.T) @ (f)
                 fnm[self.z] = 0.0
-                fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
+                fnm_err = xp.sqrt(((self.dm.V.T**2) @ (f_err**2)))
 
                 # Breaks if all the forces are statistically insignificant.
-                if np.all(np.abs(fnm) < fnm_err):
+                if xp.all(xp.abs(fnm) < fnm_err):
                     info(
                         " @SCP: All forces are statistically insignificant.",
                         verbosity.medium,
@@ -705,7 +700,7 @@ class SCPhononator(DummyPhononator):
                     info(" @SCP: Skipping the optimization step.", verbosity.medium)
                     break
 
-                if np.all(np.abs(fnm_old - fnm) < fnm_err):
+                if xp.all(xp.abs(fnm_old - fnm) < fnm_err):
                     info(" @SCP: All forces are converged.", verbosity.medium)
                     break
 
@@ -728,22 +723,22 @@ class SCPhononator(DummyPhononator):
             # Calculates the harmonic force.
             f = self.f[i]
             x = self.x[i]
-            fh = -1.0 * np.dot(x - qp, Kp)
+            fh = -1.0 * ((x - qp) @ (Kp))
 
             # Calculates the weights to calculate average for the distribution for (qp, iDp).
             w, sw, rw = self.calculate_weights(i)
             batch_w[i] = sw
 
             # Simply multiplies the forces by the weights and averages.
-            V1 = np.sum(rw)
-            V2 = np.sum(rw**2)
-            avg_fi = np.sum(rw * (f - fh), axis=0) / V1
-            var_fi = np.sum(rw * (f - fh - avg_fi) ** 2, axis=0) / (V1 - V2 / V1)
+            V1 = xp.sum(rw)
+            V2 = xp.sum(rw**2)
+            avg_fi = xp.sum(rw * (f - fh), axis=0) / V1
+            var_fi = xp.sum(rw * (f - fh - avg_fi) ** 2, axis=0) / (V1 - V2 / V1)
             avg_f += sw * avg_fi
             var_f += sw**2 * var_fi
             norm += sw
 
-        return avg_f / norm, np.sqrt(var_f / norm**2 / self.dm.max_steps), batch_w
+        return avg_f / norm, xp.sqrt(var_f / norm**2 / self.dm.max_steps), batch_w
 
     def weighted_hessian(self):
         """
@@ -763,16 +758,16 @@ class SCPhononator(DummyPhononator):
             x = self.x[i]
 
             # Calculates the harmonic forces.
-            fh = -1.0 * np.dot(x - qp, Kp)
+            fh = -1.0 * ((x - qp) @ (Kp))
 
             # Calculates the weights to calculate average for the distribution for (qp, iDp)
             w, sw, rw = self.calculate_weights(i)
 
             # Simply multiplies the forces by the weights and averages
-            V1 = np.sum(rw)
+            V1 = xp.sum(rw)
 
             # Simply multiplies the forces by the weights and averages
-            avg_dKi = -np.dot(iDp, np.dot(((f - fh) * rw).T, (x - qp[-1])).T) / V1
+            avg_dKi = -((iDp) @ (((((f - fh) * rw).T) @ ((x - qp[-1]))).T)) / V1
             avg_Ki = Kp + 0.50 * (avg_dKi + avg_dKi.T)
             avg_K += sw * avg_Ki
             norm += sw
@@ -796,9 +791,9 @@ class SCPhononator(DummyPhononator):
         iD0 = self.iD[i]
 
         # Estimates the weights as the ratio of density matrix for (qp, iDp) to the density matrix for (self.q, self.iD)
-        rw = np.exp(
-            -(0.50 * np.dot(iDp, (qp - x).T).T * (qp - x)).sum(axis=1)
-            + (0.50 * np.dot(iD0, (x - q0).T).T * (x - q0)).sum(axis=1)
+        rw = xp.exp(
+            -(0.50 * ((iDp) @ ((qp - x).T)).T * (qp - x)).sum(axis=1)
+            + (0.50 * ((iD0) @ ((x - q0).T)).T * (x - q0)).sum(axis=1)
         )
 
         if rw.sum() < 1e-24:
@@ -810,7 +805,7 @@ class SCPhononator(DummyPhononator):
         rw = rw.reshape((self.dm.max_steps, 1))
         return (
             w,
-            np.nan_to_num(np.exp(-np.var(np.log(w)))) ** self.dm.batch_weight_exponent,
+            np.nan_to_num(xp.exp(-np.var(xp.log(w)))) ** self.dm.batch_weight_exponent,
             rw,
         )
 
@@ -851,9 +846,9 @@ class SCPhononator(DummyPhononator):
         itd[self.z] = 0.0
         itdm[self.nz] = np.divide(1.0, tdm[self.nz])
         itdm[self.z] = 0.0
-        sqtd[self.nz] = np.sqrt(td[self.nz])
+        sqtd[self.nz] = xp.sqrt(td[self.nz])
         sqtd[self.z] = 0.0
-        sqtdm[self.nz] = np.sqrt(tdm[self.nz])
+        sqtdm[self.nz] = xp.sqrt(tdm[self.nz])
         sqtdm[self.z] = 0.0
 
         self.dm.itK = np.eye(self.dm.dof) * 0.0
@@ -868,7 +863,7 @@ class SCPhononator(DummyPhononator):
             if self.z[i]:
                 continue
             U = self.dm.U.T[i].reshape((1, self.dm.dof))
-            m = np.dot(U.T, U)
+            m = (U.T) @ (U)
             self.dm.itK += self.dm.iw2[i] * m
             self.dm.tD += td[i] * m
             self.dm.tDm += tdm[i] * m
@@ -877,24 +872,24 @@ class SCPhononator(DummyPhononator):
             self.dm.sqtD += sqtd[i] * m
             self.dm.sqtDm += sqtd[i] * m
 
-        self.dm.K = np.dot(self.dm.sqM, np.dot(self.dm.dynmatrix, self.dm.sqM))
-        self.dm.iD = np.dot(self.dm.sqM, np.dot(self.dm.itD, self.dm.sqM))
-        self.dm.iDm = np.dot(self.dm.sqM, np.dot(self.dm.itDm, self.dm.sqM))
-        self.dm.D = np.dot(self.dm.isqM, np.dot(self.dm.tD, self.dm.isqM))
-        self.dm.sqD = np.dot(self.dm.isqM, np.dot(self.dm.sqtD, self.dm.isqM))
-        self.dm.iK = np.dot(self.dm.isqM, np.dot(self.dm.itK, self.dm.isqM))
+        self.dm.K = (self.dm.sqM) @ (((self.dm.dynmatrix) @ (self.dm.sqM)))
+        self.dm.iD = (self.dm.sqM) @ (((self.dm.itD) @ (self.dm.sqM)))
+        self.dm.iDm = (self.dm.sqM) @ (((self.dm.itDm) @ (self.dm.sqM)))
+        self.dm.D = (self.dm.isqM) @ (((self.dm.tD) @ (self.dm.isqM)))
+        self.dm.sqD = (self.dm.isqM) @ (((self.dm.sqtD) @ (self.dm.isqM)))
+        self.dm.iK = (self.dm.isqM) @ (((self.dm.itK) @ (self.dm.isqM)))
 
     def apply_hpf(self):
         """
         Computes the square of frequencies, frequencies and normal modes of the system.
         Also replaces very low or imaginary frequencies by zero.
         """
-        self.dm.w2, self.dm.U = np.linalg.eigh(self.dm.dynmatrix)
+        self.dm.w2, self.dm.U = xp.linalg.eigh(self.dm.dynmatrix)
         self.dm.w2 = np.absolute(self.dm.w2)
-        self.dm.V = np.dot(self.dm.isqM, self.dm.U.copy())
+        self.dm.V = (self.dm.isqM) @ (self.dm.U.copy())
         self.dm.dynmatrix = np.tensordot(self.dm.w2 * self.dm.U, self.dm.U.T, axes=1)
-        self.dm.w2, self.dm.U = np.linalg.eigh(self.dm.dynmatrix)
-        self.dm.V = np.dot(self.dm.isqM, self.dm.U.copy())
+        self.dm.w2, self.dm.U = xp.linalg.eigh(self.dm.dynmatrix)
+        self.dm.V = (self.dm.isqM) @ (self.dm.U.copy())
 
         # Computes the tolerance and chops the frequencies.
         self.z = self.dm.w2 < self.dm.atol
@@ -902,6 +897,6 @@ class SCPhononator(DummyPhononator):
 
         # Computes the square, inverse and inverse square of frequencies only for non-zero modes.
         self.dm.w2[self.z] = 0.0
-        self.dm.w[self.nz] = np.sqrt(self.dm.w2[self.nz])
+        self.dm.w[self.nz] = xp.sqrt(self.dm.w2[self.nz])
         self.dm.iw2[self.nz] = np.divide(1.0, self.dm.w2[self.nz])
-        self.dm.iw[self.nz] = np.sqrt(self.dm.iw2[self.nz])
+        self.dm.iw[self.nz] = xp.sqrt(self.dm.iw2[self.nz])

@@ -22,6 +22,7 @@ from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
@@ -159,14 +160,17 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        # Apply PBC on the active backend (so `cell.array_pbc`, which uses
+        # `xp` ops, can work in place), then hand a numpy snapshot to the
+        # driver — the socket protocol serialises bytes and expects numpy.
+        pbcpos_xp = xp.asarray(dstrip(atoms.q), copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
         # active atoms do not change but we only know how to build this array once we get the positions once
         if self.iactive is None:
             if self.active[0] == -1:
-                activehere = np.arange(len(pbcpos))
+                activehere = np.arange(pbcpos_xp.shape[0])
             else:
                 activehere = np.array(
                     [[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active]
@@ -176,19 +180,22 @@ class ForceField:
             activehere = activehere.flatten()
 
             # Perform sanity check for active atoms
-            if len(activehere) > len(pbcpos) or activehere[-1] > (len(pbcpos) - 1):
+            if len(activehere) > pbcpos_xp.shape[0] or activehere[-1] > (
+                pbcpos_xp.shape[0] - 1
+            ):
                 raise ValueError("There are more active atoms than atoms!")
 
             self.iactive = activehere
 
         if self.dopbc:
-            cell.array_pbc(pbcpos)
+            cell.array_pbc(pbcpos_xp)
 
+        pbcpos = to_numpy(pbcpos_xp)
         fields = {
             "id": reqid,
             "pos": pbcpos,
             "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "cell": (to_numpy(dstrip(cell.h)), to_numpy(dstrip(cell.ih))),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -514,8 +521,13 @@ class FFDirect(ForceField):
     def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
         results[0] -= self.offset
-        results[1] = results[1].reshape(-1)
-        results[2] = results[2].reshape(3, 3)
+        # The socket delivers numpy buffers; lift to the active array
+        # namespace here so every consumer downstream (depend storage,
+        # integrator arithmetic) sees backend-native arrays with no
+        # ad-hoc coercion. This is the numpy -> xp boundary for the
+        # force pipeline.
+        results[1] = xp.asarray(results[1].reshape(-1))
+        results[2] = xp.asarray(results[2].reshape(3, 3))
 
         # converts the extra fields, if there are any
         mxtra = results[3]
@@ -647,7 +659,12 @@ class FFLennardJones(FFEval):
 
         v *= self.epsfour
 
-        r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
+        r["result"] = [
+            v,
+            xp.asarray(f.reshape(nat * 3)),
+            xp.zeros((3, 3)),
+            {"raw": ""},
+        ]
         r["status"] = "Done"
         r._event_done.set()
 
@@ -722,20 +739,20 @@ class FFdmd(FFEval):
         f = np.zeros(q.shape)
         vir = np.zeros((3, 3), float)
         # must think and check handling of time step
-        periodic = np.sin(self.dmdstep * self.freq * self.dtdmd)
+        periodic = xp.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
         for i in range(1, nat):
             # MR's first implementation:
             #            dij = q[i] - q[:i]
-            #            rij = np.sqrt((dij ** 2).sum(axis=1))
+            #            rij = xp.sqrt((dij ** 2).sum(axis=1))
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
             cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]
-            prefac = np.dot(
-                cij, rij
+            prefac = (cij) @ (
+                rij
             )  # for each i it has the distances to all indexes previous
-            v += np.sum(prefac) * periodic
-            nij = np.copy(dij)
+            v += xp.sum(prefac) * periodic
+            nij = xp.asarray(dij, copy=True)
             nij *= -(cij / rij)[:, np.newaxis]  # magic line...
             f[i] += nij.sum(axis=0) * periodic
             f[:i] -= nij * periodic  # everything symmetric
@@ -805,7 +822,7 @@ class FFDebye(FFEval):
         self.xref = xref
         self.vref = vref
 
-        eigsys = np.linalg.eigh(self.H)
+        eigsys = xp.linalg.eigh(self.H)
         info(
             " @ForceField: Hamiltonian eigenvalues: " + " ".join(map(str, eigsys[0])),
             verbosity.medium,
@@ -822,10 +839,10 @@ class FFDebye(FFEval):
             raise ValueError("Reference structure size mismatch")
 
         d = q - self.xref
-        mf = np.dot(self.H, d)
+        mf = (self.H) @ (d)
 
         r["result"] = [
-            self.vref + 0.5 * np.dot(d, mf),
+            self.vref + 0.5 * ((d) @ (mf)),
             -mf,
             np.zeros((3, 3), float),
             {"raw": ""},
@@ -1033,7 +1050,7 @@ class FFPlumed(FFEval):
         # is triggered and your input makes sense, the right thing to
         # do is to perform a full plumed-side update (which will have a cost,
         # so see if you can avoid it)
-        if np.linalg.norm(self.lastq - pos) > 1e-10:
+        if xp.linalg.norm(self.lastq - pos) > 1e-10:
             warning(
                 "mtd_update: Positions moved since last PLUMED evaluation: "
                 "triggering a full PLUMED update.",
@@ -1162,7 +1179,7 @@ class FFYaff(FFEval):
         nat = len(q) / 3
         rvecs = r["cell"][0]
 
-        self.ff.update_rvecs(np.ascontiguousarray(rvecs.T, dtype=np.float64))
+        self.ff.update_rvecs(np.ascontiguousarray(to_numpy(rvecs.T), dtype=np.float64))
         self.ff.update_pos(q.reshape((nat, 3)))
         gpos = np.zeros((nat, 3))
         vtens = np.zeros((3, 3))
@@ -1351,9 +1368,9 @@ class FFCommittee(ForceField):
         self.baseline_uncertainty = baseline_uncertainty
         self.baseline_name = baseline_name
         if len(ffweights) == 0 and self.baseline_uncertainty < 0:
-            ffweights = np.ones(len(fflist))
+            ffweights = xp.ones(len(fflist))
         elif len(ffweights) == 0 and self.baseline_uncertainty > 0:
-            ffweights = np.ones(len(fflist) - 1)
+            ffweights = xp.ones(len(fflist) - 1)
         if len(ffweights) != len(fflist) and self.baseline_uncertainty < 0:
             raise ValueError("List of weights does not match length of committee model")
         elif len(ffweights) != len(fflist) - 1 and self.baseline_uncertainty > 0:
@@ -1467,40 +1484,43 @@ class FFCommittee(ForceField):
                 frcs.append(ff_r["result"][1])
                 virs.append(ff_r["result"][2])
 
-        pots = np.array(pots)
-        if len(pots) != len(frcs) and len(frcs) > 1:
+        n_pots = len(pots)
+        if n_pots != len(frcs) and len(frcs) > 1:
             raise ValueError(
                 "If the committee returns forces, we need *all* components"
             )
-        frcs = np.array(frcs).reshape(len(frcs), -1)
-
-        if len(pots) != len(virs) and len(virs) > 1:
+        if n_pots != len(virs) and len(virs) > 1:
             raise ValueError(
                 "If the committee returns virials, we need *all* components"
             )
-        virs = np.array(virs).reshape(-1, 3, 3)
+        pots = xp.asarray(pots)
+        frcs = xp.reshape(
+            xp.stack([xp.asarray(f) for f in frcs], axis=0), (len(frcs), -1)
+        )
+        virs = xp.reshape(xp.stack([xp.asarray(v) for v in virs], axis=0), (-1, 3, 3))
 
         xtrs.append(ff_r["result"][3])
 
         # Computes the mean energetics
-        mean_pot = np.mean(pots, axis=0)
-        mean_frc = np.mean(frcs, axis=0)
-        mean_vir = np.mean(virs, axis=0)
+        mean_pot = xp.mean(pots, axis=0)
+        mean_frc = xp.mean(frcs, axis=0)
+        mean_vir = xp.mean(virs, axis=0)
 
         # Rescales the committee energetics so that their standard deviation corresponds to the error
-        rescaled_pots = np.asarray(
-            [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
+        rescaled_pots = xp.stack(
+            [mean_pot + self.alpha * (pot - mean_pot) for pot in pots], axis=0
         )
-        rescaled_frcs = np.asarray(
-            [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
+        rescaled_frcs = xp.stack(
+            [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs], axis=0
         )
-        rescaled_virs = np.asarray(
-            [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
+        rescaled_virs = xp.stack(
+            [mean_vir + self.alpha * (vir - mean_vir) for vir in virs], axis=0
         )
 
-        # Calculates the error associated with the committee
-        var_pot = np.var(rescaled_pots, ddof=1)
-        std_pot = np.sqrt(var_pot)
+        # Calculates the error associated with the committee (unbiased, ddof=1)
+        n = rescaled_pots.shape[0]
+        var_pot = xp.sum((rescaled_pots - mean_pot) ** 2) / max(n - 1, 1)
+        std_pot = xp.sqrt(var_pot)
 
         if self.baseline_name != "":
             if not (all_have_frc and all_have_vir):
@@ -1517,27 +1537,17 @@ class FFCommittee(ForceField):
 
             s_b2 = self.baseline_uncertainty**2
 
-            nmodels = len(pots)
+            nmodels = pots.shape[0]
+            # pots: (nmodels,); frcs: (nmodels, ndof); virs: (nmodels, 3, 3).
+            # Broadcast (pot - mean_pot) over each bead's (frc/vir - mean_*) and sum over models.
             uncertain_frc = (
                 self.alpha**2
-                * np.sum(
-                    [
-                        (pot - mean_pot) * (frc - mean_frc)
-                        for pot, frc in zip(pots, frcs)
-                    ],
-                    axis=0,
-                )
+                * xp.sum((pots - mean_pot)[:, None] * (frcs - mean_frc), axis=0)
                 / (nmodels - 1)
             )
             uncertain_vir = (
                 self.alpha**2
-                * np.sum(
-                    [
-                        (pot - mean_pot) * (vir - mean_vir)
-                        for pot, vir in zip(pots, virs)
-                    ],
-                    axis=0,
-                )
+                * xp.sum((pots - mean_pot)[:, None, None] * (virs - mean_vir), axis=0)
                 / (nmodels - 1)
             )
 
@@ -1565,25 +1575,28 @@ class FFCommittee(ForceField):
             r["result"][2] = mean_vir
 
         r["result"][3] = {
-            "committee_pot": rescaled_pots,
-            "committee_uncertainty": std_pot,
+            "committee_pot": to_numpy(rescaled_pots),
+            "committee_uncertainty": float(std_pot),
         }
 
         if all_have_frc:
-            r["result"][3]["committee_force"] = rescaled_frcs.reshape(
-                len(rescaled_pots), -1
+            r["result"][3]["committee_force"] = to_numpy(
+                xp.reshape(rescaled_frcs, (len(rescaled_pots), -1))
             )
         if all_have_vir:
-            r["result"][3]["committee_virial"] = rescaled_virs.reshape(
-                len(rescaled_pots), -1
+            r["result"][3]["committee_virial"] = to_numpy(
+                xp.reshape(rescaled_virs, (len(rescaled_pots), -1))
             )
 
         if self.baseline_name != "":
-            r["result"][3]["baseline_pot"] = (baseline_pot,)
-            r["result"][3]["baseline_force"] = (baseline_frc,)
-            r["result"][3]["baseline_virial"] = ((baseline_vir.flatten()),)
+            # Extras boundary: store as numpy / Python primitives for JSON.
+            # Wrapping in a 1-tuple preserves the per-bead structure expected
+            # by extra_gather downstream.
+            r["result"][3]["baseline_pot"] = (float(baseline_pot),)
+            r["result"][3]["baseline_force"] = (to_numpy(baseline_frc),)
+            r["result"][3]["baseline_virial"] = (to_numpy(baseline_vir.flatten()),)
             r["result"][3]["baseline_extras"] = (baseline_xtr,)
-            r["result"][3]["wb_mixing"] = (s_b2 / (s_b2 + var_pot),)
+            r["result"][3]["wb_mixing"] = (float(s_b2 / (s_b2 + var_pot)),)
 
         # "dissolve" the extras dictionaries into a list
         for k in xtrs[0].keys():
@@ -1597,12 +1610,12 @@ class FFCommittee(ForceField):
             for x in xtrs:
                 r["result"][3][("committee_" + k)].append(x[k])
 
-        if self.active_thresh > 0.0 and std_pot > self.active_thresh:
+        if self.active_thresh > 0.0 and float(std_pot) > self.active_thresh:
             dumps = json.dumps(
                 {
-                    "position": list(r["pos"]),
-                    "cell": list(r["cell"][0].flatten()),
-                    "uncertainty": std_pot,
+                    "position": to_numpy(r["pos"]).tolist(),
+                    "cell": to_numpy(r["cell"][0].flatten()).tolist(),
+                    "uncertainty": float(std_pot),
                 }
             )
             self.active_file.write(dumps)
@@ -1714,7 +1727,7 @@ class FFRotations(ForceField):
 
             rot_atoms = atoms.clone()
             rot_cell = GenericCell(
-                R @ dstrip(cell.h).copy()
+                R @ xp.asarray(dstrip(cell.h), copy=True)
             )  # NB we need generic cell orientation
             rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
 
@@ -1725,7 +1738,7 @@ class FFRotations(ForceField):
                 # also add a "flipped rotation" to the evaluation list
                 R = R * -1
 
-                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+                rot_cell = GenericCell(R @ xp.asarray(dstrip(cell.h), copy=True))
                 rot_atoms = atoms.clone()
                 rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
 
@@ -1779,17 +1792,17 @@ class FFRotations(ForceField):
             xtrs.append(ff_r["result"][3])
             quad_w.append(w)
 
-        quad_w = np.array(quad_w)
-        pots = np.array(pots)
-        frcs = np.array(frcs).reshape(len(frcs), -1)
-        virs = np.array(virs).reshape(-1, 3, 3)
+        quad_w = xp.asarray(quad_w)
+        pots = xp.asarray(pots)
+        frcs = xp.reshape(
+            xp.stack([xp.asarray(fc) for fc in frcs], axis=0), (len(frcs), -1)
+        )
+        virs = xp.reshape(xp.stack([xp.asarray(vr) for vr in virs], axis=0), (-1, 3, 3))
 
         # Computes the mean energetics (using the quadrature weights)
-        mean_pot = np.sum(pots * quad_w, axis=0) / quad_w.sum()
-        mean_frc = np.sum(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.sum()
-        mean_vir = (
-            np.sum(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.sum()
-        )
+        mean_pot = xp.sum(pots * quad_w, axis=0) / xp.sum(quad_w)
+        mean_frc = xp.sum(frcs * quad_w[:, None], axis=0) / xp.sum(quad_w)
+        mean_vir = xp.sum(virs * quad_w[:, None, None], axis=0) / xp.sum(quad_w)
 
         # Sets the output of the committee model.
         r["result"][0] = mean_pot
@@ -1877,29 +1890,29 @@ class PhotonDriver:
         self.pos_ph = np.zeros(self.n_photon_3)
 
         # construct cavity mode frequency array for all photons
-        self.omega_k = np.array([self.omega_c])
+        self.omega_k = xp.asarray([self.omega_c])
         if self.ph_rep == "loose":
-            self.omega_klambda = np.concatenate((self.omega_k, self.omega_k))
+            self.omega_klambda = xp.concat((self.omega_k, self.omega_k))
         elif self.ph_rep == "dense":
             self.omega_klambda = self.omega_k
-        self.omega_klambda3 = np.reshape(
-            np.array([[x, x, x] for x in self.omega_klambda]), -1
+        self.omega_klambda3 = xp.reshape(
+            xp.stack([self.omega_klambda] * 3, axis=-1), (-1,)
         )
 
         # construct varepsilon array for all photons
         self.varepsilon_k = self.E0
         self.varepsilon_klambda = (
-            self.E0 * self.omega_klambda / np.min(self.omega_klambda)
+            self.E0 * self.omega_klambda / xp.min(self.omega_klambda)
         )
         self.varepsilon_klambda3 = (
-            self.E0 * self.omega_klambda3 / np.min(self.omega_klambda3)
+            self.E0 * self.omega_klambda3 / xp.min(self.omega_klambda3)
         )
 
         # cavity mode function acting on the dipole moment
-        self.ftilde_kx = np.array([1.0])
-        self.ftilde_ky = np.array([1.0])
-        self.ftilde_kx3 = np.reshape(np.array([[x, x, x] for x in self.ftilde_kx]), -1)
-        self.ftilde_ky3 = np.reshape(np.array([[x, x, x] for x in self.ftilde_ky]), -1)
+        self.ftilde_kx = xp.asarray([1.0])
+        self.ftilde_ky = xp.asarray([1.0])
+        self.ftilde_kx3 = xp.reshape(xp.stack([self.ftilde_kx] * 3, axis=-1), (-1,))
+        self.ftilde_ky3 = xp.reshape(xp.stack([self.ftilde_ky] * 3, axis=-1), (-1,))
 
     def split_atom_ph_coord(self, pos):
         """
@@ -1933,26 +1946,26 @@ class PhotonDriver:
             total energy of photonic system
         """
         # calculate the photonic potential energy
-        e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
+        e_ph = xp.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
 
         # calculate the dot products between mode functions and dipole array
-        d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
-        d_dot_f_y = np.dot(self.ftilde_ky, dy_array)
+        d_dot_f_x = (self.ftilde_kx) @ (dx_array)
+        d_dot_f_y = (self.ftilde_ky) @ (dy_array)
 
         # calculate the light-matter interaction
         if self.ph_rep == "loose":
-            e_int_x = np.sum(
+            e_int_x = xp.sum(
                 self.varepsilon_k * d_dot_f_x * self.pos_ph[: self.n_mode * 3 : 3]
             )
-            e_int_y = np.sum(
+            e_int_y = xp.sum(
                 self.varepsilon_k * d_dot_f_y * self.pos_ph[1 + self.n_mode * 3 :: 3]
             )
         elif self.ph_rep == "dense":
-            e_int_x = np.sum(self.varepsilon_k * d_dot_f_x * self.pos_ph[::3])
-            e_int_y = np.sum(self.varepsilon_k * d_dot_f_y * self.pos_ph[1::3])
+            e_int_x = xp.sum(self.varepsilon_k * d_dot_f_x * self.pos_ph[::3])
+            e_int_y = xp.sum(self.varepsilon_k * d_dot_f_y * self.pos_ph[1::3])
 
         # calculate the dipole self-energy term
-        dse = np.sum(
+        dse = xp.sum(
             (self.varepsilon_k**2 / 2.0 / self.omega_k**2)
             * (d_dot_f_x**2 + d_dot_f_y**2)
         )
@@ -1976,8 +1989,8 @@ class PhotonDriver:
         f_ph = -self.omega_klambda3**2 * self.pos_ph
 
         # calculate the dot products between mode functions and dipole array
-        d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
-        d_dot_f_y = np.dot(self.ftilde_ky, dy_array)
+        d_dot_f_x = (self.ftilde_kx) @ (dx_array)
+        d_dot_f_y = (self.ftilde_ky) @ (dy_array)
 
         # calculate the force due to light-matter interactions
         if self.ph_rep == "loose":
@@ -2002,8 +2015,8 @@ class PhotonDriver:
         """
 
         # calculate the dot products between mode functions and dipole array
-        d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
-        d_dot_f_y = np.dot(self.ftilde_ky, dy_array)
+        d_dot_f_x = (self.ftilde_kx) @ (dx_array)
+        d_dot_f_y = (self.ftilde_ky) @ (dy_array)
 
         # cavity force on x direction
         if self.ph_rep == "loose":
@@ -2016,10 +2029,11 @@ class PhotonDriver:
         Eky += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_y
 
         # dimension of independent baths (xy grid points)
-        coeff_x = np.dot(np.transpose(Ekx), self.ftilde_kx)
-        coeff_y = np.dot(np.transpose(Eky), self.ftilde_ky)
-        fx = -np.kron(coeff_x, charge_array_bath)
-        fy = -np.kron(coeff_y, charge_array_bath)
+        coeff_x = (xp.transpose(Ekx)) @ (self.ftilde_kx)
+        coeff_y = (xp.transpose(Eky)) @ (self.ftilde_ky)
+        # np.kron is not in the array-API; lift inputs to numpy for this op
+        fx = xp.asarray(-np.kron(to_numpy(coeff_x), to_numpy(charge_array_bath)))
+        fy = xp.asarray(-np.kron(to_numpy(coeff_y), to_numpy(charge_array_bath)))
         return fx, fy
 
 
@@ -2106,22 +2120,22 @@ class FFCavPhSocket(FFSocket):
         Returns:
             dx_array, dy_array, dz_array: total dipole moment array along x, y, and z directions
         """
-        ndim_tot = np.size(pos)
+        ndim_tot = xp_size(pos)
         ndim_local = int(ndim_tot // n_bath)
 
         dx_array, dy_array, dz_array = [], [], []
         for idx in range(n_bath):
             pos_bath = pos[ndim_local * idx : ndim_local * (idx + 1)]
             # check the dimension of charge array
-            if np.size(pos_bath[::3]) != np.size(charge_array_bath):
+            if xp_size(pos_bath[::3]) != xp_size(charge_array_bath):
                 softexit.trigger(
                     "The size of charge array = {}  does not match the size of atoms = {} ".format(
-                        np.size(charge_array_bath), np.size(pos_bath[::3])
+                        xp_size(charge_array_bath), xp_size(pos_bath[::3])
                     )
                 )
-            dx = np.sum(pos_bath[::3] * charge_array_bath)
-            dy = np.sum(pos_bath[1::3] * charge_array_bath)
-            dz = np.sum(pos_bath[2::3] * charge_array_bath)
+            dx = xp.sum(pos_bath[::3] * charge_array_bath)
+            dy = xp.sum(pos_bath[1::3] * charge_array_bath)
+            dz = xp.sum(pos_bath[2::3] * charge_array_bath)
             dx_array.append(dx)
             dy_array.append(dy)
             dz_array.append(dz)
@@ -2162,7 +2176,7 @@ class FFCavPhSocket(FFSocket):
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = xp.asarray(dstrip(atoms.q), copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -2188,14 +2202,15 @@ class FFCavPhSocket(FFSocket):
 
         # 1. split coordinates to atoms and photons
         pbcpos_atoms, pbcpos_phs = self.ph.split_atom_ph_coord(pbcpos)
-        ndim_tot = np.size(pbcpos_atoms)
+        ndim_tot = xp_size(pbcpos_atoms)
         ndim_local = int(ndim_tot // self.n_independent_bath)
 
         # 2. for atomic coordinates, we now evaluate their atomic forces
         for idx in range(self.n_independent_bath):
-            pbcpos_local = pbcpos_atoms[
-                ndim_local * idx : ndim_local * (idx + 1)
-            ].copy()
+            pbcpos_local = xp.asarray(
+                pbcpos_atoms[ndim_local * idx : ndim_local * (idx + 1)],
+                copy=True,
+            )
             iactive_local = self.iactive[0:ndim_local]
             # Let's try to do PBC for the small regions
             if self.dopbc:
@@ -2205,7 +2220,10 @@ class FFCavPhSocket(FFSocket):
                     "id": int(reqid * self.n_independent_bath) + idx,
                     "pos": pbcpos_local,
                     "active": iactive_local,
-                    "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                    "cell": (
+                        xp.asarray(dstrip(cell.h), copy=True),
+                        xp.asarray(dstrip(cell.ih), copy=True),
+                    ),
                     "pars": par_str,
                     "result": None,
                     "status": "Queued",
@@ -2305,7 +2323,10 @@ class FFCavPhSocket(FFSocket):
                 "id": reqid,
                 "pos": pbcpos,
                 "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "cell": (
+                    xp.asarray(dstrip(cell.h), copy=True),
+                    xp.asarray(dstrip(cell.ih), copy=True),
+                ),
                 "pars": par_str,
                 "result": result_tot,
                 "status": newreq_lst[-1]["status"],

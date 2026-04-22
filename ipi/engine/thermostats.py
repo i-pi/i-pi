@@ -10,6 +10,8 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 # See the "licenses" directory for full license information.
 
 
+import math
+
 import numpy as np
 
 from ipi.utils.array_backend import xp
@@ -465,7 +467,7 @@ class ThermoSVR(Thermostat):
     def get_et(self):
         """Calculates the damping term in the propagator."""
 
-        return np.exp(-self.dt / self.tau)
+        return math.exp(-self.dt / self.tau)
 
     def get_K(self):
         """Calculates the average kinetic energy per degree of freedom."""
@@ -513,10 +515,10 @@ class ThermoSVR(Thermostat):
         alpha2 = (
             self.et
             + self.K / K * (1 - self.et) * (r1**2 + rg)
-            + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
+            + 2.0 * r1 * math.sqrt(self.K / K * self.et * (1 - self.et))
         )
-        alpha = np.sqrt(alpha2)
-        if (r1 + np.sqrt(2 * K / self.K * self.et / (1 - self.et))) < 0:
+        alpha = math.sqrt(alpha2)
+        if (r1 + math.sqrt(2 * K / self.K * self.et / (1 - self.et))) < 0:
             alpha *= -1
 
         self.ethermo += K * (1 - alpha2)
@@ -646,7 +648,7 @@ class ThermoGLE(Thermostat):
     def get_S(self):
         """Calculates the matrix for the coloured noise."""
 
-        SST = Constants.kb * (self.C - np.dot(self.T, np.dot(self.C, self.T.T)))
+        SST = Constants.kb * (self.C - ((self.T) @ (((self.C) @ (self.T.T)))))
         # Uses a symetric decomposition rather than Cholesky, since it is more stable
         return root_herm(SST)
         # return stab_cholesky(SST)
@@ -654,8 +656,7 @@ class ThermoGLE(Thermostat):
     def get_C(self):
         """Calculates C from temp (if C is not set explicitly)"""
 
-        rC = np.identity(self.ns + 1, float) * self.temp
-        return rC[:]
+        return xp.eye(self.ns + 1) * self.temp
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, ethermo=0.0):
         """Initialises ThermoGLE.
@@ -676,18 +677,20 @@ class ThermoGLE(Thermostat):
         super(ThermoGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = np.identity(1, float)
-        self._A = depend_value(value=A.copy(), name="A")
+            A = xp.eye(1, dtype=xp.float64)
+        # `xp.asarray(..., copy=True)` is the array-API equivalent of
+        # numpy's `.copy()` and works on both numpy and torch inputs.
+        self._A = depend_value(value=xp.asarray(A, copy=True), name="A")
 
         self.ns = len(self.A) - 1
 
         # now, this is tricky. if C is taken from temp, then we want it to be updated
         # as a depend of temp. Otherwise, we want it to be an independent beast.
         if C is None:
-            C = np.identity(self.ns + 1, float) * self.temp
+            C = xp.eye(self.ns + 1, dtype=xp.float64) * self.temp
             self._C = depend_value(name="C", func=self.get_C, dependencies=[self._temp])
         else:
-            self._C = depend_value(value=C.copy(), name="C")
+            self._C = depend_value(value=xp.asarray(C, copy=True), name="C")
 
         self._T = depend_value(
             name="T", func=self.get_T, dependencies=[self._A, self._dt]
@@ -735,7 +738,7 @@ class ThermoGLE(Thermostat):
                     "Mismatch in GLE s array size on restart, will reinitialise to free particle.",
                     verbosity.low,
                 )
-            self.s = np.zeros((self.ns + 1, len(self._m)))
+            self.s = xp.zeros((self.ns + 1, len(self._m)))
 
             # Initializes the s vector in the free-particle limit
             info(
@@ -743,7 +746,7 @@ class ThermoGLE(Thermostat):
                 verbosity.low,
             )
             SC = stab_cholesky(self.C * Constants.kb)
-            self.s[:] = np.dot(SC, self.prng.gvec(self.s.shape))
+            self.s[:] = SC @ self.prng.gvec(self.s.shape)
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -752,11 +755,11 @@ class ThermoGLE(Thermostat):
 
         self.s[0, :] = self.p / self.sm
 
-        self.ethermo += np.dot(self.s[0], self.s[0]) * 0.5
-        self.s[:] = np.dot(self.T, self.s) + np.dot(
-            self.S, self.prng.gvec(self.s.shape)
-        )
-        self.ethermo -= np.dot(self.s[0], self.s[0]) * 0.5
+        s0 = self.s[0]
+        self.ethermo += (s0 @ s0) * 0.5
+        self.s[:] = self.T @ self.s + self.S @ self.prng.gvec(self.s.shape)
+        s0 = self.s[0]
+        self.ethermo -= (s0 @ s0) * 0.5
 
         self.p = self.s[0] * self.sm
 
@@ -814,8 +817,8 @@ class ThermoNMGLE(Thermostat):
         super(ThermoNMGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = np.identity(1, float)
-        self._A = depend_value(value=A.copy(), name="A")
+            A = xp.eye(1, dtype=xp.float64)
+        self._A = depend_value(value=xp.asarray(A, copy=True), name="A")
 
         self.nb = len(self.A)
         self.ns = len(self.A[0]) - 1
@@ -826,7 +829,7 @@ class ThermoNMGLE(Thermostat):
         if C is None:
             self._C = depend_value(name="C", func=self.get_C, dependencies=[self._temp])
         else:
-            self._C = depend_value(value=C.copy(), name="C")
+            self._C = depend_value(value=xp.asarray(C, copy=True), name="C")
 
     def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
@@ -875,7 +878,7 @@ class ThermoNMGLE(Thermostat):
                     "Mismatch in GLE s array size on restart, will reinitialise to free particle.",
                     verbosity.low,
                 )
-            self.s = np.zeros((self.nb, self.ns + 1, nm.natoms * 3))
+            self.s = xp.zeros((self.nb, self.ns + 1, nm.natoms * 3))
 
             # Initializes the s vector in the free-particle limit
             info(
@@ -884,7 +887,7 @@ class ThermoNMGLE(Thermostat):
             )
             for b in range(self.nb):
                 SC = stab_cholesky(self.C[b] * Constants.kb)
-                self.s[b] = np.dot(SC, self.prng.gvec(self.s[b].shape))
+                self.s[b] = SC @ self.prng.gvec(self.s[b].shape)
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -1038,7 +1041,7 @@ class ThermoCL(Thermostat):
         """Calculates the Langevin coefficient of drift."""
 
         if self.tau > 0:
-            return np.exp(-0.5 * self.dt / self.tau)
+            return math.exp(-0.5 * self.dt / self.tau)
         else:
             return 1.0
 
@@ -1046,7 +1049,7 @@ class ThermoCL(Thermostat):
         """Calculates the coefficient of drift to compensate for the inherent noise."""
 
         if self.intau > 0:
-            return np.exp(-0.5 * self.dt / self.intau)
+            return math.exp(-0.5 * self.dt / self.intau)
         else:
             return 1.0
 
@@ -1054,7 +1057,7 @@ class ThermoCL(Thermostat):
         """Calculates the coefficient of drift for the inherent dissipation."""
 
         if self.idtau > 0:
-            return np.exp(-0.5 * self.dt / self.idtau)
+            return math.exp(-0.5 * self.dt / self.idtau)
         else:
             return 1.0
 
@@ -1066,7 +1069,7 @@ class ThermoCL(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
 
-        return np.sqrt(Constants.kb * self.temp * (1.0 - (self.lgT * self.idT) ** 2))
+        return math.sqrt(Constants.kb * self.temp * (1.0 - (self.lgT * self.idT) ** 2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=0, intau=0, idtau=0, apat=0, ethermo=0.0):
         """Initialises ThermoCL.
@@ -1110,15 +1113,15 @@ class ThermoCL(Thermostat):
         """Updates the bound momentum vector with a langevin thermostat."""
 
         et = self.ethermo
-        p = dstrip(self.p).copy()
+        p = xp.asarray(dstrip(self.p), copy=True)
         sm = dstrip(self.sm)
 
         p /= sm
 
-        et += np.dot(p, p) * 0.5
+        et += ((p) @ (p)) * 0.5
         p *= self.T
         p += self.S * self.prng.gvec(len(p))
-        et -= np.dot(p, p) * 0.5
+        et -= ((p) @ (p)) * 0.5
 
         p *= sm
 
@@ -1126,7 +1129,7 @@ class ThermoCL(Thermostat):
         self.ethermo = et
 
         if self.apat > 0 and self.idstep and ((self.intau != 0) ^ (self.idtau != 0)):
-            ekin = np.dot(dstrip(self.p), dstrip(self.p) / dstrip(self.m)) * 0.5
+            ekin = ((dstrip(self.p)) @ (dstrip(self.p) / dstrip(self.m))) * 0.5
             mytemp = ekin / Constants.kb / self.ndof * 2
 
             if self.intau != 0:
@@ -1188,16 +1191,16 @@ class ThermoFFL(ThermoLangevin):
         """Updates the bound momentum vector with a fast-forward langevin thermostat."""
 
         et = self.ethermo
-        p = dstrip(self.p).copy()
+        p = xp.asarray(dstrip(self.p), copy=True)
         sm = dstrip(self.sm)
 
         p /= sm
 
         # Store momentum before langevin step
-        p_old = list(p)
+        p_old = xp.asarray(p, copy=True)
 
         # Accumulate conserved quantity
-        et += np.dot(p, p) * 0.5
+        et += ((p) @ (p)) * 0.5
 
         # Do standard langevin thermostatting
         p *= self.T
@@ -1206,26 +1209,23 @@ class ThermoFFL(ThermoLangevin):
         # Check whether to flip momenta back
         if self.flip == "soft":
             # Soft flip
-            p_old = np.reshape(p_old, (-1, 3))
-            p_new = np.reshape(p, (-1, 3))
-            dotpr = hfunc(
-                np.sum(np.multiply(p_old, p_new), axis=1)
-                / np.sum(np.multiply(p_old, p_old), axis=1)
-            )
-            p += np.reshape(np.multiply(dotpr, p_old.T).T, len(p))
+            p_old = xp.reshape(p_old, (-1, 3))
+            p_new = xp.reshape(p, (-1, 3))
+            dotpr = hfunc(xp.sum(p_old * p_new, axis=1) / xp.sum(p_old * p_old, axis=1))
+            p += xp.reshape((dotpr * p_old.T).T, (len(p),))
         elif self.flip == "hard":
             # Hard flip
-            p = np.multiply(p, np.sign(np.multiply(p, p_old)))
+            p = p * xp.sign(p * p_old)
         elif self.flip == "rescale":
             # Rescale flip
-            p_old = np.reshape(p_old, (-1, 3))
-            p_new = np.reshape(p, (-1, 3))
-            scalfac = np.linalg.norm(p_new, axis=1) / np.linalg.norm(p_old, axis=1)
-            p = np.reshape(np.multiply(scalfac, p_old.T).T, len(p))
+            p_old = xp.reshape(p_old, (-1, 3))
+            p_new = xp.reshape(p, (-1, 3))
+            scalfac = xp.linalg.norm(p_new, axis=1) / xp.linalg.norm(p_old, axis=1)
+            p = xp.reshape((scalfac * p_old.T).T, (len(p),))
         # Otherwise we have chosen 'none', and we just don't do anything here
 
         # Accumulate conserved quantity
-        et -= np.dot(p, p) * 0.5
+        et -= ((p) @ (p)) * 0.5
 
         p *= sm
 
@@ -1281,4 +1281,4 @@ class MultiThermo(Thermostat):
 
 
 def hfunc(x):
-    return (np.sign(x) - 1.0) * x
+    return (xp.sign(x) - 1.0) * x

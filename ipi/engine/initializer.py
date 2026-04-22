@@ -11,6 +11,8 @@ overwrite data given elsewhere.
 # See the "licenses" directory for full license information.
 
 
+import math
+
 import numpy as np
 
 from ipi.utils.array_backend import xp
@@ -380,7 +382,7 @@ class Initializer:
                         "length", v.units, 1.0
                     )
                 elif v.mode == "chk":
-                    rh = init_chk(v.value)[1].h
+                    rh = dstrip(init_chk(v.value)[1].h)
                 elif init_file(v.mode, v.value)[1].h.trace() == -3:
                     # In case the file do not contain any
                     # + cell parameters, the diagonal elements of the cell will be
@@ -525,7 +527,7 @@ class Initializer:
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
                     * xp.sqrt(dstrip(rnm.dynm3))
-                    * np.sqrt(rbeads.nbeads * rtemp * Constants.kb)
+                    * math.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
                 if v.index < 0:
@@ -552,7 +554,9 @@ class Initializer:
                         )
                     simul.beads.resize(natoms, self.nbeads)
 
-                rp *= xp.sqrt(self.nbeads / nbeads)
+                # math.sqrt is cheap for a Python scalar and avoids
+                # array_api_compat.torch's strict rejection of floats.
+                rp *= math.sqrt(self.nbeads / nbeads)
                 set_vector(v, simul.beads.p, rp)
                 fmom = True
             elif k == "velocities":
@@ -579,7 +583,7 @@ class Initializer:
                 else:
                     for ev in rv:
                         ev *= simul.beads.m3[0]
-                rv *= np.sqrt(self.nbeads / nbeads)
+                rv *= math.sqrt(self.nbeads / nbeads)
                 set_vector(v, simul.beads.p, rv)
                 fmom = True
             elif k == "gle":

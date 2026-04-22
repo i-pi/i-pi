@@ -8,8 +8,12 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
+import math
 import time
+
+import numpy as np
+
+from ipi.utils.array_backend import xp
 
 from ipi.engine.smotion import Smotion
 from ipi.engine.ensembles import ensemble_swap
@@ -130,8 +134,8 @@ class ReplicaExchange(Smotion):
                 # which means that the exchange is done only relative to the potential energy part.
                 if self.rescalekin:
                     # also rescales the velocities -- should do the same with cell velocities
-                    sl[i].beads.p *= np.sqrt(tj / ti)
-                    sl[j].beads.p *= np.sqrt(ti / tj)
+                    sl[i].beads.p *= math.sqrt(tj / ti)
+                    sl[j].beads.p *= math.sqrt(ti / tj)
                     try:  # if motion has a barostat, and barostat has a momentum, does the swap
                         # also note that the barostat has a hidden T dependence inside the mass, so
                         # as a matter of fact <p^2> \propto T^2
@@ -143,7 +147,7 @@ class ReplicaExchange(Smotion):
                 try:  # if motion has a barostat, and the barostat has a reference cell, does the swap
                     # as that when there are very different pressures, the cell should reflect the
                     # pressure/temperature dependence. this also changes the barostat conserved quantities
-                    bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                    bjh = xp.asarray(dstrip(sl[j].motion.barostat.h0.h), copy=True)
                     sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
                     sl[i].motion.barostat.h0.h[:] = bjh
                 except AttributeError:
@@ -155,7 +159,7 @@ class ReplicaExchange(Smotion):
                 newpensi = sl[i].ensemble.lpens
                 newpensj = sl[j].ensemble.lpens
 
-                pxc = np.exp((newpensi + newpensj) - (pensi + pensj))
+                pxc = math.exp((newpensi + newpensj) - (pensi + pensj))
                 t_eval += time.time()
 
                 if pxc > self.prng.u:  # really does the exchange
@@ -186,15 +190,15 @@ class ReplicaExchange(Smotion):
 
                     # undoes the kinetic scaling
                     if self.rescalekin:
-                        sl[i].beads.p *= np.sqrt(ti / tj)
-                        sl[j].beads.p *= np.sqrt(tj / ti)
+                        sl[i].beads.p *= math.sqrt(ti / tj)
+                        sl[j].beads.p *= math.sqrt(tj / ti)
                         try:
                             sl[i].motion.barostat.p *= ti / tj
                             sl[j].motion.barostat.p *= tj / ti
                         except AttributeError:
                             pass
                     try:
-                        bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                        bjh = xp.asarray(dstrip(sl[j].motion.barostat.h0.h), copy=True)
                         sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
                         sl[i].motion.barostat.h0.h[:] = bjh
                     except AttributeError:

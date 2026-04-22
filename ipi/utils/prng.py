@@ -301,7 +301,7 @@ class Random(object):
         """Fills a pre-allocated array in parallel (numpy backend only)."""
 
         out_flat = out.flatten()
-        step_size = np.ceil(len(out_flat) / self.n_threads).astype(int)
+        step_size = xp.ceil(len(out_flat) / self.n_threads).astype(int)
         if step_size < _MIN_STEP_THREADED:
             # falls back to serial if the vector is too small
             self.gfill_serial(out)
@@ -322,9 +322,13 @@ class Random(object):
         if _IS_TORCH_BACKEND:
             import torch
 
+            # Default torch dtype may be float32 — force float64 so the
+            # result matches the rest of i-PI's numerics (which are
+            # double throughout, unless IPI_DTYPE=float32 is set).
             out = torch.empty(
                 tuple(shape) if not isinstance(shape, int) else (shape,),
                 device=_xp_device,
+                dtype=torch.get_default_dtype(),
             )
             out.normal_(generator=self._torch_gen)
             return out

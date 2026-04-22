@@ -224,10 +224,10 @@ class Dynamics(Motion):
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
-                if np.any(np.isnan(self.ensemble.pext)):
+                if bool(xp.any(xp.isnan(xp.asarray(self.ensemble.pext)))):
                     raise ValueError("Unspecified pressure for a constant-p integrator")
             elif self.enstype == "nst":
-                if np.any(np.isnan(self.ensemble.stressext)):
+                if bool(xp.any(xp.isnan(dstrip(self.ensemble.stressext)))):
                     raise ValueError("Unspecified stress for a constant-s integrator")
                 if type(self.barostat) is not BaroRGB:
                     raise ValueError(

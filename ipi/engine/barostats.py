@@ -971,7 +971,7 @@ class BaroRGB(Barostat):
         self._m6 = depend_array(
             name="m6",
             value=np.zeros(6, float),
-            func=(lambda: xp.ones(6, dtype=xp.float64) * self.m[0]),
+            func=(lambda: xp.ones(6) * self.m[0]),
             dependencies=[self._m],
         )
 
@@ -1120,7 +1120,9 @@ class BaroRGB(Barostat):
         else:
             eigvals, eigvecs = xp.linalg.eig(v)
             ieigvecs = xp.linalg.inv(eigvecs)
-            sinh = halfdt * (eigvecs @ (xp.diag(sinch(halfdt * eigvals)) @ ieigvecs))
+            sinh = xp.real(
+                halfdt * (eigvecs @ (xp.diag(sinch(halfdt * eigvals)) @ ieigvecs))
+            )
 
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 
@@ -1276,7 +1278,7 @@ class BaroMTK(Barostat):
         self._m6 = depend_array(
             name="m6",
             value=np.zeros(6, float),
-            func=(lambda: xp.ones(6, dtype=xp.float64) * self.m[0]),
+            func=(lambda: xp.ones(6) * self.m[0]),
             dependencies=[self._m],
         )
 
@@ -1358,7 +1360,7 @@ class BaroMTK(Barostat):
         dt2 = dt**2
         dt3 = dt**3 / 3.0
 
-        pi_ext = xp.eye(3, dtype=xp.float64) * self.pext
+        pi_ext = xp.eye(3) * self.pext
 
         stress = dstrip(self.stress_mts(level))
         self.p += dt * (self.cell.V * xp.triu(stress))
@@ -1393,7 +1395,7 @@ class BaroMTK(Barostat):
         if self.vol_constraint is True:
             # a traceless momentum tensor will not change the volume, see
             # Rogge, S. M. J. et al. Theory Comput. 11, 5583–5597 (2015) DOI: 10.1021/acs.jctc.5b00748
-            p_xp = self.p
+            p_xp = dstrip(self.p)
             self.p = p_xp - xp.eye(3, dtype=p_xp.dtype) * xp.linalg.trace(p_xp) / 3.0
 
         self.thermostat.ethermo -= self.kin

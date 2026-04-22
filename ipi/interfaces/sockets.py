@@ -19,6 +19,7 @@ import threading
 import numpy as np
 import json
 
+from ipi.utils.array_backend import xp
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
@@ -515,7 +516,12 @@ class Driver(DriverSocket):
                 )
 
             mxtradict["raw"] = mxtra
-        return [mu, mf, mvir, mxtradict]
+        # Lift force / virial from the socket-numpy side to the active
+        # array namespace so all downstream consumers (depend storage,
+        # integrator arithmetic) see backend-native arrays without
+        # coercion. `mu` stays a Python float — scalars don't need the
+        # backend.
+        return [float(mu), xp.asarray(mf), xp.asarray(mvir), mxtradict]
 
     def getforce(self):
         """Gets the potential energy, force and virial from the driver.
@@ -588,7 +594,7 @@ class Driver(DriverSocket):
         # If only a piece of the system is active, resize forces and reassign
         if len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
-            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1] = xp.zeros(len(r["pos"]), dtype=xp.float64)
             r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
@@ -686,7 +692,7 @@ class Driver(DriverSocket):
         # If only a piece of the system is active, resize forces and reassign
         if len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
-            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1] = xp.zeros(len(r["pos"]), dtype=xp.float64)
             r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
@@ -788,7 +794,10 @@ class Driver(DriverSocket):
         else:
             mxtra = ""
 
-        return [mu, mf, mvir, _parse_extra(mxtra)]
+        # Same numpy -> xp lift as `_recv_force_data`; the two return
+        # sites serve the sync (dispatch) and async (dispatch_recv) paths
+        # respectively, so they don't double-wrap.
+        return [mu, xp.asarray(mf), xp.asarray(mvir), _parse_extra(mxtra)]
 
 
 class InterfaceSocket(object):

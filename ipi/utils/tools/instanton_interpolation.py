@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import argparse
 
+from ipi.utils.array_backend import xp
 from ipi.utils.io import read_file, print_file
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.units import unit_to_internal
@@ -133,7 +134,7 @@ def interpolate_instanton(
             except:
                 print("We don't have a hessian so there is nothing more to do")
                 sys.exit()
-            if np.linalg.norm(h) < 1e-13:
+            if xp.linalg.norm(h) < 1e-13:
                 print("We don't have a hessian so there is nothing more to do")
                 sys.exit()
 

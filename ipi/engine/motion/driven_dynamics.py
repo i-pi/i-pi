@@ -4,8 +4,10 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import math
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import (
@@ -141,13 +143,13 @@ class EDAIntegrator(DummyIntegrator):
         )  # Born Effective Charges: shape == (nbeads,3xNatoms,3)
         v = self.beads.p / self.beads.m3  # velocities: shape == (nbeads,3xNatoms)
         if bead >= 0:
-            mu_dt = Constants.e * np.einsum("jk,j->k", Z[bead], v[bead])
+            mu_dt = Constants.e * xp.einsum("jk,j->k", Z[bead], v[bead])
             # time derivative of the dipole: shape == (3)
             assert mu_dt.shape == (
                 3,
             ), f"Got mu_dt.shape = {mu_dt.shape}, expected (3,)"
         else:
-            mu_dt = Constants.e * np.einsum("ijk,ij->ik", Z, v)
+            mu_dt = Constants.e * xp.einsum("ijk,ij->ik", Z, v)
             # time derivative of the dipole: shape == (nbeads,3)
             assert mu_dt.shape == (
                 self.beads.nbeads,
@@ -368,7 +370,7 @@ class ElectricDipole:
             elif "raw" not in self.ens.forces.extras:
                 raise ValueError("'raw' has to be in 'forces.extras'")
 
-            elif np.all(
+            elif xp.all(
                 ["Total dipole moment" in s for s in self.ens.forces.extras["raw"]]
             ):
                 raws = [self.ens.forces.extras["raw"][i] for i in range(self.nbeads)]
@@ -452,7 +454,7 @@ class ElectricField:
             x = time  # indipendent variable
             u = self.peak  # mean value
             s = self.sigma  # standard deviation
-            return np.exp(
+            return math.exp(
                 -0.5 * ((x - u) / s) ** 2
             )  # the returned maximum value is 1, when x = u
         else:
@@ -460,7 +462,7 @@ class ElectricField:
 
     def _get_Ecos(self, time):
         """Get the sinusoidal part of the external electric field"""
-        return np.cos(self.freq * time + self.phase)
+        return math.cos(self.freq * time + self.phase)
 
 
 dproperties(

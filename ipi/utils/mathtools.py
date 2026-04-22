@@ -117,9 +117,12 @@ def stab_cholesky(M):
        M: The matrix to be decomposed.
     """
 
+    from array_api_compat import device as _device_of
+
     n = M.shape[1]
-    D = np.zeros(n, float)
-    L = np.zeros(M.shape, float)
+    dev = _device_of(M)
+    D = xp.zeros(n, dtype=M.dtype, device=dev)
+    L = xp.zeros(M.shape, dtype=M.dtype, device=dev)
     for i in range(n):
         L[i, i] = 1.0
         for j in range(i):
@@ -133,10 +136,10 @@ def stab_cholesky(M):
             D[i] -= L[i, k] * L[i, k] * D[k]
 
     negev = False
-    S = np.zeros(M.shape, float)
+    S = xp.zeros(M.shape, dtype=M.dtype, device=dev)
     for i in range(n):
         if D[i] > 0:
-            D[i] = math.sqrt(D[i])
+            D[i] = xp.sqrt(D[i])
         else:
             warning(
                 "Zeroing negative element in stab-cholesky decomposition: " + str(D[i]),
@@ -149,8 +152,7 @@ def stab_cholesky(M):
 
     if negev:
         warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(M - np.dot(S, S.T)),
+            "Checking decomposition after negative eigenvalue: \n" + str(M - S @ S.T),
             verbosity.low,
         )
 
@@ -205,12 +207,12 @@ def genh2abc(h):
        A list containing the lattice vector lengths and the angles between them.
     """
 
-    a = math.sqrt(np.dot(h[0], h[0]))
-    b = math.sqrt(np.dot(h[1], h[1]))
-    c = math.sqrt(np.dot(h[2], h[2]))
-    gamma = math.acos(np.dot(h[0], h[1]) / (a * b))
-    beta = math.acos(np.dot(h[0], h[2]) / (a * c))
-    alpha = math.acos(np.dot(h[2], h[1]) / (b * c))
+    a = math.sqrt(((h[0]) @ (h[0])))
+    b = math.sqrt(((h[1]) @ (h[1])))
+    c = math.sqrt(((h[2]) @ (h[2])))
+    gamma = math.acos(((h[0]) @ (h[1])) / (a * b))
+    beta = math.acos(((h[0]) @ (h[2])) / (a * c))
+    alpha = math.acos(((h[2]) @ (h[1])) / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
@@ -251,7 +253,7 @@ def abc2h(a, b, c, alpha, beta, gamma):
        An array giving the lattice vector matrix in upper triangular form.
     """
 
-    h = np.zeros((3, 3), float)
+    h = xp.zeros((3, 3))
     h[0, 0] = a
     h[0, 1] = b * math.cos(gamma)
     h[0, 2] = c * math.cos(beta)
@@ -292,8 +294,8 @@ def eigensystem_ut3x3(p):
        An array giving the 3 eigenvalues of p, and the eigenvector matrix of p.
     """
 
-    eigp = np.zeros((3, 3), float)
-    eigvals = np.zeros(3, float)
+    eigp = xp.zeros((3, 3))
+    eigvals = xp.zeros(3)
 
     for i in range(3):
         eigp[i, i] = 1
@@ -344,10 +346,14 @@ def exp_ut3x3(h):
     Returns:
        The matrix exponential of h.
     """
-    eh = np.zeros((3, 3), float)
-    e00 = math.exp(h[0, 0])
-    e11 = math.exp(h[1, 1])
-    e22 = math.exp(h[2, 2])
+    eh = xp.zeros((3, 3))
+    # Keep 0-d exponents in the active namespace; control-flow branches
+    # below compare these against scalars, which triggers a sync on CUDA
+    # but this routine runs 2×/MD step for an anisotropic barostat — not
+    # a hot enough spot to justify a specialised kernel.
+    e00 = xp.exp(h[0, 0])
+    e11 = xp.exp(h[1, 1])
+    e22 = xp.exp(h[2, 2])
     eh[0, 0] = e00
     eh[1, 1] = e11
     eh[2, 2] = e22
@@ -402,28 +408,30 @@ def root_herm(A):
        original matrix.
     """
 
-    if not (abs(A.T - A) < 1e-10).all():
+    from array_api_compat import device as _device_of
+
+    if not bool((abs(A.T - A) < 1e-10).all()):
         raise ValueError("Non-Hermitian matrix passed to root_herm function")
-    eigvals, eigvecs = np.linalg.eigh(A)
-    ndgrs = len(eigvals)
-    diag = np.zeros((ndgrs, ndgrs))
+    eigvals, eigvecs = xp.linalg.eigh(A)
+    ndgrs = int(eigvals.shape[0])
+    diag = xp.zeros((ndgrs, ndgrs), dtype=A.dtype, device=_device_of(A))
     negev = False
     for i in range(ndgrs):
-        if eigvals[i] >= 0:
-            diag[i, i] = math.sqrt(eigvals[i])
+        if bool(eigvals[i] >= 0):
+            diag[i, i] = xp.sqrt(eigvals[i])
         else:
             warning(
                 "Zeroing negative %d-th element in matrix square root: %e"
-                % (i, eigvals[i]),
+                % (i, float(eigvals[i])),
                 verbosity.low,
             )
             diag[i, i] = 0
             negev = True
-    rv = np.dot(eigvecs, np.dot(diag, eigvecs.T))
+    rv = eigvecs @ (diag @ eigvecs.T)
     if negev:
         warning(
             "Checking decomposition after negative eigenvalue: \n"
-            + str(A - np.dot(rv, rv.T)),
+            + str(A - ((rv) @ (rv.T))),
             verbosity.low,
         )
 

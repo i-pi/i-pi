@@ -1,4 +1,5 @@
 import numpy as np
+from ipi.utils.array_backend import xp
 from ipi.utils.io import read_file_raw
 from ipi.utils.units import unit_to_internal
 
@@ -123,7 +124,7 @@ def compute_acf_xyz(
 
             # Averages over all species and sums over the x,y,z directions. Also multiplies with the time step and a prefactor of (2pi)^-1.
             mfvvacf = (
-                3.0 * np.real(np.mean(tfvvacf, axis=(1, 2))) * dt / (2 * np.pi) / bsize
+                3.0 * xp.real(xp.mean(tfvvacf, axis=(1, 2))) * dt / (2 * np.pi) / bsize
             )
 
             # Computes the inverse Fourier transform to get the vvac.
@@ -149,10 +150,10 @@ def compute_acf_xyz(
 
     # Performs the block average of the Fourier transform.
     fvvacf = fvvacf / nblocks
-    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf**2)
+    fvvacf_err = xp.sqrt(fvvacf2 / nblocks - fvvacf**2)
 
     # Computes the inverse Fourier transform to get the vvac.
     vvacf = vvacf / nblocks
-    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf**2)
+    vvacf_err = xp.sqrt(vvacf2 / nblocks - vvacf**2)
 
     return time, vvacf, vvacf_err, omega, fvvacf, fvvacf_err

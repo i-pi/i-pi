@@ -467,11 +467,14 @@ class ForceComponent:
                     )
                 fc_extra[e].append(b.extra[e])
 
-        # interpolate_extras should be numerical, thus can be converted to numpy arrays.
-        # we enforce the type and numpy will raise an error if not.
+        # interpolate_extras should be numerical. Each bead's entry may be a
+        # Python list (JSON-parsed) or a numpy array, so lift each element
+        # to the active backend individually, then stack into a (nbeads, ...)
+        # array. Fails (as intended) if the entries aren't uniformly shaped
+        # numeric data.
         for e in self.interpolate_extras:
             try:
-                fc_extra[e] = xp.asarray(fc_extra[e], dtype=float)
+                fc_extra[e] = xp.stack([xp.asarray(x) for x in fc_extra[e]])
             except KeyError:
                 raise KeyError(
                     "interpolate_extras required "
@@ -493,7 +496,10 @@ class ForceComponent:
         """
 
         self.queue()
-        return xp.asarray([dstrip(b.vir) for b in self._forces], dtype=xp.float64)
+        # `xp.asarray(list_of_tensors)` doesn't stack under torch; use
+        # `xp.stack` which is the array-API verb for concatenating
+        # along a new leading axis.
+        return xp.stack([dstrip(b.vir) for b in self._forces])
 
     def f_gather(self):
         """Obtains the force vector for each replica.
@@ -538,7 +544,7 @@ class ScaledForceComponent:
             func=lambda: (
                 self.scaling * self.bf.f
                 if self.scaling != 0
-                else np.zeros((self.bf.nbeads, 3 * self.bf.natoms))
+                else xp.zeros((self.bf.nbeads, 3 * self.bf.natoms))
             ),
             value=np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
             dependencies=[self.bf._f, self._scaling],
@@ -583,7 +589,7 @@ class ScaledForceComponent:
         return (
             self.scaling * self.bf.pots
             if self.scaling != 0
-            else np.zeros(self.bf.nbeads)
+            else xp.zeros(self.bf.nbeads)
         )
 
     def get_vir(self):
@@ -1210,11 +1216,11 @@ class Forces:
 
         if weighted and self.mforces[index].weight == 0:
             if interpolate:
-                return np.zeros(self.mrpc[index].nbeads1)
+                return xp.zeros(self.mrpc[index].nbeads1)
             else:
-                return np.zeros(self.mrpc[index].nbeads2)
+                return xp.zeros(self.mrpc[index].nbeads2)
         else:
-            pots = dstrip(self.mforces[index].pots).copy()
+            pots = xp.asarray(dstrip(self.mforces[index].pots), copy=True)
             if weighted:
                 pots *= self.mforces[index].weight
             if interpolate:
@@ -1226,11 +1232,11 @@ class Forces:
 
         if weighted and self.mforces[index].weight == 0:
             if interpolate:
-                return np.zeros((self.mrpc[index].nbeads1, 3 * self.natoms))
+                return xp.zeros((self.mrpc[index].nbeads1, 3 * self.natoms))
             else:
-                return np.zeros((self.mrpc[index].nbeads2, 3 * self.natoms))
+                return xp.zeros((self.mrpc[index].nbeads2, 3 * self.natoms))
         else:
-            forces = dstrip(self.mforces[index].f).copy()
+            forces = xp.asarray(dstrip(self.mforces[index].f), copy=True)
             if weighted:
                 forces *= self.mforces[index].weight
             if interpolate:
@@ -1242,11 +1248,11 @@ class Forces:
 
         if weighted and self.mforces[index].weight == 0:
             if interpolate:
-                return np.zeros((self.mrpc[index].nbeads1, 3, 3))
+                return xp.zeros((self.mrpc[index].nbeads1, 3, 3))
             else:
-                return np.zeros((self.mrpc[index].nbeads2, 3, 3))
+                return xp.zeros((self.mrpc[index].nbeads2, 3, 3))
         else:
-            virs = dstrip(self.mforces[index].virs).copy()
+            virs = xp.asarray(dstrip(self.mforces[index].virs), copy=True)
             if weighted:
                 virs *= self.mforces[index].weight
             if interpolate:
@@ -1272,17 +1278,19 @@ class Forces:
         # calculates the finite displacement.
         fbase = dstrip(self.f)
         eps = self.mforces[index].epsilon
-        foverm = np.sqrt(
+        # foverm is a 0-d tensor under the torch backend — use xp so the
+        # sqrt / abs stay on the active namespace.
+        foverm = xp.sqrt(
             (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
             / (self.nbeads * self.natoms)
         )
-        if np.abs(foverm) > 1e-20:
-            delta = np.abs(eps) / np.sqrt(
+        if xp.abs(foverm) > 1e-20:
+            delta = abs(eps) / xp.sqrt(
                 (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
                 / (self.nbeads * self.natoms)
             )
         else:  # defaults to eps if otherwise we'd get an 1/0
-            delta = np.abs(eps)
+            delta = abs(eps)
         dq = delta * fbase / self.beads.m3
 
         # stores the force component.
@@ -1316,7 +1324,7 @@ class Forces:
                     self.dcell = self.cell.clone()
                     self.dforces = self.clone(self.dbeads, self.dcell)
 
-                self.dcell.h = self.cell.h
+                self.dcell.h = dstrip(self.cell.h)
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
@@ -1345,7 +1353,7 @@ class Forces:
                     self.dcell = self.cell.clone()
                     self.dforces = self.clone(self.dbeads, self.dcell)
 
-                self.dcell.h = self.cell.h
+                self.dcell.h = dstrip(self.cell.h)
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
@@ -1374,7 +1382,7 @@ class Forces:
                 self.dcell = self.cell.clone()
                 self.dforces = self.clone(self.dbeads, self.dcell)
 
-            self.dcell.h = self.cell.h
+            self.dcell.h = dstrip(self.cell.h)
 
             f_4th_order = fbase * 0.0
             v_4th_order = vbase * 0.0
@@ -1425,7 +1433,7 @@ class Forces:
                 )
 
                 # calculates the virial.
-                vplus = np.zeros((self.nbeads, 3, 3), float)
+                vplus = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
                 vplus += self.dforces.mrpc[index].b2tob1(dmvirs)
 
@@ -1479,7 +1487,7 @@ class Forces:
         """Obtains the total fourth order |f^2| correction to the force vector and the virial."""
 
         rf = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
-        rv = np.zeros((self.nbeads, 3, 3), float)
+        rv = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
 
         for k in range(self.nforces):
             if self.mforces[k].weight != 0 and self.mforces[k].mts_weights.sum() != 0:
@@ -1492,7 +1500,7 @@ class Forces:
         """Obtains the potential energy for each forcefield."""
 
         self.queue()
-        rp = xp.zeros(self.nbeads, dtype=xp.float64)
+        rp = xp.zeros(self.nbeads)
         for k in range(self.nforces):
             # "expand" to the total number of beads the potentials from the
             # contracted one
@@ -1583,7 +1591,7 @@ class Forces:
         # this evaluates the square forces contribution to the SC potential (only the difference with the Trotter potential is returned)
         return self.coeffsc_part_1.T * dstrip(
             self.pots
-        ) + self.coeffsc_part_2.T * np.sum(
+        ) + self.coeffsc_part_2.T * xp.sum(
             dstrip(self.f) / self.beads.m3 * dstrip(self.f), axis=1
         )
 
@@ -1620,18 +1628,21 @@ class Forces:
     def get_coeffsc_part_1(self):
         """Obtains the coefficients of the linear part of the Suzuki-Chin correction."""
 
-        rc = np.zeros(self.beads.nbeads)
+        # Return as a column vector in the active namespace. `np.asmatrix`
+        # used to be the way to get a 2D (N, 1) shape; xp.reshape keeps the
+        # same shape contract without the deprecated np.matrix subclass.
+        rc = xp.zeros(self.beads.nbeads)
         rc[0::2] = -1.0 / 3.0
         rc[1::2] = 1.0 / 3.0
-        return np.asmatrix(rc).T
+        return xp.reshape(rc, (-1, 1))
 
     def get_coeffsc_part_2(self):
         """Obtains the coefficients of the linear part of the Suzuki-Chin correction."""
 
-        rc = np.zeros(self.beads.nbeads)
+        rc = xp.zeros(self.beads.nbeads)
         rc[0::2] = self.alpha / self.omegan2 / 9.0
         rc[1::2] = (1.0 - self.alpha) / self.omegan2 / 9.0
-        return np.asmatrix(rc).T
+        return xp.reshape(rc, (-1, 1))
 
 
 dproperties(

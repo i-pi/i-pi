@@ -338,7 +338,7 @@ class InputInitCell(InputInitBase):
                         h[5] * np.pi / 180.0,
                     )
 
-            h = xp.reshape(h, (9,))
+            h = xp.reshape(xp.asarray(h), (9,))
             ibase.value = h
             mode = "manual"
 

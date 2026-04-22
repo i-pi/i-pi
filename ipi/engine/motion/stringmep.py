@@ -8,6 +8,7 @@ See the "licenses" directory for full license information.
 """
 
 import numpy as np
+from ipi.utils.array_backend import xp
 from numpy.linalg import norm as npnorm
 import time
 
@@ -89,14 +90,14 @@ class StringGradientMapper(object):
         self.dbeads.q[1:-1, self.fixatoms_mask] = rbq
 
         # Forces and energies
-        rbf = dstrip(self.rforces.f).copy()[:, self.fixatoms_mask]
-        be = dstrip(self.rforces.pots).copy()
+        rbf = xp.asarray(dstrip(self.rforces.f), copy=True)[:, self.fixatoms_mask]
+        be = xp.asarray(dstrip(self.rforces.pots), copy=True)
 
         # Calculate the force component perpendicular to the spline.
         tangent = spline_derv(self.dbeads.q[:, self.fixatoms_mask], self.dbeads.nbeads)[
             1:-1
         ]
-        rbf_perp = rbf - tangent * np.sum(rbf * tangent, axis=1)[:, np.newaxis]
+        rbf_perp = rbf - tangent * xp.sum(rbf * tangent, axis=1)[:, np.newaxis]
 
         # Return potential energy of the whole string and minus f_perpendicular
         e = be.sum()
@@ -158,8 +159,8 @@ class GradientMapper(object):
         self.dbeads.q[1:-1, self.fixatoms_mask] = rbq
 
         # Forces
-        rbf = dstrip(self.rforces.f).copy()[:, self.fixatoms_mask]
-        be = dstrip(self.rforces.pots).copy()
+        rbf = xp.asarray(dstrip(self.rforces.f), copy=True)[:, self.fixatoms_mask]
+        be = xp.asarray(dstrip(self.rforces.pots), copy=True)
 
         # Return potential energy of the whole string and full force gradient
         e = be.sum()
@@ -234,7 +235,7 @@ class StringClimbGrMapper(object):
         tau /= npnorm(tau)
 
         # Inverting the force component along the path
-        rbf -= 2 * np.dot(rbf, tau) * tau
+        rbf -= 2 * ((rbf) @ (tau)) * tau
 
         # Return the potential energy and gradient of the climbing bead
         e = self.rforces.pot
@@ -448,9 +449,10 @@ class StringMover(Motion):
             softexit.trigger(
                 status="bad", message="ERROR: climbing bead is the endpoint."
             )
-        self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
-        self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
-        self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
+        q_src = dstrip(self.beads.q)
+        self.climbgm.rbeads.q[:] = q_src[cl_indx]
+        self.climbgm.q_prev[:] = q_src[cl_indx - 1, self.climbgm.fixatoms_mask]
+        self.climbgm.q_next[:] = q_src[cl_indx + 1, self.climbgm.fixatoms_mask]
         info(
             "q_prev.shape: %s,    q_next.shape: %s"
             % (str(self.climbgm.q_prev.shape), str(self.climbgm.q_next.shape)),
@@ -475,7 +477,9 @@ class StringMover(Motion):
             self.N_up = 0
             self.dt_fire = 0.1
 
-        self.old_x = dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]).copy()
+        self.old_x = xp.asarray(
+            dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]), copy=True
+        )
         self.stage = "climb"
         return cl_indx
 
@@ -505,7 +509,7 @@ class StringMover(Motion):
         n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
 
         # Store 'old' resampled positions
-        self.old_x[:] = self.beads.q[1:-1, fixatoms_mask]
+        self.old_x[:] = dstrip(self.beads.q)[1:-1, fixatoms_mask]
 
         # 'Self' stringpot will be updated later on,
         # therefore we store the copy to check convergence in the end.
@@ -595,13 +599,13 @@ class StringMover(Motion):
             info(" @EULER: making a step.", vrb.debug)
             dt = 1e-3
             dq = -self.stringgrad * dt
-            if np.any(np.abs(dq) > self.big_step):
+            if xp.any(xp.abs(dq) > self.big_step):
                 info(" @EULER: WARNING: hit the big_step.")
-                dq *= self.big_step / np.amax(np.abs(dq))
-            info(" @EULER: maxdispl is %g" % np.amax(np.abs(dq)))
+                dq *= self.big_step / np.amax(xp.abs(dq))
+            info(" @EULER: maxdispl is %g" % np.amax(xp.abs(dq)))
             self.beads.q[1:-1, fixatoms_mask] += dq.reshape((nbeads - 2, -1))
             # info(" @EULER: calling the mapper.", vrb.debug)
-            self.stringgm.dbeads.q[:] = self.beads.q[:]
+            self.stringgm.dbeads.q[:] = dstrip(self.beads.q)
             # self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
 
         # TODO: Routines for L-BFGS, SD, CG
@@ -651,17 +655,17 @@ class StringMover(Motion):
         f_perp = (
             self.full_f[1:-1, fixatoms_mask]
             - tangent
-            * np.sum(self.full_f[1:-1, fixatoms_mask] * tangent, axis=1)[:, np.newaxis]
+            * xp.sum(self.full_f[1:-1, fixatoms_mask] * tangent, axis=1)[:, np.newaxis]
         )
 
         # Check convergence at the resampled positions.
         # dx = current resampled position - previous resampled position.
-        dx = np.amax(np.abs(self.beads.q[1:-1, fixatoms_mask] - self.old_x))
-        de = np.amax(np.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
+        dx = np.amax(xp.abs(self.beads.q[1:-1, fixatoms_mask] - self.old_x))
+        de = np.amax(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
         if (
             (de <= self.tolerances["energy"])
             and (dx <= self.tolerances["position"])
-            and (np.amax(np.abs(f_perp)) <= self.tolerances["force"])
+            and (np.amax(xp.abs(f_perp)) <= self.tolerances["force"])
         ):
             info(
                 decor
@@ -688,7 +692,7 @@ class StringMover(Motion):
             )
             info(
                 " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-                % (np.amax(np.abs(f_perp)).item(), self.tolerances["force"]),
+                % (np.amax(xp.abs(f_perp)).item(), self.tolerances["force"]),
                 vrb.debug,
             )
             info(
@@ -862,14 +866,14 @@ class StringMover(Motion):
         # f_perp = (
         #     self.full_f[1:-1, fixmask]
         #     - tangent
-        #     * np.sum(self.full_f[1:-1, fixmask] * tangent, axis=1)[:, np.newaxis]
+        #     * xp.sum(self.full_f[1:-1, fixmask] * tangent, axis=1)[:, np.newaxis]
         # )
 
         # self.qtime += time.time()
 
         # # Check preliminary convergence: only the perpendicular component of the force
         # # at the NOT resampled positions - because this costs nothing.
-        # if np.amax(np.abs(f_perp)) <= self.tolerances["force"]:
+        # if np.amax(xp.abs(f_perp)) <= self.tolerances["force"]:
         #     info(
         #         " @STRING: The force before resampling has converged. Step: %i\n"
         #         % step,
@@ -881,7 +885,7 @@ class StringMover(Motion):
         #         nbeads,
         #     )
         #     # dx = current resampled position - previous resampled position.
-        #     dx = np.amax(np.abs(self.beads.q[1:-1, fixmask] - self.old_x))
+        #     dx = np.amax(xp.abs(self.beads.q[1:-1, fixmask] - self.old_x))
 
         #     # Here we check forces on the resampled positions, which costs
         #     # an additional force evaluation. We again call it via the mapper
@@ -890,14 +894,14 @@ class StringMover(Motion):
         #     tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
         #     f_perp = (
         #         self.stringgrad
-        #         - tangent * np.sum(self.stringgrad * tangent, axis=1)[:, np.newaxis]
+        #         - tangent * xp.sum(self.stringgrad * tangent, axis=1)[:, np.newaxis]
         #     )
         #     if (
         #         (
-        #             np.amax(np.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
+        #             np.amax(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
         #             <= self.tolerances["energy"]
         #         )
-        #         and (np.amax(np.abs(f_perp)) <= self.tolerances["force"])
+        #         and (np.amax(xp.abs(f_perp)) <= self.tolerances["force"])
         #         and (dx <= self.tolerances["position"])
         #     ):
         #         info(
@@ -921,7 +925,7 @@ class StringMover(Motion):
         #         info(
         #             " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
         #             % (
-        #                 np.amax(np.abs(self.stringpot - old_stringpot))
+        #                 np.amax(xp.abs(self.stringpot - old_stringpot))
         #                 / (nbeads * natoms),
         #                 self.tolerances["energy"],
         #             ),
@@ -929,7 +933,7 @@ class StringMover(Motion):
         #         )
         #         info(
         #             " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-        #             % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
+        #             % (np.amax(xp.abs(self.stringgrad)), self.tolerances["force"]),
         #             vrb.debug,
         #         )
         #         info(
@@ -940,7 +944,7 @@ class StringMover(Motion):
         # else:  # the 1st check didn't pass
         #     info(
         #         " @STRING: Not converged, f_perp_1 = %.8f, tol = %f"
-        #         % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
+        #         % (np.amax(xp.abs(self.stringgrad)), self.tolerances["force"]),
         #         vrb.debug,
         #     )
 
@@ -1025,11 +1029,11 @@ class StringMover(Motion):
         # Use to determine converged minimization
         # max displacement
         dx = np.amax(
-            np.abs(self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask] - self.old_x)
+            xp.abs(self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask] - self.old_x)
         )
 
         # Store old positions
-        self.old_x[:] = self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
+        self.old_x[:] = dstrip(self.beads.q)[self.cl_indx, self.climbgm.fixatoms_mask]
 
         # This transfers forces from the climbing mapper to the "main" beads,
         # so that recalculation won't be triggered after the step.
@@ -1056,10 +1060,10 @@ class StringMover(Motion):
         # Check convergence criteria
         if (
             (
-                np.amax(np.abs(self.stringpot - old_stringpot)) / self.beads.natoms
+                np.amax(xp.abs(self.stringpot - old_stringpot)) / self.beads.natoms
                 <= self.tolerances["energy"]
             )
-            and (np.amax(np.abs(self.stringgrad)) <= self.tolerances["force"])
+            and (np.amax(xp.abs(self.stringgrad)) <= self.tolerances["force"])
             and (dx <= self.tolerances["position"])
         ):
             info(
@@ -1078,7 +1082,7 @@ class StringMover(Motion):
                 " @STRING_CLIMB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                 % (
                     (
-                        np.amax(np.abs(self.stringpot - old_stringpot))
+                        np.amax(xp.abs(self.stringpot - old_stringpot))
                         / self.beads.natoms
                     ).item(),
                     self.tolerances["energy"],
@@ -1088,7 +1092,7 @@ class StringMover(Motion):
             info(
                 " @STRING_CLIMB: Not converged, climbgrad = %.8f, tol = %f"
                 % (
-                    np.amax(np.abs(self.stringgrad)).item(),
+                    np.amax(xp.abs(self.stringgrad)).item(),
                     self.tolerances["force"],
                 ),
                 vrb.debug,
@@ -1134,8 +1138,8 @@ class StringMover(Motion):
 
                 # Store full forces and pots
                 info(" @STRING: calling the full force at step 0.", vrb.debug)
-                self.full_f = dstrip(self.stringgm.dforces.f).copy()
-                self.full_v = dstrip(self.stringgm.dforces.pots).copy()
+                self.full_f = xp.asarray(dstrip(self.stringgm.dforces.f), copy=True)
+                self.full_v = xp.asarray(dstrip(self.stringgm.dforces.pots), copy=True)
                 # Initialize the mapper forces for the first time
                 # Since we just called full forces, it makes sense to transfer them to the
                 # reduced beads (rbeads). No fixmask here, rforces are not the same
@@ -1156,15 +1160,15 @@ class StringMover(Motion):
                     vrb.debug,
                 )
                 # Store old bead positions at step 0
-                self.old_x = dstrip(
-                    self.beads.q[1:-1, self.stringgm.fixatoms_mask]
-                ).copy()
+                self.old_x = xp.asarray(
+                    dstrip(self.beads.q[1:-1, self.stringgm.fixatoms_mask]), copy=True
+                )
 
             self.path_step_textbook2002(step)
 
         elif self.stage == "climb":
             # We need to initialize climbing once
-            if np.all(self.climbgm.q_prev == 0.0) or np.all(self.climbgm.q_next == 0.0):
+            if xp.all(self.climbgm.q_prev == 0.0) or xp.all(self.climbgm.q_next == 0.0):
                 self.cl_indx = self.init_climb()
             self.climb_step(step)
 
@@ -1329,7 +1333,7 @@ def print_distances(q, nbeads):
 #
 #    # Calculate direction
 #    # When the inverse itself is not needed, people recommend solve(), not inv().
-#    info(" @DampedBFGS_String: sk = np.linalg.solve(B, -g0) ...", vrb.debug)
+#    info(" @DampedBFGS_String: sk = xp.linalg.solve(B, -g0) ...", vrb.debug)
 #    info(
 #        "              The code randomly crashes here with some versions of Numpy "
 #        "based on OpenBLAS.\n"
@@ -1339,15 +1343,15 @@ def print_distances(q, nbeads):
 #    info("Operands:", vrb.debug)
 #    info("%s,  %s" % (type(B), str(B.shape)), vrb.debug)
 #    info("%s,  %s" % (type(g0), str(g0.shape)), vrb.debug)
-#    sk = np.linalg.solve(B, -g0)
+#    sk = xp.linalg.solve(B, -g0)
 #    info(" @DampedBFGS_String: Calculated direction.", vrb.debug)
 #
 #    # Cosine of the (f, dx) angle
-#    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+#    quality = -((sk / xp.linalg.norm(sk)) @ (g0 / xp.linalg.norm(g0)))
 #    info(" @DampedBFGS_String: Direction quality: %.4f." % quality, vrb.debug)
 #
 #    # I use maximal cartesian atomic displacement as a measure of step length
-#    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
+#    maxdispl = np.amax(xp.linalg.norm(sk.reshape(-1, 3), axis=1))
 #    info(" @DampedBFGS_String: big_step = %.6f" % big_step, vrb.debug)
 #    if maxdispl > big_step:
 #        info(
@@ -1358,7 +1362,7 @@ def print_distances(q, nbeads):
 #
 #    info(
 #        " @DampedBFGS_String: maxdispl:                %.6f bohr"
-#        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
+#        % (np.amax(xp.linalg.norm(sk.reshape(-1, 3), axis=1))),
 #        vrb.debug,
 #    )
 #
@@ -1369,12 +1373,12 @@ def print_distances(q, nbeads):
 #
 #    # Update hessian
 #    yk = g - g0
-#    skyk = np.dot(sk, yk)
+#    skyk = ((sk) @ (yk))
 #
 #    # Equation 18.15 in Nocedal
 #    theta = 1.0
-#    Bsk = np.dot(B, sk)
-#    sBs = np.dot(sk, Bsk)
+#    Bsk = ((B) @ (sk))
+#    sBs = ((sk) @ (Bsk))
 #    # Damped update if rhok isn't sufficiently positive
 #    if skyk < 0.2 * sBs:
 #        theta = (0.8 * sBs) / (sBs - skyk)
@@ -1385,7 +1389,7 @@ def print_distances(q, nbeads):
 #            vrb.debug,
 #        )
 #        yk = theta * yk + (1 - theta) * Bsk
-#        skyk = np.dot(sk, yk)
+#        skyk = ((sk) @ (yk))
 #    else:
 #        info(" @DampedBFGS_String: Update of the Hessian, no damping.", vrb.debug)
 #
@@ -1402,17 +1406,17 @@ def print_distances(q, nbeads):
 #    # Compute BFGS term (eq. 18.16 in Nocedal)
 #    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
 #
-#    print("det(Hessian): %f" % np.linalg.det(B))
-#    print("Condition number: %f" % np.linalg.cond(B))
-#    eigvals = np.real(np.linalg.eigvals(B))
-#    print("Positive definite: %r" % np.all(eigvals > 0))
+#    print("det(Hessian): %f" % xp.linalg.det(B))
+#    print("Condition number: %f" % xp.linalg.cond(B))
+#    eigvals = xp.real(xp.linalg.eigvals(B))
+#    print("Positive definite: %r" % xp.all(eigvals > 0))
 #    print("Eigenvalues of the Hessian:")
 #    with np.printoptions(threshold=10000, linewidth=100000):
 #        print(np.sort(eigvals))
 #
 #    # If small numbers are found on the diagonal of the Hessian,
 #    # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
-#    if np.any(eigvals < 1e-1):
+#    if xp.any(eigvals < 1e-1):
 #        info(
 #            " @DampedBFGS_String: stabilizing the diagonal of the Hessian.",
 #            vrb.debug,
@@ -1505,12 +1509,12 @@ def print_distances(q, nbeads):
 #    v += dt * force
 #    # change velocity direction with inertia
 #    if p > 0.0:
-#        f_unit = force / np.linalg.norm(force)
-#        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
+#        f_unit = force / xp.linalg.norm(force)
+#        v = (1 - a) * v + a * xp.linalg.norm(v) * f_unit
 #    # update posistion
 #    dx = dt * v
 #    # check max dx
-#    normdx = np.linalg.norm(dx)
+#    normdx = xp.linalg.norm(dx)
 #    if normdx > maxstep:
 #        dx = maxstep * dx / normdx
 #    x0 += dx

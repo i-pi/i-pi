@@ -9,6 +9,7 @@ Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 # See the "licenses" directory for full license information.
 
 
+import math
 import numpy as np
 import warnings
 
@@ -17,6 +18,7 @@ import time
 import sys
 from importlib import util
 
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
@@ -86,33 +88,33 @@ class InstantonMotion(Motion):
         mode="None",
         tolerances={"energy": 1e-5, "force": 1e-4, "position": 1e-3},
         biggest_step=0.3,
-        old_pos=np.zeros(0, float),
-        old_pot=np.zeros(0, float),
-        old_force=np.zeros(0, float),
+        old_pos=xp.zeros(0),
+        old_pot=xp.zeros(0),
+        old_force=xp.zeros(0),
         opt="None",
         max_e=0.0,
         max_ms=0.0,
-        discretization=np.zeros(0, float),
+        discretization=xp.zeros(0),
         alt_out=1,
         prefix="instanton",
-        delta=np.zeros(0, float),
+        delta=xp.zeros(0),
         hessian_init=None,
         hessian=np.eye(0, 0, 0, float),
         fric_hessian=np.eye(0, 0, 0, float),
         hessian_update=None,
         hessian_asr=None,
-        qlist_lbfgs=np.zeros(0, float),
-        glist_lbfgs=np.zeros(0, float),
+        qlist_lbfgs=xp.zeros(0),
+        glist_lbfgs=xp.zeros(0),
         scale_lbfgs=1,
         corrections_lbfgs=5,
         ls_options={"tolerance": 1e-1, "iter": 100},
-        old_direction=np.zeros(0, float),
+        old_direction=xp.zeros(0),
         hessian_final="False",
-        energy_shift=np.zeros(0, float),
+        energy_shift=xp.zeros(0),
         friction=False,
         frictionSD=True,
         eta=np.eye(0, 0, 0, float),
-        fric_spec_dens=np.zeros(0, float),
+        fric_spec_dens=xp.zeros(0),
         fric_spec_dens_ener=0.0,
     ):
         """Initialises InstantonMotion."""
@@ -330,7 +332,7 @@ class PesMapper(object):
             old_index = 0
             for i in range(1, self.dbeads.nbeads):
                 if (full_mspath[i] - full_mspath[old_index] > self.max_ms) or (
-                    np.absolute(self.pot[i] - self.pot[old_index]) > self.max_e
+                    abs(self.pot[i] - self.pot[old_index]) > self.max_e
                 ):
                     indexes.append(i)
                     old_index = i
@@ -363,11 +365,14 @@ class PesMapper(object):
 
         # Interpolate if necessary to get full pot and forces
         if self.spline:
-            red_mspath = full_mspath[indexes]
-            spline = interp1d(red_mspath, rpots.T, kind="cubic")
-            full_pot = spline(full_mspath).T
-            spline = interp1d(red_mspath, rforces.T, kind="cubic")
-            full_forces = spline(full_mspath).T
+            from ipi.utils.array_backend import to_numpy
+
+            red_mspath = to_numpy(full_mspath[indexes])
+            full_mspath_np = to_numpy(full_mspath)
+            spline = interp1d(red_mspath, to_numpy(rpots).T, kind="cubic")
+            full_pot = xp.asarray(spline(full_mspath_np).T)
+            spline = interp1d(red_mspath, to_numpy(rforces).T, kind="cubic")
+            full_forces = xp.asarray(spline(full_mspath_np).T)
         else:
             full_pot = rpots
             full_forces = rforces
@@ -379,7 +384,7 @@ class PesMapper(object):
     def __call__(self, x, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        full_q = x.copy()
+        full_q = xp.asarray(x, copy=True)
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces = self.interpolation(full_q, full_mspath)
         self.dbeads.q[:] = x[:]
@@ -396,8 +401,8 @@ class PesMapper(object):
         - friction term (if required)
         """
 
-        e = self.pot.copy()
-        g = -self.f.copy()
+        e = xp.asarray(self.pot, copy=True)
+        g = -xp.asarray(self.f, copy=True)
 
         e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
@@ -436,7 +441,7 @@ class FrictionMapper(PesMapper):
                 (q.shape[0], q.shape[1], q.shape[1])
             )
         else:
-            eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
+            eta = xp.zeros((q.shape[0], q.shape[1], q.shape[1]))
             for i in range(self.dbeads.nbeads):
                 eta[i] = self.eta0
 
@@ -445,16 +450,19 @@ class FrictionMapper(PesMapper):
         self.save(forces.pots, -forces.f, eta)
 
     def check_eta(self, eta):
+        # Friction-tensor routines use scipy.linalg.sqrtm below, which is
+        # numpy-only; keep `eta` on the host throughout this check.
+        eta_np = to_numpy(eta)
         for i in range(self.dbeads.nbeads):
             assert (
-                eta[i] - eta[i].T
+                eta_np[i] - eta_np[i].T
                 == np.zeros((self.dbeads.natoms * 3, self.dbeads.natoms * 3))
             ).all()
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             try:
                 self.sqrtm(
-                    eta[i] + np.eye(self.dbeads.natoms * 3) * 0.000000000001
+                    eta_np[i] + np.eye(self.dbeads.natoms * 3) * 0.000000000001
                 )  # dgdq = s ** 0.5 -> won't work for multiD
             except Warning:
                 print(eta[i])
@@ -466,16 +474,19 @@ class FrictionMapper(PesMapper):
 
         # from scipy.interpolate import interp1d
         if len(fric_spec_dens_data) == 0:
-            LT_fric_spec_dens = np.ones((1000, 2))
-            LT_fric_spec_dens[:, 0] = np.arange(self.omegak.shape)
+            LT_fric_spec_dens = xp.ones((1000, 2))
+            LT_fric_spec_dens[:, 0] = xp.arange(self.omegak.shape[0])
         else:
             invcm2au = units.unit_to_internal("frequency", "inversecm", 1)
 
+            # scipy.interpolate.interp1d needs numpy; lift the input data at
+            # the boundary and re-lift spline outputs back to xp.
+            fdata_np = to_numpy(fric_spec_dens_data)
             # We perform the spline in inversecm for numerical reasons
-            freq = fric_spec_dens_data[:, 0] * invcm2au
+            freq = fdata_np[:, 0] * invcm2au
             spline = self.interp1d(
                 freq,
-                fric_spec_dens_data[:, 1],
+                fdata_np[:, 1],
                 kind="cubic",
                 fill_value=0.0,
                 bounds_error=False,
@@ -489,11 +500,10 @@ class FrictionMapper(PesMapper):
                 # norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
                 norm = spline(fric_spec_dens_ener / invcm2au)
 
-            fric_spec_dens = spline(self.omegak)
+            fric_spec_dens = xp.asarray(spline(to_numpy(self.omegak)))
             LT_fric_spec_dens = fric_spec_dens / norm
-            # LT_fric_spec_dens = LT_friction(self.omegak / invcm2au, spline) / norm
 
-        self.fric_LTwk = np.multiply(self.omegak, LT_fric_spec_dens)[:, np.newaxis]
+        self.fric_LTwk = (self.omegak * LT_fric_spec_dens)[:, None]
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
     def get_fric_rp_hessian(self, fric_hessian, eta, SD):
@@ -506,17 +516,19 @@ class FrictionMapper(PesMapper):
 
         s = eta
 
-        dgdq = np.zeros(s.shape)
+        # scipy.linalg.sqrtm is numpy-only; stage on the host.
+        s_np = to_numpy(s)
+        dgdq = xp.zeros(s.shape)
         for i in range(nbeads):
-            dgdq[i] = self.sqrtm(s[i] + np.eye(nphys) * 0.000000000001)
+            dgdq[i] = xp.asarray(self.sqrtm(s_np[i] + np.eye(nphys) * 0.000000000001))
 
-        h_fric = np.zeros((ndof, ndof))
+        h_fric = xp.zeros((ndof, ndof))
 
         # Block diag:
         if SD:
             gq = self.obtain_g(s)
-            gq_k = np.dot(self.C, gq)
-            prefactor = np.dot(self.C.T, self.fric_LTwk * gq_k)
+            gq_k = (self.C) @ (gq)
+            prefactor = (self.C.T) @ (self.fric_LTwk * gq_k)
             for n in range(self.dbeads.nbeads):
                 for j in range(nphys):
                     for k in range(nphys):
@@ -540,7 +552,7 @@ class FrictionMapper(PesMapper):
                     )
                 for j in range(nphys):
                     for k in range(nphys):
-                        suma = np.sum(dgdq[nl, :, j] * dgdq[ne, :, k])
+                        suma = xp.sum(dgdq[nl, :, j] * dgdq[ne, :, k])
                         h_fric[nphys * nl + j, nphys * ne + k] = (
                             prefactor * suma
                         ).item()
@@ -551,30 +563,26 @@ class FrictionMapper(PesMapper):
 
         nphys = self.dbeads.natoms * 3
 
-        ss = np.zeros(s.shape)
-
+        # scipy.linalg.sqrtm and scipy.interpolate.interp1d / quad are
+        # numpy-only; stage everything on the host and lift the final gq.
+        s_np = to_numpy(s)
+        ss_np = np.zeros(s_np.shape)
         for i in range(self.dbeads.nbeads):
-            ss[i] = self.sqrtm(
-                s[i] + np.eye(nphys) * 0.000000001
-            )  # ss = s ** 0.5 -> won't work for multiD
+            ss_np[i] = self.sqrtm(s_np[i] + np.eye(nphys) * 0.000000001)
 
-        q = self.dbeads.q.copy()
-        gq = np.zeros(self.dbeads.q.copy().shape)
+        q_np = to_numpy(dstrip(self.dbeads.q))
+        gq_np = np.zeros(self.dbeads.q.shape)
         for nd in range(3 * self.dbeads.natoms):
             try:
                 spline = self.interp1d(
-                    q[:, nd], ss[:, nd, nd], kind="cubic"
+                    q_np[:, nd], ss_np[:, nd, nd], kind="cubic"
                 )  # spline for each dof
                 for nb in range(1, self.dbeads.nbeads):
-                    gq[nb, nd] = self.quad(spline, q[0, nd], q[nb, nd])[
-                        0
-                    ]  # Cumulative integral along the path for each dof
-                # for i in range(self.dbeads.nbeads):
-                #    print(q[i, nd],q[i,nd],ss[i, nd, nd],gq[i, nd])
+                    gq_np[nb, nd] = self.quad(spline, q_np[0, nd], q_np[nb, nd])[0]
             except ValueError:
-                gq[:, nd] = 0
+                gq_np[:, nd] = 0
 
-        return gq
+        return xp.asarray(gq_np)
 
     def compute_friction_terms(self):
         """Computes friction component of the energy and gradient"""
@@ -583,26 +591,29 @@ class FrictionMapper(PesMapper):
 
         nphys = self.dbeads.natoms * 3
 
-        dgdq = np.zeros(s.shape)
+        # scipy.linalg.sqrtm is numpy-only; lift s to the host, do the
+        # sqrtm loop in numpy, then re-lift to the active backend.
+        s_np = to_numpy(s)
+        dgdq = xp.zeros(s.shape)
         for i in range(self.dbeads.nbeads):
             with warnings.catch_warnings():
                 warnings.filterwarnings("error")
                 try:
-                    dgdq[i] = self.sqrtm(
-                        s[i] + np.eye(nphys) * 0.00000001
-                    )  # dgdq = s ** 0.5 -> won't work for multiD
+                    dgdq[i] = xp.asarray(
+                        self.sqrtm(s_np[i] + np.eye(nphys) * 0.00000001)
+                    )
                 except Warning:
-                    print(s[i])
+                    print(s_np[i])
                     softexit.trigger("The provided friction is not positive definite")
 
         gq = self.obtain_g(s)
-        gq_k = np.dot(self.C, gq)
-        e = 0.5 * np.sum(self.fric_LTwk * gq_k**2)
+        gq_k = (self.C) @ (gq)
+        e = 0.5 * xp.sum(self.fric_LTwk * gq_k**2)
 
-        f = np.dot(self.C.T, self.fric_LTwk * gq_k)
-        g = np.zeros(f.shape)
+        f = (self.C.T) @ (self.fric_LTwk * gq_k)
+        g = xp.zeros(f.shape)
         for i in range(self.dbeads.nbeads):
-            g[i, :] = np.dot(dgdq[i], f[i])
+            g[i, :] = (dgdq[i]) @ (f[i])
 
         return e, g
 
@@ -627,7 +638,7 @@ class FrictionMapper(PesMapper):
     def __call__(self, x, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        full_q = x.copy()
+        full_q = xp.asarray(x, copy=True)
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces, indexes, reduced_forces = self.interpolation(
             full_q, full_mspath, get_all_info=True
@@ -635,12 +646,13 @@ class FrictionMapper(PesMapper):
 
         full_extras = self.get_full_extras(reduced_forces, full_mspath, indexes)
         if self.frictionSD:
-            full_eta = np.zeros(
+            full_eta = xp.zeros(
                 (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
             )
             for n in range(self.dbeads.nbeads):
-                full_eta[n] = full_extras["friction"][n].reshape(
-                    self.dbeads.natoms * 3, self.dbeads.natoms * 3
+                full_eta[n] = xp.reshape(
+                    xp.asarray(full_extras["friction"][n]),
+                    (self.dbeads.natoms * 3, self.dbeads.natoms * 3),
                 )
         else:
             full_eta = self.eta
@@ -664,8 +676,8 @@ class FrictionMapper(PesMapper):
         - friction term
         """
 
-        e = self.pot.copy()
-        g = -self.f.copy()
+        e = xp.asarray(self.pot, copy=True)
+        g = -xp.asarray(self.f, copy=True)
 
         e_friction, g_friction = self.compute_friction_terms()
         e += e_friction
@@ -717,7 +729,7 @@ class SpringMapper(object):
 
     def set_coef(self, coef):
         """Sets coefficients for non-uniform instanton calculation"""
-        self.coef = coef.reshape(-1, 1)
+        self.coef = xp.reshape(coef, (-1, 1))
 
     def save(self, e, g):
         """Stores potential and forces in this class for convenience"""
@@ -730,48 +742,43 @@ class SpringMapper(object):
         if new_disc:
             coef = self.coef
         elif new_disc == "one":
-            coef = np.ones(self.coef.shape)
+            coef = xp.ones(self.coef.shape)
         else:
-            coef = new_disc.reshape(self.coef.shape)
+            coef = xp.reshape(new_disc, self.coef.shape)
 
         if x.shape[0] == 1:  # only one bead
             self.dbeads.q = x
             e = 0.0
-            g = np.zeros(x.shape[1])
+            g = xp.zeros(x.shape[1])
             self.save(e, g)
 
         else:
             self.dbeads.q = x
             e = 0.00
-            g = np.zeros(self.dbeads.q.shape, float)
+            g = xp.zeros(self.dbeads.q.shape)
 
             # OLD reference
             # for i in range(self.dbeads.nbeads - 1):
             #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
-            #    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
+            #    e += self.omega2 * 0.5 * ((self.dbeads.m3[0] * dq) @ (dq))
             # for i in range(0, self.dbeads.nbeads - 1):
             #    #g[i, :] += self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
             # for i in range(1, self.dbeads.nbeads):
             #    #g[i, :] +=  self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
-            gq_k = np.dot(self.C, self.dbeads.q)
-            e = 0.5 * np.sum(
-                np.power(self.omegak, 2)[:, np.newaxis]
-                * (self.dbeads.m3 * np.power(gq_k, 2))
-            )
+            gq_k = self.C @ self.dbeads.q
+            e = 0.5 * xp.sum((self.omegak**2)[:, None] * (self.dbeads.m3 * gq_k**2))
 
-            g = self.dbeads.m3[0] * np.dot(
-                self.C.T, gq_k * (self.omegak**2)[:, np.newaxis]
-            )
+            g = self.dbeads.m3[0] * (self.C.T @ (gq_k * (self.omegak**2)[:, None]))
 
             # With new discretization #This can be expressed as matrix multp
             if False:  # ALBERTO
                 for i in range(self.dbeads.nbeads - 1):
-                    dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / np.sqrt(
+                    dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / xp.sqrt(
                         coef[i + 1]
                     )  # coef[0] and coef[-1] do not enter
-                    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
+                    e += self.omega2 * 0.5 * ((self.dbeads.m3[0] * dq) @ (dq))
                 for i in range(0, self.dbeads.nbeads - 1):
                     g[i, :] += (
                         self.dbeads.m3[i, :]
@@ -803,24 +810,23 @@ class SpringMapper(object):
         OUT    h       = hessian with only the spring terms ('spring hessian')
         """
         if coef is None:
-            coef = np.ones(nbeads + 1).reshape(-1, 1)
+            coef = xp.reshape(xp.ones(nbeads + 1), (-1, 1))
 
         # Check size of discretization:
-        if coef.size != nbeads + 1:
+        if xp_size(coef) != nbeads + 1:
             print("@spring_hessian: discretization size error")
             sys.exit()
 
         info(" @spring_hessian", verbosity.high)
         ii = natoms * 3
-        h = np.zeros([ii * nbeads, ii * nbeads])
+        h = xp.zeros((ii * nbeads, ii * nbeads))
 
         if nbeads == 1:
             return h
 
         # Diagonal
         h_sp = m3 * omega2
-        diag1 = np.diag(h_sp)
-        # diag2 = np.diag(2.0 * h_sp)
+        diag1 = xp.diag(h_sp)
 
         if mode == "half":
             i = 0
@@ -840,7 +846,7 @@ class SpringMapper(object):
             raise ValueError("We can't compute the spring hessian.")
 
         # Non-Diagonal
-        ndiag = np.diag(-h_sp)
+        ndiag = xp.diag(-h_sp)
         # Quasi-band
         for i in range(0, nbeads - 1):
             h[i * ii : (i + 1) * ii, (i + 1) * ii : (i + 2) * ii] += ndiag * (
@@ -879,7 +885,7 @@ class Mapper(object):
         e1, g1 = self.gm.evaluate()
         e2, g2 = self.sm(q)
         g = self.fix.get_active_vector(g1 + g2, 1)
-        e = np.sum(e1) + np.sum(e2)
+        e = xp.sum(e1) + e2
 
         self.save(e, g)
 
@@ -901,7 +907,7 @@ class Mapper(object):
 
         self.options = dumop.options
 
-        self.coef = np.ones(self.beads.nbeads + 1).reshape(-1, 1)
+        self.coef = xp.reshape(xp.ones(self.beads.nbeads + 1), (-1, 1))
         self.set_coef(self.options["discretization"])
 
         self.friction = self.options["friction"]
@@ -919,14 +925,14 @@ class Mapper(object):
 
     def set_coef(self, coef):
         """Sets coeficients for non-uniform instanton calculation"""
-        self.coef[:] = coef.reshape(-1, 1)
+        self.coef[:] = xp.reshape(coef, (-1, 1))
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
         if mode == "all":
             e1, g1 = self.sm(x, new_disc)
             e2, g2 = self.gm(x, new_disc)
-            e = np.sum(e1) + np.sum(e2)
-            g = np.add(g1, g2)
+            e = e1 + xp.sum(e2)
+            g = g1 + g2
 
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
@@ -939,7 +945,7 @@ class Mapper(object):
             g = self.fix.get_active_vector(g, 1)
 
         if mode == "all":
-            self.save(np.sum(e), g)
+            self.save(xp.sum(e), g)
 
         if ret:
             return e, g
@@ -980,23 +986,21 @@ class DummyOptimizer:
 
         # The resize action must be done before the bind
 
-        if geop.optarrays["old_x"].size != self.beads.q.size:
-            if geop.optarrays["old_x"].size == 0:
-                geop.optarrays["old_x"] = np.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms), float
-                )
+        nq = xp_size(self.beads.q)
+        shape = (self.beads.nbeads, 3 * self.beads.natoms)
+        if xp_size(geop.optarrays["old_x"]) != nq:
+            if xp_size(geop.optarrays["old_x"]) == 0:
+                geop.optarrays["old_x"] = xp.zeros(shape)
             else:
                 raise ValueError("Old positions size does not match system size")
-        if geop.optarrays["old_u"].size != self.beads.nbeads:
-            if geop.optarrays["old_u"].size == 0:
-                geop.optarrays["old_u"] = np.zeros(self.beads.nbeads, float)
+        if xp_size(geop.optarrays["old_u"]) != self.beads.nbeads:
+            if xp_size(geop.optarrays["old_u"]) == 0:
+                geop.optarrays["old_u"] = xp.zeros(self.beads.nbeads)
             else:
                 raise ValueError("Old potential energy size does not match system size")
-        if geop.optarrays["old_f"].size != self.beads.q.size:
-            if geop.optarrays["old_f"].size == 0:
-                geop.optarrays["old_f"] = np.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms), float
-                )
+        if xp_size(geop.optarrays["old_f"]) != nq:
+            if xp_size(geop.optarrays["old_f"]) == 0:
+                geop.optarrays["old_f"] = xp.zeros(shape)
             else:
                 raise ValueError("Old forces size does not match system size")
 
@@ -1013,9 +1017,9 @@ class DummyOptimizer:
         self.options["mode"] = geop.options["mode"]
 
         # Generic optimization
-        if geop.options["discretization"].size != self.beads.nbeads + 1:
-            if geop.options["discretization"].size == 0:
-                geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
+        if xp_size(geop.options["discretization"]) != self.beads.nbeads + 1:
+            if xp_size(geop.options["discretization"]) == 0:
+                geop.options["discretization"] = xp.ones(self.beads.nbeads + 1)
             else:
                 raise ValueError("Discretization coefficients do not match system size")
 
@@ -1068,7 +1072,7 @@ class DummyOptimizer:
         for i in range(self.beads.nbeads):
             self.beads.q[i, :] += (
                 self.optarrays["delta"]
-                * np.cos(i * np.pi / float(self.beads.nbeads - 1))
+                * math.cos(i * np.pi / float(self.beads.nbeads - 1))
                 * imvector[:]
             )
 
@@ -1084,13 +1088,13 @@ class DummyOptimizer:
 
         info(
             " @Exit step: Energy difference: {:4.2e}, (condition: {:4.2e})".format(
-                np.absolute(d_u / self.fix.fixbeads.natoms), tolerances["energy"]
+                float(abs(d_u / self.fix.fixbeads.natoms)), tolerances["energy"]
             ),
             verbosity.low,
         )
         info(
             " @Exit step: Maximum force component: {:4.2e}, (condition: {:4.2e})".format(
-                np.amax(np.absolute(active_force)), tolerances["force"]
+                float(xp.max(xp.abs(active_force))), tolerances["force"]
             ),
             verbosity.low,
         )
@@ -1102,11 +1106,11 @@ class DummyOptimizer:
         )
 
         if (
-            (np.absolute(d_u / self.mapper.sm.dbeads.natoms) <= tolerances["energy"])
+            (float(abs(d_u / self.mapper.sm.dbeads.natoms)) <= tolerances["energy"])
             and (
-                (np.amax(np.absolute(active_force)) <= tolerances["force"])
+                (float(xp.max(xp.abs(active_force))) <= tolerances["force"])
                 or (
-                    np.linalg.norm(
+                    xp.linalg.norm(
                         self.forces.f.flatten() - self.optarrays["old_f"].flatten()
                     )
                     <= 1e-08
@@ -1138,7 +1142,7 @@ class DummyOptimizer:
                 info("We are going to compute the final hessian", verbosity.low)
                 current_hessian = get_hessian(
                     gm=self.mapper.gm,
-                    x0=self.beads.q.copy(),
+                    x0=xp.asarray(dstrip(self.beads.q), copy=True),
                     natoms=self.beads.natoms,
                     nbeads=self.beads.nbeads,
                     fixatoms_dof=self.fixatoms_dof,
@@ -1189,16 +1193,14 @@ class DummyOptimizer:
     def update_old_pos_for(self):
         """Update 'old' positions and forces arrays"""
 
-        self.optarrays["old_x"][:] = self.beads.q
-        self.optarrays["old_u"][:] = self.forces.pots
-        self.optarrays["old_f"][:] = self.forces.f
+        self.optarrays["old_x"][:] = dstrip(self.beads.q)
+        self.optarrays["old_u"][:] = dstrip(self.forces.pots)
+        self.optarrays["old_f"][:] = dstrip(self.forces.f)
 
     def print_geo(self, step):
         """Small interface to call the function that prints thet instanton geometry"""
 
-        if (
-            self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0
-        ) or self.exit:
+        if (self.options["save"] > 0 and step % self.options["save"] == 0) or self.exit:
             print_instanton_geo(
                 self.options["prefix"],
                 step,
@@ -1246,21 +1248,21 @@ class DummyOptimizer:
         pass
 
     def opt_coef(self, coef):
-        # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
+        # func = lambda x: 2 * xp.sum(x) - x[0] - x[-1]
         def func(x):
-            return 2 * np.sum(x) - x[0] - x[-1]
+            return 2 * xp.sum(x) - x[0] - x[-1]
 
-        coef = np.absolute(coef)
+        coef = xp.abs(coef)
         s = func(coef)
         coef *= 2 * self.sm.dbeads.nbeads / s
-        # c0   = 2*self.sm.dbeads.nbeads - 2*np.sum(coef)
+        # c0   = 2*self.sm.dbeads.nbeads - 2*xp.sum(coef)
         # coef = np.insert(coef,0,c0)
 
         # self.im.set_coef(coef)
 
         fphys = self.gm.dforces.f * ((coef[1:] + coef[:-1]) / 2).reshape(-1, 1)
         e, gspring = self.sm(self.sm.dbeads.q)
-        return np.amax(np.absolute(-gspring + fphys))
+        return float(xp.max(xp.abs(-gspring + fphys)))
 
 
 class HessianOptimizer(DummyOptimizer):
@@ -1279,24 +1281,28 @@ class HessianOptimizer(DummyOptimizer):
         #        self.output_maker = geop.output_maker
         self.options["hessian_init"] = geop.options["hessian_init"]
         self.optarrays["initial_hessian"] = None
-        print(geop.optarrays["hessian"].size)
+        print(xp_size(geop.optarrays["hessian"]))
 
-        if geop.optarrays["hessian"].size != (
-            self.beads.natoms * 3 * self.beads.q.size
+        if xp_size(geop.optarrays["hessian"]) != (
+            self.beads.natoms * 3 * xp_size(self.beads.q)
         ):
-            if geop.optarrays["hessian"].size == (self.beads.natoms * 3) ** 2:
-                self.optarrays["initial_hessian"] = geop.optarrays["hessian"].copy()
-                geop.optarrays["hessian"] = np.zeros(
-                    (self.beads.natoms * 3, self.beads.q.size), float
+            if xp_size(geop.optarrays["hessian"]) == (self.beads.natoms * 3) ** 2:
+                self.optarrays["initial_hessian"] = xp.asarray(
+                    geop.optarrays["hessian"], copy=True
+                )
+                geop.optarrays["hessian"] = xp.zeros(
+                    (self.beads.natoms * 3, xp_size(self.beads.q))
                 )
 
-            elif geop.optarrays["hessian"].size == 0 and geop.options["hessian_init"]:
+            elif (
+                xp_size(geop.optarrays["hessian"]) == 0 and geop.options["hessian_init"]
+            ):
                 info(
                     " Initial hessian is not provided. We are going to compute it.",
                     verbosity.low,
                 )
-                geop.optarrays["hessian"] = np.zeros(
-                    (self.beads.natoms * 3, self.beads.q.size)
+                geop.optarrays["hessian"] = xp.zeros(
+                    (self.beads.natoms * 3, xp_size(self.beads.q))
                 )
 
                 if (
@@ -1315,7 +1321,7 @@ class HessianOptimizer(DummyOptimizer):
         self.optarrays["hessian"] = geop.optarrays["hessian"]
         if self.options["friction"]:
             if geop.options["eta0"].shape == (0, 0):
-                geop.options["eta0"] = np.zeros(
+                geop.options["eta0"] = xp.zeros(
                     (self.beads.natoms * 3, self.beads.natoms * 3)
                 )
             assert geop.options["eta0"].shape == (
@@ -1332,7 +1338,7 @@ class HessianOptimizer(DummyOptimizer):
                     self.beads.natoms * 3,
                 ):
                     if geop.options["hessian_init"]:
-                        geop.optarrays["fric_hessian"] = np.zeros(
+                        geop.optarrays["fric_hessian"] = xp.zeros(
                             (
                                 self.beads.nbeads,
                                 self.beads.natoms * 3,
@@ -1378,7 +1384,7 @@ class HessianOptimizer(DummyOptimizer):
         if self.options["hessian_init"]:
             full_hessian = get_hessian(
                 gm=self.mapper.gm,
-                x0=self.beads.q.copy(),
+                x0=xp.asarray(dstrip(self.beads.q), copy=True),
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
                 fixatoms_dof=self.fixatoms_dof,
@@ -1439,9 +1445,7 @@ class HessianOptimizer(DummyOptimizer):
         self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
     def print_hess(self, step):
-        if (
-            self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0
-        ) or self.exit:
+        if (self.options["save"] > 0 and step % self.options["save"] == 0) or self.exit:
             print_instanton_hess(
                 self.options["prefix"],
                 step,
@@ -1459,7 +1463,7 @@ class HessianOptimizer(DummyOptimizer):
     def post_step(self, step, new_x, d_x, activearrays):
         """General tasks that have to be performed after finding the new step"""
 
-        d_x_max = np.amax(np.absolute(d_x))
+        d_x_max = float(xp.max(xp.abs(d_x)))
         info("Current step norm = {}".format(d_x_max), verbosity.medium)
 
         # Get energy and forces(f) for the new position
@@ -1467,7 +1471,7 @@ class HessianOptimizer(DummyOptimizer):
 
         # Update
         f = self.fix.get_active_vector(self.mapper.gm.f, t=1)
-        d_g = np.subtract(activearrays["old_f"], f)
+        d_g = activearrays["old_f"] - f
 
         # Update
         self.update_hessian(
@@ -1510,7 +1514,7 @@ class NicholsOptimizer(HessianOptimizer):
         )
 
         # Add spring terms to the physical hessian
-        h = np.add(self.mapper.sm.h, h0)
+        h = self.mapper.sm.h + h0
 
         # Add friction terms to the hessian
         if self.options["friction"]:
@@ -1523,7 +1527,7 @@ class NicholsOptimizer(HessianOptimizer):
                 h_fric = self.mapper.gm.get_fric_rp_hessian(
                     None, eta_active, self.options["frictionSD"]
                 )
-            h = np.add(h, h_fric)
+            h = h + h_fric
 
         # Get eigenvalues and eigenvector.
         d, w = clean_hessian(
@@ -1536,33 +1540,21 @@ class NicholsOptimizer(HessianOptimizer):
             self.options["hessian_asr"],
         )
 
-        # d,w =np.linalg.eigh(h1) #Cartesian
-        info(
-            "\n@Nichols: 1st freq {} cm^-1".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[0]) * np.sqrt(np.absolute(d[0]))
-                )
-            ),
-            verbosity.medium,
-        )
-        info(
-            "@Nichols: 2nd freq {} cm^-1".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[1]) * np.sqrt(np.absolute(d[1]))
-                )
-            ),
-            verbosity.medium,
-        )
-        info(
-            "@Nichols: 3rd freq {} cm^-1".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[2]) * np.sqrt(np.absolute(d[2]))
-                )
-            ),
-            verbosity.medium,
-        )
-        # info('@Nichols: 4th freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[3])*np.sqrt(np.absolute(d[3])))),verbosity.medium)
-        # info('@Nichols: 8th freq {} cm^-1\n'.format(units.unit_to_user('frequency','inversecm',np.sign(d[7])*np.sqrt(np.absolute(d[7])))),verbosity.medium)
+        def _signed_sqrt(v):
+            v = float(v)
+            return math.copysign(math.sqrt(abs(v)), v)
+
+        for i, label in ((0, "1st"), (1, "2nd"), (2, "3rd")):
+            info(
+                "@Nichols: %s freq %s cm^-1"
+                % (
+                    label,
+                    units.unit_to_user("frequency", "inversecm", _signed_sqrt(d[i])),
+                ),
+                verbosity.medium,
+            )
+        # info('@Nichols: 4th freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',xp.sign(d[3])*xp.sqrt(np.absolute(d[3])))),verbosity.medium)
+        # info('@Nichols: 8th freq {} cm^-1\n'.format(units.unit_to_user('frequency','inversecm',xp.sign(d[7])*xp.sqrt(np.absolute(d[7])))),verbosity.medium)
 
         # Find new movement direction
         if self.options["mode"] == "rate":
@@ -1584,16 +1576,16 @@ class NicholsOptimizer(HessianOptimizer):
             )
 
         # Rescale step if necessary
-        if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
+        if float(xp.max(xp.abs(d_x))) > activearrays["big_step"]:
             info(
                 "Step norm, scaled down to {}".format(activearrays["big_step"]),
                 verbosity.low,
             )
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
+            d_x *= activearrays["big_step"] / float(xp.max(xp.abs(d_x)))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
-        new_x = self.optarrays["old_x"].copy() + d_x_full
+        new_x = self.optarrays["old_x"] + d_x_full
 
         self.post_step(step, new_x, d_x, activearrays)
 
@@ -1626,22 +1618,22 @@ class NROptimizer(HessianOptimizer):
         f = (fff + self.mapper.sm.f).reshape(
             self.mapper.sm.dbeads.natoms * 3 * self.mapper.sm.dbeads.nbeads, 1
         )
-        f = np.multiply(f, self.mapper.sm.dbeads.m3.reshape(f.shape) ** -0.5)
+        f = f * self.mapper.sm.dbeads.m3.reshape(f.shape) ** -0.5
 
         d_x = invmul_banded(h_up_band, f).reshape(self.mapper.sm.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.mapper.sm.dbeads.m3**-0.5)
+        d_x = d_x * self.mapper.sm.dbeads.m3**-0.5
 
         # Rescale step if necessary
-        if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
+        if float(xp.max(xp.abs(d_x))) > activearrays["big_step"]:
             info(
                 "Step norm, scaled down to {}".format(activearrays["big_step"]),
                 verbosity.low,
             )
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
+            d_x *= activearrays["big_step"] / float(xp.max(xp.abs(d_x)))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
-        new_x = self.optarrays["old_x"].copy() + d_x_full
+        new_x = self.optarrays["old_x"] + d_x_full
 
         self.post_step(step, new_x, d_x, activearrays)
 
@@ -1679,7 +1671,7 @@ class LanczosOptimizer(HessianOptimizer):
             h_up_band = banded_hessian(
                 dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
             )  # create upper band matrix
-            f = np.multiply(f, self.fix.fixbeads.m3.reshape(f.shape) ** -0.5)
+            f = f * self.fix.fixbeads.m3.reshape(f.shape) ** -0.5
             # CARTESIAN
             # h_up_band = banded_hessian(activearrays["hessian"], self.sm.masses=True)  # create upper band matrix
 
@@ -1692,7 +1684,7 @@ class LanczosOptimizer(HessianOptimizer):
                 self.sm.dbeads.natoms,
                 self.mapper.coef,
             )
-            h_test = np.add(self.sm.h, h_0)  # add spring terms to the physical hessian
+            h_test = self.sm.h + h_0  # add spring terms to the physical hessian
             d, w = clean_hessian(
                 h_test,
                 self.sm.dbeads.q,
@@ -1703,31 +1695,21 @@ class LanczosOptimizer(HessianOptimizer):
                 None,
             )
             # CARTESIAN
-            # d,w =np.linalg.eigh(h_test) #Cartesian
-        info(
-            "\n@Lanczos: 1st freq {} cm^-1".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[0]) * np.sqrt(np.absolute(d[0]))
-                )
-            ),
-            verbosity.medium,
-        )
-        info(
-            "@Lanczos: 2nd freq {} cm^-1".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[1]) * np.sqrt(np.absolute(d[1]))
-                )
-            ),
-            verbosity.medium,
-        )
-        info(
-            "@Lanczos: 3rd freq {} cm^-1\n".format(
-                units.unit_to_user(
-                    "frequency", "inversecm", np.sign(d[2]) * np.sqrt(np.absolute(d[2]))
-                )
-            ),
-            verbosity.medium,
-        )
+            # d,w =xp.linalg.eigh(h_test) #Cartesian
+
+        def _signed_sqrt(v):
+            v = float(v)
+            return math.copysign(math.sqrt(abs(v)), v)
+
+        for i, label in ((0, "1st"), (1, "2nd"), (2, "3rd")):
+            info(
+                "@Lanczos: %s freq %s cm^-1"
+                % (
+                    label,
+                    units.unit_to_user("frequency", "inversecm", _signed_sqrt(d[i])),
+                ),
+                verbosity.medium,
+            )
 
         if d[0] > 0:
             if d[1] / 2 > d[0]:
@@ -1756,28 +1738,28 @@ class LanczosOptimizer(HessianOptimizer):
             lamb = (d[0] + d[1]) / 4
 
         if banded:
-            h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
+            h_up_band[-1, :] += -xp.ones(h_up_band.shape[1]) * lamb
             d_x = alpha * invmul_banded(h_up_band, f)
         else:
-            h_test = h_test - np.eye(h_test.shape[0]) * lamb
-            d_x = alpha * np.linalg.solve(h_test, f)
+            h_test = h_test - xp.eye(h_test.shape[0]) * lamb
+            d_x = alpha * xp.linalg.solve(h_test, f)
 
-        d_x.shape = self.fix.fixbeads.q.shape
+        d_x = xp.reshape(d_x, self.fix.fixbeads.q.shape)
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.fix.fixbeads.m3**-0.5)
+        d_x = d_x * self.fix.fixbeads.m3**-0.5
 
         # Rescale step if necessary
-        if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
+        if float(xp.max(xp.abs(d_x))) > activearrays["big_step"]:
             info(
                 "Step norm, scaled down to {}".format(activearrays["big_step"]),
                 verbosity.low,
             )
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
+            d_x *= activearrays["big_step"] / float(xp.max(xp.abs(d_x)))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
-        new_x = self.optarrays["old_x"].copy() + d_x_full
+        new_x = self.optarrays["old_x"] + d_x_full
 
         self.post_step(step, new_x, d_x, activearrays)
 
@@ -1787,17 +1769,19 @@ class LBFGSOptimizer(DummyOptimizer):
         # call bind function from DummyOptimizer
         super(LBFGSOptimizer, self).bind(geop)
 
-        if geop.optarrays["hessian"].size == (self.beads.natoms * 3) ** 2:
-            self.optarrays["initial_hessian"] = geop.optarrays["hessian"].copy()
-            geop.optarrays["hessian"] = np.zeros(
-                (self.beads.natoms * 3, self.beads.q.size)
+        if xp_size(geop.optarrays["hessian"]) == (self.beads.natoms * 3) ** 2:
+            self.optarrays["initial_hessian"] = xp.asarray(
+                geop.optarrays["hessian"], copy=True
+            )
+            geop.optarrays["hessian"] = xp.zeros(
+                (self.beads.natoms * 3, xp_size(self.beads.q))
             )
 
         if geop.options["hessian_final"]:
             self.options["hessian_asr"] = geop.options["hessian_asr"]
-            if geop.optarrays["hessian"].size == 0:
-                geop.optarrays["hessian"] = np.zeros(
-                    (self.beads.natoms * 3, self.beads.q.size)
+            if xp_size(geop.optarrays["hessian"]) == 0:
+                geop.optarrays["hessian"] = xp.zeros(
+                    (self.beads.natoms * 3, xp_size(self.beads.q))
                 )
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
@@ -1806,21 +1790,21 @@ class LBFGSOptimizer(DummyOptimizer):
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]
         self.options["ls_options"] = geop.options["ls_options"]
-        if geop.optarrays["qlist"].size != (
-            self.options["corrections"] * self.beads.q.size
+        if xp_size(geop.optarrays["qlist"]) != (
+            self.options["corrections"] * xp_size(self.beads.q)
         ):
-            if geop.optarrays["qlist"].size == 0:
-                geop.optarrays["qlist"] = np.zeros(
-                    (self.options["corrections"], self.beads.q.size), float
+            if xp_size(geop.optarrays["qlist"]) == 0:
+                geop.optarrays["qlist"] = xp.zeros(
+                    (self.options["corrections"], xp_size(self.beads.q))
                 )
             else:
                 raise ValueError("qlist size does not match system size")
-        if geop.optarrays["glist"].size != (
-            self.options["corrections"] * self.beads.q.size
+        if xp_size(geop.optarrays["glist"]) != (
+            self.options["corrections"] * xp_size(self.beads.q)
         ):
-            if geop.optarrays["glist"].size == 0:
-                geop.optarrays["glist"] = np.zeros(
-                    (self.options["corrections"], self.beads.q.size), float
+            if xp_size(geop.optarrays["glist"]) == 0:
+                geop.optarrays["glist"] = xp.zeros(
+                    (self.options["corrections"], xp_size(self.beads.q))
                 )
             else:
                 raise ValueError("qlist size does not match system size")
@@ -1833,10 +1817,10 @@ class LBFGSOptimizer(DummyOptimizer):
 
         self.options["scale"] = geop.options["scale"]
 
-        if geop.optarrays["d"].size != self.beads.q.size:
-            if geop.optarrays["d"].size == 0:
-                geop.optarrays["d"] = np.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms), float
+        if xp_size(geop.optarrays["d"]) != xp_size(self.beads.q):
+            if xp_size(geop.optarrays["d"]) == 0:
+                geop.optarrays["d"] = xp.zeros(
+                    (self.beads.nbeads, 3 * self.beads.natoms)
                 )
             else:
                 raise ValueError("Initial direction size does not match system size")
@@ -1870,15 +1854,15 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if (
             self.optarrays["old_x"]
-            == np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)
+            == xp.zeros((self.beads.nbeads, 3 * self.beads.natoms))
         ).all():
-            self.optarrays["old_x"][:] = self.beads.q
+            self.optarrays["old_x"][:] = dstrip(self.beads.q)
 
         # Specific for LBFGS
-        if np.linalg.norm(self.optarrays["d"]) == 0.0:
+        if xp.linalg.norm(self.optarrays["d"]) == 0.0:
             # f = self.forces.f + self.mapper.sm.f
             f = self.mapper.f
-            self.optarrays["d"] += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
+            self.optarrays["d"] += dstrip(f) / xp.sqrt(((f.flatten()) @ (f.flatten())))
 
         self.update_old_pos_for()
         self.init = True
@@ -1900,9 +1884,7 @@ class LBFGSOptimizer(DummyOptimizer):
         self.print_geo(step)
 
         # Check Exit and only then update old arrays
-        d_x_max = np.amax(
-            np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"]))
-        )
+        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.optarrays["old_x"])))
         self.exit = self.exitstep(d_x_max, step)
         self.update_old_pos_for()
 
