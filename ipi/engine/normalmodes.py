@@ -549,13 +549,13 @@ class NormalModes:
         """
 
         dt = self.dt
-        pqk = np.zeros((self.nbeads, 2, 2), float)
-        pqk[0] = np.array([[1, 0], [dt, 1]])
+        pqk = xp.zeros((self.nbeads, 2, 2))
+        pqk[0] = xp.asarray([[1.0, 0.0], [dt, 1.0]])
 
         # Note that the propagator uses mass-scaled momenta.
         if self.propagator == "cayley":
             for b in range(1, self.nbeads):
-                sk = np.sqrt(self.o_nm_factor[b])
+                sk = xp.sqrt(self.o_nm_factor[b])
                 square = (self.o_omegak[b] * dt / 2) ** 2
                 pqk[b, 0, 0] = (1 - square) / (1 + square)
                 pqk[b, 1, 1] = (1 - square) / (1 + square)
@@ -563,10 +563,10 @@ class NormalModes:
                 pqk[b, 1, 0] = dt / sk / (1 + square)
         else:  # exact propagator
             for b in range(1, self.nbeads):
-                sk = np.sqrt(self.o_nm_factor[b])
+                sk = xp.sqrt(self.o_nm_factor[b])
                 dto_omegak = self.o_omegak[b] * dt / sk
-                c = np.cos(dto_omegak)
-                s = np.sin(dto_omegak)
+                c = xp.cos(dto_omegak)
+                s = xp.sin(dto_omegak)
                 pqk[b, 0, 0] = c
                 pqk[b, 1, 1] = c
                 pqk[b, 0, 1] = -s * self.o_omegak[b] * sk
@@ -578,8 +578,10 @@ class NormalModes:
         that can be multiplied to propagate the normal modes dynamics. Open path version
         """
 
-        pq_ms = np.zeros((2, 2, self.nbeads, len(self.open_paths_coords)))
-        pq_ms[:] = np.moveaxis(dstrip(self.o_prop_pq), 0, -1)[:, :, :, np.newaxis]
+        pq_ms = xp.zeros((2, 2, self.nbeads, len(self.open_paths_coords)))
+        prop = dstrip(self.o_prop_pq)
+        # moveaxis(prop, 0, -1) for a 3-D array is permute_dims(prop, (1, 2, 0))
+        pq_ms[:] = xp.permute_dims(prop, (1, 2, 0))[:, :, :, None]
         pq_ms[0, 1] *= dstrip(self.beads.m3[:, self.open_paths_coords])
         pq_ms[1, 0] /= dstrip(self.beads.m3[:, self.open_paths_coords])
 
@@ -642,7 +644,7 @@ class NormalModes:
             wmax = self.nm_freqs[0]
             wt = self.nm_freqs[1]
             for b in range(1, self.nbeads):
-                sk = 1.0 / np.sqrt(
+                sk = 1.0 / xp.sqrt(
                     (wt) ** 2
                     * (1 + (wmax / self.omegak[1]) ** 2)
                     / (wmax**2 + (self.omegak[b]) ** 2)
@@ -709,7 +711,7 @@ class NormalModes:
             wmax = self.nm_freqs[0]
             wt = self.nm_freqs[1]
             for b in range(1, self.nbeads):
-                sk = 1.0 / np.sqrt(
+                sk = 1.0 / xp.sqrt(
                     (wt) ** 2
                     * (1 + (wmax / self.o_omegak[1]) ** 2)
                     / (wmax**2 + (self.o_omegak[b]) ** 2)
@@ -876,8 +878,8 @@ class NormalModes:
             res1 = dstrip(self.pnm[1:]) * self.prop_pq_ms[0,0,1:] + dstrip(self.qnm[1:]) * self.prop_pq_ms[0,1,1:]
             res2 = dstrip(self.pnm[1:]) * self.prop_pq_ms[1,0,1:] + dstrip(self.qnm[1:]) * self.prop_pq_ms[1,1,1:]
             
-            print("check, ", np.linalg.norm( pnm[1:] * sm[1:] - res1), 
-            np.linalg.norm( qnm[1:] / sm[1:] - res2))
+            print("check, ", xp.linalg.norm( pnm[1:] * sm[1:] - res1), 
+            xp.linalg.norm( qnm[1:] / sm[1:] - res2))
             # back to non-scaled coordinates, and update the actual arrays
             self.pnm[1:] = pnm[1:] * sm[1:]
             self.qnm[1:] = qnm[1:] / sm[1:]
@@ -913,7 +915,7 @@ class NormalModes:
                         for k in range(1, self.nbeads):
                             pq[0] = self.pnm[k, a] / sm[k, a]
                             pq[1] = self.qnm[k, a] * sm[k, a]
-                            pq = np.dot(o_prop_pq[k], pq)
+                            pq = ((o_prop_pq[k]) @ (pq))
                             new_pnm[k, a] = pq[0] * sm[k,a]
                             new_qnm[k, a] = pq[1] / sm[k,a]
                 """

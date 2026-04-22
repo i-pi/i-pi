@@ -6,6 +6,7 @@
 
 import time
 import numpy as np
+from ipi.utils.array_backend import xp
 from ipi.utils import sparse
 
 from ipi.engine.motion import Motion, Dynamics
@@ -128,15 +129,15 @@ class Planetary(Motion):
             self.dnm = nm.copy(
                 freqs=nm.omegak[1]
                 * self.nbeads
-                * np.sin(np.pi / self.nbeads)
+                * xp.sin(np.pi / self.nbeads)
                 * np.ones(self.nbeads - 1)
-                / (beads.nbeads * np.sin(np.pi / beads.nbeads))
+                / (beads.nbeads * xp.sin(np.pi / beads.nbeads))
             )
             self.dnm.mode = "manual"
 
         self.dnm.bind(ens, self, beads=self.dbeads, forces=self.dforces)
         self.dnm.qnm[:] = (
-            nm.qnm[: self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(beads.nbeads)
+            nm.qnm[: self.nbeads] * xp.sqrt(self.nbeads) / xp.sqrt(beads.nbeads)
         )
         self.dens = ens.copy()
         self.dbias = ens.bias.copy(self.dbeads, self.dcell)
@@ -191,10 +192,10 @@ class Planetary(Motion):
         sij = np.matmul(self.dcell.h, sij)
         sij = sij.reshape(3, self.natoms, self.natoms).transpose()
         # take square magnitudes of distances
-        sij = np.sum(sij * sij, axis=2)
+        sij = xp.sum(sij * sij, axis=2)
         # screen with Heaviside step function
         sij = (sij < self.screen**2).astype(float)
-        # sij = np.exp(-sij / (self.screen**2))
+        # sij = xp.exp(-sij / (self.screen**2))
         # acount for 3 dimensions
         sij = np.concatenate((sij, sij, sij), axis=0)
         sij = np.concatenate((sij, sij, sij), axis=1)
@@ -217,15 +218,15 @@ class Planetary(Motion):
 
         self.dnm.qnm[:] = (
             self.basenm.qnm[: self.nbeads]
-            * np.sqrt(self.nbeads)
-            / np.sqrt(self.basebeads.nbeads)
+            * xp.sqrt(self.nbeads)
+            / xp.sqrt(self.basebeads.nbeads)
         )
 
         # Randomized momenta
         self.dnm.pnm = (
             self.prng.gvec((self.dbeads.nbeads, 3 * self.dbeads.natoms))
-            * np.sqrt(self.dnm.dynm3)
-            * np.sqrt(self.dens.temp * self.dbeads.nbeads * Constants.kb)
+            * xp.sqrt(self.dnm.dynm3)
+            * xp.sqrt(self.dens.temp * self.dbeads.nbeads * Constants.kb)
         )
         self.dnm.pnm[0] = 0.0
 

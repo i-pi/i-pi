@@ -14,6 +14,7 @@ Algorithms implemented by Michele Ceriotti and Benjamin Helfrecht, 2015
 import numpy as np
 import time
 
+from ipi.utils.array_backend import xp, xp_size
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
@@ -205,11 +206,11 @@ class LineMapper(object):
             self.fixatoms_mask[dumop.fixatoms_dof] = 0
 
     def set_dir(self, x0, mdir):
-        self.x0 = x0.copy()
+        self.x0 = xp.asarray(x0, copy=True)
 
         # exclude fixed degrees of freedom and renormalize direction vector to unit length:
-        tmp3 = mdir.copy()[:, self.fixatoms_mask]
-        self.d = tmp3 / np.sqrt(np.dot(tmp3.flatten(), tmp3.flatten()))
+        tmp3 = xp.asarray(mdir, copy=True)[:, self.fixatoms_mask]
+        self.d = tmp3 / xp.sqrt(((tmp3.flatten()) @ (tmp3.flatten())))
         del tmp3
         if self.x0[:, self.fixatoms_mask].shape != self.d.shape:
             raise ValueError(
@@ -225,8 +226,9 @@ class LineMapper(object):
             self.x0[:, self.fixatoms_mask] + self.d * x
         )
         e = self.dforces.pot  # Energy
-        g = -np.dot(
-            dstrip(self.dforces.f[:, self.fixatoms_mask]).flatten(), self.d.flatten()
+        g = -(
+            (dstrip(self.dforces.f[:, self.fixatoms_mask]).flatten())
+            @ (self.d.flatten())
         )  # Gradient
         return e, g
 
@@ -316,29 +318,31 @@ class DummyOptimizer:
                 "We stop here. Comment this line and continue only if you know what you are doing"
             )
 
+        nq = xp_size(self.beads.q)
+        shape = (self.beads.nbeads, 3 * self.beads.natoms)
         # The resize action must be done before the bind
-        if geop.old_x.size != self.beads.q.size:
-            if geop.old_x.size == 0:
-                geop.old_x = np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)
+        if xp_size(geop.old_x) != nq:
+            if xp_size(geop.old_x) == 0:
+                geop.old_x = xp.zeros(shape)
             else:
                 raise ValueError(
                     "Conjugate gradient position size does not match system size"
                 )
-        if geop.old_u.size != 1:
-            if geop.old_u.size == 0:
-                geop.old_u = np.zeros(1, float)
+        if xp_size(geop.old_u) != 1:
+            if xp_size(geop.old_u) == 0:
+                geop.old_u = xp.zeros(1)
             else:
                 raise ValueError("Conjugate gradient has weird potential (size != 1)")
-        if geop.old_f.size != self.beads.q.size:
-            if geop.old_f.size == 0:
-                geop.old_f = np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)
+        if xp_size(geop.old_f) != nq:
+            if xp_size(geop.old_f) == 0:
+                geop.old_f = xp.zeros(shape)
             else:
                 raise ValueError(
                     "Conjugate gradient force size does not match system size"
                 )
-        if geop.d.size != self.beads.q.size:
-            if geop.d.size == 0:
-                geop.d = np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)
+        if xp_size(geop.d) != nq:
+            if xp_size(geop.d) == 0:
+                geop.d = xp.zeros(shape)
             else:
                 raise ValueError(
                     "Conjugate gradient direction size does not match system size"
@@ -356,34 +360,33 @@ class DummyOptimizer:
         self.qtime += time.time()
 
         if len(self.fixatoms_dof) > 0:
-            ftmp = self.forces.f.copy()
+            ftmp = xp.asarray(dstrip(self.forces.f), copy=True)
             for dqb in ftmp:
                 dqb[self.fixatoms_dof] = 0.0
-            fmax = np.amax(np.absolute(ftmp))
+            fmax = float(xp.max(xp.abs(ftmp)))
         else:
-            fmax = np.amax(np.absolute(self.forces.f))
+            fmax = float(xp.max(xp.abs(dstrip(self.forces.f))))
 
-        e = np.absolute((fx - u0) / self.beads.natoms)
+        e = abs((fx - u0) / self.beads.natoms)
         info("@GEOP", verbosity.medium)
-        self.tolerances["position"]
         info("   Current energy             %e" % (fx))
         info(
             "   Position displacement      %e  Tolerance %e"
-            % (x.item(), self.tolerances["position"]),
+            % (float(x), self.tolerances["position"]),
             verbosity.medium,
         )
         info(
             "   Max force component        %e  Tolerance %e"
-            % (fmax.item(), self.tolerances["force"]),
+            % (float(fmax), self.tolerances["force"]),
             verbosity.medium,
         )
         info(
             "   Energy difference per atom %e  Tolerance %e"
-            % (e.item(), self.tolerances["energy"]),
+            % (e, self.tolerances["energy"]),
             verbosity.medium,
         )
 
-        if np.linalg.norm(self.forces.f.flatten() - self.old_f.flatten()) <= 1e-20:
+        if xp.linalg.norm(self.forces.f.flatten() - self.old_f.flatten()) <= 1e-20:
             info(
                 "Something went wrong, the forces are not changing anymore."
                 " This could be due to an overly small tolerance threshold "
@@ -393,7 +396,7 @@ class DummyOptimizer:
             )
 
         if (
-            (np.absolute((fx - u0) / self.beads.natoms) <= self.tolerances["energy"])
+            (abs((fx - u0) / self.beads.natoms) <= self.tolerances["energy"])
             and (fmax <= self.tolerances["force"])
             and (x <= self.tolerances["position"])
         ):
@@ -407,9 +410,10 @@ class BFGSOptimizer(DummyOptimizer):
         # call bind function from DummyOptimizer
         super(BFGSOptimizer, self).bind(geop)
 
-        if geop.invhessian.size != (self.beads.q.size * self.beads.q.size):
-            if geop.invhessian.size == 0:
-                geop.invhessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
+        nq = xp_size(self.beads.q)
+        if xp_size(geop.invhessian) != nq * nq:
+            if xp_size(geop.invhessian) == 0:
+                geop.invhessian = xp.eye(nq)
             else:
                 raise ValueError("Inverse Hessian size does not match system size")
 
@@ -429,17 +433,17 @@ class BFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing BFGS", verbosity.debug)
-            self.d += dstrip(self.forces.f) / np.sqrt(
-                np.dot(self.forces.f.flatten(), self.forces.f.flatten())
+            self.d += dstrip(self.forces.f) / xp.sqrt(
+                ((self.forces.f.flatten()) @ (self.forces.f.flatten()))
             )
 
             if len(self.fixatoms_dof) > 0:
                 for dqb in self.d:
                     dqb[self.fixatoms_dof] = 0.0
 
-        self.old_x[:] = self.beads.q
-        self.old_u[:] = self.forces.pot
-        self.old_f[:] = self.forces.f
+        self.old_x[:] = dstrip(self.beads.q)
+        self.old_u[:] = dstrip(self.forces.pot)
+        self.old_f[:] = dstrip(self.forces.f)
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -493,13 +497,13 @@ class BFGSOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
+        self.beads.q = dstrip(self.gm.dbeads.q)
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
+        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u, d_x_max)
 
 
@@ -510,15 +514,16 @@ class BFGSTRMOptimizer(DummyOptimizer):
         # call bind function from DummyOptimizer
         super(BFGSTRMOptimizer, self).bind(geop)
 
-        if geop.hessian.size != (self.beads.q.size * self.beads.q.size):
-            if geop.hessian.size == 0:
-                geop.hessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
+        nq = xp_size(self.beads.q)
+        if xp_size(geop.hessian) != nq * nq:
+            if xp_size(geop.hessian) == 0:
+                geop.hessian = xp.eye(nq)
             else:
                 raise ValueError("Hessian size does not match system size")
 
         self.hessian = geop.hessian
-        if geop.tr.size == 0:
-            geop.tr = np.array([0.4])
+        if xp_size(geop.tr) == 0:
+            geop.tr = xp.asarray([0.4])
         self.tr = geop.tr
         self.gm.bind(self)
         self.big_step = geop.big_step
@@ -536,9 +541,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing BFGSTRM", verbosity.debug)
-        self.old_x[:] = self.beads.q
-        self.old_u[:] = self.forces.pot
-        self.old_f[:] = self.forces.f
+        self.old_x[:] = dstrip(self.beads.q)
+        self.old_u[:] = dstrip(self.forces.pot)
+        self.old_f[:] = dstrip(self.forces.f)
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -581,13 +586,13 @@ class BFGSTRMOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
+        self.beads.q = dstrip(self.gm.dbeads.q)
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
+        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u, d_x_max)
 
 
@@ -607,14 +612,15 @@ class LBFGSOptimizer(DummyOptimizer):
         self.big_step = geop.big_step
         self.ls_options = geop.ls_options
 
-        if geop.qlist.size != (self.corrections * self.beads.q.size):
-            if geop.qlist.size == 0:
-                geop.qlist = np.zeros((self.corrections, self.beads.q.size), float)
+        nq = xp_size(self.beads.q)
+        if xp_size(geop.qlist) != self.corrections * nq:
+            if xp_size(geop.qlist) == 0:
+                geop.qlist = xp.zeros((self.corrections, nq))
             else:
                 raise ValueError("qlist size does not match system size")
-        if geop.glist.size != (self.corrections * self.beads.q.size):
-            if geop.glist.size == 0:
-                geop.glist = np.zeros((self.corrections, self.beads.q.size), float)
+        if xp_size(geop.glist) != self.corrections * nq:
+            if xp_size(geop.glist) == 0:
+                geop.glist = xp.zeros((self.corrections, nq))
             else:
                 raise ValueError("qlist size does not match system size")
 
@@ -638,13 +644,13 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing L-BFGS", verbosity.debug)
-            self.d += dstrip(self.forces.f) / np.sqrt(
-                np.dot(self.forces.f.flatten(), self.forces.f.flatten())
+            self.d += dstrip(self.forces.f) / xp.sqrt(
+                ((self.forces.f.flatten()) @ (self.forces.f.flatten()))
             )
 
-        self.old_x[:] = self.beads.q
-        self.old_u[:] = self.forces.pot
-        self.old_f[:] = self.forces.f
+        self.old_x[:] = dstrip(self.beads.q)
+        self.old_u[:] = dstrip(self.forces.pot)
+        self.old_f[:] = dstrip(self.forces.f)
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -702,13 +708,13 @@ class LBFGSOptimizer(DummyOptimizer):
         self.gm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
+        self.beads.q = dstrip(self.gm.dbeads.q)
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
+        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u, d_x_max)
 
 
@@ -729,9 +735,10 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         # call bind function from DummyOptimizer
         super(Damped_BFGSOptimizer, self).bind(geop)
 
-        if geop.invhessian.size != (self.beads.q.size * self.beads.q.size):
-            if geop.invhessian.size == 0:
-                geop.invhessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
+        nq = xp_size(self.beads.q)
+        if xp_size(geop.invhessian) != nq * nq:
+            if xp_size(geop.invhessian) == 0:
+                geop.invhessian = xp.eye(nq)
             else:
                 raise ValueError("Inverse Hessian size does not match system size")
 
@@ -749,9 +756,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         self.qtime = -time.time()
         info("\nMD STEP %d" % step, verbosity.debug)
 
-        self.old_x[:] = self.beads.q
-        self.old_u[:] = self.forces.pot
-        self.old_f[:] = self.forces.f
+        self.old_x[:] = dstrip(self.beads.q)
+        self.old_u[:] = dstrip(self.forces.pot)
+        self.old_f[:] = dstrip(self.forces.f)
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -797,12 +804,12 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions
-        self.beads.q = self.gm.dbeads.q
+        self.beads.q = dstrip(self.gm.dbeads.q)
         # This enforces the update of the forces
         self.forces.transfer_forces(self.gm.dforces)
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
+        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u, d_x_max)
 
 
@@ -829,7 +836,7 @@ class SDOptimizer(DummyOptimizer):
         info("\nMD STEP %d" % step, verbosity.debug)
 
         # Store previous forces for warning exit condition
-        self.old_f[:] = self.forces.f
+        self.old_f[:] = dstrip(self.forces.f)
 
         # Check for fixatoms
         if len(self.fixatoms_dof) > 0:
@@ -839,7 +846,7 @@ class SDOptimizer(DummyOptimizer):
         dq1 = dstrip(self.old_f)
 
         # Move direction for steepest descent
-        dq1_unit = dq1 / np.sqrt(np.dot(dq1.flatten(), dq1.flatten()))
+        dq1_unit = dq1 / xp.sqrt(((dq1.flatten()) @ (dq1.flatten())))
         info(" @GEOP: Determined SD direction", verbosity.debug)
 
         # Set position and direction inside the mapper
@@ -847,8 +854,8 @@ class SDOptimizer(DummyOptimizer):
 
         # Reuse initial value since we have energy and forces already
         u0, du0 = (
-            self.forces.pot.copy(),
-            np.dot(dstrip(self.forces.f.flatten()), dq1_unit.flatten()),
+            self.forces.pot,
+            ((dstrip(self.forces.f.flatten())) @ (dq1_unit.flatten())),
         )
 
         # Do one SD iteration; return positions and energy
@@ -865,13 +872,13 @@ class SDOptimizer(DummyOptimizer):
         self.lm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = self.lm.dbeads.q
+        self.beads.q = dstrip(self.lm.dbeads.q)
         self.forces.transfer_forces(
             self.lm.dforces
         )  # This forces the update of the forces
 
-        d_x = np.absolute(np.subtract(self.beads.q, self.lm.x0))
-        x = np.linalg.norm(d_x)
+        d_x = xp.abs(dstrip(self.beads.q) - self.lm.x0)
+        x = xp.linalg.norm(d_x)
         # Automatically adapt the search step for the next iteration.
         # Relaxes better with very small step --> multiply by factor of 0.1 or 0.01
 
@@ -881,7 +888,7 @@ class SDOptimizer(DummyOptimizer):
         )
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(d_x))
+        d_x_max = float(xp.max(xp.abs(d_x)))
         self.exitstep(self.forces.pot, u0, d_x_max)
 
 
@@ -919,18 +926,18 @@ class CGOptimizer(DummyOptimizer):
             gradf1 = dq1 = dstrip(self.forces.f)
 
             # Move direction for 1st conjugate gradient step
-            dq1_unit = dq1 / np.sqrt(np.dot(gradf1.flatten(), gradf1.flatten()))
+            dq1_unit = dq1 / xp.sqrt(((gradf1.flatten()) @ (gradf1.flatten())))
             info(" @GEOP: Determined SD direction", verbosity.debug)
 
         else:
             gradf0 = self.old_f
             dq0 = self.d
             gradf1 = dstrip(self.forces.f)
-            beta = np.dot((gradf1.flatten() - gradf0.flatten()), gradf1.flatten()) / (
-                np.dot(gradf0.flatten(), gradf0.flatten())
+            beta = (((gradf1.flatten() - gradf0.flatten())) @ (gradf1.flatten())) / (
+                ((gradf0.flatten()) @ (gradf0.flatten()))
             )
             dq1 = gradf1 + max(0.0, beta) * dq0
-            dq1_unit = dq1 / np.sqrt(np.dot(dq1.flatten(), dq1.flatten()))
+            dq1_unit = dq1 / xp.sqrt(((dq1.flatten()) @ (dq1.flatten())))
             info(" @GEOP: Determined CG direction", verbosity.debug)
 
         # Store force and direction for next CG step
@@ -945,8 +952,8 @@ class CGOptimizer(DummyOptimizer):
 
         # Reuse initial value since we have energy and forces already
         u0, du0 = (
-            self.forces.pot.copy(),
-            np.dot(dstrip(self.forces.f.flatten()), dq1_unit.flatten()),
+            self.forces.pot,
+            ((dstrip(self.forces.f.flatten())) @ (dq1_unit.flatten())),
         )
 
         # Do one CG iteration; return positions and energy
@@ -962,13 +969,13 @@ class CGOptimizer(DummyOptimizer):
         self.lm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = self.lm.dbeads.q
+        self.beads.q = dstrip(self.lm.dbeads.q)
         self.forces.transfer_forces(
             self.lm.dforces
         )  # This forces the update of the forces
 
-        d_x = np.absolute(np.subtract(self.beads.q, self.lm.x0))
-        x = np.linalg.norm(d_x)
+        d_x = xp.abs(dstrip(self.beads.q) - self.lm.x0)
+        x = xp.linalg.norm(d_x)
         # Automatically adapt the search step for the next iteration.
         # Relaxes better with very small step --> multiply by factor of 0.1 or 0.01
 
@@ -978,5 +985,5 @@ class CGOptimizer(DummyOptimizer):
         )
 
         # Exit simulation step
-        d_x_max = np.amax(np.absolute(d_x))
+        d_x_max = float(xp.max(xp.abs(d_x)))
         self.exitstep(self.forces.pot, u0, d_x_max)

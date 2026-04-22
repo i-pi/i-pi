@@ -7,9 +7,11 @@ Could probably be generalized to something more general.
 # See the "licenses" directory for full license information.
 
 
+import math
 import pickle
 import threading
 import numpy as np
+from ipi.utils.array_backend import xp
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
@@ -139,8 +141,8 @@ class AlKMC(Motion):
             list(range(self.ncell)),
             indexing="ij",
         )
-        self.sites = np.dot(
-            np.asarray([ix.flatten(), iy.flatten(), iz.flatten()]).T, self.scell.T
+        self.sites = (np.asarray([ix.flatten(), iy.flatten(), iz.flatten()]).T) @ (
+            self.scell.T
         )
         print(len(self.sites), self.nsites, "###")
         # now we build list of nearest neighbors (fcc-lattice hardcoded!)
@@ -155,7 +157,7 @@ class AlKMC(Motion):
             self.dcell.array_pbc(rij)
             rij.shape = (self.nsites, 3)
             for j in range(i):
-                if np.dot(rij[j], rij[j]) < a02:  # found nearest neighbor
+                if ((rij[j]) @ (rij[j])) < a02:  # found nearest neighbor
                     self.neigh[i, nneigh[i]] = j
                     self.neigh[j, nneigh[j]] = i
                     nneigh[i] += 1
@@ -326,7 +328,7 @@ class AlKMC(Motion):
         for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.optimizer[ieval].step(i)
-        newq = dstrip(self.dbeads[ieval].q[0]).copy()
+        newq = xp.asarray(dstrip(self.dbeads[ieval].q[0]), copy=True)
         newpot = self.dforces[ieval].pot
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
@@ -623,7 +625,7 @@ class AlKMC(Motion):
                 0.5 * (ecurr + levents[i][2]) + self.barriers[levents[i][-1]]
             )  # naive heuristic for the ts energy
             print("Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2])
-            rates[i] = self.prefactors[levents[i][-1]] * np.exp(-(ets - ecurr) / kT)
+            rates[i] = self.prefactors[levents[i][-1]] * xp.exp(-(ets - ecurr) / kT)
             cdf += rates[i]
             crates[i] = cdf
 
@@ -632,7 +634,7 @@ class AlKMC(Motion):
         isel = 0
         while fpick > crates[isel]:
             isel += 1
-        dt = -1.0 / cdf * np.log(1.0 - self.prng.u)
+        dt = -1.0 / cdf * math.log(1.0 - self.prng.u)
         print(("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr, ecurr)))
         print("Selected event ", isel, " with rate ", rates[isel], " / ", cdf)
 
@@ -655,14 +657,14 @@ class AlKMC(Motion):
         print("Finishing step at ", "".join(self.state))
 
         # updates the positions
-        self.cell.h = self.dcell.h
+        self.cell.h = dstrip(self.dcell.h)
 
         uidx = self.unique_idx(self.state)
         ruidx = np.zeros(self.nsites, int)
         ruidx[uidx] = list(range(self.nsites))
 
         self.sites[self.unique_idx(self.state)]
-        oldq = dstrip(self.beads.q[0]).copy()
+        oldq = xp.asarray(dstrip(self.beads.q[0]), copy=True)
 
         newq = np.zeros(self.nsites * 3, float)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)

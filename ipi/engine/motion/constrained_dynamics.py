@@ -12,6 +12,7 @@ constant energy and constant temperature dynamics.
 
 
 import numpy as np
+from ipi.utils.array_backend import xp
 
 from ipi.engine.motion import Dynamics
 from ipi.engine.motion.dynamics import DummyIntegrator
@@ -269,19 +270,19 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        p = dstrip(self.beads.p[0]).copy()
+        p = xp.asarray(dstrip(self.beads.p[0]), copy=True)
 
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
             ic = constr.i3_unique
-            b = np.dot(dg, p[ic] / constr.m3)
+            b = (dg) @ (p[ic] / constr.m3)
 
             if spla is None:
-                x = np.linalg.solve(dstrip(constr.Gram), b)
+                x = xp.linalg.solve(dstrip(constr.Gram), b)
             else:
                 x = spla.cho_solve(dstrip(constr.GramChol), b)
 
-            p[ic] -= np.dot(np.transpose(dg), x)
+            p[ic] -= (xp.transpose(dg)) @ (x)
         self.beads.p[0] = p
 
     def proj_manifold(self):
@@ -292,8 +293,8 @@ class ConstraintSolver(ConstraintSolverBase):
         """
 
         m3 = dstrip(self.beads.m3[0])
-        p = dstrip(self.beads.p[0]).copy()
-        q = dstrip(self.beads.q[0]).copy()
+        p = xp.asarray(dstrip(self.beads.p[0]), copy=True)
+        q = xp.asarray(dstrip(self.beads.q[0]), copy=True)
 
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
@@ -310,14 +311,14 @@ class ConstraintSolver(ConstraintSolverBase):
             for i in range(self.maxit):
                 g = dstrip(constr.g)
                 # bailout condition
-                if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
+                if self.tolerance > xp.linalg.norm(g, ord=self.norm_order):
                     break
 
                 if spla is None:
-                    dlambda = np.linalg.solve(gram, g)
+                    dlambda = xp.linalg.solve(gram, g)
                 else:
                     dlambda = spla.cho_solve(chol_gram, g)
-                delta = np.dot(np.transpose(dg), dlambda)
+                delta = (xp.transpose(dg)) @ (dlambda)
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic]  # updates the constraint to recompute g
 
@@ -520,12 +521,12 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
 
             # accumulates conserved quantity
             p = dstrip(self.beads.p)
-            self.ensemble.eens += np.dot(p.flatten(), (p / m3).flatten()) * 0.5
+            self.ensemble.eens += ((p.flatten()) @ ((p / m3).flatten())) * 0.5
 
             self.proj_cotangent()
 
-            p = dstrip(self.beads.p).copy()
-            self.ensemble.eens -= np.dot(p.flatten(), (p / m3).flatten()) * 0.5
+            p = xp.asarray(dstrip(self.beads.p), copy=True)
+            self.ensemble.eens -= ((p.flatten()) @ ((p / m3).flatten())) * 0.5
 
     def step(self, step=None):
         """Does one simulation time step."""

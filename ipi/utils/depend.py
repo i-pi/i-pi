@@ -33,7 +33,7 @@ import operator as _op
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, xp_size
 
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
@@ -174,6 +174,10 @@ class depend_base(object):
         newone = type(self).__new__(type(self))
         for cls in type(self).__mro__:
             for name in getattr(cls, "__slots__", ()):
+                # `__weakref__` is a read-only descriptor slot that Python
+                # manages itself; setattr on the fresh instance raises.
+                if name == "__weakref__":
+                    continue
                 try:
                     val = getattr(self, name)
                 except AttributeError:
@@ -426,7 +430,7 @@ class depend_array(depend_base):
 
     @property
     def size(self):
-        return self._value.size
+        return xp_size(self._value)
 
     @property
     def T(self):
@@ -526,6 +530,11 @@ class depend_array(depend_base):
         )
 
     def __setitem__(self, index, value):
+        # Safety net: some backends (e.g. torch) reject a depend_array RHS
+        # outright. Callers are expected to dstrip() explicitly; this peel
+        # costs ~12 ns and only fires when someone forgot.
+        if isinstance(value, depend_base):
+            value = value._value
         status = self._status
         with status.threadlock:
             self._value[index] = value
@@ -537,6 +546,8 @@ class depend_array(depend_base):
 
     def set(self, value, manual=True):
         """Full-array assignment. `manual=False` is used by `update_auto`."""
+        if isinstance(value, depend_base):
+            value = value._value
         status = self._status
         with status.threadlock:
             self._value[...] = value

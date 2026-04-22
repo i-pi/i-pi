@@ -33,8 +33,11 @@ import os
 
 import numpy as np
 
+from array_api_compat import size as xp_size
+
 __all__ = [
     "xp",
+    "xp_size",
     "device",
     "dtype",
     "set_array_backend",
@@ -121,9 +124,22 @@ def _load_backend(name):
         # functions (``asarray``, ``zeros``, ``empty``, ...) receive
         # ``device=`` transparently.
         dev = os.environ.get("IPI_DEVICE", "cpu")
-        dt_name = os.environ.get("IPI_DTYPE")
-        if dt_name:
-            torch.set_default_dtype(getattr(torch, dt_name))
+        # i-PI is double-precision throughout (matches numpy's default for
+        # float operations); torch otherwise defaults to float32 which
+        # would cause dtype mismatches when a float64-typed array meets
+        # a prng-drawn / default-dtype array. `IPI_DTYPE=float32` opts in
+        # explicitly.
+        dt_name = os.environ.get("IPI_DTYPE", "float64")
+        torch.set_default_dtype(getattr(torch, dt_name))
+        # Prime the CUDA primary context eagerly. cuFFT (and other
+        # lazy-init kernels) otherwise create the context from
+        # whichever worker thread hits them first and emit a
+        # UserWarning about it. Allocating any tensor on the target
+        # device forces primary-context creation now; subsequent
+        # threads inherit it implicitly via `cudaSetDevice`.
+        if dev != "cpu" and dev.startswith("cuda") and torch.cuda.is_available():
+            torch.cuda.init()
+            torch.empty(0, device=dev)
         return _XpWithDevice(_torch_backend, dev), dev, torch.get_default_dtype()
     if name == "jax":
         import array_api_compat.jax.numpy as _jax_backend

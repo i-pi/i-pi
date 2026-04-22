@@ -6,6 +6,7 @@
 
 
 import numpy as np
+import math
 
 from array_api_compat import is_numpy_namespace
 
@@ -41,25 +42,25 @@ def mk_nm_matrix(nbeads):
        nbeads: The number of beads.
     """
 
-    b2nm = np.zeros((nbeads, nbeads))
-    b2nm[0, :] = np.sqrt(1.0)
+    b2nm = xp.zeros((nbeads, nbeads))
+    b2nm[0, :] = math.sqrt(1.0)
     for j in range(nbeads):
         for i in range(1, nbeads // 2 + 1):
-            b2nm[i, j] = np.sqrt(2.0) * np.cos(2 * np.pi * j * i / float(nbeads))
+            b2nm[i, j] = math.sqrt(2.0) * math.cos(2 * math.pi * j * i / float(nbeads))
         for i in range(nbeads // 2 + 1, nbeads):
-            b2nm[i, j] = np.sqrt(2.0) * np.sin(2 * np.pi * j * i / float(nbeads))
+            b2nm[i, j] = math.sqrt(2.0) * math.sin(2 * math.pi * j * i / float(nbeads))
     if (nbeads % 2) == 0:
         b2nm[nbeads // 2, 0:nbeads:2] = 1.0
         b2nm[nbeads // 2, 1:nbeads:2] = -1.0
-    return b2nm / np.sqrt(nbeads)
+    return b2nm / math.sqrt(nbeads)
 
 
 def nm_eva(nbeads):
-    return 2 * xp.asarray([np.sin(k * np.pi / nbeads) for k in range(nbeads)])
+    return 2 * xp.asarray([math.sin(k * math.pi / nbeads) for k in range(nbeads)])
 
 
 def o_nm_eva(nbeads):
-    return 2 * xp.asarray([np.sin(k * np.pi / (2 * nbeads)) for k in range(nbeads)])
+    return 2 * xp.asarray([math.sin(k * math.pi / (2 * nbeads)) for k in range(nbeads)])
 
 
 def mk_o_nm_matrix(nbeads):
@@ -68,12 +69,14 @@ def mk_o_nm_matrix(nbeads):
     representations.
     """
     # here define the orthogonal transformation matrix for the open path
-    b2o_nm = np.zeros((nbeads, nbeads))
-    b2o_nm[0, :] = np.sqrt(1.0)
+    b2o_nm = xp.zeros((nbeads, nbeads))
+    b2o_nm[0, :] = math.sqrt(1.0)
     for j in range(0, nbeads):
         for i in range(1, nbeads):
-            b2o_nm[i, j] = np.sqrt(2.0) * np.cos(np.pi * (j + 0.5) * i / float(nbeads))
-    return b2o_nm / np.sqrt(nbeads)
+            b2o_nm[i, j] = math.sqrt(2.0) * math.cos(
+                math.pi * (j + 0.5) * i / float(nbeads)
+            )
+    return b2o_nm / math.sqrt(nbeads)
 
 
 def mk_rs_matrix(nb1, nb2):
@@ -88,13 +91,13 @@ def mk_rs_matrix(nb1, nb2):
     """
 
     if nb1 == nb2:
-        return np.identity(nb1, float)
+        return xp.eye(nb1)
     elif nb1 > nb2:
         b1_nm = mk_nm_matrix(nb1)
         nm_b2 = mk_nm_matrix(nb2).T
 
         # builds the "reduction" matrix that picks the normal modes we want to keep
-        b1_b2 = np.zeros((nb2, nb1), float)
+        b1_b2 = xp.zeros((nb2, nb1))
         b1_b2[0, 0] = 1.0
         for i in range(1, nb2 // 2 + 1):
             b1_b2[i, i] = 1.0
@@ -105,8 +108,8 @@ def mk_rs_matrix(nb1, nb2):
             # stiffest mode in the new path
             b1_b2[nb2 // 2, nb1 - nb2 // 2] = 0.0
 
-        rs_b1_b2 = np.dot(nm_b2, np.dot(b1_b2, b1_nm))
-        return rs_b1_b2 * np.sqrt(float(nb2) / float(nb1))
+        rs_b1_b2 = (nm_b2) @ (((b1_b2) @ (b1_nm)))
+        return rs_b1_b2 * math.sqrt(float(nb2) / float(nb1))
     else:
         return mk_rs_matrix(nb2, nb1).T * (float(nb2) / float(nb1))
 
@@ -123,13 +126,13 @@ def mk_o_rs_matrix(nb1, nb2):
     """
 
     if nb1 == nb2:
-        return np.identity(nb1, float)
+        return xp.eye(nb1)
     elif nb1 > nb2:
         b1_nm = mk_o_nm_matrix(nb1)
         nm_b2 = mk_o_nm_matrix(nb2).T
 
         # builds the "reduction" matrix that picks the normal modes we want to keep
-        b1_b2 = np.zeros((nb2, nb1), float)
+        b1_b2 = xp.zeros((nb2, nb1))
         b1_b2[0, 0] = 1.0
         for i in range(1, nb2 // 2 + 1):
             b1_b2[i, i] = 1.0
@@ -140,8 +143,8 @@ def mk_o_rs_matrix(nb1, nb2):
             # stiffest mode in the new path
             b1_b2[nb2 // 2, nb1 - nb2 // 2] = 0.0
 
-        rs_b1_b2 = np.dot(nm_b2, np.dot(b1_b2, b1_nm))
-        return rs_b1_b2 * np.sqrt(float(nb2) / float(nb1))
+        rs_b1_b2 = (nm_b2) @ (((b1_b2) @ (b1_nm)))
+        return rs_b1_b2 * math.sqrt(float(nb2) / float(nb1))
     else:
         return mk_o_rs_matrix(nb2, nb1).T * (float(nb2) / float(nb1))
 
@@ -435,20 +438,20 @@ class nm_fft(
                     verbosity.low,
                 )
 
-            self.qdummy = np.zeros(
+            self.qdummy = xp.zeros(
                 (nbeads, 3 * natoms),
                 dtype="float32" if self.single_precision else "float64",
             )
-            self.qnmdummy = np.zeros(
+            self.qnmdummy = xp.zeros(
                 (nbeads // 2 + 1, 3 * natoms),
                 dtype="complex64" if self.single_precision else "complex128",
             )
 
             def dummy_fft(self):
-                self.qnmdummy = np.fft.rfft(self.qdummy, axis=0)
+                self.qnmdummy = xp.fft.rfft(self.qdummy, axis=0)
 
             def dummy_ifft(self):
-                self.qdummy = np.fft.irfft(self.qnmdummy, n=self.nbeads, axis=0)
+                self.qdummy = xp.fft.irfft(self.qnmdummy, n=self.nbeads, axis=0)
 
             self.fft = lambda: dummy_fft(self)
             self.ifft = lambda: dummy_ifft(self)
@@ -485,23 +488,23 @@ class nm_fft(
         self.qdummy[:] = q
         self.fft()
         if self.nbeads == 2:
-            return self.qnmdummy.real / np.sqrt(self.nbeads)
+            return self.qnmdummy.real / math.sqrt(self.nbeads)
 
         nmodes = self.nbeads // 2
 
-        self.qnmdummy /= np.sqrt(self.nbeads)
-        qnm = np.zeros(q.shape)
+        self.qnmdummy /= math.sqrt(self.nbeads)
+        qnm = xp.zeros(q.shape)
         qnm[0, :] = self.qnmdummy[0, :].real
 
         if self.nbeads % 2 == 0:
-            self.qnmdummy[1:-1, :] *= np.sqrt(2)
+            self.qnmdummy[1:-1, :] *= math.sqrt(2)
             qnm[1:nmodes, :], qnm[self.nbeads : nmodes : -1, :] = (
                 self.qnmdummy[1:-1, :].real,
                 self.qnmdummy[1:-1, :].imag,
             )
             qnm[nmodes, :] = self.qnmdummy[nmodes, :].real
         else:
-            self.qnmdummy[1:, :] *= np.sqrt(2)
+            self.qnmdummy[1:, :] *= math.sqrt(2)
             qnm[1 : nmodes + 1, :], qnm[self.nbeads : nmodes : -1, :] = (
                 self.qnmdummy[1:, :].real,
                 self.qnmdummy[1:, :].imag,
@@ -509,9 +512,9 @@ class nm_fft(
 
         # atoms flagged as open paths use the open-path matrix instead
         for io in self._open:
-            qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
-            qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
-            qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
+            qnm[:, 3 * io] = (self._b2o_nm) @ (q[:, 3 * io])
+            qnm[:, 3 * io + 1] = (self._b2o_nm) @ (q[:, 3 * io + 1])
+            qnm[:, 3 * io + 2] = (self._b2o_nm) @ (q[:, 3 * io + 2])
         return qnm
 
     def _nm2b_numpy(self, qnm):
@@ -519,12 +522,12 @@ class nm_fft(
         if nbeads == 2:
             self.qnmdummy[:] = qnm
             self.ifft()
-            return self.qdummy * np.sqrt(nbeads)
+            return self.qdummy * math.sqrt(nbeads)
 
         nmodes = nbeads // 2
         odd = nbeads - 2 * nmodes  # 0 if even, 1 if odd
 
-        isqrt2 = np.sqrt(0.5)
+        isqrt2 = math.sqrt(0.5)
         qnm_complex = self.qnmdummy
         qnm_complex[0, :] = qnm[0, :]
         if not odd:
@@ -536,31 +539,31 @@ class nm_fft(
             qnm_complex[1:, :].imag = qnm[nbeads:nmodes:-1, :] * isqrt2
 
         self.ifft()
-        q = self.qdummy * np.sqrt(nbeads)
+        q = self.qdummy * math.sqrt(nbeads)
         for io in self._open:
-            q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
-            q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
-            q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+            q[:, 3 * io] = (self._o_nm2b) @ (qnm[:, 3 * io])
+            q[:, 3 * io + 1] = (self._o_nm2b) @ (qnm[:, 3 * io + 1])
+            q[:, 3 * io + 2] = (self._o_nm2b) @ (qnm[:, 3 * io + 2])
         return q
 
     def _b2nm_xp(self, q):
         # rfft along the bead axis produces (nbeads//2+1, 3*natoms) complex tensor
         qnm_complex = xp.fft.rfft(q, axis=0)
         if self.nbeads == 2:
-            return qnm_complex.real / np.sqrt(self.nbeads)
+            return qnm_complex.real / math.sqrt(self.nbeads)
 
         nmodes = self.nbeads // 2
-        qnm_complex = qnm_complex / np.sqrt(self.nbeads)
+        qnm_complex = qnm_complex / math.sqrt(self.nbeads)
         qnm = xp.zeros(q.shape, dtype=q.dtype)
         qnm[0, :] = qnm_complex[0, :].real
 
         if self.nbeads % 2 == 0:
-            mid = qnm_complex[1:-1, :] * np.sqrt(2)
+            mid = qnm_complex[1:-1, :] * math.sqrt(2)
             qnm[1:nmodes, :] = mid.real
             qnm[nmodes + 1 : self.nbeads, :] = xp.flip(mid.imag, axis=(0,))
             qnm[nmodes, :] = qnm_complex[nmodes, :].real
         else:
-            mid = qnm_complex[1:, :] * np.sqrt(2)
+            mid = qnm_complex[1:, :] * math.sqrt(2)
             qnm[1 : nmodes + 1, :] = mid.real
             qnm[nmodes + 1 : self.nbeads, :] = xp.flip(mid.imag, axis=(0,))
 
@@ -578,11 +581,11 @@ class nm_fft(
         nbeads = self.nbeads
         if nbeads == 2:
             qc = xp.astype(qnm, xp.complex128) if hasattr(xp, "astype") else qnm + 0j
-            return xp.fft.irfft(qc, n=nbeads, axis=0) * np.sqrt(nbeads)
+            return xp.fft.irfft(qc, n=nbeads, axis=0) * math.sqrt(nbeads)
 
         nmodes = nbeads // 2
         odd = nbeads - 2 * nmodes
-        isqrt2 = np.sqrt(0.5)
+        isqrt2 = math.sqrt(0.5)
 
         # assemble the complex rfft input from the real-valued NM layout
         real_part = xp.zeros((nbeads // 2 + 1, qnm.shape[1]), dtype=qnm.dtype)
@@ -599,7 +602,7 @@ class nm_fft(
             imag_part[1:, :] = xp.flip(qnm[nmodes + 1 : nbeads, :], axis=(0,)) * isqrt2
 
         qnm_complex = real_part + 1j * imag_part
-        q = xp.fft.irfft(qnm_complex, n=nbeads, axis=0) * np.sqrt(nbeads)
+        q = xp.fft.irfft(qnm_complex, n=nbeads, axis=0) * math.sqrt(nbeads)
 
         for io in self._open:
             q[:, 3 * io] = xp.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=([1], [0]))

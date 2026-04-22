@@ -1,5 +1,7 @@
 import numpy as np
 
+from ipi.utils.array_backend import xp, xp_size, to_numpy
+from ipi.utils.depend import dstrip
 from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -16,13 +18,14 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     nbeads = sm.fix.fixbeads.nbeads
     natoms = sm.fix.fixbeads.natoms
     coef = sm.coef  # new_disc
-    m3 = sm.fix.fixbeads.m3
+    m3 = dstrip(sm.fix.fixbeads.m3)
     omega2 = sm.omegan**2
+    h = dstrip(h)
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
 
-    href = np.zeros((ndiag, ii))
+    href = xp.zeros((ndiag, ii))
 
     # add physical part
     for i in range(nbeads):
@@ -30,7 +33,7 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
             :, i * natoms * 3 : (i + 1) * natoms * 3
         ]  # Peaks one physical hessian
         for j in range(1, ndiag):
-            href[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = np.diag(
+            href[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = xp.diag(
                 h_aux, ndiag - 1 - j
             )
 
@@ -40,22 +43,22 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
         if masses:
             d_corner = m3[0] * omega2
         else:
-            d_corner = np.ones(m3[0].shape) * omega2
+            d_corner = xp.ones(m3[0].shape) * omega2
 
-        d_0 = np.array([[d_corner * 2]]).repeat(nbeads - 2, axis=0).flatten()
-        diag_sp = np.concatenate((d_corner, d_0, d_corner))
+        d_0 = xp.tile(d_corner * 2, (nbeads - 2,))
+        diag_sp = xp.concat((d_corner, d_0, d_corner))
         href[-1, :] += diag_sp
 
         # Non-Diagonal
         d_out = -d_corner
-        ndiag_sp = np.array([[d_out]]).repeat(nbeads - 1, axis=0).flatten()
-        href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
+        ndiag_sp = xp.tile(d_out, (nbeads - 1,))
+        href[0, :] = xp.concat((xp.zeros(natoms * 3), ndiag_sp))
 
     # Add safety shift value
     href[-1, :] += shift
 
     # ------- new Discretization --------------
-    hnew = np.zeros((ndiag, ii))
+    hnew = xp.zeros((ndiag, ii))
 
     # add physical part
     for i in range(nbeads):
@@ -63,7 +66,7 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
             h[:, i * natoms * 3 : (i + 1) * natoms * 3] * (coef[i] + coef[i + 1]) / 2
         )  # Peaks one physical hessian
         for j in range(1, ndiag):
-            hnew[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = np.diag(
+            hnew[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = xp.diag(
                 h_aux, ndiag - 1 - j
             )
 
@@ -72,25 +75,23 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
         if masses:
             d_corner = m3[0] * omega2
         else:
-            d_corner = np.ones(m3[0].shape) * omega2
+            d_corner = xp.ones(m3[0].shape) * omega2
 
         d_init = d_corner / coef[1]
         d_fin = d_corner / coef[-2]
 
         d_mid = d_corner * (1.0 / coef[1] + 1.0 / coef[2])
         for i in range(2, nbeads - 1):
-            d_mid = np.concatenate(
-                (d_mid, d_corner * (1.0 / coef[i] + 1.0 / coef[i + 1]))
-            )
+            d_mid = xp.concat((d_mid, d_corner * (1.0 / coef[i] + 1.0 / coef[i + 1])))
 
-        diag_sp = np.concatenate((d_init, d_mid, d_fin))
+        diag_sp = xp.concat((d_init, d_mid, d_fin))
         hnew[-1, :] += diag_sp
 
         # Non-Diagonal
         d_mid = -d_corner * (1.0 / coef[1])
         for i in range(2, nbeads):
-            d_mid = np.concatenate((d_mid, -d_corner * (1.0 / coef[i])))
-        hnew[0, :] = np.concatenate((np.zeros(natoms * 3), d_mid))
+            d_mid = xp.concat((d_mid, -d_corner * (1.0 / coef[i])))
+        hnew[0, :] = xp.concat((xp.zeros(natoms * 3), d_mid))
 
     # Add safety shift value
     hnew[-1, :] += shift
@@ -103,7 +104,7 @@ def sym_band(A):
     u = len(A) - 1
     lu = u
     M = A.shape[1]
-    newA = np.empty((u + lu + 1, M))
+    newA = xp.empty((u + lu + 1, M))
     newA[: u + 1] = A
     for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
@@ -124,15 +125,12 @@ def invmul_banded(A, B, posdef=False):
         raise ValueError(" ")
 
     if posdef:
-        return linalg.solveh_banded(A, B)
+        return xp.asarray(linalg.solveh_banded(to_numpy(A), to_numpy(B)))
     else:
         u = len(A) - 1
         lu = u
         newA = sym_band(A)
-        # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
-        # print linalg.eigvals_banded(A)
-        # sys.exit(0)
-        return linalg.solve_banded((lu, u), newA, B)
+        return xp.asarray(linalg.solve_banded((lu, u), to_numpy(newA), to_numpy(B)))
 
 
 def diag_banded(A, n=2):
@@ -147,10 +145,14 @@ def diag_banded(A, n=2):
         raise ValueError(" ")
 
     d = eig_banded(
-        A, select="i", select_range=(0, n), eigvals_only=True, check_finite=False
+        to_numpy(A),
+        select="i",
+        select_range=(0, n),
+        eigvals_only=True,
+        check_finite=False,
     )
 
-    return d
+    return xp.asarray(d)
 
 
 def red2comp(h, nbeads, natoms, coef=None):
@@ -159,10 +161,10 @@ def red2comp(h, nbeads, natoms, coef=None):
     info("\n @Instanton: Creating 'complete' physical hessian \n", verbosity.high)
 
     if coef is None:
-        coef = np.ones(nbeads + 1).reshape(-1, 1)
+        coef = xp.reshape(xp.ones(nbeads + 1), (-1, 1))
     i = natoms * 3
     ii = nbeads * i
-    h0 = np.zeros((ii, ii), float)
+    h0 = xp.zeros((ii, ii))
 
     for j in range(nbeads):
         h0[j * i : (j + 1) * i, j * i : (j + 1) * i] = (
@@ -178,42 +180,42 @@ def get_imvector(h, m3):
     OUT    imv    = eigenvector corresponding to the imaginary mode
     """
     info("@get_imvector", verbosity.high)
-    if h.size != m3.size**2:
+    h = dstrip(h)
+    m3 = dstrip(m3)
+    if xp_size(h) != xp_size(m3) ** 2:
         raise ValueError(
             "@Get_imvector. Initial hessian size does not match system size."
         )
     m = 1.0 / (m3**0.5)
-    mm = np.outer(m, m)
-    hm = np.multiply(h, mm)
+    mm = xp.linalg.outer(m, m)
+    hm = h * mm
 
     # Simmetrize to use linalg.eigh
-    hmT = hm.T
-    hm = (hmT + hm) / 2.0
+    hm = (hm.T + hm) / 2.0
 
-    d, w = np.linalg.eigh(hm)
-    freq = np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)
+    d, w = xp.linalg.eigh(hm)
+    freq = xp.sign(d) * xp.abs(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)
 
-    info(" @GEOP: 1 frequency %4.1f cm^-1" % freq[0], verbosity.low)
-    info(" @GEOP: 2 frequency %4.1f cm^-1" % freq[1], verbosity.low)
-    info(" @GEOP: 3 frequency %4.1f cm^-1" % freq[2], verbosity.low)
-    if freq[0] > -80 and freq[0] < 0:
-        raise ValueError(
-            " @GEOP: Small negative frequency %4.1f cm^-1" % freq, verbosity.low
-        )
-    elif freq[0] > 0:
+    f0, f1, f2 = float(freq[0]), float(freq[1]), float(freq[2])
+    info(" @GEOP: 1 frequency %4.1f cm^-1" % f0, verbosity.low)
+    info(" @GEOP: 2 frequency %4.1f cm^-1" % f1, verbosity.low)
+    info(" @GEOP: 3 frequency %4.1f cm^-1" % f2, verbosity.low)
+    if f0 > -80 and f0 < 0:
+        raise ValueError(" @GEOP: Small negative frequency %4.1f cm^-1" % f0)
+    elif f0 > 0:
         raise ValueError(
             "@GEOP: The smallest frequency is positive. We aren't in a TS. Please check your hessian"
         )
 
     info(
-        " @get_imvector: We stretch along the mode with freq %f cm^1" % freq[0],
+        " @get_imvector: We stretch along the mode with freq %f cm^1" % f0,
         verbosity.low,
     )
 
     imv = w[:, 0] / (m3[:] ** 0.5)
-    imv = imv / np.linalg.norm(imv)
+    imv = imv / xp.linalg.vector_norm(imv)
 
-    return imv.reshape(1, imv.size)
+    return xp.reshape(imv, (1, xp_size(imv)))
 
 
 # def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
@@ -290,18 +292,16 @@ def print_instanton_geo(
 def print_instanton_hess(prefix, step, hessian, output_maker):
     """Print physical part of the instanton hessian"""
     outfile = output_maker.get_output(prefix + ".hess_" + str(step), "w")
-    np.savetxt(outfile, hessian.reshape(1, hessian.size))
+    np.savetxt(outfile, to_numpy(xp.reshape(hessian, (1, xp_size(hessian)))))
     outfile.close_stream()
 
 
 def ms_pathway(pos, m3):
     """Compute mass scaled pathway"""
-    dx = list()
-    path = np.zeros(pos.shape[0])
+    path = xp.zeros(pos.shape[0])
     for i in range(1, pos.shape[0]):
-        d_norm = np.linalg.norm((pos[i] - pos[i - 1]) * m3[i] ** 0.5)
-        dx.append(d_norm)
-        path[i] = np.sum(dx[:i])
+        d_norm = xp.linalg.vector_norm((pos[i] - pos[i - 1]) * m3[i] ** 0.5)
+        path[i] = path[i - 1] + d_norm
     return path
 
 
@@ -338,9 +338,10 @@ class Fix(object):
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
         self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
-        self.fixbeads.q[:] = self.get_active_vector(beads.clone().q, 1)
-        self.fixbeads.m[:] = self.get_active_vector(beads.clone().m, 0)
-        self.fixbeads.names[:] = self.get_active_vector(beads.clone().names, 0)
+        clone = beads.clone()
+        self.fixbeads.q[:] = self.get_active_vector(dstrip(clone.q), 1)
+        self.fixbeads.m[:] = self.get_active_vector(dstrip(clone.m), 0)
+        self.fixbeads.names[:] = self.get_active_vector(dstrip(clone.names), 0)
 
         mask3a = np.ones(9 * self.natoms, dtype=bool)
         for i in range(9):
@@ -411,13 +412,13 @@ class Fix(object):
             return vector
 
         if t == 1:
-            full_vector = np.zeros((self.nbeads, 3 * self.natoms))
+            full_vector = xp.zeros((self.nbeads, 3 * self.natoms))
             full_vector[:, self.get_mask(1)] = vector
 
             return full_vector
 
         elif t == 2:
-            full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
+            full_vector = xp.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
 
             ii = 0
             for i in self.get_mask(1):
@@ -427,7 +428,7 @@ class Fix(object):
             return full_vector
 
         elif t == 3:
-            full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
+            full_vector = xp.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
             full_vector[:, self.fix.get_mask(2)] = vector
 
             return full_vector

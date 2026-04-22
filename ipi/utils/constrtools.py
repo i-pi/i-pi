@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 import numpy as np
+from ipi.utils.array_backend import xp
 
 from ipi.utils.depend import *
 
@@ -136,9 +137,9 @@ class ConstraintBase:
         """Computes a cholesky decomposition of the mass-scaled Jacobian,
         used in a few places"""
 
-        dg = dstrip(self.Dg).copy()
+        dg = xp.asarray(dstrip(self.Dg), copy=True)
         dgm = dg / self.m3
-        return np.dot(dg, dgm.T)
+        return (dg) @ (dgm.T)
 
     if spla is None:
 
@@ -146,7 +147,7 @@ class ConstraintBase:
             """Computes a cholesky decomposition of the mass-scaled Jacobian,
             used in a few places"""
 
-            return np.linalg.cholesky(self.Gram)
+            return xp.linalg.cholesky(self.Gram)
 
     else:
 
@@ -224,7 +225,7 @@ class RigidBondConstraint(ValueConstraintBase):
         # if constraint values are not specified, initializes based on the first frame
         if self._calc_cons:
             self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
-            self.constraint_values = np.sqrt(dstrip(self.g))
+            self.constraint_values = xp.sqrt(dstrip(self.g))
 
     def gfunc(self):
         """
@@ -238,7 +239,7 @@ class RigidBondConstraint(ValueConstraintBase):
             c_atoms = self.i3_indirect[i]
             c_dist = constraint_distances[i]
             # print q[c_atoms[0]], q[c_atoms[1]], c_dist
-            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist**2
+            r[i] = xp.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist**2
         if q[0] == float("inf"):
             ValueError("fgfgf")
             print("autsch")
@@ -293,15 +294,15 @@ class AngleConstraint(ValueConstraintBase):
 
         q = dstrip(self.q)
         r = np.zeros(self.ncons)
-        constraint_cosines = np.cos(dstrip(self.constraint_values))
+        constraint_cosines = xp.cos(dstrip(self.constraint_values))
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
             c_cos = constraint_cosines[i]
             q1 = q[c_atoms[1]] - q[c_atoms[0]]
-            r1 = np.sqrt(np.dot(q1, q1))
+            r1 = xp.sqrt(((q1) @ (q1)))
             q2 = q[c_atoms[2]] - q[c_atoms[0]]
-            r2 = np.sqrt(np.dot(q2, q2))
-            r[i] = np.dot(q1, q2) / r1 / r2
+            r2 = xp.sqrt(((q2) @ (q2)))
+            r[i] = ((q1) @ (q2)) / r1 / r2
             r[i] -= c_cos
         return r
 
@@ -315,12 +316,12 @@ class AngleConstraint(ValueConstraintBase):
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
             q1 = q[c_atoms[1]] - q[c_atoms[0]]
-            r1 = np.sqrt(np.dot(q1, q1))
+            r1 = xp.sqrt(((q1) @ (q1)))
             q1 /= r1
             q2 = q[c_atoms[2]] - q[c_atoms[0]]
-            r2 = np.sqrt(np.dot(q2, q2))
+            r2 = xp.sqrt(((q2) @ (q2)))
             q2 /= r2
-            ct = np.dot(q1, q2)
+            ct = (q1) @ (q2)
             r[i][c_atoms[1]] = (q2 - ct * q1) / r1
             r[i][c_atoms[2]] = (q1 - ct * q2) / r2
             r[i][c_atoms[0]] = -(r[i][c_atoms[1]] + r[i][c_atoms[2]])
@@ -342,7 +343,7 @@ class EckartConstraint(ConstraintBase):
         )
 
         # Check that there are no repeats
-        if np.any(self.constrained_indices != self.i_unique):
+        if xp.any(self.constrained_indices != self.i_unique):
             raise ValueError("repeated atom indices in EckartConstraint")
         self.i3_indirect.shape = (-1, 3)
         if len(constraint_values) == 0:
@@ -354,7 +355,10 @@ class EckartConstraint(ConstraintBase):
             self._calc_cons = False
             self._qref = depend_array(
                 name="qref",
-                value=np.reshape(constraint_values, self.i3_indirect.shape).copy(),
+                value=xp.asarray(
+                    xp.reshape(xp.asarray(constraint_values), self.i3_indirect.shape),
+                    copy=True,
+                ),
             )
 
     def bind(self, beads):
@@ -377,7 +381,7 @@ class EckartConstraint(ConstraintBase):
             name="qref_com",
             value=np.zeros(3, float),
             func=(
-                lambda: np.sum(
+                lambda: xp.sum(
                     dstrip(self.qref) * dstrip(self.m3).reshape((-1, 3)), axis=0
                 )
                 / self.mtot
@@ -414,8 +418,8 @@ class EckartConstraint(ConstraintBase):
         qref = dstrip(self.qref)
         r = np.zeros(self.ncons)
         Delta = q - qref
-        r[:3] = np.sum(m * Delta, axis=0) / self.mtot
-        r[3:] = np.sum(np.cross(dstrip(self.mqref_rel), Delta), axis=0) / self.mtot
+        r[:3] = xp.sum(m * Delta, axis=0) / self.mtot
+        r[3:] = xp.sum(np.cross(dstrip(self.mqref_rel), Delta), axis=0) / self.mtot
         return r
 
     def Dgfunc(self, reduced=False):

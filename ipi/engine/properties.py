@@ -7,6 +7,8 @@ prepares them for output.
 # See the "licenses" directory for full license information.
 
 
+import math
+
 import numpy as np
 
 from ipi.utils.array_backend import xp, to_numpy
@@ -284,7 +286,7 @@ class Properties:
                       form [a, b, c, A, B, C], where A is the angle between the sides of length b and c in degrees, and B and C
                       are defined similarly. Since the output mixes different units, a, b and c can only be output in bohr.""",
                 "size": 6,
-                "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
+                "func": (lambda: xp.asarray(h2abc_deg(self.cell.h))),
             },
             "Efield": {
                 "dimension": "electric-field",
@@ -569,7 +571,7 @@ class Properties:
                 "longhelp": """The positions of all the beads of a particle given its index.
                         Takes an argument index (zero based).""",
                 "func": (
-                    lambda atom="": np.asarray(
+                    lambda atom="": xp.stack(
                         [
                             self.get_atom_vec(self.beads.q, atom=atom, bead=j)
                             for j in range(self.beads.nbeads)
@@ -583,7 +585,7 @@ class Properties:
                 "longhelp": """The forces acting on all the beads of a particle given its index. Takes arguments index
                        and bead (both zero based). If bead is not specified, refers to the centroid.""",
                 "func": (
-                    lambda atom="": np.asarray(
+                    lambda atom="": xp.stack(
                         [
                             self.get_atom_vec(self.forces.f, atom=atom, bead=j)
                             for j in range(self.beads.nbeads)
@@ -1076,8 +1078,9 @@ class Properties:
                 % bead
             )
 
+        prop_vec = dstrip(prop_vec)
         if bead < 0:
-            atom_vec = np.zeros(3)
+            atom_vec = xp.zeros(3)
             for b in range(self.beads.nbeads):
                 atom_vec += prop_vec[b, 3 * atom : 3 * (atom + 1)]
             return atom_vec / float(self.beads.nbeads)
@@ -1162,7 +1165,7 @@ class Properties:
 
             if len(self.motion.fixatoms_dof) > 0:
                 # Note that fixatom should NOT be compatitable with fixcom!
-                flags = np.zeros(self.beads.natoms * 3)
+                flags = xp.zeros(self.beads.natoms * 3)
                 flags[self.motion.fixatoms_dof] += 1  # mark all fixed atom dof as 1
                 dof_ids = np.concatenate(
                     (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
@@ -1172,7 +1175,7 @@ class Properties:
                     if self.motion.enstype == "nvt-cc"
                     else self.beads.nbeads
                 )
-                eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
+                eff_number_fixed_dof += xp.sum(flags[dof_ids]) * eff_nbeads
 
             kemd += (
                 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
@@ -1214,7 +1217,7 @@ class Properties:
 
         f = dstrip(self.forces.f)
         # subtracts centroid
-        q = dstrip(self.beads.q).copy()
+        q = xp.asarray(dstrip(self.beads.q), copy=True)
         qc = dstrip(self.beads.qc)
         for b in range(self.beads.nbeads):
             q[b] -= qc
@@ -1227,7 +1230,7 @@ class Properties:
             else:
                 ncount += 1
 
-        acv = np.dot(q.flatten(), f.flatten())
+        acv = (q.flatten()) @ (f.flatten())
         acv *= -0.5 / self.beads.nbeads
         acv += ncount * 1.5 * Constants.kb * self.ensemble.temp
 
@@ -1308,7 +1311,7 @@ class Properties:
     def get_fqvirial(self, ref="", units=""):
         if self.fqref is None:
             if ref == "":
-                self.fqref = np.zeros(3 * self.beads.natoms)
+                self.fqref = xp.zeros(3 * self.beads.natoms)
             else:
                 self.fqref = np.loadtxt(ref).flatten() * unit_to_internal(
                     "length", units, 1
@@ -1319,7 +1322,7 @@ class Properties:
                     )
         fq = 0.0
         for b in range(self.beads.nbeads):
-            fq += np.dot(self.forces.f[b], self.beads.q[b] - self.fqref)
+            fq += (self.forces.f[b]) @ (self.beads.q[b] - self.fqref)
 
         return fq * 0.5 / self.beads.nbeads
 
@@ -1735,7 +1738,7 @@ class Properties:
             iatom = -1
             latom = atom
 
-        tkcv = np.zeros((6), float)
+        tkcv = xp.zeros((6), dtype=xp.float64)
         ncount = 0
         for i in range(self.beads.natoms):
             if atom != "" and iatom != i and latom != self.beads.names[i]:
@@ -1759,7 +1762,7 @@ class Properties:
             p = dstrip(self.beads.pc)
         else:
             p = dstrip(self.beads[bead])
-        pcom = np.zeros(3)
+        pcom = xp.zeros(3)
         tm = 0
         for i in range(self.beads.natoms):
             if latom != "" and latom != self.beads.names[i]:
@@ -1805,7 +1808,7 @@ class Properties:
         f = dstrip(self.forces.f)
 
         # I implement this for the most general case. In practice T_ij = <p_i p_j>/(2sqrt(m_i m_j))
-        kcv = np.zeros((6), float)
+        kcv = xp.zeros((6), dtype=xp.float64)
         for b in range(self.beads.nbeads):
             kcv[0] += (
                 mi * (q[b, ai] - qc[ai]) * f[b, aj]
@@ -1832,7 +1835,7 @@ class Properties:
                 + mj * (q[b, aj + 2] - qc[aj + 2]) * f[b, ai + 1]
             )  # Tyz
 
-        kcv *= -0.5 / (self.beads.nbeads * 2 * np.sqrt(mi * mj))
+        kcv *= -0.5 / (self.beads.nbeads * 2 * xp.sqrt(mi * mj))
         if i == j:
             kcv[0:3] += 0.5 * Constants.kb * self.ensemble.temp
 
@@ -1873,9 +1876,9 @@ class Properties:
             rg_at = 0.0
             for j in range(nb):
                 dq = q[j, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]
-                rg_at += np.dot(dq, dq)
+                rg_at += (dq) @ (dq)
             ncount += 1
-            rg_tot += np.sqrt(rg_at / float(nb))
+            rg_tot += xp.sqrt(rg_at / float(nb))
 
         if ncount == 0:
             raise IndexError(
@@ -1894,7 +1897,7 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = np.zeros((3, 3), float)
+        kst = xp.zeros((3, 3), dtype=xp.float64)
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)
@@ -1905,11 +1908,11 @@ class Properties:
         for b in range(self.beads.nbeads):
             for i in range(3):
                 for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3], fall[b, j:na3:3])
+                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ (fall[b, j:na3:3])
 
         # return the CV estimator MULTIPLIED BY NBEADS -- again for consistency with the virial, kstress_MD, etc...
         for i in range(3):
-            kst[i, i] += self.beads.nbeads * (np.dot(pc[i:na3:3], pc[i:na3:3] / m))
+            kst[i, i] += self.beads.nbeads * (((pc[i:na3:3]) @ (pc[i:na3:3] / m)))
 
         return kst
 
@@ -1923,7 +1926,7 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = np.zeros((3, 3), float)
+        kst = xp.zeros((3, 3), dtype=xp.float64)
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)
@@ -1934,11 +1937,11 @@ class Properties:
         for b in range(self.beads.nbeads):
             for i in range(3):
                 for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3], fall[b, j:na3:3])
+                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ (fall[b, j:na3:3])
 
         # return the CV estimator MULTIPLIED BY NBEADS -- again for consistency with the virial, kstress_MD, etc...
         for i in range(3):
-            kst[i, i] += self.beads.nbeads * (np.dot(pc[i:na3:3], pc[i:na3:3] / m))
+            kst[i, i] += self.beads.nbeads * (((pc[i:na3:3]) @ (pc[i:na3:3] / m)))
 
         return kst
 
@@ -1980,8 +1983,8 @@ class Properties:
 
         beta = 1.0 / (self.ensemble.temp * Constants.kb)
 
-        u = np.array([float(ux), float(uy), float(uz)])
-        u_size = np.dot(u, u)
+        u = xp.asarray([float(ux), float(uy), float(uz)])
+        u_size = (u) @ (u)
         q = dstrip(self.beads.q)
         nat = self.beads.natoms
         nb = self.beads.nbeads
@@ -1997,8 +2000,8 @@ class Properties:
                 self.dbeads.q[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
             dV = self.dforces.pot - self.forces.pot
 
-            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
-            nx_tot += n0 * np.exp(-dV * beta / float(self.beads.nbeads))
+            n0 = xp.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
+            nx_tot += n0 * xp.exp(-dV * beta / float(self.beads.nbeads))
             ncount += 1
 
         if ncount == 0:
@@ -2025,19 +2028,17 @@ class Properties:
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
 
-        self.dcell.h = self.cell.h
+        self.dcell.h = dstrip(self.cell.h)
         self.dbeads.q[::2] = self.beads.q[::2] + eps * (q - qc)[::2]
 
         vir1 = (
-            np.dot(((q - qc)[::2]).flatten(), (self.forces.f[::2]).flatten())
+            ((((q - qc)[::2]).flatten()) @ ((self.forces.f[::2]).flatten()))
             / self.beads.nbeads
             * 2.0
         )
         vir2 = (
-            np.dot(
-                ((q - qc)[::2]).flatten(),
-                ((self.dforces.f - self.forces.f)[::2]).flatten() / eps,
-            )
+            (((q - qc)[::2]).flatten())
+            @ (((self.dforces.f - self.forces.f)[::2]).flatten() / eps)
             / self.beads.nbeads
             * 2.0
         )
@@ -2045,14 +2046,14 @@ class Properties:
         eop = (
             1.5 * self.beads.natoms / beta
             - (0.50 * vir1)
-            + np.mean(self.forces.pots[::2])
+            + xp.mean(self.forces.pots[::2])
         )
 
         r3 = 1.5 * self.beads.natoms / beta2
         r4 = 0.5 / beta * (vir1) * 1.50
         r5 = 0.5 / beta * (vir2) * 0.50
 
-        return np.asarray([eop, r3 + r4 + r5])
+        return xp.asarray([eop, r3 + r4 + r5])
 
     def get_yama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
         """Calculates the quantum scaled coordinate kinetic energy estimator.
@@ -2082,8 +2083,8 @@ class Properties:
         q = dstrip(self.beads.q)
         v0 = dstrip(self.forces.pot) / self.beads.nbeads
         while True:
-            splus = np.sqrt(1.0 + dbeta)
-            sminus = np.sqrt(1.0 - dbeta)
+            splus = math.sqrt(1.0 + dbeta)
+            sminus = math.sqrt(1.0 - dbeta)
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
@@ -2130,7 +2131,7 @@ class Properties:
 
                 break
 
-        return np.asarray([eps, eps_prime])
+        return xp.asarray([eps, eps_prime])
 
     def get_scyama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
         """Calculates the quantum scaled coordinate Suzuki-Chin
@@ -2165,8 +2166,8 @@ class Properties:
         v0 = (self.forces.pot + self.forces.potsc) / self.beads.nbeads
 
         while True:
-            splus = np.sqrt(1.0 + dbeta)
-            sminus = np.sqrt(1.0 - dbeta)
+            splus = math.sqrt(1.0 + dbeta)
+            sminus = math.sqrt(1.0 - dbeta)
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
@@ -2207,7 +2208,7 @@ class Properties:
 
                 break
 
-        return np.asarray([eps, eps_prime])
+        return xp.asarray([eps, eps_prime])
 
     def get_isotope_yama(self, alpha="1.0", atom=""):
         """Gives the components of the yamamoto scaled-mass KE estimator
@@ -2267,19 +2268,16 @@ class Properties:
             for b in range(self.beads.nbeads):
                 self.dbeads.q[b, 3 * i : 3 * (i + 1)] = qc[
                     3 * i : 3 * (i + 1)
-                ] + np.sqrt(1.0 / alpha) * (
+                ] + math.sqrt(1.0 / alpha) * (
                     q[b, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]
                 )
 
             tcv = 0.0
             for b in range(self.beads.nbeads):
-                tcv += np.dot(
-                    (
-                        self.dbeads.q[b, 3 * i : 3 * (i + 1)]
-                        - self.dbeads.qc[3 * i : 3 * (i + 1)]
-                    ),
-                    self.dforces.f[b, 3 * i : 3 * (i + 1)],
-                )
+                tcv += (
+                    self.dbeads.q[b, 3 * i : 3 * (i + 1)]
+                    - self.dbeads.qc[3 * i : 3 * (i + 1)]
+                ) @ self.dforces.f[b, 3 * i : 3 * (i + 1)]
             tcv *= -0.5 / self.beads.nbeads
             tcv += 1.5 * Constants.kb * self.ensemble.temp
 
@@ -2302,11 +2300,11 @@ class Properties:
             # here we need to take care of the sign of tcv, which might as well be
             # negative... almost never but...
             if ni == 1:
-                lawke = -logr + np.log(abs(tcv))
-                sawke = np.sign(tcv)
+                lawke = -logr + xp.log(abs(tcv))
+                sawke = xp.sign(tcv)
             else:
                 lawke, sawke = logsumlog(
-                    (lawke, sawke), (-logr + np.log(abs(tcv)), np.sign(tcv))
+                    (lawke, sawke), (-logr + xp.log(abs(tcv)), xp.sign(tcv))
                 )
 
         if ni == 0:
@@ -2314,7 +2312,7 @@ class Properties:
                 "Couldn't find an atom which matched the argument of isotope_y"
             )
 
-        return np.asarray(
+        return xp.asarray(
             [alogr / ni, alogr2 / ni, atcv / ni, atcv2 / ni, law, lawke, sawke]
         )
 
@@ -2383,10 +2381,9 @@ class Properties:
             # centroid virial contribution from atom i
             tcv = 0.0
             for b in range(self.beads.nbeads):
-                tcv += np.dot(
-                    (q[b, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]),
-                    f[b, 3 * i : 3 * (i + 1)],
-                )
+                tcv += (q[b, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]) @ f[
+                    b, 3 * i : 3 * (i + 1)
+                ]
             tcv *= -0.5 / self.beads.nbeads
             tcv += 1.5 * Constants.kb * self.ensemble.temp
 
@@ -2410,11 +2407,11 @@ class Properties:
             # here we need to take care of the sign of tcv, which might as well be
             # negative... almost never but...
             if ni == 1:
-                lawke = -logr + np.log(abs(tcv))
-                sawke = np.sign(tcv)
+                lawke = -logr + xp.log(abs(tcv))
+                sawke = xp.sign(tcv)
             else:
                 lawke, sawke = logsumlog(
-                    (lawke, sawke), (-logr + np.log(abs(tcv)), np.sign(tcv))
+                    (lawke, sawke), (-logr + xp.log(abs(tcv)), xp.sign(tcv))
                 )
 
         if ni == 0:
@@ -2422,7 +2419,7 @@ class Properties:
                 "Couldn't find an atom which matched the argument of isotope_y"
             )
 
-        return np.asarray(
+        return xp.asarray(
             [alogr / ni, alogr2 / ni, atcv / ni, atcv2 / ni, law, lawke, sawke]
         )
 
@@ -2482,7 +2479,7 @@ class Properties:
             # spr = 0.5*(alpha-1)*m_H*omegan2*sum {(q_i+1 - q_i)**2}
             spr *= 0.5 * (alpha - 1.0) * self.beads.m[i] * self.nm.omegan2
             spr2 = spr * spr
-            sprexp = np.exp(-betaP * spr)
+            sprexp = xp.exp(-betaP * spr)
 
             sprsum += spr
             spr2sum += spr2
@@ -2499,7 +2496,7 @@ class Properties:
         free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1))
         sprexpaverage = (sprexpsum / ni) * free_particle_factor
 
-        return np.asarray([spraverage, spr2average, sprexpaverage])
+        return xp.asarray([spraverage, spr2average, sprexpaverage])
 
     def get_isotope_zetasc(self, alpha="1.0", atom=""):
         """Gives the components  to directly compute the relative probablity of
@@ -2531,7 +2528,7 @@ class Properties:
             latom = atom
 
         alpha = float(alpha)
-        scalefactor = 1.0 / np.sqrt(alpha)
+        scalefactor = 1.0 / math.sqrt(alpha)
         betaP = 1.0 / (Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
         scsum = 0.0
@@ -2559,7 +2556,7 @@ class Properties:
 
             sc = self.dforces.pot - v0
             sc2 = sc * sc
-            scexp = np.exp(-betaP * sc)
+            scexp = xp.exp(-betaP * sc)
 
             scsum += sc
             sc2sum += sc2
@@ -2571,7 +2568,7 @@ class Properties:
             raise IndexError(
                 "Couldn't find an atom which matched the argument of isotope_zetasc"
             )
-        return np.asarray([scsum / ni, sc2sum / ni, scexpsum / ni])
+        return xp.asarray([scsum / ni, sc2sum / ni, scexpsum / ni])
 
     def get_isotope_zetatd_4th(self, alpha="1.0", atom=""):
         """Gives the components to directly compute the relative probablity of
@@ -2664,9 +2661,9 @@ class Properties:
 
             td = spr
             td2 = td * td
-            tdexp = np.exp(-betaP * td)
-            chinexp = np.exp(-betaP * (spr + chin))
-            tiexp = np.exp(-betaP * (spr + ti))
+            tdexp = xp.exp(-betaP * td)
+            chinexp = xp.exp(-betaP * (spr + chin))
+            tiexp = xp.exp(-betaP * (spr + ti))
 
             tdsum += td
             td2sum += td2
@@ -2684,7 +2681,7 @@ class Properties:
         # which is ( \frac{mP}{2\pi\beta\hbar^2})^{3P/2}
         # we have also removed the centroid mode contribution to the ratio, as it is irrelevant here.
 
-        return np.asarray(
+        return xp.asarray(
             [
                 tdsum / ni,
                 td2sum / ni,
@@ -2726,7 +2723,7 @@ class Properties:
             latom = atom
 
         alpha = float(alpha)
-        scalefactor = 1.0 / np.sqrt(alpha)
+        scalefactor = 1.0 / math.sqrt(alpha)
         betaP = 1.0 / (Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
         scsum = 0.0
@@ -2787,9 +2784,9 @@ class Properties:
             ti *= 1.0 / self.beads.m[i] * (1.0 / 24.0) / self.nm.omegan2
 
             sc2 = sc * sc
-            scexp = np.exp(-betaP * sc)
-            chinexp = np.exp(-betaP * (sc + chin))
-            tiexp = np.exp(-betaP * (sc + ti))
+            scexp = xp.exp(-betaP * sc)
+            chinexp = xp.exp(-betaP * (sc + chin))
+            tiexp = xp.exp(-betaP * (sc + ti))
 
             scsum += sc
             sc2sum += sc2
@@ -2803,7 +2800,7 @@ class Properties:
                 "Couldn't find an atom which matched the argument of isotope_zetasc"
             )
 
-        return np.asarray(
+        return xp.asarray(
             [scsum / ni, sc2sum / ni, scexpsum / ni, tiexpsum / ni, chinexpsum / ni]
         )
 
@@ -2826,9 +2823,9 @@ class Properties:
 
         chin *= -betaP
         chin2 = chin**2
-        chinexp = np.exp(chin)
+        chinexp = xp.exp(chin)
 
-        return np.asarray([chin, chin2, chinexp])
+        return xp.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
         f = dstrip(self.forces.f)
@@ -2846,9 +2843,9 @@ class Properties:
 
         ti *= -betaP
         ti2 = ti**2
-        tiexp = np.exp(ti)
+        tiexp = xp.exp(ti)
 
-        return np.asarray([ti, ti2, tiexp])
+        return xp.asarray([ti, ti2, tiexp])
 
     def get_ti_term(self, atom=""):
         """Calculates the TI correction potential.
@@ -2989,7 +2986,7 @@ class Trajectories:
                             self.system.motion.integrator.time
                         )
                         if isinstance(self.system.motion, DrivenDynamics)
-                        else np.zeros((self.system.beads.natoms * 3))
+                        else xp.zeros((self.system.beads.natoms * 3))
                     )
                 ),
             },
@@ -3015,7 +3012,7 @@ class Trajectories:
                 "help": "The suzuki-chin centroid coordinates.",
                 "func": (
                     lambda: 2
-                    * np.sum(self.system.beads.q[::2, :], axis=0)
+                    * xp.sum(self.system.beads.q[::2, :], axis=0)
                     / self.system.beads.nbeads
                 ),
             },
@@ -3024,7 +3021,7 @@ class Trajectories:
                 "help": "The suzuki-chin centroid velocity.",
                 "func": (
                     lambda: 2
-                    * np.sum(
+                    * xp.sum(
                         (self.system.beads.p / self.system.beads.m3)[::2, :], axis=0
                     )
                     / self.system.beads.nbeads
@@ -3035,7 +3032,7 @@ class Trajectories:
                 "help": "The suzuki-chin centroid coordinates.",
                 "func": (
                     lambda: 2
-                    * np.sum(self.system.beads.q[1::2, :], axis=0)
+                    * xp.sum(self.system.beads.q[1::2, :], axis=0)
                     / self.system.beads.nbeads
                 ),
             },
@@ -3044,7 +3041,7 @@ class Trajectories:
                 "help": "The suzuki-chin centroid velocity.",
                 "func": (
                     lambda: 2
-                    * np.sum(
+                    * xp.sum(
                         (self.system.beads.p / self.system.beads.m3)[1::2, :], axis=0
                     )
                     / self.system.beads.nbeads
@@ -3059,7 +3056,7 @@ class Trajectories:
                 "dimension": "force",
                 "help": "The force acting on the centroid.",
                 "func": (
-                    lambda: np.sum(self.system.forces.f, 0)
+                    lambda: xp.sum(self.system.forces.f, 0)
                     / float(self.system.beads.nbeads)
                 ),
             },
@@ -3170,7 +3167,7 @@ class Trajectories:
         of freedom.
         """
 
-        rv = np.zeros(self.system.beads.natoms * 3)
+        rv = xp.zeros(self.system.beads.natoms * 3)
         for b in range(self.system.beads.nbeads):
             rv[:] += (
                 self.system.beads.q[b] - self.system.beads.qc
@@ -3184,10 +3181,10 @@ class Trajectories:
         due to each atom.
         """
 
-        rv = np.zeros((self.system.beads.natoms, 3))
+        rv = xp.zeros((self.system.beads.natoms, 3))
         # helper arrays to make it more obvious what we are computing
-        dq = np.zeros((self.system.beads.natoms, 3))
-        f = np.zeros((self.system.beads.natoms, 3))
+        dq = xp.zeros((self.system.beads.natoms, 3))
+        f = xp.zeros((self.system.beads.natoms, 3))
         for b in range(self.system.beads.nbeads):
             dq[:] = (self.system.beads.q[b] - self.system.beads.qc).reshape(
                 (self.system.beads.natoms, 3)
@@ -3212,12 +3209,12 @@ class Trajectories:
         qc = dstrip(self.system.beads.qc)
         nat = self.system.beads.natoms
         nb = self.system.beads.nbeads
-        rg = np.zeros(3 * nat)
+        rg = xp.zeros(3 * nat)
         for i in range(nb):
             for j in range(nat):
                 dq = q[i, 3 * j : 3 * (j + 1)] - qc[3 * j : 3 * (j + 1)]
                 rg[3 * j : 3 * (j + 1)] += dq * dq
-        return np.sqrt(rg / float(nb))
+        return xp.sqrt(rg / float(nb))
 
     def get_isotope_zetatd(self, alpha="1.0", atom=""):
         """Get the thermodynamic isotope ratio direct estimator for each atom.
@@ -3247,7 +3244,7 @@ class Trajectories:
 
         nat = self.system.beads.natoms
         nb = self.system.beads.nbeads
-        zetatd = np.zeros((nat, 3))
+        zetatd = xp.zeros((nat, 3))
         # strips dependency control since we are not gonna change the true beads in what follows
         q = dstrip(self.system.beads.q)
 
@@ -3266,8 +3263,8 @@ class Trajectories:
                 0.5 * (alpha - 1.0) * self.system.beads.m[i] * self.system.nm.omegan2
             )
 
-        zetatd[:, 1] = np.square(zetatd[:, 0])
-        zetatd[:, 2] = np.exp(
+        zetatd[:, 1] = zetatd[:, 0] ** 2
+        zetatd[:, 2] = xp.exp(
             -1.0 / (Constants.kb * self.system.ensemble.temp * nb) * zetatd[:, 0]
         )
 
@@ -3299,12 +3296,12 @@ class Trajectories:
             latom = atom
 
         alpha = float(alpha)
-        scalefactor = 1.0 / np.sqrt(alpha)
+        scalefactor = 1.0 / math.sqrt(alpha)
         beta = 1.0 / (Constants.kb * self.system.ensemble.temp)
 
         nat = self.system.beads.natoms
         nb = self.system.beads.nbeads
-        zetasc = np.zeros((nat, 3))
+        zetasc = xp.zeros((nat, 3))
 
         qc = dstrip(self.system.beads.qc)
         q = dstrip(self.system.beads.q)
@@ -3325,8 +3322,8 @@ class Trajectories:
 
             self.dbeads.q = q
 
-        zetasc[:, 1] = np.square(zetasc[:, 0])
-        zetasc[:, 2] = np.exp(-1.0 * beta * zetasc[:, 0])
+        zetasc[:, 1] = zetasc[:, 0] ** 2
+        zetasc[:, 2] = xp.exp(-1.0 * beta * zetasc[:, 0])
 
         return zetasc.reshape(nat * 3)
 
@@ -3373,7 +3370,7 @@ class Trajectories:
         """Return a component (xyz = x, y, or z) of the Born Effective Charge Tensors."""
         # allocate empty BECs
         shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
-        bec = np.full(shape, np.nan)
+        bec = xp.full(shape, float("nan"))
         if isinstance(self.system.motion, DrivenDynamics):
             # get all the BECs
             BEC = self.system.motion.Born_Charges.bec
@@ -3381,7 +3378,7 @@ class Trajectories:
             xyz2index = {"x": 0, "y": 1, "z": 2}
             index = xyz2index[xyz]
             # get the `xyz` component of the BECs for all the beads
-            bec = np.asarray([bec[:, index] for bec in BEC])
+            bec = xp.stack([b[:, index] for b in BEC])
             # `reshape` should not be necessary, but it guarantees the shape to be correct
-            bec = bec.reshape(shape)
+            bec = xp.reshape(bec, shape)
         return bec

@@ -11,6 +11,7 @@ appropriate conserved energy quantity.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
@@ -115,11 +116,12 @@ class AtomSwap(Motion):
 
             old_energy = self.forces.pot
             # swap the atom positions
-            self.dbeads.q[:] = self.beads.q[:]
-            self.dbeads.q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
-            self.dbeads.q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
+            q_src = dstrip(self.beads.q)
+            self.dbeads.q[:] = q_src
+            self.dbeads.q[:, 3 * i : 3 * i + 3] = q_src[:, 3 * j : 3 * j + 3]
+            self.dbeads.q[:, 3 * j : 3 * j + 3] = q_src[:, 3 * i : 3 * i + 3]
             new_energy = self.dforces.pot
-            pexchange = np.exp(-betaP * (new_energy - old_energy))
+            pexchange = xp.exp(-betaP * (new_energy - old_energy))
 
             # attemps the exchange, and actually propagate the exchange if something has happened
             if pexchange > self.prng.u:

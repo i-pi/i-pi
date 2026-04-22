@@ -279,7 +279,7 @@ class Beads:
                 dq = q[b, :] - q[b - 1, :]
             else:
                 dq = q[b, :] - q[self.nbeads - 1, :]
-            epath += np.dot(dq, m * dq)
+            epath += (dq) @ (m * dq)
         print(
             "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
         )
