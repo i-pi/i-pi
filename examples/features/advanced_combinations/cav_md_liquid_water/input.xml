@@ -4,7 +4,7 @@
     <trajectory filename='xc' stride='4' format='xyz'> x_centroid{angstrom} </trajectory>
     <checkpoint filename='checkpoint' stride='4' overwrite='True'/>
   </output>
-  <total_steps>4000</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>

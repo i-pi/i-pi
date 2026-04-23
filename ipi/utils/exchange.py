@@ -9,6 +9,7 @@ Used in /engine/normalmodes.py
 import math
 import numpy as np
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 import ipi.utils.units as units
 import sys
 
@@ -41,7 +42,8 @@ class ExchangePotential:
         dpipe(nm._omegan2, self._omegan2)
 
         self._bosons = depend_array(
-            name="bosons", value=np.zeros(self.nbosons, dtype=int)
+            name="bosons",
+            value=xp.zeros(self.nbosons, dtype=xp.int64),
         )
         dpipe(nm._bosons, self._bosons)
 
@@ -64,7 +66,7 @@ class ExchangePotential:
             name="qbosons",
             value=np.zeros((self.nbeads, self.nbosons, 3)),
             func=lambda: dstrip(self.beads.q).reshape(self.nbeads, -1, 3)[
-                :, self.bosons
+                :, dstrip(self.bosons)
             ],
             dependencies=[self.beads._q, self.bosons],
         )
@@ -72,18 +74,18 @@ class ExchangePotential:
         # self.bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
         self._bead_diff_intra = depend_array(
             name="bead_diff_intra",
-            value=np.zeros((self.nbeads - 1, self.nbosons, 3)),
-            func=lambda: np.diff(dstrip(self.qbosons), axis=0),
+            value=xp.zeros((self.nbeads - 1, self.nbosons, 3)),
+            func=lambda: xp.diff(dstrip(self.qbosons), axis=0),
             dependencies=[self._qbosons],
         )
 
         # self.bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
         self._bead_diff_inter_first_last_bead = depend_array(
             name="bead_diff_inter_first_last_bead",
-            value=np.zeros((self.nbosons, self.nbosons, 3)),
+            value=xp.zeros((self.nbosons, self.nbosons, 3)),
             func=lambda: (
-                dstrip(self.qbosons)[0, :, np.newaxis, :]
-                - dstrip(self.qbosons)[self.nbeads - 1, np.newaxis, :, :]
+                dstrip(self.qbosons)[0, :, None, :]
+                - dstrip(self.qbosons)[self.nbeads - 1, None, :, :]
             ),
             dependencies=[self._qbosons],
         )
@@ -91,7 +93,7 @@ class ExchangePotential:
         # self.cycle_energies[u, v] is the ring polymer energy of the cycle on particle indices u,...,v
         self._cycle_energies = depend_array(
             name="cycle_energies",
-            value=np.zeros((self.nbosons, self.nbosons), dtype=float, order="F"),
+            value=xp.zeros((self.nbosons, self.nbosons)),
             func=self.get_cycle_energies,
             dependencies=[
                 self._boson_m,
@@ -105,7 +107,7 @@ class ExchangePotential:
         self._prefix_V = depend_array(
             name="V",
             func=self.get_prefix_V,
-            value=np.zeros(self.nbosons + 1, float),
+            value=xp.zeros(self.nbosons + 1),
             dependencies=[self._cycle_energies, self._betaP],
         )
 
@@ -114,7 +116,7 @@ class ExchangePotential:
         self._suffix_V = depend_value(
             name="V",
             func=self.get_suffix_V,
-            value=np.zeros(self.nbosons + 1, float),
+            value=xp.zeros(self.nbosons + 1),
             dependencies=[self._cycle_energies, self._betaP],
         )
 
@@ -162,8 +164,8 @@ class ExchangePotential:
         """
         Ensures that all the bosons have the same mass, and returns it.
         """
-        masses = dstrip(self.beads.m)[self.bosons]
-        if len(set(masses)) > 1:
+        masses = dstrip(self.beads.m)[dstrip(self.bosons)]
+        if not xp.all(masses == masses[0]):
             raise ValueError(
                 "Bosons must have the same mass, found %s for bosons %s"
                 % (str(masses), str(self.bosons))
@@ -175,21 +177,19 @@ class ExchangePotential:
         Evaluate all the cycle energies, as outlined in Eqs. 5-7 of arXiv:2305.18025.
         Returns an upper-triangular matrix, Emks[u,v] is the ring polymer energy of the cycle on u,...,v.
         """
-        # using column-major (Fortran order) because uses of the array are mostly within the same column
-        Emks = np.zeros((self.nbosons, self.nbosons), dtype=float, order="F")
+        Emks = xp.zeros((self.nbosons, self.nbosons))
 
-        intra_spring_energies = np.sum(dstrip(self.bead_diff_intra) ** 2, axis=(0, -1))
-        spring_energy_first_last_bead_array = np.sum(
+        intra_spring_energies = xp.sum(dstrip(self.bead_diff_intra) ** 2, axis=(0, -1))
+        spring_energy_first_last_bead_array = xp.sum(
             dstrip(self.bead_diff_inter_first_last_bead) ** 2, axis=-1
         )
 
         spring_potential_prefix = 0.5 * self.boson_m * self.omegan2
 
-        # for m in range(self.nbosons):
-        #     Emks[m][m] = spring_potential_prefix * \
-        #                     (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
-        Emks[np.diag_indices_from(Emks)] = spring_potential_prefix * (
-            intra_spring_energies + np.diagonal(spring_energy_first_last_bead_array)
+        diag_idx = xp.arange(self.nbosons)
+        Emks[diag_idx, diag_idx] = spring_potential_prefix * (
+            intra_spring_energies
+            + spring_energy_first_last_bead_array[diag_idx, diag_idx]
         )
 
         for s in range(self.nbosons - 1 - 1, -1, -1):
@@ -215,21 +215,16 @@ class ExchangePotential:
         Returns a vector of these potentials, in this order.
         Assumes that the cycle energies self.cycle_energies have been computed.
         """
-        V = np.zeros(self.nbosons + 1, float)
+        V = xp.zeros(self.nbosons + 1)
 
         for m in range(1, self.nbosons + 1):
             # For numerical stability
             subdivision_potentials = V[:m] + dstrip(self.cycle_energies)[:m, m - 1]
-            Elong = np.min(subdivision_potentials)
+            Elong = xp.min(subdivision_potentials)
 
-            # sig = 0.0
-            # for u in range(m):
-            #   sig += np.exp(- self.betaP *
-            #                (V[u] + self.cycle_energies[u, m - 1] - Elong) # V until u-1, then cycle from u to m
-            #                 )
-            sig = np.sum(np.exp(-self.betaP * (subdivision_potentials - Elong)))
-            assert sig != 0.0 and np.isfinite(sig)
-            V[m] = Elong - np.log(sig / m) / self.betaP
+            sig = xp.sum(xp.exp(-self.betaP * (subdivision_potentials - Elong)))
+            assert float(sig) != 0.0 and math.isfinite(float(sig))
+            V[m] = Elong - xp.log(sig / m) / self.betaP
 
         return V
 
@@ -240,23 +235,19 @@ class ExchangePotential:
         Returns a vector of these potentials, in this order.
         Assumes that both the cycle energies self.cycle_energies and prefix potentials self.prefix_V have been computed.
         """
-        RV = np.zeros(self.nbosons + 1, float)
+        RV = xp.zeros(self.nbosons + 1)
 
         for l in range(self.nbosons - 1, 0, -1):
             # For numerical stability
             subdivision_potentials = dstrip(self.cycle_energies)[l, l:] + RV[l + 1 :]
-            Elong = np.min(subdivision_potentials)
+            Elong = xp.min(subdivision_potentials)
 
-            # sig = 0.0
-            # for p in range(l, self.nbosons):
-            #     sig += 1 / (p + 1) * np.exp(- self.betaP * (self.cycle_energies[l, p] + RV[p + 1]
-            #                                                 - Elong))
-            sig = np.sum(
-                np.reciprocal(np.arange(l + 1.0, self.nbosons + 1))
-                * np.exp(-self.betaP * (subdivision_potentials - Elong))
+            sig = xp.sum(
+                (1.0 / xp.arange(l + 1.0, self.nbosons + 1))
+                * xp.exp(-self.betaP * (subdivision_potentials - Elong))
             )
-            assert sig != 0.0 and np.isfinite(sig)
-            RV[l] = Elong - np.log(sig) / self.betaP
+            assert float(sig) != 0.0 and math.isfinite(float(sig))
+            RV[l] = Elong - xp.log(sig) / self.betaP
 
         # V^[1,N]
         RV[0] = self.prefix_V[-1]
@@ -273,18 +264,12 @@ class ExchangePotential:
         Assumes that both the cycle energies self.cycle_energies, the prefix potentials self.prefix_V,
         and the suffix potentials self.suffix_V have been computed.
         """
-        F = np.zeros((self.nbeads, self.nbosons, 3), float)
+        F = xp.zeros((self.nbeads, self.nbosons, 3))
 
         spring_force_prefix = (-1.0) * self.boson_m * self.omegan2
         bead_diff_intra = dstrip(self.bead_diff_intra)
-        # force on intermediate beads
-        #
-        # for j in range(1, self.nbeads - 1):
-        #   for l in range(self.nbosons):
-        #         F[j, l, :] = spring_force_prefix * (-bead_diff_intra[j][l] +
-        #                                                     bead_diff_intra[j - 1][l])
         F[1:-1, :, :] = spring_force_prefix * (
-            -bead_diff_intra[1:, :] + np.roll(bead_diff_intra, axis=0, shift=1)[1:, :]
+            -bead_diff_intra[1:, :] + xp.roll(bead_diff_intra, shift=1, axis=0)[1:, :]
         )
 
         # force on endpoint beads
@@ -293,7 +278,7 @@ class ExchangePotential:
         prefix_V = dstrip(self.prefix_V)
         suffix_V = dstrip(self.suffix_V)
 
-        connection_probs = np.zeros((self.nbosons, self.nbosons), float)
+        connection_probs = xp.zeros((self.nbosons, self.nbosons))
         # close cycle probabilities:
         # for u in range(0, self.nbosons):
         #     for l in range(u, self.nbosons):
@@ -301,34 +286,23 @@ class ExchangePotential:
         #                np.exp(- self.betaP *
         #                        (self.prefix_V[u] + self.cycle_energies[u, l] + self.suffix_V[l+1]
         #                         - self.prefix_V[self.nbosons]()))
-        tril_indices = np.tril_indices(self.nbosons, k=0)
-        connection_probs[tril_indices] = (
-            # np.asarray([1 / (l + 1) for l in range(self.nbosons)])[:, np.newaxis] *
-            np.reciprocal(np.arange(1.0, self.nbosons + 1))[:, np.newaxis]
-            * np.exp(
-                -self.betaP
-                * (
-                    # np.asarray([self.prefix_V(u - 1) for u in range(self.nbosons)])[np.newaxis, :]
-                    prefix_V[np.newaxis, :-1]
-                    # + np.asarray([(self.cycle_energies[u, l] if l >= u else 0) for l in range(self.nbosons)
-                    #                   for u in range(self.nbosons)]).reshape((self.nbosons, self.nbosons))
-                    + cycle_energies.T
-                    # + np.asarray([self.suffix_V(l + 1) for l in range(self.nbosons)])[:, np.newaxis]
-                    + suffix_V[1:, np.newaxis]
-                    - prefix_V[self.nbosons]
-                )
+        tril_mask = xp.tril(xp.ones((self.nbosons, self.nbosons), dtype=xp.bool), k=0)
+        all_probs = (1.0 / xp.arange(1.0, self.nbosons + 1))[:, None] * xp.exp(
+            -self.betaP
+            * (
+                prefix_V[None, :-1]
+                + cycle_energies.T
+                + suffix_V[1:, None]
+                - prefix_V[self.nbosons]
             )
-        )[tril_indices]
+        )
+        connection_probs = xp.where(tril_mask, all_probs, connection_probs)
 
-        # direct link probabilities:
-        # for l in range(self.nbosons - 1):
-        #     connection_probs[l][l+1] = 1 - (np.exp(- self.betaP * (self.prefix_V[l + 1] + self.suffix_V[l + 1] -
-        #                                         self.prefix_V[self.nbosons]())))
-        superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
-        connection_probs[superdiagonal_indices] = 1 - (
-            np.exp(
-                -self.betaP * (prefix_V[1:-1] + suffix_V[1:-1] - prefix_V[self.nbosons])
-            )
+        # direct link probabilities on the superdiagonal
+        rows = xp.arange(self.nbosons - 1)
+        cols = rows + 1
+        connection_probs[rows, cols] = 1 - xp.exp(
+            -self.betaP * (prefix_V[1:-1] + suffix_V[1:-1] - prefix_V[self.nbosons])
         )
 
         bead_diff_inter_first_last_bead = dstrip(self.bead_diff_inter_first_last_bead)
@@ -350,11 +324,11 @@ class ExchangePotential:
         #                         (-self.bead_diff_inter_first_last_bead[:, l] + bead_diff_intra[-1, l])
         #     F[-1, l, :] = np.dot(connection_probs[l][:], force_from_neighbors)
         force_from_neighbors = spring_force_prefix * (
-            -np.transpose(bead_diff_inter_first_last_bead, axes=(1, 0, 2))
-            + bead_diff_intra[-1, :, np.newaxis]
+            -xp.permute_dims(bead_diff_inter_first_last_bead, (1, 0, 2))
+            + bead_diff_intra[-1, :, None]
         )
         # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
-        F[-1, :, :] = np.einsum("ljk,lj->lk", force_from_neighbors, connection_probs)
+        F[-1, :, :] = xp.einsum("ljk,lj->lk", force_from_neighbors, connection_probs)
 
         # on the first bead:
         #
@@ -375,10 +349,10 @@ class ExchangePotential:
         #     F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
         #
         force_from_neighbors = spring_force_prefix * (
-            bead_diff_inter_first_last_bead - bead_diff_intra[0, :, np.newaxis]
+            bead_diff_inter_first_last_bead - bead_diff_intra[0, :, None]
         )
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
-        F[0, :, :] = np.einsum("ljk,jl->lk", force_from_neighbors, connection_probs)
+        F[0, :, :] = xp.einsum("ljk,jl->lk", force_from_neighbors, connection_probs)
 
         return [prefix_V[self.nbosons], F]
 
@@ -386,15 +360,13 @@ class ExchangePotential:
         """
         Evaluate the probability of the configuration where all the particles are separate.
         """
-        return np.exp(
+        return xp.exp(
             -self.betaP
             * (
-                np.trace(dstrip(self.cycle_energies))
+                xp.trace(dstrip(self.cycle_energies))
                 - dstrip(self.prefix_V)[self.nbosons]
             )
-            - math.log(
-                math.factorial(self.nbosons)
-            )  # (1.0 / math.factorial(self.nbosons))
+            - math.log(math.factorial(self.nbosons))
         )
 
     def get_longest_probability(self):
@@ -403,7 +375,7 @@ class ExchangePotential:
         divided by 1/N. Notice that there are (N-1)! permutations of this topology
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
-        return np.exp(
+        return xp.exp(
             -self.betaP
             * (dstrip(self.cycle_energies)[0, -1] - dstrip(self.prefix_V)[self.nbosons])
         )
@@ -416,7 +388,7 @@ class ExchangePotential:
         cycle_energies = dstrip(self.cycle_energies)
         prefix_V = dstrip(self.prefix_V)
 
-        est = np.zeros(self.nbosons + 1)
+        est = xp.zeros(self.nbosons + 1)
 
         for m in range(1, self.nbosons + 1):
             sig = 0.0
@@ -424,15 +396,17 @@ class ExchangePotential:
             # Numerical stability - Xiong-Xiong method (arXiv.2206.08341)
             e_tilde = sys.float_info.max
             for k in range(m, 0, -1):
-                e_tilde = min(e_tilde, cycle_energies[m - k, m - 1] + prefix_V[m - k])
+                e_tilde = min(
+                    e_tilde, float(cycle_energies[m - k, m - 1] + prefix_V[m - k])
+                )
 
             for k in range(m, 0, -1):
                 E_kn_val = cycle_energies[m - k, m - 1]
-                sig += (est[m - k] - E_kn_val) * np.exp(
+                sig = sig + (est[m - k] - E_kn_val) * xp.exp(
                     -self.betaP * (E_kn_val + prefix_V[m - k] - e_tilde)
                 )
 
-            sig_denom_m = m * np.exp(-self.betaP * (prefix_V[m] - e_tilde))
+            sig_denom_m = m * xp.exp(-self.betaP * (prefix_V[m] - e_tilde))
 
             est[m] = sig / sig_denom_m
 
@@ -445,7 +419,7 @@ class ExchangePotential:
         The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720,
         which can be used to reweight observables to obtain fermionic statistics.
         """
-        return self._get_fermionic_potential_exp() / np.exp(
+        return self._get_fermionic_potential_exp() / xp.exp(
             -self.betaP * self.prefix_V[-1]
         )
 
@@ -457,15 +431,15 @@ class ExchangePotential:
         sum of exponentials could be negative.
         """
         xi = -1
-        W = np.empty(self.nbosons + 1, float)
+        W = xp.zeros(self.nbosons + 1)
         W[0] = 1.0
 
         for m in range(1, self.nbosons + 1):
-            perm_sign = np.array([xi ** (k - 1) for k in range(m, 0, -1)])
-            W[m] = (1.0 / m) * np.sum(
+            perm_sign = xp.asarray([float(xi ** (k - 1)) for k in range(m, 0, -1)])
+            W[m] = (1.0 / m) * xp.sum(
                 perm_sign
                 * W[:m]
-                * np.exp(-self.betaP * dstrip(self.cycle_energies)[:m, m - 1])
+                * xp.exp(-self.betaP * dstrip(self.cycle_energies)[:m, m - 1])
             )
 
         return W[-1]

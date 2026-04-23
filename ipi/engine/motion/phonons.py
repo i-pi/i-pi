@@ -108,9 +108,11 @@ class DynMatrixMover(Motion):
             self.phcalc.step(step)
         else:
             self.phcalc.transform()
-            self.refdynmatrix = self.apply_asr(self.refdynmatrix.copy())
+            self.refdynmatrix = self.apply_asr(xp.asarray(self.refdynmatrix, copy=True))
             self.printall(
-                self.prefix, self.refdynmatrix.copy(), fixatoms_dof=self.fixatoms_dof
+                self.prefix,
+                xp.asarray(self.refdynmatrix, copy=True),
+                fixatoms_dof=self.fixatoms_dof,
             )
             softexit.trigger(
                 status="success",
@@ -351,8 +353,8 @@ class FDPhononCalculator(DummyPhononCalculator):
             info(" We have skipped the dof # {}.".format(step), verbosity.low)
 
     def transform(self):
-        dm = self.dm.dynmatrix.copy()
-        rdm = self.dm.dynmatrix.copy()
+        dm = xp.asarray(self.dm.dynmatrix, copy=True)
+        rdm = xp.asarray(self.dm.dynmatrix, copy=True)
         self.dm.dynmatrix = 0.50 * (dm + dm.T)
         self.dm.refdynmatrix = 0.50 * (rdm + rdm.T)
 
@@ -378,7 +380,7 @@ class NMFDPhononCalculator(FDPhononCalculator):
                 )
 
         self.dm.w2, self.dm.U = xp.linalg.eigh(self.dm.dynmatrix)
-        self.dm.V = self.dm.U.copy()
+        self.dm.V = xp.asarray(self.dm.U, copy=True)
         for i in range(len(self.dm.V)):
             self.dm.V[:, i] *= self.dm.ism
 
@@ -399,10 +401,8 @@ class NMFDPhononCalculator(FDPhononCalculator):
         self.dm.refdynmatrix[step] = (self.dm.V.T) @ (dmrowk)
 
     def transform(self):
-        self.dm.refdynmatrix = (self.dm.U) @ (
-            ((self.dm.refdynmatrix) @ (xp.transpose(self.dm.U)))
-        )
-        rdm = self.dm.dynmatrix.copy()
+        self.dm.refdynmatrix = (self.dm.U) @ (((self.dm.refdynmatrix) @ (self.dm.U.T)))
+        rdm = xp.asarray(self.dm.dynmatrix, copy=True)
         self.dm.refdynmatrix = 0.50 * (rdm + rdm.T)
 
 

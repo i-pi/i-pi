@@ -140,6 +140,12 @@ def _load_backend(name):
         if dev != "cpu" and dev.startswith("cuda") and torch.cuda.is_available():
             torch.cuda.init()
             torch.empty(0, device=dev)
+            # Also prime torch.linalg.eigh: its lazy wrapper is not
+            # thread-safe and races ("lazy wrapper should be called at
+            # most once") when multiple REMD worker threads hit it
+            # concurrently for their first eigh call.
+            _warm = torch.eye(2, device=dev)
+            torch.linalg.eigh(_warm)
         return _XpWithDevice(_torch_backend, dev), dev, torch.get_default_dtype()
     if name == "jax":
         import array_api_compat.jax.numpy as _jax_backend

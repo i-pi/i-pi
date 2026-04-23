@@ -19,7 +19,7 @@ import threading
 import numpy as np
 import json
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
@@ -412,13 +412,20 @@ class Driver(DriverSocket):
 
         if self.status & Status.Ready:
             try:
+                # Socket wire format is numpy bytes. This is the boundary
+                # where xp tensors (from ForceRequest fields) are lifted to
+                # host numpy. The reverse direction (_recv_force_data and
+                # _recv_forces_bulk) lifts numpy → xp symmetrically.
+                h0_np = to_numpy(h_ih[0])
+                h1_np = to_numpy(h_ih[1])
+                pos_np = to_numpy(pos)
                 # reduces latency by combining all messages in one
                 self.sendall(
                     MESSAGE["posdata"]  # header
-                    + h_ih[0].tobytes()  # cell
-                    + h_ih[1].tobytes()  # inverse cell
-                    + np.int32(len(pos) // 3).tobytes()  # length of position array
-                    + pos.tobytes()  # positions
+                    + h0_np.tobytes()  # cell
+                    + h1_np.tobytes()  # inverse cell
+                    + np.int32(len(pos_np) // 3).tobytes()  # length of position array
+                    + pos_np.tobytes()  # positions
                 )
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
@@ -643,12 +650,17 @@ class Driver(DriverSocket):
         pos = r["pos"][r["active"]]
         h_ih = r["cell"]
         try:
+            # Socket wire format is numpy bytes — lift xp tensors at the
+            # boundary so all forcefield queue() paths can stay xp-native.
+            h0_np = to_numpy(h_ih[0])
+            h1_np = to_numpy(h_ih[1])
+            pos_np = to_numpy(pos)
             self.sendall(
                 MESSAGE["posdata"]
-                + h_ih[0].tobytes()
-                + h_ih[1].tobytes()
-                + np.int32(len(pos) // 3).tobytes()
-                + pos.tobytes()
+                + h0_np.tobytes()
+                + h1_np.tobytes()
+                + np.int32(len(pos_np) // 3).tobytes()
+                + pos_np.tobytes()
                 + MESSAGE["getforce"]
             )
         except socket.timeout:

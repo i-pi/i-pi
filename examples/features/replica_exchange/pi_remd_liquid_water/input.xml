@@ -3,7 +3,7 @@
       <properties stride='40' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
       <trajectory filename='xc' stride='40' format='ase'> x_centroid </trajectory>
       <trajectory filename='pos1' stride='40' bead='0'> positions </trajectory>
-      <trajectory filename='pos2' stride='40' bead='4'> positions </trajectory>
+      <trajectory filename='pos2' stride='40' bead='1'> positions </trajectory>
       <checkpoint stride='4000'/>
    </output>
    <total_steps>400</total_steps>
@@ -25,7 +25,8 @@
        <instance> [ 7,  320, 1.0, 7_init.xyz ]  </instance>
        <instance> [ 8,  330, 1.0, 8_init.xyz ] </instance>
        <instance> [ 9,  340, 1.0, 9_init.xyz ] </instance>
-       <instance> [ 10, 250, 100, 0_init.xyz ] </instance>
+       <!-- It's possible to run at different pressures
+       <instance> [ 10, 250, 100, 10_init.xyz ] </instance>
        <instance> [ 11, 260, 100, 11_init.xyz ] </instance>
        <instance> [ 12, 270, 100, 12_init.xyz ] </instance>
        <instance> [ 13, 280, 100, 13_init.xyz ] </instance>
@@ -35,9 +36,10 @@
        <instance> [ 17, 320, 100, 17_init.xyz ]  </instance>
        <instance> [ 18, 330, 100, 18_init.xyz ] </instance>
        <instance> [ 19, 340, 100, 19_init.xyz ] </instance>
+       -->
        <template>
            <system prefix='IDX'>
-              <initialize nbeads='8'>
+              <initialize nbeads='2'>
                  <file mode='xyz'> INITFILE </file>
                  <velocities mode='thermal' units='kelvin'> TEMP </velocities>
               </initialize>
