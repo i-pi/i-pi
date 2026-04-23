@@ -20,7 +20,7 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["NormalModeMover"]
 
 import numpy as np
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 import os
 
 import math
@@ -186,19 +186,16 @@ class IMF(DummyCalculator):
         super(IMF, self).bind(imm)
 
         # Initialises a 3*number of atoms X 3*number of atoms dynamic matrix.
-        if self.imm.dynmatrix.size != (self.imm.beads.q.size * self.imm.beads.q.size):
-            if self.imm.dynmatrix.size == 0:
-                self.imm.dynmatrix = np.zeros(
-                    (self.imm.beads.q.size, self.imm.beads.q.size), float
-                )
+        nq = xp_size(self.imm.beads.q)
+        if xp_size(self.imm.dynmatrix) != nq * nq:
+            if xp_size(self.imm.dynmatrix) == 0:
+                self.imm.dynmatrix = xp.zeros((nq, nq))
             else:
                 raise ValueError(
                     "Force constant matrix size does not match system size"
                 )
         else:
-            self.imm.dynmatrix = self.imm.dynmatrix.reshape(
-                ((self.imm.beads.q.size, self.imm.beads.q.size))
-            )
+            self.imm.dynmatrix = self.imm.dynmatrix.reshape((nq, nq))
 
         # Applies ASR
         self.imm.dynmatrix = apply_asr(self.imm.asr, self.imm.dynmatrix, self.imm.beads)
@@ -214,7 +211,7 @@ class IMF(DummyCalculator):
         self.imm.w = self.imm.w2 * 0
         self.imm.w[self.imm.nz :] = xp.sqrt(self.imm.w2[self.imm.nz :])
 
-        self.imm.V = self.imm.U.copy()
+        self.imm.V = xp.asarray(self.imm.U, copy=True)
         for i in range(len(self.imm.V)):
             self.imm.V[:, i] *= self.imm.ism
 
@@ -226,11 +223,11 @@ class IMF(DummyCalculator):
 
         # Uses a temp dependent thermal RMS displacement as the scale of displacements.
         # TODO : Add a separate mapping temperature.
-        self.imm.nmrms = np.zeros(len(self.imm.w))
+        self.imm.nmrms = xp.zeros(len(self.imm.w))
         self.imm.nmrms[self.imm.nz :] = xp.sqrt(
             0.5
             / self.imm.w[self.imm.nz :]
-            / np.tanh(self.imm.w[self.imm.nz :] / self.imm.temp / 2.0)
+            / xp.tanh(self.imm.w[self.imm.nz :] / self.imm.temp / 2.0)
         )
         self.nmrms = self.imm.nmrms
 
@@ -238,11 +235,11 @@ class IMF(DummyCalculator):
         # self.imm.nmevib =  0.5 * self.imm.w
 
         # Harm vibr energy at finite temp
-        self.imm.nmevib = np.zeros(len(self.imm.w))
+        self.imm.nmevib = xp.zeros(len(self.imm.w))
         self.imm.nmevib[self.imm.nz :] = (
             0.50
             * self.imm.w[self.imm.nz :]
-            / np.tanh(self.imm.w[self.imm.nz :] / self.imm.temp / 2.0)
+            / xp.tanh(self.imm.w[self.imm.nz :] / self.imm.temp / 2.0)
         )
 
         # Fraction of the harmonic RMS displacement
@@ -292,14 +289,14 @@ class IMF(DummyCalculator):
         """
 
         # Defines variables for easier referencing
-        alpha = m * hw
+        alpha = float(m * hw)
         try:
             herfun = self.hermite_functions[n]
         except:
             herfun = hermite(n)
 
         norm = (alpha / np.pi) ** 0.25 * math.sqrt(1.0 / (2.0 ** (n) * factorial(n)))
-        psival = norm * xp.exp(-alpha * q**2 / 2.0) * herfun(math.sqrt(alpha) * q)
+        psival = norm * np.exp(-alpha * q**2 / 2.0) * herfun(math.sqrt(alpha) * q)
 
         return psival
 
@@ -312,6 +309,8 @@ class IMF(DummyCalculator):
 
         # The number of basis set elements.
         nbasis = len(psigrid)
+        hw_f = float(hw)
+        temp_f = float(self.imm.temp)
 
         # Constructs the Hamiltonian matrix.
         h = np.zeros((nbasis, nbasis))
@@ -319,16 +318,16 @@ class IMF(DummyCalculator):
             for j in range(i, nbasis, 1):
                 h[i][j] = (psigrid[i] * psigrid[j]) @ (vgrid)
             h[i][i] *= 0.5
-            h[i][i] += 0.5 * (i + 0.5) * hw
+            h[i][i] += 0.5 * (i + 0.5) * hw_f
         h += h.T
 
         # Diagonalise Hamiltonian matrix and evaluate anharmonic free energy and vibrational freq
-        evals, evecs = xp.linalg.eigh(h)
+        evals, evecs = np.linalg.eigh(h)
 
         # Calculates the free and internal energy
-        A = -logsumexp(-1.0 * evals / self.imm.temp) * self.imm.temp
-        E = xp.sum(evals * xp.exp(-1.0 * evals / self.imm.temp)) / xp.sum(
-            xp.exp(-1.0 * evals / self.imm.temp)
+        A = -logsumexp(-1.0 * evals / temp_f) * temp_f
+        E = np.sum(evals * np.exp(-1.0 * evals / temp_f)) / np.sum(
+            np.exp(-1.0 * evals / temp_f)
         )
 
         if return_eigsys:
@@ -396,7 +395,7 @@ class IMF(DummyCalculator):
                 # Calculates the wavefunctions on the grid.
                 for i in range(nnbasis):
                     psigrid[i] = self.psi(i, 1.0, self.imm.w[step], qgrid)
-                    psigrid[i] = psigrid[i] / xp.sqrt(((psigrid[i]) @ (psigrid[i])))
+                    psigrid[i] = psigrid[i] / np.sqrt(psigrid[i] @ psigrid[i])
 
                 # Solves the Schroedinger's Equation.
                 bs_AEanh = self.solve_schroedingers_equation(
@@ -439,8 +438,8 @@ class IMF(DummyCalculator):
             self.v0 = v0  # TODO CHECK IF NECESSARY
 
             vlist.append(0.0)
-            flist.append(f0)
-            qlist.append(q0)
+            flist.append(float(f0))
+            qlist.append(float(q0))
 
             # Converge anharmonic vibrational energies w.r.t. density of sampling points
             Aanh = []
@@ -459,7 +458,7 @@ class IMF(DummyCalculator):
 
                 # Calculates the displacement in Cartesian coordinates.
                 nmd = ffnmrms * self.imm.nmrms[step]
-                dev = xp.real(self.imm.V.T[step]) * nmd * xp.sqrt(self.nprim)
+                dev = xp.real(self.imm.V.T[step]) * nmd * math.sqrt(self.nprim)
 
                 # After the first iteration doubles the displacement to avoid
                 # calculation of the potential at configurations already v_indep_listited
@@ -486,16 +485,16 @@ class IMF(DummyCalculator):
                         - v0
                     )
                     df = (
-                        (xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0])
-                        @ (xp.real(self.imm.V.T[step]),)
+                        xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0]
+                        @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
                     # the harmonic component.
-                    vlist.append(dv)
-                    flist.append(df)
-                    qlist.append(nmd * counter)
+                    vlist.append(float(dv))
+                    flist.append(float(df))
+                    qlist.append(float(nmd * counter))
 
                     # Bailout condition.
                     if self.nevib * self.imm.nmevib[step] < xp.abs(
@@ -528,16 +527,16 @@ class IMF(DummyCalculator):
                         - v0
                     )
                     df = (
-                        (xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0])
-                        @ (xp.real(self.imm.V.T[step]),)
+                        xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0]
+                        @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
                     # the harmonic component.
-                    vlist.append(dv)
-                    flist.append(df)
-                    qlist.append(nmd * counter)
+                    vlist.append(float(dv))
+                    flist.append(float(df))
+                    qlist.append(float(nmd * counter))
 
                     # Bailout condition.
                     if self.nevib * self.imm.nmevib[step] < xp.abs(
@@ -574,7 +573,7 @@ class IMF(DummyCalculator):
                     # Calculates the wavefunctions on the grid.
                     for i in range(nnbasis):
                         psigrid[i] = self.psi(i, 1.0, self.imm.w[step], qgrid)
-                        psigrid[i] = psigrid[i] / xp.sqrt(((psigrid[i]) @ (psigrid[i])))
+                        psigrid[i] = psigrid[i] / np.sqrt(psigrid[i] @ psigrid[i])
 
                     # Solves the Schroedinger's Equation.
                     bs_AEanh = self.solve_schroedingers_equation(
@@ -583,14 +582,14 @@ class IMF(DummyCalculator):
                     bs_Aanh.append(bs_AEanh[0])
                     bs_Eanh.append(bs_AEanh[1])
 
-                    dA = xp.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
+                    dA = abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
                     info(
                         " @NM: CONVERGENCE : fnmrms = %10.8e   nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
                         % (
                             ffnmrms,
                             nnbasis,
-                            bs_Aanh[-1].item(),
-                            dA.item(),
+                            float(bs_Aanh[-1]),
+                            float(dA),
                             self.athresh,
                         ),
                         verbosity.medium,
@@ -606,7 +605,7 @@ class IMF(DummyCalculator):
                 Eanh.append(bs_Eanh[-1])
 
                 # Check whether anharmonic frequency is converged
-                dA = xp.abs(Aanh[-1] - Aanh[-2]) / (self.dof - self.imm.nz)
+                dA = abs(Aanh[-1] - Aanh[-2]) / (self.dof - self.imm.nz)
                 if dA < self.athresh:
                     break
 
@@ -641,34 +640,12 @@ class IMF(DummyCalculator):
 
         # Done converging wrt size of SHO basis.
         # Calculates the harmonic free and internal energy.
-        Ahar = (
-            -logsumexp(
-                [
-                    -1.0 * xp.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
-                    for i in range(nnbasis)
-                ]
-            )
-            * self.imm.temp
-        )
-        Zhar = xp.sum(
-            [
-                xp.exp(-1.0 * xp.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp)
-                for i in range(nnbasis)
-            ]
-        )
-        Ehar = (
-            xp.sum(
-                [
-                    xp.sqrt(self.imm.w2[step])
-                    * (0.5 + i)
-                    * xp.exp(
-                        -1.0 * xp.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
-                    )
-                    for i in range(nnbasis)
-                ]
-            )
-            / Zhar
-        )
+        w_step = math.sqrt(float(self.imm.w2[step]))
+        temp_f = float(self.imm.temp)
+        levels = w_step * (0.5 + np.arange(nnbasis))
+        Ahar = -logsumexp(-levels / temp_f) * temp_f
+        Zhar = np.sum(np.exp(-levels / temp_f))
+        Ehar = np.sum(levels * np.exp(-levels / temp_f)) / Zhar
 
         info(
             " @NM: HAR frequency     =  %10.8e" % (self.imm.w[step],), verbosity.medium
@@ -829,7 +806,7 @@ class VSCF(IMF):
         self.pair_combinations = list(combinations(self.inms, 2))
 
         # Selects the range of pair of modes to be calculated.
-        if self.pair_range.size == 0:
+        if xp_size(self.pair_range) == 0:
             self.pair_range = np.asarray([0, len(self.pair_combinations)])
 
         # Variables for storing the number of sampled configurations
@@ -877,7 +854,7 @@ class VSCF(IMF):
                     xp.asarray(dstrip(self.imm.forces.pots), copy=True)[0] / self.nprim
                 )
                 outfile = self.imm.output_maker.get_output(self.v_offset_filename)
-                np.savetxt(outfile, [self.v0])
+                np.savetxt(outfile, [float(self.v0)])
                 outfile.close_stream()
 
         # Maps 1D curves.

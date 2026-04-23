@@ -3056,7 +3056,7 @@ class Trajectories:
                 "dimension": "force",
                 "help": "The force acting on the centroid.",
                 "func": (
-                    lambda: xp.sum(self.system.forces.f, 0)
+                    lambda: xp.sum(dstrip(self.system.forces.f), axis=0)
                     / float(self.system.beads.nbeads)
                 ),
             },

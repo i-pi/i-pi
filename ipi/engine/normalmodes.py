@@ -111,7 +111,7 @@ class NormalModes:
             open_paths = []
         self.open_paths = np.asarray(open_paths, int)
         if bosons is None:
-            bosons = np.zeros(0, int)
+            bosons = xp.zeros(0, dtype=xp.int64)
         self._bosons = depend_value(name="bosons", value=bosons)
         self._nmts = depend_value(name="nmts", value=nmts)
         self._dt = depend_value(name="dt", value=dt)
@@ -436,7 +436,7 @@ class NormalModes:
         ):
             raise ValueError("Invalid index for boson, got %s" % str(bosons_array))
 
-        return bosons_array
+        return xp.asarray(bosons_array, dtype=xp.int64)
 
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction

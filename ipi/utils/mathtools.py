@@ -564,12 +564,29 @@ def quat2rot(q):
 
     q1, q2, q3, q4 = q
 
-    # Compute the rotation matrix elements
-    R = np.array(
+    R = xp.stack(
         [
-            [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
-            [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
-            [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
+            xp.stack(
+                [
+                    1 - 2 * (q3**2 + q4**2),
+                    2 * (q2 * q3 - q1 * q4),
+                    2 * (q2 * q4 + q1 * q3),
+                ]
+            ),
+            xp.stack(
+                [
+                    2 * (q2 * q3 + q1 * q4),
+                    1 - 2 * (q2**2 + q4**2),
+                    2 * (q3 * q4 - q1 * q2),
+                ]
+            ),
+            xp.stack(
+                [
+                    2 * (q2 * q4 - q1 * q3),
+                    2 * (q3 * q4 + q1 * q2),
+                    1 - 2 * (q2**2 + q3**2),
+                ]
+            ),
         ]
     )
 
@@ -662,7 +679,7 @@ def random_rotation(prng, improper=True):
     """Generates a (uniform) random rotation matrix"""
 
     quaternion = prng.gvec(shape=(4,))
-    quaternion /= np.sqrt((quaternion**2).sum())
+    quaternion = quaternion / xp.sqrt((quaternion**2).sum())
 
     rot = quat2rot(quaternion)
 

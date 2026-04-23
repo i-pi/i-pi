@@ -596,8 +596,8 @@ class NVTCCIntegrator(NVTIntegrator):
         self.thermostat.step()
         self.pconstraints()
         # NB we only have to take into account the energy balance of zeroing centroid velocity when we had added energy through the thermostat
-        pnm0 = self.nm.pnm[0]
-        dynm30 = self.nm.dynm3[0]
+        pnm0 = dstrip(self.nm.pnm)[0]
+        dynm30 = dstrip(self.nm.dynm3)[0]
         self.ensemble.eens += float(0.5 * xp.vecdot(pnm0, pnm0 / dynm30))
         self.nm.pnm[0, :] = 0.0
 
@@ -615,8 +615,8 @@ class NVTCCIntegrator(NVTIntegrator):
         self.pconstraints()
 
         self.thermostat.step()
-        pnm0 = self.nm.pnm[0]
-        dynm30 = self.nm.dynm3[0]
+        pnm0 = dstrip(self.nm.pnm)[0]
+        dynm30 = dstrip(self.nm.dynm3)[0]
         self.ensemble.eens += float(0.5 * xp.vecdot(pnm0, pnm0 / dynm30))
         self.nm.pnm[0, :] = 0.0
         self.pconstraints()

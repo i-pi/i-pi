@@ -586,7 +586,7 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
         # Compute BFGS term
         dg = (fac * d_x).flatten() - fad * hdg
         invhessian += (
-            xp.linalg.outer(d_x, d_x) * fac
+            xp.linalg.outer(d_x.flatten(), d_x.flatten()) * fac
             - xp.linalg.outer(hdg, hdg) * fad
             + xp.linalg.outer(dg, dg) * fae
         )

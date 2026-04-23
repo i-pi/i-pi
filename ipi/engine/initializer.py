@@ -241,7 +241,7 @@ def init_vector(
         ):  # if there is a bead specifier then we return a single bead slice
             nbeads = 1
         natoms = len(rq) // (nbeads * 3)
-        rq.shape = (nbeads, 3 * natoms)
+        rq = rq.reshape((nbeads, 3 * natoms))
 
     return rq
 

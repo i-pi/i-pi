@@ -161,16 +161,17 @@ class ForceField:
             par_str = " "
 
         # Apply PBC on the active backend (so `cell.array_pbc`, which uses
-        # `xp` ops, can work in place), then hand a numpy snapshot to the
-        # driver — the socket protocol serialises bytes and expects numpy.
-        pbcpos_xp = xp.asarray(dstrip(atoms.q), copy=True)
+        # `xp` ops, can work in place). We hand the xp tensor through to
+        # the ForceRequest unchanged; any numpy conversion needed for the
+        # socket wire format happens inside sockets.py at the byte boundary.
+        pbcpos = xp.asarray(dstrip(atoms.q), copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
         # active atoms do not change but we only know how to build this array once we get the positions once
         if self.iactive is None:
             if self.active[0] == -1:
-                activehere = np.arange(pbcpos_xp.shape[0])
+                activehere = np.arange(pbcpos.shape[0])
             else:
                 activehere = np.array(
                     [[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active]
@@ -180,22 +181,24 @@ class ForceField:
             activehere = activehere.flatten()
 
             # Perform sanity check for active atoms
-            if len(activehere) > pbcpos_xp.shape[0] or activehere[-1] > (
-                pbcpos_xp.shape[0] - 1
+            if len(activehere) > pbcpos.shape[0] or activehere[-1] > (
+                pbcpos.shape[0] - 1
             ):
                 raise ValueError("There are more active atoms than atoms!")
 
             self.iactive = activehere
 
         if self.dopbc:
-            cell.array_pbc(pbcpos_xp)
+            cell.array_pbc(pbcpos)
 
-        pbcpos = to_numpy(pbcpos_xp)
         fields = {
             "id": reqid,
             "pos": pbcpos,
             "active": self.iactive,
-            "cell": (to_numpy(dstrip(cell.h)), to_numpy(dstrip(cell.ih))),
+            "cell": (
+                xp.asarray(dstrip(cell.h), copy=True),
+                xp.asarray(dstrip(cell.ih), copy=True),
+            ),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -644,7 +647,7 @@ class FFLennardJones(FFEval):
         nat = len(q)
 
         v = 0.0
-        f = np.zeros(q.shape)
+        f = xp.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
             rij2 = (dij**2).sum(axis=1)
@@ -652,8 +655,8 @@ class FFLennardJones(FFEval):
             x6 = (self.sigma2 / rij2) ** 3
             x12 = x6**2
 
-            v += (x12 - x6).sum()
-            dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
+            v += float((x12 - x6).sum())
+            dij = dij * (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, None]
             f[i] += dij.sum(axis=0)
             f[:i] -= dij
 
@@ -661,7 +664,7 @@ class FFLennardJones(FFEval):
 
         r["result"] = [
             v,
-            xp.asarray(f.reshape(nat * 3)),
+            f.reshape(nat * 3),
             xp.zeros((3, 3)),
             {"raw": ""},
         ]
@@ -957,9 +960,9 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = dstrip(myatoms.q) * 0.0
-        self.masses = dstrip(myatoms.m)
-        self.lastq = np.zeros(3 * self.natoms)
+        self.charges = to_numpy(dstrip(myatoms.q)) * 0.0
+        self.masses = to_numpy(dstrip(myatoms.m))
+        self.lastq = xp.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
 
@@ -993,17 +996,17 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
-            vir[:] = -dstrip(self.system_force.vir)
-            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
+            f[:] = to_numpy(dstrip(self.system_force.f)).reshape((-1, 3))
+            vir[:] = -to_numpy(dstrip(self.system_force.vir))
+            self.plumed.cmd("setEnergy", float(self.system_force.pot))
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
         # next time getBias is called
-        self.box = r["cell"][0].T.copy()
+        self.box = to_numpy(r["cell"][0]).T.copy()
         self.plumed.cmd("setBox", self.box)
 
-        self.pos = r["pos"].reshape(-1, 3).copy()
+        self.pos = to_numpy(r["pos"]).reshape(-1, 3).copy()
         self.plumed.cmd("setPositions", self.pos)
 
         self.plumed.cmd("setForces", f)
@@ -1019,17 +1022,19 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= dstrip(self.system_force.f).flatten()
-            vir[:] -= -dstrip(self.system_force.vir)
+            f[:] -= to_numpy(dstrip(self.system_force.f)).flatten()
+            vir[:] -= -to_numpy(dstrip(self.system_force.vir))
 
         extras = {"raw": ""}
         for x in self.plumed_data:
             extras[str(x)] = self.plumed_data[x].copy()
 
         # nb: the virial is a symmetric tensor, so we don't need to transpose
-        r["result"] = [v, f, vir, extras]
+        r["result"] = [float(v), xp.asarray(f), xp.asarray(vir), extras]
         r["status"] = "Done"
-        r._event_done.set()
+        # mtd_update calls this with a bare dict (no queue, no waiter)
+        if hasattr(r, "_event_done"):
+            r._event_done.set()
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1718,18 +1723,20 @@ class FFRotations(ForceField):
         ffh = []  # this is the list of "inner" FF requests
         rots = []  # this is a list of tuples of (rotation matrix, weight)
         if self.random:
-            R_random = random_rotation(self.prng, improper=True)
+            R_random = xp.asarray(random_rotation(self.prng, improper=True))
         else:
-            R_random = np.eye(3)
+            R_random = xp.eye(3)
 
         for R, w, _ in self._rotations:
-            R = R @ R_random
+            # Rotations come in as numpy (loaded from host data); lift so
+            # downstream `@` with xp cell/q tensors works on both backends.
+            R = xp.asarray(R) @ R_random
 
             rot_atoms = atoms.clone()
             rot_cell = GenericCell(
                 R @ xp.asarray(dstrip(cell.h), copy=True)
             )  # NB we need generic cell orientation
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+            rot_atoms.q[:] = (xp.reshape(dstrip(rot_atoms.q), (-1, 3)) @ R.T).flatten()
 
             rots.append((R, w))
             ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1740,7 +1747,9 @@ class FFRotations(ForceField):
 
                 rot_cell = GenericCell(R @ xp.asarray(dstrip(cell.h), copy=True))
                 rot_atoms = atoms.clone()
-                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+                rot_atoms.q[:] = (
+                    xp.reshape(dstrip(rot_atoms.q), (-1, 3)) @ R.T
+                ).flatten()
 
                 rots.append((R, w))
                 ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -2029,8 +2038,9 @@ class PhotonDriver:
         Eky += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_y
 
         # dimension of independent baths (xy grid points)
-        coeff_x = (xp.transpose(Ekx)) @ (self.ftilde_kx)
-        coeff_y = (xp.transpose(Eky)) @ (self.ftilde_ky)
+        # Ekx/Eky are 1-D; transpose is a no-op for them.
+        coeff_x = Ekx @ self.ftilde_kx
+        coeff_y = Eky @ self.ftilde_ky
         # np.kron is not in the array-API; lift inputs to numpy for this op
         fx = xp.asarray(-np.kron(to_numpy(coeff_x), to_numpy(charge_array_bath)))
         fy = xp.asarray(-np.kron(to_numpy(coeff_y), to_numpy(charge_array_bath)))
@@ -2139,9 +2149,11 @@ class FFCavPhSocket(FFSocket):
             dx_array.append(dx)
             dy_array.append(dy)
             dz_array.append(dz)
-        dx_array = np.array(dx_array)
-        dy_array = np.array(dy_array)
-        dz_array = np.array(dz_array)
+        # Each dx/dy/dz is a 0-d tensor from xp.sum; stack them into a 1-d
+        # tensor on the active backend.
+        dx_array = xp.stack(dx_array) if dx_array else xp.zeros(0)
+        dy_array = xp.stack(dy_array) if dy_array else xp.zeros(0)
+        dz_array = xp.stack(dz_array) if dz_array else xp.zeros(0)
         return dx_array, dy_array, dz_array
 
     def queue(self, atoms, cell, reqid=-1):
@@ -2275,7 +2287,8 @@ class FFCavPhSocket(FFSocket):
         # ...atomic forces have been calculated at this point
 
         # 3. At this moment, we combine the small requests to a big mega request (updated results)
-        result_tot = [0.0, np.zeros(len(pbcpos), float), np.zeros((3, 3), float), {}]
+        # Socket receive lifts f/vir to the active backend, so the accumulator must match.
+        result_tot = [0.0, xp.zeros(len(pbcpos)), xp.zeros((3, 3)), {}]
         for idx, newreq in enumerate(newreq_lst):
             u, f, vir, extra = newreq["result"]
             result_tot[0] += u
@@ -2291,10 +2304,9 @@ class FFCavPhSocket(FFSocket):
                 charge_array_bath=self.charge_array,
             )
             # check the size of photon modes + molecules to match the total number of particles
-            if (
-                self.ph.n_photon + self.n_independent_bath * self.charge_array.size
-                != int(len(pbcpos) // 3)
-            ):
+            if self.ph.n_photon + self.n_independent_bath * xp_size(
+                self.charge_array
+            ) != int(len(pbcpos) // 3):
                 softexit.trigger(
                     "Total number of photons + molecules does not match total number of particles"
                 )
