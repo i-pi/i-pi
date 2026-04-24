@@ -1,4 +1,4 @@
-<simulation verbosity='low'>
+<simulation verbosity='medium'>
    <output prefix='simulation'>
       <properties stride='40' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
       <trajectory filename='xc' stride='40' format='ase'> x_centroid </trajectory>
