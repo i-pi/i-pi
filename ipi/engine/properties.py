@@ -1657,7 +1657,7 @@ class Properties:
                 k = 3 * i
 
                 # Checks if all the beads have the same mass. If not, raises an error.
-                mass_vals = [dm3[b, k] for b in range(self.beads.nbeads)]
+                mass_vals = [float(dm3[b, k]) for b in range(self.beads.nbeads)]
                 if len(set(mass_vals)) > 1:
                     raise ValueError(
                         "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."

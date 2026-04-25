@@ -665,7 +665,7 @@ class NEBMover(Motion):
                 # old_nebpot is used later as a convergence criterion.
                 old_nebpot = (
                     float(self.nebpot)
-                    if xp_size(self.nebpot) <= 1
+                    if xp_size(self.nebpot) == 1
                     else xp.asarray(self.nebpot, copy=True)
                 )
                 # old_nebgrad = self.nebgrad.copy()
@@ -694,7 +694,7 @@ class NEBMover(Motion):
 
             elif self.mode == "fire":
                 # Only initialize velocity for fresh start, not for RESTART
-                if step == 0 and self.v.size == 0:
+                if step == 0 and xp_size(self.v) == 0:
                     info(
                         " @NEB: calling NEBGradientMapper at step 0 by FIRE",
                         verbosity.debug,
@@ -718,7 +718,7 @@ class NEBMover(Motion):
                 # Store potential and force gradient for convergence criterion
                 old_nebpot = (
                     float(self.nebpot)
-                    if xp_size(self.nebpot) <= 1
+                    if xp_size(self.nebpot) == 1
                     else xp.asarray(self.nebpot, copy=True)
                 )
                 # old_nebgrad = self.nebgrad.copy()
@@ -877,7 +877,7 @@ class NEBMover(Motion):
                 # old_nebpot is used later as a convergence criterion.
                 old_nebpot = (
                     float(self.nebpot)
-                    if xp_size(self.nebpot) <= 1
+                    if xp_size(self.nebpot) == 1
                     else xp.asarray(self.nebpot, copy=True)
                 )
                 # old_nebgrad = self.nebgrad.copy()
@@ -905,7 +905,7 @@ class NEBMover(Motion):
                 # old_nebpot is used later as a convergence criterion.
                 old_nebpot = (
                     float(self.nebpot)
-                    if xp_size(self.nebpot) <= 1
+                    if xp_size(self.nebpot) == 1
                     else xp.asarray(self.nebpot, copy=True)
                 )
                 # old_nebgrad = self.nebgrad.copy()

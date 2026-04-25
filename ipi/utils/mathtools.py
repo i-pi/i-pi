@@ -441,17 +441,23 @@ def root_herm(A):
 def sinch(x):
     """Element-wise sinh(x)/x, stable near x=0.
 
-    Branches globally on ``max|x|`` rather than per element: the
-    per-element branch (``np.vectorize(lambda x: ...)``) would force a
-    host-side Python loop that is fine under numpy but fails for
+    Per-element branch via ``xp.where``: ``sinh(x)/x`` divides by zero
+    on entries with |x|<eps, while the Taylor form loses accuracy for
+    large |x|. Evaluating both branches and picking per element via
+    ``where`` matches the semantics of the original
+    ``np.vectorize(...)`` version while still running on
     device-resident torch/jax arrays.
     """
 
     xp = array_namespace(x)
     x2 = x * x
-    if float(xp.max(xp.abs(x))) < 1e-6:
-        return 1.0 + (x2 / 6.0) * (1.0 + (x2 / 20.0) * (1.0 + (x2 / 42.0)))
-    return xp.sinh(x) / x
+    taylor = 1.0 + (x2 / 6.0) * (1.0 + (x2 / 20.0) * (1.0 + (x2 / 42.0)))
+    small = xp.abs(x) < 1e-6
+    # Replace 0 entries with 1 before dividing so the unused branch
+    # doesn't emit NaN (which `where` would still propagate to grads).
+    safe_x = xp.where(small, xp.ones_like(x), x)
+    exact = xp.sinh(x) / safe_x
+    return xp.where(small, taylor, exact)
 
 
 def mat_taylor(x, function):

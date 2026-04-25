@@ -448,9 +448,7 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
     if slope >= 0.0:
         info(" @MINIMIZE: Warning -- gradient is >= 0 (%f)" % slope, verbosity.low)
 
-    test = float(
-        xp.max(xp.abs(d0.flatten()) / xp.maximum(xp.abs(x0.flatten()), xp.ones(n)))
-    )
+    test = xp.max(xp.abs(d0.flatten()) / xp.maximum(xp.abs(x0.flatten()), xp.ones(n)))
 
     # Setup to try Newton step first
     alamin = tol / test
