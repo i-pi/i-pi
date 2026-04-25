@@ -20,13 +20,14 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["DynMatrixMover"]
 
 import numpy as np
-from ipi.utils.array_backend import xp, xp_size
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
+from ipi.utils.phonontools import apply_asr as _apply_asr
 
 
 class DynMatrixMover(Motion):
@@ -122,7 +123,10 @@ class DynMatrixMover(Motion):
     def printall(self, prefix, dmatx, deltaw=0.0, fixatoms_dof=np.array([])):
         """Prints out diagnostics for a given dynamical matrix."""
 
-        dmatx = dmatx + np.eye(len(dmatx)) * deltaw
+        # I/O boundary: stage on numpy so the per-cell `str(...)` writes
+        # produce plain floats (torch's `str(tensor)` would emit
+        # "tensor(...)" strings).
+        dmatx = to_numpy(dmatx) + np.eye(len(dmatx)) * deltaw
         if deltaw != 0.0:
             wstr = " !! Shifted by %e !!" % (deltaw)
         else:
@@ -138,9 +142,9 @@ class DynMatrixMover(Motion):
             active_atoms_mask = np.arange(3 * self.beads.natoms)
 
         dmatx_full = dmatx.copy()
-        ism_full = self.ism.copy()
+        ism_full = to_numpy(self.ism).copy()
         dmatx = dmatx[active_atoms_mask][:, active_atoms_mask]
-        ism = self.ism[active_atoms_mask]
+        ism = ism_full[active_atoms_mask]
 
         # prints out the dynamical matrix
         outfile = self.output_maker.get_output(self.prefix + ".dynmat", "w")
@@ -165,7 +169,7 @@ class DynMatrixMover(Motion):
             )
         outfile.close_stream()
 
-        eigsys = xp.linalg.eigh(dmatx)
+        eigsys = np.linalg.eigh(dmatx)
 
         # prints eigenvalues
         outfile = self.output_maker.get_output(self.prefix + ".eigval", "w")
@@ -187,7 +191,7 @@ class DynMatrixMover(Motion):
         for i in range(activedof):
             eigmode[i] *= ism[i]
         for i in range(activedof):
-            eigmode[:, i] /= xp.sqrt(((eigmode[:, i]) @ (eigmode[:, i])))
+            eigmode[:, i] /= np.sqrt(eigmode[:, i] @ eigmode[:, i])
         outfile = self.output_maker.get_output(self.prefix + ".mode", "w")
 
         outfile.write("# Phonon modes (cartesian space and normalized)" + "\n")
@@ -196,89 +200,13 @@ class DynMatrixMover(Motion):
         outfile.close_stream()
 
     def apply_asr(self, dm):
+        """Removes the translations and/or rotations depending on the asr mode.
+
+        Delegates to the xp-clean implementation in `ipi.utils.phonontools`
+        rather than duplicating the math (the two were equivalent up to
+        `eigh` vs `eig` on the symmetric MoI tensor).
         """
-        Removes the translations and/or rotations depending on the asr mode.
-        """
-        if self.asr == "none":
-            return dm
-
-        if self.asr == "crystal":
-            # Computes the centre of mass.
-            com = (
-                (xp.transpose(self.beads.q.reshape((self.beads.natoms, 3)))) @ (self.m)
-            ) / self.m.sum()
-            qminuscom = self.beads.q.reshape((self.beads.natoms, 3)) - com
-            # Computes the moment of inertia tensor.
-            moi = np.zeros((3, 3), float)
-            for k in range(self.beads.natoms):
-                moi -= (
-                    (np.cross(qminuscom[k], np.identity(3)))
-                    @ (np.cross(qminuscom[k], np.identity(3)))
-                    * self.m[k]
-                )
-
-            U = (xp.linalg.eig(moi))[1]
-            R = (qminuscom) @ (U)
-            D = np.zeros((3, 3 * self.beads.natoms), float)
-
-            # Computes the vectors along rotations.
-            D[0] = np.tile([1, 0, 0], self.beads.natoms) / self.ism
-            D[1] = np.tile([0, 1, 0], self.beads.natoms) / self.ism
-            D[2] = np.tile([0, 0, 1], self.beads.natoms) / self.ism
-
-            # Computes unit vecs.
-            for k in range(3):
-                D[k] = D[k] / xp.linalg.norm(D[k])
-
-            # Computes the transformation matrix.
-            transfmatrix = np.eye(3 * self.beads.natoms) - ((D.T) @ (D))
-            r = (transfmatrix.T) @ (((dm) @ (transfmatrix)))
-            return r
-
-        elif self.asr == "poly":
-            # Computes the centre of mass.
-            com = (
-                (xp.transpose(self.beads.q.reshape((self.beads.natoms, 3)))) @ (self.m)
-            ) / self.m.sum()
-            qminuscom = self.beads.q.reshape((self.beads.natoms, 3)) - com
-            # Computes the moment of inertia tensor.
-            moi = np.zeros((3, 3), float)
-            for k in range(self.beads.natoms):
-                moi -= (
-                    (np.cross(qminuscom[k], np.identity(3)))
-                    @ (np.cross(qminuscom[k], np.identity(3)))
-                    * self.m[k]
-                )
-
-            U = (xp.linalg.eig(moi))[1]
-            R = (qminuscom) @ (U)
-            D = np.zeros((6, 3 * self.beads.natoms), float)
-
-            # Computes the vectors along translations and rotations.
-            D[0] = np.tile([1, 0, 0], self.beads.natoms) / self.ism
-            D[1] = np.tile([0, 1, 0], self.beads.natoms) / self.ism
-            D[2] = np.tile([0, 0, 1], self.beads.natoms) / self.ism
-            for i in range(3 * self.beads.natoms):
-                iatom = i // 3
-                idof = np.mod(i, 3)
-                D[3, i] = (
-                    R[iatom, 1] * U[idof, 2] - R[iatom, 2] * U[idof, 1]
-                ) / self.ism[i]
-                D[4, i] = (
-                    R[iatom, 2] * U[idof, 0] - R[iatom, 0] * U[idof, 2]
-                ) / self.ism[i]
-                D[5, i] = (
-                    R[iatom, 0] * U[idof, 1] - R[iatom, 1] * U[idof, 0]
-                ) / self.ism[i]
-
-            # Computes unit vecs.
-            for k in range(6):
-                D[k] = D[k] / xp.linalg.norm(D[k])
-
-            # Computes the transformation matrix.
-            transfmatrix = np.eye(3 * self.beads.natoms) - ((D.T) @ (D))
-            r = (transfmatrix.T) @ (((dm) @ (transfmatrix)))
-            return r
+        return _apply_asr(self.asr, dm, self.beads)
 
 
 class DummyPhononCalculator:

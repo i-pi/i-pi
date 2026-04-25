@@ -9,6 +9,7 @@ layer for a driver that gets positions and returns forces (and energy).
 # See the "licenses" directory for full license information.
 
 
+import math
 import time
 import threading
 import json
@@ -742,7 +743,7 @@ class FFdmd(FFEval):
         f = np.zeros(q.shape)
         vir = np.zeros((3, 3), float)
         # must think and check handling of time step
-        periodic = xp.sin(self.dmdstep * self.freq * self.dtdmd)
+        periodic = math.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
         for i in range(1, nat):
             # MR's first implementation:
