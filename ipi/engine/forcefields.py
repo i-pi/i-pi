@@ -1928,18 +1928,7 @@ class PhotonDriver:
         Returns:
             force array of all nuclear dimensions (3*natoms) [1x, 1y, 1z, 2x..]
         """
-        if charge_array_bath is None and dipole_der is None:
-            softexit.trigger(
-                "Both charge array and dipole derivative are None. No force will be applied on nuclei from cavity photons."
-            )
-
-        if charge_array_bath is not None and dipole_der is not None:
-            softexit.trigger(
-                "Both charge array and dipole derivative are provided. \
-                 The forces on nuclei from cavity photons will be calculated by considering \
-                 both contributions from partial charges and dipole derivatives."
-            )
-
+        # In the evaluation part, only one of charge_array_bath and dipole_der with correct dimensions will be provided.
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
         d_dot_f_y = np.dot(self.ftilde_ky, dy_array)
@@ -1995,6 +1984,8 @@ class FFCavPhSocket(FFSocket):
         interface=None,
         charge_array=None,
         apply_photon=True,
+        dipole_surface=False,
+        evaluate_photon=True,
         E0=1e-4,
         omega_c=0.01,
         ph_rep="loose",
@@ -2013,6 +2004,7 @@ class FFCavPhSocket(FFSocket):
               with the client codes.
            charge_array: An N-dimensional numpy array for fixed point charges of all atoms
            apply_photon: If add photonic degrees of freedom in the dynamics
+           dipole_surface: If add the dipole surface contribution to the forces on nuclei
            E0: Effective light-matter coupling strength
            omega_c: Cavity mode frequency
            ph_rep: A string to control how to represent the photonic coordinates: 'loose' or 'dense'.
@@ -2035,6 +2027,8 @@ class FFCavPhSocket(FFSocket):
 
         # store photonic variables
         self.apply_photon = apply_photon
+        self.dipole_surface = dipole_surface
+        self.evaluate_photon = evaluate_photon
         self.E0 = E0
         self.omega_c = omega_c
         self.ph_rep = ph_rep
@@ -2277,32 +2271,28 @@ class FFCavPhSocket(FFSocket):
         # For the other drivers, `evaluate_driver = False`, and photonic energy, forces, cavity forces
         # will be set as zero. This is to avoid double counting of photonic contributions when multiple drivers are attached.
 
-        # if `charge_array` is all zeros, `evaluate_driver` is False
-        evaluate_driver = not np.all(self.charge_array == 0)
-        # if `charge_array` is [], we will fall back to dipole driver path for obtaining dipole information,
-        # and `evaluate_driver` will be set as True
-        evaluate_driver = evaluate_driver or (len(self.charge_array) == 0)
-
         if self.ph.apply_photon:
 
             # this path is for the driver that is coupled to the photons, and we need to calculate photonic contributions to energy and forces
-            if evaluate_driver:
+            if self.evaluate_photon:
 
-                # first determine whether the dipole info is calculated using charge_array or dipole surfaces (using dipole driver)
-                has_dipole_der = ("dipole" in extra) and ("dipole_derivative" in extra)
-                do_dipole_der = (
-                    has_dipole_der
-                    and (len(extra["dipole"]) == 3)
-                    and (
-                        len(extra["dipole_derivative"])
-                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
-                    )
-                )
-                if do_dipole_der:
+                if self.dipole_surface:
+
+                    has_dipole_der = ("dipole" in extra) and ("dipole_derivative" in extra)
+                    check_dipole_der = (len(extra["dipole"]) == 3) and (len(extra["dipole_derivative"]) == (len(pbcpos) - self.ph.n_photon * 3) * 3)
+                    if not has_dipole_der or not check_dipole_der:
+                        softexit.trigger(
+                            "Dipole surface is turned on, but the required dipole information is not provided in extras. \
+                            Please check if the driver provides the dipole and its derivative information in extras, \
+                            and make sure the size of dipole and dipole derivative information matches the number of atoms. \
+                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                        )
+
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
                     # !!! ONLY WORK FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
                     dx_array, dy_array = np.array([extra["dipole"][0]]), np.array([extra["dipole"][1]])
                     dipole_der = extra["dipole_derivative"]
+
                 else:
                     # we fall back to the original path with charge array to calculate dipole information
                     # check the size of photon modes + molecules to match the total number of particles
@@ -2326,7 +2316,7 @@ class FFCavPhSocket(FFSocket):
                 # 6. calculate photonic forces
                 f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
                 # 7. calculate cavity forces on nuclei
-                if do_dipole_der:
+                if self.dipole_surface:
                     fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
                         dx_array=dx_array, dy_array=dy_array, dipole_der=dipole_der
                     )
@@ -2340,8 +2330,8 @@ class FFCavPhSocket(FFSocket):
             # this is the path to avoid double counting of photonic contributions when multiple drivers are attached to i-pi
             else:
                 e_ph = 0
-                f_ph = np.zeros((self.ph.n_photon * 3))
-                fx_cav, fy_cav, fz_cav = [np.zeros((self.charge_array.size))] * 3
+                f_ph = 0
+                fx_cav, fy_cav, fz_cav = 0,0, 0
 
             # 8. add cavity effects to our output
             result_tot[0] += e_ph
