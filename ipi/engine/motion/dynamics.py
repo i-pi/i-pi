@@ -391,10 +391,12 @@ class DummyIntegrator:
         if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
+            print("fixatoms-dof in dynamics", self.fixatoms_dof)
             self.ensemble.eens += 0.5 * np.sum(
                 p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
             )
             beads.p[:, self.fixatoms_dof] = 0.0
+            print("beads", beads.p)
 
 
 dproperties(

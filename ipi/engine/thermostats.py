@@ -387,6 +387,7 @@ class ThermoPILE_L(Thermostat):
                 dpipe(self._temp, t._temp)
             # pipes dt
             dpipe(self._dt, t._dt)
+            print("temperature others", self._thermos[1]._temp._value)
 
             # for tau it is slightly more complex
             if it == 0:
@@ -469,6 +470,7 @@ class ThermoSVR(Thermostat):
 
     def get_K(self):
         """Calculates the average kinetic energy per degree of freedom."""
+        print("temperature in svr", self.temp)
         return Constants.kb * self.temp * 0.5
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
