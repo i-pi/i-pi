@@ -388,7 +388,7 @@ class DummyIntegrator:
 
             self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
-# Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
+        # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
             pnm = dstrip(self.nm.pnm)
             dynm3 = dstrip(self.nm.dynm3)
