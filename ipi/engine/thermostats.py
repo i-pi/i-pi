@@ -210,10 +210,10 @@ class ThermoLangevin(Thermostat):
             name="S", func=self.get_S, dependencies=[self._temp, self._T]
         )
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
         """Binds the appropriate degrees of freedom to the thermostat."""
 
-        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof)
+        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof, fixcom)
 
         self._T_on_sm = depend_value(
             name="T_on_sm", func=self.get_T_on_sm, dependencies=[self._T, self._sm]
