@@ -1,0 +1,10 @@
+# column   1     --> step : The current simulation time step.
+# column   2     --> time{picosecond} : The elapsed simulation time.
+# column   3     --> conserved{electronvolt} : The value of the conserved energy quantity per bead.
+# column   4     --> temperature{kelvin} : The current temperature, as obtained from the MD kinetic energy.
+# column   5     --> kinetic_cv{electronvolt} : The centroid-virial quantum kinetic energy of the physical system.
+# column   6     --> potential{electronvolt} : The physical system potential energy.
+    0.00000000e+00     0.00000000e+00    -2.03040537e+01     3.00054577e+02     7.52293979e+00    -2.78026180e+01   
+    1.00000000e+00     5.00000000e-04    -2.03144667e+01     3.01643923e+02     7.52293979e+00    -2.78528862e+01   
+    2.00000000e+00     1.00000000e-03    -2.03287541e+01     3.07888966e+02     7.52293979e+00    -2.80237771e+01   
+    3.00000000e+00     1.50000000e-03    -2.03431063e+01     3.16045101e+02     7.52293979e+00    -2.82426564e+01     
