@@ -210,7 +210,16 @@ class ThermoLangevin(Thermostat):
             name="S", func=self.get_S, dependencies=[self._temp, self._T]
         )
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat."""
 
         super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof, fixcom)
