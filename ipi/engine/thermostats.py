@@ -136,7 +136,6 @@ class Thermostat:
             self.ndof = len(self.p)
         else:
             self.ndof = float(len(self.p) - fixdof)
-            print("SELF.NDOF THERMO", self.ndof)
 
         self._sm = depend_array(
             name="sm",
@@ -387,7 +386,6 @@ class ThermoPILE_L(Thermostat):
                 dpipe(self._temp, t._temp)
             # pipes dt
             dpipe(self._dt, t._dt)
-            print("temperature others", self._thermos[1]._temp._value)
 
             # for tau it is slightly more complex
             if it == 0:
@@ -470,7 +468,6 @@ class ThermoSVR(Thermostat):
 
     def get_K(self):
         """Calculates the average kinetic energy per degree of freedom."""
-        print("temperature in svr", self.temp)
         return Constants.kb * self.temp * 0.5
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
@@ -506,7 +503,6 @@ class ThermoSVR(Thermostat):
 
         # gets the stochastic term (basically a Gamma distribution for the kinetic energy)
         r1 = self.prng.g
-        print("SELF.NDOF IN SVR", self.ndof)
         if (self.ndof - 1) % 2 == 0:
             rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
         else:
@@ -522,9 +518,7 @@ class ThermoSVR(Thermostat):
             alpha *= -1
 
         self.ethermo += K * (1 - alpha2)
-        print("SELF.p IN SVR before", self.p)
         self.p *= alpha
-        print("SELF.p IN SVR after", self.p)
 
 
 dproperties(ThermoSVR, ["tau", "et", "K"])
