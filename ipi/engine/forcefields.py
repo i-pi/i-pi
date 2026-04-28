@@ -2278,8 +2278,13 @@ class FFCavPhSocket(FFSocket):
 
                 if self.dipole_surface:
 
-                    has_dipole_der = ("dipole" in extra) and ("dipole_derivative" in extra)
-                    check_dipole_der = (len(extra["dipole"]) == 3) and (len(extra["dipole_derivative"]) == (len(pbcpos) - self.ph.n_photon * 3) * 3)
+                    has_dipole_der = ("dipole" in extra) and (
+                        "dipole_derivative" in extra
+                    )
+                    check_dipole_der = (len(extra["dipole"]) == 3) and (
+                        len(extra["dipole_derivative"])
+                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    )
                     if not has_dipole_der or not check_dipole_der:
                         softexit.trigger(
                             "Dipole surface is turned on, but the required dipole information is not provided in extras. \
@@ -2290,7 +2295,9 @@ class FFCavPhSocket(FFSocket):
 
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
                     # !!! ONLY WORK FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
-                    dx_array, dy_array = np.array([extra["dipole"][0]]), np.array([extra["dipole"][1]])
+                    dx_array, dy_array = np.array([extra["dipole"][0]]), np.array(
+                        [extra["dipole"][1]]
+                    )
                     dipole_der = extra["dipole_derivative"]
 
                 else:
@@ -2331,7 +2338,7 @@ class FFCavPhSocket(FFSocket):
             else:
                 e_ph = 0
                 f_ph = 0
-                fx_cav, fy_cav, fz_cav = 0,0, 0
+                fx_cav, fy_cav, fz_cav = 0, 0, 0
 
             # 8. add cavity effects to our output
             result_tot[0] += e_ph

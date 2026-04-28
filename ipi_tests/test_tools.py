@@ -40,7 +40,7 @@ fortran_driver_models = [
     "doublewell",
     "gas",
     "noo3-h2o",
-    "water_dip_pol"
+    "water_dip_pol",
 ]
 
 # We should do this automatically but for now we do it explicitly here
