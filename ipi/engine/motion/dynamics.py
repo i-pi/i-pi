@@ -388,15 +388,14 @@ class DummyIntegrator:
 
             self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
+# Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
-            m3 = dstrip(beads.m3)
-            p = dstrip(beads.p)
-            print("fixatoms-dof in dynamics", self.fixatoms_dof)
+            pnm = dstrip(self.nm.pnm)
+            dynm3 = dstrip(self.nm.dynm3)
             self.ensemble.eens += 0.5 * np.sum(
-                p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
+                pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof]
             )
-            beads.p[:, self.fixatoms_dof] = 0.0
-            print("beads", beads.p)
+            self.nm.pnm[:, self.fixatoms_dof] = 0.0
 
 
 dproperties(

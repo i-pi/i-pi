@@ -601,10 +601,8 @@ class ThermoPILE_G(ThermoPILE_L):
 
         if fixcom:
             fixdof0 = fixdof
-            print("FIXCOM FIXDOF0", fixdof0)
         else:
             fixdof0 = int(fixdof / nm.nbeads)
-            print("FIXDOF FIXDOF0", fixdof0, fixdof)
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
