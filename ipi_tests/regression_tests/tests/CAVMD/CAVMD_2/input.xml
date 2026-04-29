@@ -6,7 +6,7 @@
     <trajectory filename='dip' stride='1' extra_type='dipole'> extras </trajectory>
     <checkpoint filename='checkpoint' stride='1' overwrite='True'/>
   </output>
-  <total_steps>3</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
