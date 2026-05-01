@@ -153,9 +153,10 @@ class MetatomicDriver(Dummy_driver):
         metatomic_minor = int(metatomic_minor)
 
         if metatomic_major != 0 or metatomic_minor != 1:
-            raise ImportError(
-                "this code is only compatible with metatomic-torch == v0.1, "
-                f"found version v{mta.__version__} at '{mta.__file__}'"
+            warning(
+                "this code is only tested with metatomic-torch == v0.1, "
+                f"found version v{mta.__version__} at '{mta.__file__}'.\n"
+                "proceed at your own risk"
             )
 
     def _check_consistency_options(self):
