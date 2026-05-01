@@ -193,6 +193,7 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
+        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model("A", self.model)
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
@@ -296,9 +297,8 @@ class MetatomicDriver(Dummy_driver):
         system = system.to(device)
 
         # Compute neighbor lists using vesin
-        vesin_metatomic.compute_requested_neighbors(
-            system, system_length_unit="Angstrom", model=model
-        )
+        for calculator in self._nl_calculators:
+            calculator.add_neighbor_list(system)
 
         return system, strain
 
@@ -640,8 +640,7 @@ class MetatomicDriver(Dummy_driver):
             pre_time += time()
 
             info(
-                "Total compute time %e (samples: %d; devices: %d)"
-                % (pre_time, n_samples, n_devices),
+                "Total compute time %e" % (pre_time),
                 verbosity.high,
             )
 
