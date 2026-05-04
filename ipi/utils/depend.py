@@ -435,11 +435,17 @@ class depend_array(depend_base):
     # Shape helpers (explicit so they return the intended type)
     # ------------------------------------------------------------------
 
-    def reshape(self, newshape):
-        """Return a reshaped depend_array sharing memory with self."""
+    def reshape(self, *shape):
+        """Return a reshaped depend_array sharing memory with self.
+
+        Accepts both `da.reshape((2, 3))` and `da.reshape(2, 3)`, matching
+        numpy's signature.
+        """
+        if len(shape) == 1:
+            shape = shape[0]
         return depend_array(
             value=None,
-            base=self._value.reshape(newshape),
+            base=self._value.reshape(shape),
             name=self._name,
             synchro=self._synchro,
             dependants=self._dependants,
@@ -488,7 +494,13 @@ class depend_array(depend_base):
             self.taint(taintme=False)
 
     def set(self, value, manual=True):
-        """Full-array assignment. `manual=False` is used by `update_auto`."""
+        """Full-array assignment. `manual=False` is used by `update_auto`.
+
+        Note: this writes through `_value[...] = value` so child slice-views
+        (which hold references to the same underlying buffer) stay valid.
+        Do NOT replace `self._value` with a new ndarray — that would
+        silently desync any existing slice's `_value` from the parent's.
+        """
         with self._threadlock:
             self._value[...] = value
             if manual and (self._synchro is not None or self._func is not None):
