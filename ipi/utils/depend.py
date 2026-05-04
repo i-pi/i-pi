@@ -272,6 +272,8 @@ class depend_value(depend_base):
 
 def _is_scalar_index(index, ndim):
     """True if `array[index]` returns a scalar for an array of rank `ndim`."""
+    if isinstance(index, (slice, type(Ellipsis))):
+        return False
     if hasattr(index, "__len__"):
         if len(index) == ndim and isinstance(index, tuple):
             for i in index:

@@ -17,9 +17,16 @@ b = dp.depend_array(name="b", value=np.zeros((2, 2), float))
 
 def test_slicing():
     """Depend: Slicing test"""
+    # Integer index into a 2D array returns a row (sub-array), not a scalar
     c = a[0]
     print((type(c)))
     assert isinstance(c, dp.depend_array)
+    # Slice of a 1D array must also return a depend_array, not a plain ndarray
+    d1 = dp.depend_array(name="d1", value=np.zeros(6))
+    s = d1[2:5]
+    assert isinstance(s, dp.depend_array), (
+        f"1D slice returned {type(s)}, expected depend_array"
+    )
 
 
 def test_addition():
