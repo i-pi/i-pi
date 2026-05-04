@@ -24,9 +24,9 @@ def test_slicing():
     # Slice of a 1D array must also return a depend_array, not a plain ndarray
     d1 = dp.depend_array(name="d1", value=np.zeros(6))
     s = d1[2:5]
-    assert isinstance(s, dp.depend_array), (
-        f"1D slice returned {type(s)}, expected depend_array"
-    )
+    assert isinstance(
+        s, dp.depend_array
+    ), f"1D slice returned {type(s)}, expected depend_array"
 
 
 def test_addition():
