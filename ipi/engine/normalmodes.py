@@ -499,7 +499,7 @@ class NormalModes:
         """
 
         dt = self.dt
-        pqk = xp.zeros((self.nbeads, 2, 2), dtype=xp.float64)
+        pqk = xp.zeros((self.nbeads, 2, 2))
         pqk[0] = xp.asarray([[1, 0], [dt, 1]])
 
         # Note that the propagator uses mass-scaled momenta.
@@ -594,7 +594,7 @@ class NormalModes:
         # also checks that the frequencies and the mode given in init are
         # consistent with the beads and ensemble
 
-        dmf = xp.ones(self.nbeads, dtype=xp.float64)
+        dmf = xp.ones(self.nbeads)
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
                 warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
@@ -661,7 +661,7 @@ class NormalModes:
         # also checks that the frequencies and the mode given in init are
         # consistent with the beads and ensemble
 
-        dmf = xp.ones(self.nbeads, dtype=xp.float64)
+        dmf = xp.ones(self.nbeads)
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
                 warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
@@ -723,7 +723,7 @@ class NormalModes:
     def get_dynm3(self):
         """Returns an array with the dynamical masses of individual atoms in the normal modes representation."""
 
-        dm3 = xp.zeros(self.beads.m3.shape, dtype=xp.float64)
+        dm3 = xp.zeros(self.beads.m3.shape)
         for b in range(self.nbeads):
             dm3[b] = dstrip(self.beads.m3)[b] * dstrip(self.nm_factor)[b]
 

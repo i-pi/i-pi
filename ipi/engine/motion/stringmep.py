@@ -513,7 +513,7 @@ class StringMover(Motion):
 
         # 'Self' stringpot will be updated later on,
         # therefore we store the copy to check convergence in the end.
-        old_stringpot = self.stringpot.copy()
+        old_stringpot = xp.asarray(self.stringpot, copy=True)
 
         if self.mode in ["damped_bfgs", "bfgstrm"]:
             # All BFGS-family algorithms would have similar structure.
@@ -541,7 +541,7 @@ class StringMover(Motion):
                 )
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
                 Damped_BFGS(
-                    x0=self.old_x.copy(),
+                    x0=xp.asarray(self.old_x, copy=True),
                     fdf=self.stringgm,
                     fdf0=(self.stringpot, self.stringgrad),
                     hessian=self.hessian,
@@ -558,7 +558,7 @@ class StringMover(Motion):
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
                 info("self.tr_trm: %s" % self.tr_trm, vrb.debug)
                 BFGSTRM(
-                    x0=self.old_x.copy(),
+                    x0=xp.asarray(self.old_x, copy=True),
                     u0=self.stringpot,
                     # BFGSTRM expects force instead of gradient, therefore minus
                     f0=-self.stringgrad,
@@ -582,7 +582,7 @@ class StringMover(Motion):
             info(" @FIRE N up: %s" % str(self.N_up), vrb.debug)
             info(" @FIRE dt: %s" % str(self.dt_fire), vrb.debug)
             self.v, self.a, self.N_dn, self.N_up, self.dt_fire = FIRE(
-                x0=self.old_x.copy(),
+                x0=xp.asarray(self.old_x, copy=True),
                 fdf=self.stringgm,
                 fdf0=(self.stringpot, self.stringgrad),
                 v=self.v,
@@ -638,7 +638,7 @@ class StringMover(Motion):
         # full potentials and full forces.
         tmp_v = self.full_v
         tmp_v[1:-1] = self.stringgm.rforces.pots
-        tmp_f = self.full_f.copy()
+        tmp_f = xp.asarray(self.full_f, copy=True)
         tmp_f[1:-1] = self.stringgm.rforces.f
         self.forces.transfer_forces_manual(
             new_q=[self.beads.q],
@@ -958,7 +958,7 @@ class StringMover(Motion):
 
         # Self instances will be updated in the optimizer, so we store the copies.
         # old_stringpot is used later as a convergence criterion.
-        old_stringpot = self.stringpot.copy()
+        old_stringpot = xp.asarray(self.stringpot, copy=True)
 
         if self.mode == "damped_bfgs":
             info(" @STRING_CLIMB: before Damped_BFGS() call", vrb.debug)
@@ -966,7 +966,7 @@ class StringMover(Motion):
             print("self.stringgrad.shape: %s" % str(self.stringgrad.shape))
             print("self.hessian.shape: %s" % str(self.hessian.shape))
             Damped_BFGS(
-                x0=self.old_x.copy(),
+                x0=xp.asarray(self.old_x, copy=True),
                 fdf=self.climbgm,
                 fdf0=(self.stringpot, self.stringgrad),
                 hessian=self.hessian,
@@ -980,7 +980,7 @@ class StringMover(Motion):
             print("self.stringgrad.shape: %s" % str(self.stringgrad.shape))
             print("self.hessian.shape: %s" % str(self.hessian.shape))
             BFGSTRM(
-                x0=self.old_x.copy(),
+                x0=xp.asarray(self.old_x, copy=True),
                 u0=self.stringpot,
                 # BFGSTRM expects force instead of gradient, therefore minus
                 f0=-self.stringgrad,
@@ -999,7 +999,7 @@ class StringMover(Motion):
             info(" @FIRE N up: %s" % str(self.N_up), vrb.debug)
             info(" @FIRE dt: %s" % str(self.dt_fire), vrb.debug)
             self.v, self.a, self.N_dn, self.N_up, self.dt_fire = FIRE(
-                x0=self.old_x.copy(),
+                x0=xp.asarray(self.old_x, copy=True),
                 fdf=self.climbgm,
                 fdf0=(self.stringpot, self.stringgrad),
                 v=self.v,
@@ -1037,8 +1037,8 @@ class StringMover(Motion):
 
         # This transfers forces from the climbing mapper to the "main" beads,
         # so that recalculation won't be triggered after the step.
-        tmp_f = self.full_f.copy()
-        tmp_v = self.full_v.copy()
+        tmp_f = xp.asarray(self.full_f, copy=True)
+        tmp_v = xp.asarray(self.full_v, copy=True)
         tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.stringgrad
         tmp_v[self.cl_indx] = self.stringpot
         self.forces.transfer_forces_manual(

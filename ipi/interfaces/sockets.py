@@ -601,7 +601,7 @@ class Driver(DriverSocket):
         # If only a piece of the system is active, resize forces and reassign
         if len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
-            r["result"][1] = xp.zeros(len(r["pos"]), dtype=xp.float64)
+            r["result"][1] = xp.zeros(len(r["pos"]))
             r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]
@@ -704,7 +704,7 @@ class Driver(DriverSocket):
         # If only a piece of the system is active, resize forces and reassign
         if len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
-            r["result"][1] = xp.zeros(len(r["pos"]), dtype=xp.float64)
+            r["result"][1] = xp.zeros(len(r["pos"]))
             r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]

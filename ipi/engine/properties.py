@@ -1738,7 +1738,7 @@ class Properties:
             iatom = -1
             latom = atom
 
-        tkcv = xp.zeros((6), dtype=xp.float64)
+        tkcv = xp.zeros((6))
         ncount = 0
         for i in range(self.beads.natoms):
             if atom != "" and iatom != i and latom != self.beads.names[i]:
@@ -1808,7 +1808,7 @@ class Properties:
         f = dstrip(self.forces.f)
 
         # I implement this for the most general case. In practice T_ij = <p_i p_j>/(2sqrt(m_i m_j))
-        kcv = xp.zeros((6), dtype=xp.float64)
+        kcv = xp.zeros((6))
         for b in range(self.beads.nbeads):
             kcv[0] += (
                 mi * (q[b, ai] - qc[ai]) * f[b, aj]
@@ -1897,7 +1897,7 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = xp.zeros((3, 3), dtype=xp.float64)
+        kst = xp.zeros((3, 3))
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)
@@ -1926,7 +1926,7 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = xp.zeros((3, 3), dtype=xp.float64)
+        kst = xp.zeros((3, 3))
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)

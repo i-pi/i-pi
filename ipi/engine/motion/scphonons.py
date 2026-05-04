@@ -785,7 +785,7 @@ class SCPhononator(DummyPhononator):
         qp, iDp = self.dm.beads.q, self.dm.iD
 
         # Takes the set of positions calculated at the previous step for (self.q, self.iD)
-        x = self.x[i].copy()
+        x = xp.asarray(self.x[i], copy=True)
 
         # Stores self.q in a vector
         q0 = self.q[i]
