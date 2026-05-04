@@ -98,9 +98,7 @@ class Ensemble:
         else:
             self.temp = -1.0
 
-        self._stressext = depend_array(
-            name="stressext", value=xp.zeros((3, 3), dtype=xp.float64)
-        )
+        self._stressext = depend_array(name="stressext", value=xp.zeros((3, 3)))
         if stressext is not None:
             self.stressext = xp.reshape(xp.asarray(stressext), (3, 3))
         else:

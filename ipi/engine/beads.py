@@ -211,7 +211,7 @@ class Beads:
            to the mass associated with the appropriate degree of freedom in q.
         """
 
-        m3 = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
+        m3 = xp.zeros((self.nbeads, 3 * self.natoms))
         m3[:, 0 : 3 * self.natoms : 3] = dstrip(self.m)
         m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
@@ -258,7 +258,7 @@ class Beads:
            The sum of the kinetic stress tensor of each replica.
         """
 
-        ks = xp.zeros((3, 3), dtype=xp.float64)
+        ks = xp.zeros((3, 3))
         for b in range(self.nbeads):
             ks = ks + self[b].kstress
         return ks

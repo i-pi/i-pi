@@ -442,7 +442,7 @@ class ForceComponent:
         """
 
         self.queue()
-        return xp.asarray([b.pot for b in self._forces], dtype=xp.float64)
+        return xp.asarray([b.pot for b in self._forces])
 
     def extra_gather(self):
         """Obtains the extra string information for each replica.
@@ -509,7 +509,7 @@ class ForceComponent:
            array for replica i of the system.
         """
 
-        newf = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
+        newf = xp.zeros((self.nbeads, 3 * self.natoms))
         self.queue()
         for b in range(self.nbeads):
             newf[b] = xp.asarray(dstrip(self._forces[b].f))
@@ -671,7 +671,7 @@ class MTSForces:
         level = self.level
         self.queue_mts()
 
-        fk = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
+        fk = xp.zeros((self.nbeads, 3 * self.natoms))
 
         mforces = self.mforces
         mrpc = self.mrpc
@@ -700,7 +700,7 @@ class MTSForces:
         level = self.level
         mforces = self.mforces
         mrpc = self.mrpc
-        rp = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
+        rp = xp.zeros((self.nbeads, 3, 3))
         for index in range(len(mforces)):
             if (
                 len(mforces[index].mts_weights) > level
@@ -1433,7 +1433,7 @@ class Forces:
                 )
 
                 # calculates the virial.
-                vplus = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
+                vplus = xp.zeros((self.nbeads, 3, 3))
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
                 vplus += self.dforces.mrpc[index].b2tob1(dmvirs)
 
@@ -1471,7 +1471,7 @@ class Forces:
         """Obtains the total force vector."""
 
         self.queue()
-        rf = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
+        rf = xp.zeros((self.nbeads, 3 * self.natoms))
         for k in range(self.nforces):
             # "expand" to the total number of beads the forces from the
             # contracted one
@@ -1486,8 +1486,8 @@ class Forces:
     def fvir_4th_order_combine(self):
         """Obtains the total fourth order |f^2| correction to the force vector and the virial."""
 
-        rf = xp.zeros((self.nbeads, 3 * self.natoms), dtype=xp.float64)
-        rv = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
+        rf = xp.zeros((self.nbeads, 3 * self.natoms))
+        rv = xp.zeros((self.nbeads, 3, 3))
 
         for k in range(self.nforces):
             if self.mforces[k].weight != 0 and self.mforces[k].mts_weights.sum() != 0:
@@ -1569,7 +1569,7 @@ class Forces:
         """Obtains the virial tensor for each forcefield."""
 
         self.queue()
-        rp = xp.zeros((self.nbeads, 3, 3), dtype=xp.float64)
+        rp = xp.zeros((self.nbeads, 3, 3))
         for k in range(self.nforces):
             if self.mforces[k].weight != 0:
                 dmvirs = dstrip(self.mforces[k].virs)

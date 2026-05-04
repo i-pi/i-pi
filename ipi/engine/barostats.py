@@ -241,7 +241,7 @@ class Barostat:
         estimator.
         """
 
-        kst = xp.zeros((3, 3), dtype=xp.float64)
+        kst = xp.zeros((3, 3))
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)
@@ -272,7 +272,7 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        kst = xp.zeros((3, 3), dtype=xp.float64)
+        kst = xp.zeros((3, 3))
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         pc = dstrip(self.beads.pc)
@@ -320,7 +320,7 @@ class Barostat:
             fall_r = fall.reshape((-1, 3))
             kst = -qqc.T @ fall_r
         else:
-            kst = xp.zeros((3, 3), dtype=xp.float64)
+            kst = xp.zeros((3, 3))
 
         if level == self.nmtslevels - 1:
             pc = dstrip(beads.pc).reshape((-1, 3))
@@ -334,7 +334,7 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        kst = xp.zeros((3, 3), dtype=xp.float64)
+        kst = xp.zeros((3, 3))
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
         na3 = 3 * self.beads.natoms
@@ -351,7 +351,7 @@ class Barostat:
     def get_stress(self):
         """Calculates the internal stress tensor."""
 
-        bvir = xp.zeros((3, 3), dtype=xp.float64)
+        bvir = xp.zeros((3, 3))
         if self.bias is not None:
             bvir = bvir + dstrip(self.bias.vir)
 
@@ -925,8 +925,7 @@ class BaroRGB(Barostat):
         # Store as a backend-native tensor so arithmetic with `self.p` and
         # cell quantities stays on the active backend (numpy / torch).
         self.L = xp.asarray(
-            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()]),
-            dtype=xp.float64,
+            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
         )
 
         if stressext is not None:
@@ -1232,8 +1231,7 @@ class BaroMTK(Barostat):
         # Store as a backend-native tensor so arithmetic with `self.p` and
         # cell quantities stays on the active backend (numpy / torch).
         self.L = xp.asarray(
-            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()]),
-            dtype=xp.float64,
+            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
         )
 
         if pext is not None:

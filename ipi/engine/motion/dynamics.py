@@ -351,9 +351,7 @@ class DummyIntegrator:
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
-            coeffsc = xp.ones(
-                (self.beads.nbeads, 3 * self.beads.natoms), dtype=xp.float64
-            )
+            coeffsc = xp.ones((self.beads.nbeads, 3 * self.beads.natoms))
             coeffsc[::2] = coeffsc[::2] / -3.0
             coeffsc[1::2] = coeffsc[1::2] / 3.0
             self.coeffsc = coeffsc

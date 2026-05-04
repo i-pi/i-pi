@@ -677,7 +677,7 @@ class ThermoGLE(Thermostat):
         super(ThermoGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = xp.eye(1, dtype=xp.float64)
+            A = xp.eye(1)
         # `xp.asarray(..., copy=True)` is the array-API equivalent of
         # numpy's `.copy()` and works on both numpy and torch inputs.
         self._A = depend_value(value=xp.asarray(A, copy=True), name="A")
@@ -687,7 +687,7 @@ class ThermoGLE(Thermostat):
         # now, this is tricky. if C is taken from temp, then we want it to be updated
         # as a depend of temp. Otherwise, we want it to be an independent beast.
         if C is None:
-            C = xp.eye(self.ns + 1, dtype=xp.float64) * self.temp
+            C = xp.eye(self.ns + 1) * self.temp
             self._C = depend_value(name="C", func=self.get_C, dependencies=[self._temp])
         else:
             self._C = depend_value(value=xp.asarray(C, copy=True), name="C")
@@ -817,7 +817,7 @@ class ThermoNMGLE(Thermostat):
         super(ThermoNMGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = xp.eye(1, dtype=xp.float64)
+            A = xp.eye(1)
         self._A = depend_value(value=xp.asarray(A, copy=True), name="A")
 
         self.nb = len(self.A)

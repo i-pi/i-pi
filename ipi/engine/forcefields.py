@@ -740,36 +740,25 @@ class FFdmd(FFEval):
             raise ValueError("Coupling matrix size mismatch")
 
         v = 0.0
-        f = np.zeros(q.shape)
-        vir = np.zeros((3, 3), float)
+        f = xp.zeros(q.shape)
+        vir = xp.zeros((3, 3))
         # must think and check handling of time step
         periodic = math.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
         for i in range(1, nat):
-            # MR's first implementation:
-            #            dij = q[i] - q[:i]
-            #            rij = xp.sqrt((dij ** 2).sum(axis=1))
-            # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
             cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]
-            prefac = (cij) @ (
-                rij
-            )  # for each i it has the distances to all indexes previous
+            prefac = cij @ rij
             v += xp.sum(prefac) * periodic
             nij = xp.asarray(dij, copy=True)
-            nij *= -(cij / rij)[:, np.newaxis]  # magic line...
+            nij = nij * (-(cij / rij)[:, None])
             f[i] += nij.sum(axis=0) * periodic
-            f[:i] -= nij * periodic  # everything symmetric
-            # virial:
+            f[:i] -= nij * periodic
+            # virial: sum_j (nij[j] outer dij[j]) accumulated into a 3x3 tensor
             fij = nij * periodic
-            for j in range(i):
-                for cart1 in range(3):
-                    for cart2 in range(3):
-                        vir[cart1][cart2] += fij[j][cart1] * dij[j][cart2]
-            # MR 2021: The virial looks correct and produces stable NPT simulations. It was not bullet-proof benchmarked, though.
-            #          Because this is "out of equilibrium" I still did not find a good benchmark. Change cell and look at variation of energy only for this term?
+            vir = vir + fij.T @ dij
 
-        r["result"] = [v, f.reshape(nat * 3), vir, ""]
+        r["result"] = [v, f.reshape(nat * 3), vir, {"raw": ""}]
         r["status"] = "Done"
         r._event_done.set()
 
@@ -822,13 +811,16 @@ class FFDebye(FFEval):
                 "Must provide a reference configuration for the Debye crystal."
             )
 
-        self.H = H
-        self.xref = xref
+        # Promote to the active backend so all subsequent linear algebra
+        # (eigh, matmul, inner products) stays on a single namespace.
+        self.H = xp.asarray(H)
+        self.xref = xp.asarray(xref)
         self.vref = vref
 
         eigsys = xp.linalg.eigh(self.H)
         info(
-            " @ForceField: Hamiltonian eigenvalues: " + " ".join(map(str, eigsys[0])),
+            " @ForceField: Hamiltonian eigenvalues: "
+            + " ".join(str(float(e)) for e in eigsys[0]),
             verbosity.medium,
         )
 
@@ -843,12 +835,12 @@ class FFDebye(FFEval):
             raise ValueError("Reference structure size mismatch")
 
         d = q - self.xref
-        mf = (self.H) @ (d)
+        mf = self.H @ d
 
         r["result"] = [
-            self.vref + 0.5 * ((d) @ (mf)),
+            self.vref + 0.5 * (d @ mf),
             -mf,
-            np.zeros((3, 3), float),
+            xp.zeros((3, 3)),
             {"raw": ""},
         ]
         r["status"] = "Done"
@@ -1181,17 +1173,26 @@ class FFYaff(FFEval):
     def evaluate(self, r):
         """Evaluate the energy and forces with the Yaff force field."""
 
-        q = r["pos"]
-        nat = len(q) / 3
+        # yaff is a numpy library: lift cell and positions to numpy at
+        # the boundary, accept its in-place writes into numpy buffers,
+        # and lift the result back to the active backend so downstream
+        # consumers see xp tensors.
+        q_np = to_numpy(r["pos"])
+        nat = len(q_np) // 3
         rvecs = r["cell"][0]
 
         self.ff.update_rvecs(np.ascontiguousarray(to_numpy(rvecs.T), dtype=np.float64))
-        self.ff.update_pos(q.reshape((nat, 3)))
+        self.ff.update_pos(q_np.reshape((nat, 3)))
         gpos = np.zeros((nat, 3))
         vtens = np.zeros((3, 3))
         e = self.ff.compute(gpos, vtens)
 
-        r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
+        r["result"] = [
+            float(e),
+            xp.asarray(-gpos.ravel()),
+            xp.asarray(-vtens),
+            {"raw": ""},
+        ]
         r["status"] = "Done"
         r._event_done.set()
 
