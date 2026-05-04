@@ -602,10 +602,10 @@ class ThermoPILE_G(ThermoPILE_L):
         # centroid thermostat
         self._thermos[0] = ThermoSVR(temp=1, dt=1, tau=1)
 
-        if fixcom:
-            fixdof0 = fixdof
-        else:
-            fixdof0 = int(fixdof / nm.nbeads)
+        # the centroid sees one bead's worth of fixed-atom DOFs, plus the
+        # COM constraint (which lives entirely on the centroid mode).
+        ncom = 3 if fixcom else 0
+        fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
@@ -1037,7 +1037,7 @@ class ThermoNMGLEG(ThermoNMGLE):
            fixcom: An optional boolean which tells whether the COM is fixed.
         """
 
-        super(ThermoNMGLEG, self).bind(nm=nm, prng=prng, fixdof=fixdof)
+        super(ThermoNMGLEG, self).bind(nm=nm, prng=prng, fixdof=fixdof, fixcom=fixcom)
 
         t = ThermoSVR(self.temp, self.dt, self.tau)
 
