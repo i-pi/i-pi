@@ -77,6 +77,16 @@ class InputInterfaceSocket(Input):
                 "help": "This gives the maximum number of job threads that are active simultaneously.",
             },
         ),
+        "consolidate_messages": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
+                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
+                strictly follow the base protocol.""",
+            },
+        ),
         "timeout": (
             InputValue,
             {
@@ -125,6 +135,7 @@ class InputInterfaceSocket(Input):
         self.timeout.store(iface.timeout)
         self.pbc.store(iface.dopbc)
         self.max_workers.store(iface.max_workers)
+        self.consolidate_messages.store(iface.consolidate_messages)
 
     def fetch(self):
         """Creates an InterfaceSocket object.
@@ -144,6 +155,7 @@ class InputInterfaceSocket(Input):
             timeout=self.timeout.fetch(),
             dopbc=self.pbc.fetch(),
             max_workers=self.max_workers.fetch(),
+            consolidate_messages=self.consolidate_messages.fetch(),
         )
 
     def check(self):

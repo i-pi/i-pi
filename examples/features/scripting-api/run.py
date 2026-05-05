@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from ipi.utils.scripting import (
+from ipi.scripting import (
     simulation_xml,
     forcefield_xml,
     motion_nvt_xml,

@@ -95,13 +95,7 @@ class Atoms:
        M: The total mass of all the atoms.
        kin: The total kinetic energy of the atoms. Depends on p and m3.
        kstress: The contribution of the atoms to the kinetic stress tensor.
-          Depends on px, py, pz and m.
-       qx: An array giving the x components of the positions.
-       qy: An array giving the y components of the positions.
-       qz: An array giving the z components of the positions.
-       px: An array giving the x components of the momenta.
-       py: An array giving the y components of the momenta.
-       pz: An array giving the z components of the momenta.
+          Depends on p and m.
     """
 
     def __init__(self, natoms, _prebind=None):

@@ -293,12 +293,12 @@ class MetatomicDriver(Dummy_driver):
             cell = cell @ strain
 
         system = mta.System(self._types, positions, cell, pbc)
+        system = system.to(device)
 
         # Compute neighbor lists using vesin
         vesin_metatomic.compute_requested_neighbors(
             system, system_length_unit="Angstrom", model=model
         )
-        system = system.to(device)
 
         return system, strain
 
@@ -640,7 +640,8 @@ class MetatomicDriver(Dummy_driver):
             pre_time += time()
 
             info(
-                "Total compute time %e" % (pre_time),
+                "Total compute time %e (samples: %d; devices: %d)"
+                % (pre_time, n_samples, n_devices),
                 verbosity.high,
             )
 
