@@ -62,9 +62,6 @@ class ForceBead:
        extra: A string containing some formatted output returned by the client. Depends on ufvx.
        pot: A float giving the potential energy of the system. Depends on ufvx.
        f: An array containing all the components of the force. Depends on ufvx.
-       fx: A slice of f containing only the x components of the forces.
-       fy: A slice of f containing only the y components of the forces.
-       fz: A slice of f containing only the z components of the forces.
        vir: An array containing the components of the virial tensor in upper
           triangular form, not divided by the volume. Depends on ufvx.
        request: a handle to the request that has been filed by the FF object
@@ -116,23 +113,16 @@ class ForceBead:
             dependencies=[self._ufvx],
         )
 
-        # NB: the force requires a bit more work, to define shortcuts to xyz
-        # slices without calculating the force at this point.
-        fbase = np.zeros(atoms.natoms * 3, float)
         self._f = depend_array(
-            name="f", value=fbase, func=self.get_f, dependencies=[self._ufvx]
+            name="f",
+            value=np.zeros(atoms.natoms * 3, float),
+            func=self.get_f,
+            dependencies=[self._ufvx],
         )
 
         self._extra = depend_value(
             name="extra", func=self.get_extra, dependencies=[self._ufvx]
         )
-
-        self._fx = depend_array(name="fx", value=fbase[0 : 3 * atoms.natoms : 3])
-        self._fy = depend_array(name="fy", value=fbase[1 : 3 * atoms.natoms : 3])
-        self._fz = depend_array(name="fz", value=fbase[2 : 3 * atoms.natoms : 3])
-        dcopy(self._f, self._fx)
-        dcopy(self._f, self._fy)
-        dcopy(self._f, self._fz)
 
     def queue(self):
         """Sends the job to the interface queue directly.
@@ -261,7 +251,7 @@ class ForceBead:
         return self.ufvx[3]
 
 
-dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
+dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra"])
 
 
 class ForceComponent:
@@ -821,11 +811,11 @@ class Forces:
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
 
             # the beads positions for this force components are obtained
-            # automatically, when needed, as a contraction of the full beads
+            # automatically, when needed, as a contraction of the full beads.
+            # Per-bead slices (b._q for b in newbeads) delegate their
+            # `_refresh` to the parent via `depend_array._parent`, so we
+            # only need to install `_func` on the parent.
             newbeads._q._func = make_rpc(newrpc, beads)
-            for b in newbeads:
-                # must update also indirect access to the beads coordinates
-                b._q._func = newbeads._q._func
 
             # makes newbeads.q depend from beads.q
             beads._q.add_dependant(newbeads._q)
