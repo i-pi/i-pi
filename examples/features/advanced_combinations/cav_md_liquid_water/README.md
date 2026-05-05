@@ -9,9 +9,13 @@ See the paper [Proc. Natl. Acad. Sci., 2020, 117 (31), 18324–18331](https://do
 
 This example is the same as the [Rabi splitting tutorial](https://github.com/TaoELi/cavity-md-ipi/tree/master/tutorials/Rabi_splitting) in [https://github.com/TaoELi/cavity-md-ipi](https://github.com/TaoELi/cavity-md-ipi). The only difference is that in the original [Rabi splitting tutorial](https://github.com/TaoELi/cavity-md-ipi/tree/master/tutorials/Rabi_splitting), the parameters for the photons are controlled by a separate input file **photon_params.json**. Here, instead, the photon parameters are controlled in the **ffcavphsocket** section of the i-pi input file **input.xml**. 
 
-**Important**: At the moment this implementation assumes that the total dipole moment is a sum of atomic charges which are fixed during the simulation. While an extension to use on-the-fly dipole moments obtained from the drive is possible, it has not been implemented at the moment. If you are interested in this feature please contact us or use the [development version of the CavMD code](https://github.com/TaoELi/cavity-md-ipi).
+## Fixed point charges as the dipole surface
 
-In short, to perform CavMD simulations, we need to make **two modifications** of conventional i-pi simulations.
+The simplest CavMD simulations assume that the molecular dipole moments are calculated using a linear combination of fixed point charges times the nuclear coordinates. For this case, the following input file and bash script are used for simulations:
+- **input.xml**
+- **run.sh**
+
+Here, we need to make **two modifications** of conventional i-pi simulations.
 
 1. We use the following force evaluator **ffcavphsocket** instead of the original **ffsocket**. In this new force evaluator, **E0** denotes the effective light-matter coupling strength in atomic units (corresponding to the \tilde{varepsilon} parameter in the [original paper](https://doi.org/10.1073/pnas.2009272117)). **omega_c_cminv** denotes the cavity photon mode frequency in wave number. **charge_array** defines the partial charges of all atoms in the same order as the input xyz file. Note that the total size of **charge_array** should match the total number of nuclei, otherwise a **ValueError** will be raised.
 

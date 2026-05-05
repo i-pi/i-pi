@@ -1,0 +1,10 @@
+driver_model qtip4pf
+address h2o-cl-cavmd
+port 32342
+socket_mode unix
+
+driver_model water_dip_pol
+address h2o-dipole-cl-cavmd
+port 32343
+socket_mode unix
+flags -o 0
