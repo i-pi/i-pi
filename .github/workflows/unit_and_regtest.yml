@@ -1,11 +1,11 @@
 name: Regression and unitary tests
 
-on: 
+on:
   push:
     branches: [main]
   pull_request:
     # Check all PR
-  
+
 concurrency:
   group: reg-unit-tests-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -32,32 +32,16 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: which python
-
-      - name: Install dependencies and Project
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt 
-          pip install .
-          pip install ase
-          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
-
-      - name: Install Gfortran and Compile Driver
-        shell: bash
+      - name: install gfortran
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran
-          cd drivers/f90
-          make
+          sudo apt-get install -y gfortran
 
-      - name: unit-tests
-        shell: bash
-        run: |
-          pwd
-          i-pi-tests -t unit
+      - name: install tox
+        run: python -m pip install --upgrade pip 'tox>=4'
 
-      - name: regtests
-        shell: bash
-        run: |
-          pwd
-          i-pi-tests -t regtests
+      - name: unit tests
+        run: tox -e unit
+
+      - name: regression tests
+        run: tox -e regtests
