@@ -112,14 +112,18 @@ available tutorials, recipes and other useful online resources.
 
 ## Run the automatic test suite
 
-The automatic test suite can be run by calling the i-pi-tests script.
-You need to have the `pytest` package installed
+The automatic test suite is driven by [`tox`](https://tox.wiki/) (install with
+`pip install tox`). From the repository root, run any of:
 
 ```
-i-pi-tests
+tox -e unit       # unit tests
+tox -e regtests   # regression tests (compiles and uses the fortran driver)
+tox -e examples   # smoke-test all input examples
 ```
 
-You may also need to install some dependencies, listed in `requirements.txt`.
+`tox` builds a clean environment, installs i-PI plus the required test
+dependencies, and runs the suite. Run `tox list` to see all available
+environments.
 
 See more details in the README file inside the `ipi_tests` folder.
 
