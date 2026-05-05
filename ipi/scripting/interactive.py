@@ -18,7 +18,6 @@ from ipi.utils.io.backends.io_ase import ase, _asecheck
 
 from ipi.scripting import calculators
 
-
 __all__ = ["InteractiveSimulation"]
 
 

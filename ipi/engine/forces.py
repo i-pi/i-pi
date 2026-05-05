@@ -26,7 +26,6 @@ from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 
-
 __all__ = ["Forces", "ForceComponent"]
 
 
