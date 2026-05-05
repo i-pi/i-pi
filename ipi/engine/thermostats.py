@@ -606,8 +606,8 @@ class ThermoPILE_G(ThermoPILE_L):
         # COM constraint (which lives entirely on the centroid mode).
         # Even if the construction below allows the formal use of fixcom
         # and fixdof together, that does not make much physical sense
-        # and the code currently would stop the user in this setup. Nevertheless
-        # if someone really wants to do it, the construction below allows this.
+        # and the code currently switches off fixcom automatically if one uses fixdof/fixatoms.
+        # Nevertheless if someone really wants to do it in the future, the construction below allows this.
         ncom = 3 if fixcom else 0
         fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
 
