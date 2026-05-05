@@ -153,9 +153,10 @@ class MetatomicDriver(Dummy_driver):
         metatomic_minor = int(metatomic_minor)
 
         if metatomic_major != 0 or metatomic_minor != 1:
-            raise ImportError(
-                "this code is only compatible with metatomic-torch == v0.1, "
-                f"found version v{mta.__version__} at '{mta.__file__}'"
+            warning(
+                "this code is only tested with metatomic-torch == v0.1, "
+                f"found version v{mta.__version__} at '{mta.__file__}'.\n"
+                "proceed at your own risk"
             )
 
     def _check_consistency_options(self):
@@ -193,6 +194,7 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
+        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model("A", self.model)
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
@@ -296,9 +298,8 @@ class MetatomicDriver(Dummy_driver):
         system = system.to(device)
 
         # Compute neighbor lists using vesin
-        vesin_metatomic.compute_requested_neighbors(
-            system, system_length_unit="Angstrom", model=model
-        )
+        for calculator in self._nl_calculators:
+            calculator.add_neighbor_list(system)
 
         return system, strain
 

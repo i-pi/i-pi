@@ -74,12 +74,12 @@ class Dynamics(Motion):
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
-            if (
-                thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
-            ) and (len(fixatoms_dof) > 0):
+            if (thermostat.__class__.__name__ == "ThermoNMGLEG") and (
+                len(fixatoms_dof) > 0
+            ):
                 softexit.trigger(
                     status="bad",
-                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE not yet supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -170,7 +170,9 @@ class Dynamics(Motion):
         dpipe(self._ntemp, self.thermostat._temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
-        self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
+        self.thermostat.bind(
+            beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof, fixcom=self.fixcom
+        )
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(self._ntemp, self.barostat._temp)
@@ -386,13 +388,14 @@ class DummyIntegrator:
 
             self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
+        # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
-            m3 = dstrip(beads.m3)
-            p = dstrip(beads.p)
+            pnm = dstrip(self.nm.pnm)
+            dynm3 = dstrip(self.nm.dynm3)
             self.ensemble.eens += 0.5 * np.sum(
-                p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
+                pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof]
             )
-            beads.p[:, self.fixatoms_dof] = 0.0
+            self.nm.pnm[:, self.fixatoms_dof] = 0.0
 
 
 dproperties(
@@ -591,7 +594,9 @@ class NVTCCIntegrator(NVTIntegrator):
         self.nm.pnm[0, :] = 0.0
         self.pconstraints()
 
-        # self.qcstep() # for the moment I just avoid doing the centroid step.
+        # The centroid is constrained, so qcstep is skipped, but the internal
+        # ring-polymer modes still need the two half-step free propagations.
+        self.nm.free_qstep()
         self.nm.free_qstep()
 
         self.pstep()

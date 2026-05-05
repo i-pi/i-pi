@@ -10,8 +10,10 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
+ipi_global_settings = {"floatformat": "%16.8e"}
+
 # expose some utility functions in a more direct way
-from ipi.utils.parsing import read_output, read_trajectory
+from ipi.scripting import read_output, read_trajectory
 from ipi.utils.setup import install_driver
 
 __all__ = [
@@ -26,8 +28,6 @@ __all__ = [
     "read_output",
     "read_trajectory",
 ]
-
-ipi_global_settings = {"floatformat": "%16.8e"}
 
 from ipi.engine.simulation import Simulation
 
