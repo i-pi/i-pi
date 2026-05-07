@@ -123,7 +123,6 @@ def run_driver(
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
-
             f_data = True
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
@@ -228,6 +227,7 @@ if __name__ == "__main__":
         default=False,
         help="Verbose output.",
     )
+    
     args = parser.parse_args()
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
