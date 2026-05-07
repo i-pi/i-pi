@@ -112,8 +112,10 @@ available tutorials, recipes and other useful online resources.
 
 ## Run the automatic test suite
 
-The automatic test suite is driven by [`tox`](https://tox.wiki/) (install with
-`pip install tox`). From the repository root, run any of:
+The automatic test suite is driven by [`tox`](https://tox.wiki/), a
+Python automation tool that creates clean, isolated environments to
+make running tests ad build tasks more reproducible. You can install
+it with `pip install tox`). From the repository root, run any of:
 
 ```
 tox -e unit       # unit tests

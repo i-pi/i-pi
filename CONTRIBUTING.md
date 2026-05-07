@@ -29,6 +29,8 @@ We also ask for the usage of `flake8` for syntactic checks, which is also
 part of linting.
 
 We use [`tox`](https://tox.wiki/) to drive linting, testing, and the docs build.
+`tox` is a Python automation tool that creates clean, isolated environments from
+scratch and runs predefined commands in them. 
 Install it once with `pip install tox`. BEFORE proceeding to a pull request, the
 minimal requirement is that you run
 
