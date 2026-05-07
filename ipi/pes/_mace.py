@@ -2,7 +2,7 @@
 """An interface for the [MACE](https://github.com/ACEsuit/mace) calculator that supports batched evaluation."""
 
 try:
-    import mace  # pylint: disable=unused-import
+    import mace  # noqa: F401
 
 except Exception:
     msg = (

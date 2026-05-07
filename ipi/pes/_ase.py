@@ -1,7 +1,7 @@
 """Interface with ASE calculators"""
 
 try:
-    import ase  # pylint: disable=unused-import
+    import ase  # noqa: F401
 
 except Exception:
     msg = (
