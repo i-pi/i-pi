@@ -4,7 +4,6 @@ import argparse
 import numpy as np
 from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
-from ipi.utils.timing import Timer
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
@@ -87,7 +86,6 @@ def run_driver(
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
-    LOGGER = Timer(logger is not None, logger)
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
         if f_verbose:
@@ -125,9 +123,8 @@ def run_driver(
             pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
-            with LOGGER.section("__call__"):
-                pot, force, vir, extras = driver(cell, pos)
-            LOGGER.report()
+            pot, force, vir, extras = driver(cell, pos)
+
             f_data = True
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
