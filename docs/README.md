@@ -12,6 +12,7 @@ and run `tox -e docs` from the repository root. The HTML output will be generate
 in `docs/_build/html`.
 
 The PDF manual (`ipi-manual.pdf`, shipped alongside the HTML on the public docs site) is built by CI and does not need to be built locally. If you do want to reproduce it, install a LaTeX toolchain first (`sudo apt install texlive-latex-extra texlive-lang-greek latexmk`) and run `tox -e docs-pdf`, from the repository root.
+The document will be generated in `docs/_build/latex`.
 
 The input documentation is automatically generated based on the helpstrings in the input folder.
 When you add a new tag, you should also add an entry into `scripts/help.py` to have it added 
