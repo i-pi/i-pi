@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from ipi.utils.scripting import InteractiveSimulation
+from ipi.scripting import InteractiveSimulation
 from ipi.utils.depend import dstrip
 import numpy as np
 import ase, ase.io

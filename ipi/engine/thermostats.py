@@ -72,7 +72,16 @@ class Thermostat:
         self._dt = depend_value(name="dt", value=dt)
         self._ethermo = depend_value(name="ethermo", value=ethermo)
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -91,6 +100,7 @@ class Thermostat:
               Random().
            fixdof: An optional integer which can specify the number of constraints
               applied to the system. Defaults to zero.
+           fixcom: An optional boolean which keeps info whether the COM was fixed.
 
         Raises:
            TypeError: Raised if no appropriate degree of freedom or object
@@ -200,10 +210,19 @@ class ThermoLangevin(Thermostat):
             name="S", func=self.get_S, dependencies=[self._temp, self._T]
         )
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat."""
 
-        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof)
+        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof, fixcom)
 
         self._T_on_sm = depend_value(
             name="T_on_sm", func=self.get_T_on_sm, dependencies=[self._T, self._sm]
@@ -292,6 +311,7 @@ class ThermoPILE_L(Thermostat):
         prng=None,
         bindcentroid=True,
         fixdof=None,
+        fixcom=None,
     ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
@@ -542,7 +562,16 @@ class ThermoPILE_G(ThermoPILE_L):
             func=self.get_npilect, name="npilect", dependencies=[self._pilect]
         )
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes a beads object with degrees of freedom, and makes its momentum
@@ -573,8 +602,17 @@ class ThermoPILE_G(ThermoPILE_L):
         # centroid thermostat
         self._thermos[0] = ThermoSVR(temp=1, dt=1, tau=1)
 
+        # the centroid sees one bead's worth of fixed-atom DOFs, plus the
+        # COM constraint (which lives entirely on the centroid mode).
+        # Even if the construction below allows the formal use of fixcom
+        # and fixdof together, that does not make much physical sense
+        # and the code currently switches off fixcom automatically if one uses fixdof/fixatoms.
+        # Nevertheless if someone really wants to do it in the future, the construction below allows this.
+        ncom = 3 if fixcom else 0
+        fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
+
         t = self._thermos[0]
-        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
+        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
             dpipe(self._npilect, t._temp)
@@ -685,7 +723,16 @@ class ThermoGLE(Thermostat):
 
         self.s = np.zeros(0)
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -704,6 +751,7 @@ class ThermoGLE(Thermostat):
               Random().
            fixdof: An optional integer which can specify the number of constraints
               applied to the system. Defaults to zero.
+           fixcom: An optional boolean which tells whether COM is fixed.
 
         Raises:
            TypeError: Raised if no appropriate degree of freedom or object
@@ -815,7 +863,16 @@ class ThermoNMGLE(Thermostat):
         else:
             self._C = depend_value(value=C.copy(), name="C")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -831,6 +888,7 @@ class ThermoNMGLE(Thermostat):
               Random().
            fixdof: An optional integer which can specify the number of constraints
               applied to the system. Defaults to zero.
+           fixcom: An optional boolean which tells whether the COM is fixed.
 
         Raises:
            TypeError: Raised if no beads object is specified for
@@ -955,7 +1013,16 @@ class ThermoNMGLEG(ThermoNMGLE):
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         self._tau = depend_value(value=tau, name="tau")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -971,9 +1038,10 @@ class ThermoNMGLEG(ThermoNMGLE):
               Random().
            fixdof: An optional integer which can specify the number of constraints
               applied to the system. Defaults to zero.
+           fixcom: An optional boolean which tells whether the COM is fixed.
         """
 
-        super(ThermoNMGLEG, self).bind(nm=nm, prng=prng, fixdof=fixdof)
+        super(ThermoNMGLEG, self).bind(nm=nm, prng=prng, fixdof=fixdof, fixcom=fixcom)
 
         t = ThermoSVR(self.temp, self.dt, self.tau)
 
@@ -1249,7 +1317,16 @@ class MultiThermo(Thermostat):
             et += t.ethermo
         return et
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat."""
 
         # just binds all the sub-thermostats

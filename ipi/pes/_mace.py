@@ -147,12 +147,12 @@ class BatchedMACE(MACECalculator):
 
     def __init__(
         self,
-        instructions: dict = {},
+        instructions: dict = None,
         *argc,
         **kwargs,
     ):
 
-        self.instructions = instructions
+        self.instructions = instructions if instructions is not None else {}
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
@@ -209,7 +209,9 @@ class BatchedMACE(MACECalculator):
                 # batch = next(iter(data_loader)).to(self.device)
                 # batch = self._clone_batch(batch)
                 node_heads = batch["head"][batch["batch"]]
-                num_atoms_arange = torch.arange(batch["positions"].shape[0])
+                num_atoms_arange = torch.arange(
+                    batch["positions"].shape[0], device=batch["positions"].device
+                )
 
                 # this try-except is to be compatible with different MACE versions
                 try:
@@ -269,7 +271,11 @@ class BatchedMACE(MACECalculator):
         """
         return [
             a.shape[0]
-            for a in np.split(batch["positions"], batch["ptr"][1:], axis=0)[:-1]
+            for a in np.split(
+                batch["positions"].cpu().numpy(),
+                batch["ptr"][1:].cpu().numpy(),
+                axis=0,
+            )[:-1]
         ]
 
     def compute_batched(self, atoms: List[Atoms]) -> List[Parent]:
@@ -348,7 +354,7 @@ class BatchedMACE(MACECalculator):
         """
 
         for keyword in ["forces", "stress"]:  # "virials"
-            if data[keyword] is not None:
+            if data.get(keyword) is not None:
                 raise ValueError(f"'{keyword}' in 'data' should be None.")
 
         forces, _, stress, hessian, edge_forces = get_outputs(
