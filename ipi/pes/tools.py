@@ -1,6 +1,5 @@
 import numpy as np
 from typing import Any, Dict, Tuple, List, Union
-from ipi.utils.units import unit_to_internal, unit_to_user
 
 Parent = Dict[str, Union[float, np.ndarray]]
 
