@@ -60,7 +60,6 @@ def run_driver(
     driver=Dummy_driver(),
     f_verbose=False,
     sockets_prefix="/tmp/ipi_",
-    logger: bool = None,
 ):
     """Minimal socket client for i-PI."""
 
@@ -229,14 +228,6 @@ if __name__ == "__main__":
         default=False,
         help="Verbose output.",
     )
-    parser.add_argument(
-        "-l",
-        "--logger",
-        type=str,
-        default=None,
-        help="""Logger file (default: None) 
-        """,
-    )
     args = parser.parse_args()
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
@@ -253,5 +244,4 @@ if __name__ == "__main__":
         driver=d_f,
         f_verbose=args.verbose,
         sockets_prefix=args.sockets_prefix,
-        logger=args.logger,
     )
