@@ -1133,6 +1133,22 @@ class InputFFCavPhSocket(InputFFSocket):
                 "help": "Determines if additional photonic degrees of freedom is included or not.",
             },
         ),
+        "evaluate_photon": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "When multiple drivers are used, determines if the photon forces are evaluated. This should be set to False for all but one driver, to avoid double counting of the photon forces. If only one driver is used, this should be set to True by default.",
+            },
+        ),
+        "dipole_surface": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Determines if use dipole surface to propagate or not.",
+            },
+        ),
         "E0": (
             InputValue,
             {
@@ -1188,6 +1204,8 @@ class InputFFCavPhSocket(InputFFSocket):
 
         self.charge_array.store(ff.charge_array)
         self.apply_photon.store(ff.apply_photon)
+        self.dipole_surface.store(ff.dipole_surface)
+        self.evaluate_photon.store(ff.evaluate_photon)
         self.E0.store(ff.E0)
         self.omega_c.store(ff.omega_c)
         self.ph_rep.store(ff.ph_rep)
@@ -1222,6 +1240,8 @@ class InputFFCavPhSocket(InputFFSocket):
             ),
             charge_array=self.charge_array.fetch(),
             apply_photon=self.apply_photon.fetch(),
+            dipole_surface=self.dipole_surface.fetch(),
+            evaluate_photon=self.evaluate_photon.fetch(),
             E0=self.E0.fetch(),
             omega_c=self.omega_c.fetch(),
             ph_rep=self.ph_rep.fetch(),
