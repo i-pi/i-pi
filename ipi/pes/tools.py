@@ -3,55 +3,6 @@ import numpy as np
 from typing import Any, Dict, Tuple, List, Union
 from ipi.utils.units import unit_to_internal, unit_to_user
 
-
-# --------------------------------------- #
-class JSONLogger:
-
-    def __init__(self, file: str = None):
-        self.file = file
-        self.enabled = file is not None
-
-    def _serialize(self, obj: Any) -> Any:
-        """Recursively convert objects into JSON-serializable types."""
-
-        # NumPy arrays → lists
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-
-        # NumPy scalar types → Python scalars
-        if isinstance(obj, (np.floating, np.integer)):
-            return obj.item()
-
-        # Standard JSON scalars
-        if isinstance(obj, (int, float, str, bool)) or obj is None:
-            return obj
-
-        # Dicts → recursively serialize values
-        if isinstance(obj, dict):
-            return {k: self._serialize(v) for k, v in obj.items()}
-
-        # Lists / tuples / sets → recursively process each element
-        if isinstance(obj, (list, tuple, set)):
-            return [self._serialize(x) for x in obj]
-
-        # Fallback: store as string if unrecognized
-        return str(obj)
-
-    def save(self, results: Dict[str, Any], file: str = None):
-        if not self.enabled:
-            return
-
-        safe_data = self._serialize(results)
-
-        if file is None:
-            file = self.file
-        # ToDo: change it
-        with open(file, "a") as f:
-            f.write(json.dumps(safe_data, indent=4))
-            f.write("\n")
-
-
-# --------------------------------------- #
 Parent = Dict[str, Union[float, np.ndarray]]
 
 

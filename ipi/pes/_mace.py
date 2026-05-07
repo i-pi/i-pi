@@ -17,7 +17,7 @@ from mace.tools.torch_geometric.batch import Batch
 from mace.tools.torch_geometric.dataloader import DataLoader
 
 from ipi.pes._ase import ASEDriver
-from ipi.pes.tools import JSONLogger, ModelResults, Parent
+from ipi.pes.tools import ModelResults, Parent
 
 # --------------------------------------- #
 __DRIVER_NAME__ = "mace"
@@ -158,7 +158,6 @@ class BatchedMACE(MACECalculator):
 
         log = self.instructions.pop("log", None)
         log = self.instructions.pop("log_results", None)
-        self.results_logger = JSONLogger(log)
         self.batch_size = self.instructions.pop("batch_size", 1)
         if "arrays_keys" not in kwargs:
             kwargs["arrays_keys"] = {}
@@ -324,9 +323,7 @@ class BatchedMACE(MACECalculator):
                 model_results[i].store(Natoms, results_tensors)
 
         # re-order results
-        out = ModelResults.mean(model_results)
-        [self.results_logger.save(a, f"results.{n}.json") for n, a in enumerate(out)]
-        return out
+        return ModelResults.mean(model_results)
 
     def augment_output(
         self,
