@@ -10,7 +10,6 @@ Should work with PBC.
 
 from ipi.engine.smotion import Smotion
 
-
 __all__ = ["DMD"]
 
 
@@ -50,9 +49,6 @@ class DMD(Smotion):
                 if not hasattr(
                     f, "dmd_update"
                 ):  # forcefield does not expose dmd_update interface
-                    raise ValueError(
-                        "The forcefield '%s' associated with driven MD \
-                                      does not have a dmd_update interface"
-                        % (k)
-                    )
+                    raise ValueError("The forcefield '%s' associated with driven MD \
+                                      does not have a dmd_update interface" % (k))
                 f.dmd_update()  # updates the time step

@@ -13,7 +13,6 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 
-
 __all__ = ["Cell", "GenericCell"]
 
 
