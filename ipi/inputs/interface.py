@@ -9,7 +9,6 @@ from ipi.utils.messages import verbosity, warning
 from ipi.utils.inputvalue import *
 from ipi.interfaces.sockets import *
 
-
 __all__ = ["InputInterfaceSocket"]
 
 

@@ -12,7 +12,6 @@ import numpy as np
 import ipi.engine.atoms
 import ipi.utils.depend as dp
 
-
 a = dp.depend_array(name="a", value=np.zeros((2, 2), float))
 b = dp.depend_array(name="b", value=np.zeros((2, 2), float))
 

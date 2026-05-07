@@ -9,7 +9,6 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 from ase.io import read
 from ase import Atoms
 
-
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"
 

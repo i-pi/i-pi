@@ -13,7 +13,6 @@ from ipi.utils.inputvalue import (
     input_default,
 )
 
-
 __all__ = ["InputAtomSwap"]
 
 

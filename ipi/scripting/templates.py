@@ -16,7 +16,6 @@ from ipi.engine.cell import Cell
 from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write, write_dict
 from ipi.pes import __drivers__
 
-
 __all__ = [
     "simulation_xml",
     "motion_nvt_xml",

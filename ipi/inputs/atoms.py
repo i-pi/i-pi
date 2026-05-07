@@ -15,7 +15,6 @@ from ipi.engine.atoms import *
 from ipi.utils.inputvalue import *
 from ipi.utils.depend import *
 
-
 __all__ = ["InputAtoms"]
 
 
