@@ -101,6 +101,7 @@ class Barostat:
         thermostat=None,
         vol_constraint=None,
         nmts=None,
+        pressure_mask=None,
     ):
         """Initialises base barostat class.
 
@@ -151,6 +152,13 @@ class Barostat:
             self.vol_constraint = vol_constraint
         else:
             self.vol_constraint = False
+
+        if pressure_mask is not None:
+            if not np.all((pressure_mask == 0) | (pressure_mask == 1)):
+                raise ValueError("Pressure mask can contain only 0 or 1.")
+            self.pressure_mask = pressure_mask
+        else:
+            self.pressure_mask = np.ones(3, int)
 
         # temperature to the thermostat
         dpipe(self._temp, self.thermostat._temp)
@@ -393,6 +401,11 @@ class Barostat:
             self.kstress_mts(level) + self.forces.mts_forces[level].vir + bvir
         ) / self.cell.V
 
+    def stress2pressure(self, stress: np.ndarray) -> np.ndarray:
+        """Converts a stress tensor to a pressure using the barostat pressure mask."""
+        diagonal = np.diag(stress)
+        return np.sum(diagonal[self.pressure_mask == 1]) / np.sum(self.pressure_mask)
+
     def pstep(self, level=0):
         """Dummy momenta propagator step."""
 
@@ -458,6 +471,7 @@ class BaroBZP(Barostat):
         thermostat=None,
         pext=None,
         p=None,
+        pressure_mask=None,
     ):
         """Initializes BZP barostat.
 
@@ -474,7 +488,9 @@ class BaroBZP(Barostat):
            p: Optional initial volume conjugate momentum. Defaults to 0.
         """
 
-        super(BaroBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
+        super(BaroBZP, self).__init__(
+            dt, temp, tau, ebaro, thermostat, pressure_mask=pressure_mask
+        )
 
         self._p = depend_array(name="p", value=np.atleast_1d(0.0))
 
@@ -580,7 +596,8 @@ class BaroBZP(Barostat):
         ]  # this is already set to be half a time step at the specified MTS depth
 
         # computes the pressure associated with the forces at each MTS level.
-        press = np.trace(self.stress_mts(level)) / 3.0
+        stress = self.stress_mts(level)
+        press = self.stress2pressure(stress)
         self.p += dt * 3.0 * (self.cell.V * press)
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
@@ -660,6 +677,7 @@ class BaroSCBZP(Barostat):
         thermostat=None,
         pext=None,
         p=None,
+        pressure_mask=None,
     ):
         """Initializes SC barostat.
 
@@ -676,7 +694,9 @@ class BaroSCBZP(Barostat):
            p: Optional initial volume conjugate momentum. Defaults to 0.
         """
 
-        super(BaroSCBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
+        super(BaroSCBZP, self).__init__(
+            dt, temp, tau, ebaro, thermostat, pressure_mask=pressure_mask
+        )
 
         self._p = depend_array(name="p", value=np.atleast_1d(0.0))
 
@@ -790,7 +810,8 @@ class BaroSCBZP(Barostat):
         dt3 = dt**3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
-        press = np.trace(self.stress_mts_sc(level)) / 3.0
+        stress = self.stress_mts_sc(level)
+        press = self.stress2pressure(stress)
         self.p += dt * 3.0 * (self.cell.V * press)
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
