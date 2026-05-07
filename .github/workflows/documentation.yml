@@ -15,21 +15,18 @@ jobs:
       - name: set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
-      - name: install dependencies
+          python-version: '3.x'
+      - name: install LaTeX toolchain
         run: |
-          pip install --upgrade pip
-          pip install -r docs/requirements.txt
-
           sudo apt-get update
           sudo apt-get install -y texlive-latex-extra texlive-lang-greek latexmk
-      - name: build documentation
+      - name: install tox
+        run: python -m pip install --upgrade pip 'tox>=4'
+      - name: build HTML and PDF docs
         run: |
-          cd docs
-          make html
-          make latexpdf
-
-          cp _build/latex/i-pi.pdf _build/html/ipi-manual.pdf
+          tox -e docs
+          tox -e docs-pdf
+          cp docs/_build/latex/i-pi.pdf docs/_build/html/ipi-manual.pdf
       - name: deploy to gh-pages
         if: github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4

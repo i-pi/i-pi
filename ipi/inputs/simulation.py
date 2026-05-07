@@ -22,7 +22,6 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
-
 __all__ = ["InputSimulation"]
 
 

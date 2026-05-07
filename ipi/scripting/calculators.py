@@ -9,7 +9,6 @@ through the ASE compatibility layer) will live here as well.
 
 from ipi.utils.io.backends.io_ase import _asecheck
 
-
 DummyASECalculator = None
 
 

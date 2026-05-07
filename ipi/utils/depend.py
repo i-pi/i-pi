@@ -1,6 +1,6 @@
 """Dependency tracking, lazy caching, and automatic update of variables.
 
-This module provides a small data and storage class used throughout i-PI to 
+This module provides a small data and storage class used throughout i-PI to
 represent physical quantities. Two concrete classes wrap values:
 
 - `depend_value`: wraps an arbitrary Python value.
