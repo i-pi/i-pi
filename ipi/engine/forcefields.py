@@ -364,7 +364,7 @@ class FFSocket(ForceField):
         active=np.array([-1]),
         threaded=True,
         interface=None,
-        batch=False,
+        mpibatch=False,
     ):
         """Initialises FFSocket.
 
@@ -378,7 +378,7 @@ class FFSocket(ForceField):
               before sending the positions to the client code.
            interface: The object used to create the socket used to interact
               with the client codes.
-           batch: If True, sends all beads in a single batched request.
+           mpibatch: If True, sends all beads in a single batched request.
         """
 
         # a socket to the communication library is created or linked
@@ -389,7 +389,7 @@ class FFSocket(ForceField):
             self.socket = InterfaceSocket()
         else:
             self.socket = interface
-        self.batch = batch
+        self.mpibatch = mpibatch
         self.socket.requests = self.requests
         self.socket.offset = self.offset
 
@@ -401,10 +401,10 @@ class FFSocket(ForceField):
     def start(self):
         """Spawns a new thread."""
 
-        if self.socket.mode == "shm" and not self.batch:
+        if self.socket.mode == "shm" and not self.mpibatch:
             raise NotImplementedError(
                 "Non-batched shm sockets are no longer supported. "
-                "Use batch='true' with mode='shm'."
+                "Use mpibatch='true' with mode='shm'."
             )
         self.socket.open()
         super(FFSocket, self).start()
@@ -421,7 +421,7 @@ class FFSocket(ForceField):
 
 class FFBatch(FFSocket):
     def __init__(self, *args, **kwargs):
-        kwargs["batch"] = True
+        kwargs["mpibatch"] = True
         super(FFBatch, self).__init__(*args, **kwargs)
 
 class FFEval(ForceField):
@@ -466,6 +466,7 @@ class FFDirect(ForceField):
         pes="dummy",
         pes_path="",
         batch_size=1,
+        batch_request=False,
     ):
         """Initialises FFDirect.
 
@@ -483,6 +484,8 @@ class FFDirect(ForceField):
             pes: The name of the potential-energy surface to be used
             batch_size: The number of structures that should be combined and evaluated
                 at once in a single batch.
+            batch_request: If True, accepts a single request containing all bead
+                positions in one batched evaluation.
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -494,6 +497,7 @@ class FFDirect(ForceField):
         self.pes = pes
         self.pes_path = pes_path
         self.batch_size = batch_size
+        self.batch_request = batch_request
         self.request_batch = []
 
         try:
@@ -561,8 +565,55 @@ class FFDirect(ForceField):
         request["status"] = "Done"
         request["t_finished"] = time.time()
 
+    def _process_batched_request_results(self, results_batch, request):
+        pot = np.zeros(len(results_batch), float)
+        force = np.zeros_like(request["pos"], float)
+        vir = np.zeros((len(results_batch), 3, 3), float)
+        extra = []
+
+        for i, results in enumerate(results_batch):
+            pot[i] = results[0] - self.offset
+            force[i] = np.asarray(results[1], float).reshape(-1)
+            vir[i] = np.asarray(results[2], float).reshape(3, 3)
+
+            mxtra = results[3]
+            mxtradict = {}
+            if mxtra:
+                try:
+                    mxtradict = json.loads(mxtra)
+                    info(
+                        "@driver.getforce: Extra string JSON has been loaded.",
+                        verbosity.debug,
+                    )
+                except:
+                    info(
+                        "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
+                        + mxtra,
+                        verbosity.debug,
+                    )
+                    mxtradict = {}
+                if "raw" in mxtradict:
+                    raise ValueError(
+                        "'raw' cannot be used as a field in a JSON-formatted extra string"
+                    )
+                mxtradict["raw"] = mxtra
+            extra.append(mxtradict)
+
+        request["result"] = [pot, force, vir, extra]
+        request["status"] = "Done"
+        request["t_finished"] = time.time()
+
     def evaluate(self, request):
-        if self.batch_size == 1:
+        if request["pos"].ndim == 2:
+            if not self.batch_request:
+                raise ValueError(
+                    "FFDirect received a batched bead request but batch_request is disabled."
+                )
+            cell_batch = [request["cell"][0]] * len(request["pos"])
+            pos_batch = [pos.reshape(-1, 3) for pos in request["pos"]]
+            results_batch = self.driver(cell_batch, pos_batch)
+            self._process_batched_request_results(results_batch, request)
+        elif self.batch_size == 1:
             results = list(
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
             )

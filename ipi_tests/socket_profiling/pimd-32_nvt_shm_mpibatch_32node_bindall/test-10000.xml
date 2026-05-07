@@ -1,5 +1,5 @@
 <simulation verbosity='low' threading='false' safe_stride='100'>
-    <ffsocket mode='shm' name='mydriver' pbc='false' batch='True' matching='lock'>
+    <ffsocket mode='shm' name='mydriver' pbc='false' mpibatch='True' matching='lock'>
          <latency>  1.00000000e-04</latency>
          <address> mydriver </address>
          <exit_on_disconnect> False </exit_on_disconnect>

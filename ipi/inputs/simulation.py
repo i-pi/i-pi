@@ -360,7 +360,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             if (
                 isinstance(new_ff, eforcefields.FFSocket)
                 and new_ff.socket.mode == "shm"
-                and new_ff.batch
+                and new_ff.mpibatch
             ):
                 # Used later to decide which systems should build Beads.q on SHM.
                 batched_shm_forcefields.add(new_ff.name)

@@ -426,8 +426,6 @@ class ForceBatchBead:
                 else None
             ),
         )
-        self._f._timing_marker = f"WD{self.uid}"
-        self._f._timing_label = "ForceBatchBead f"
         fbase = dstrip(self._f)
 
         self._extra = depend_value(
@@ -735,7 +733,10 @@ class ForceComponent:
         self._forces = []
         self.beads = beads
         
-        if isinstance(self.ff, FFSocket) and getattr(self.ff, "batch", False):
+        if (
+            (isinstance(self.ff, FFSocket) and getattr(self.ff, "mpibatch", False))
+            or getattr(self.ff, "batch_request", False)
+        ):
             self.batch_mode = True
             self.batch_force = ForceBatchBead()
             

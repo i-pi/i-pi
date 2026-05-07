@@ -1,5 +1,5 @@
 <simulation verbosity='low' threading='false' safe_stride='100'>
-    <ffsocket mode='shm' name='mydriver' pbc='false' batch='True' matching='lock'>
+    <ffsocket mode='inet' name='mydriver' pbc='false' mpibatch='True' matching='lock'>
          <latency>  1.00000000e-04</latency>
          <address> mydriver </address>
          <exit_on_disconnect> False </exit_on_disconnect>
@@ -17,7 +17,7 @@
           <force forcefield='mydriver' weight='1'> </force>
       </forces>
       <initialize nbeads='32'>
-        <file mode='xyz'> test-10000.xyz</file>
+        <file mode='xyz'> init.xyz</file>
         <cell> [10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0] </cell>
         <masses mode='manual'> [1.0] </masses>
         <velocities mode='thermal'> 1 </velocities>

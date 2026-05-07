@@ -171,7 +171,7 @@ class InputFFSocket(InputForceField):
 
     Attributes:
        mode: Describes whether the socket will use unix, internet, or shared-memory communication.
-       batch: If True, evaluates all beads in one batched socket request.
+       mpibatch: If True, evaluates all beads in one batched socket request.
 
     Fields:
        address: The server socket binding address.
@@ -234,7 +234,7 @@ class InputFFSocket(InputForceField):
                 "help": "Specifies whether the driver interface will listen onto an internet socket [inet], a unix socket [unix], or a unix socket using shared-memory transfers [shm].",
             },
         ),
-        "batch": (
+        "mpibatch": (
             InputAttribute,
             {
                 "dtype": bool,
@@ -289,7 +289,7 @@ class InputFFSocket(InputForceField):
         self.timeout.store(ff.socket.timeout)
         self.slots.store(ff.socket.slots)
         self.mode.store(ff.socket.mode)
-        self.batch.store(ff.batch)
+        self.mpibatch.store(ff.mpibatch)
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
         self.threaded.store(True)  # hard-coded
@@ -321,7 +321,7 @@ class InputFFSocket(InputForceField):
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
-            batch=self.batch.fetch(),
+            mpibatch=self.mpibatch.fetch(),
             interface=InterfaceSocket(
                 address=self.address.fetch(),
                 port=self.port.fetch(),
@@ -390,7 +390,16 @@ class InputFFDirect(InputForceField):
     }
     fields.update(InputForceField.fields)
 
-    attribs = {}
+    attribs = {
+        "batch_request": (
+            InputAttribute,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Whether the direct forcefield should accept one full bead-batched request from the force layer.",
+            },
+        ),
+    }
     attribs.update(InputForceField.attribs)
 
     default_help = """ Direct potential that evaluates forces through a Python
@@ -406,6 +415,7 @@ class InputFFDirect(InputForceField):
         self.pes.store(ff.pes)
         self.pes_path.store(ff.pes_path)
         self.batch_size.store(ff.batch_size)
+        self.batch_request.store(ff.batch_request)
 
     def fetch(self):
         super().fetch()
@@ -420,6 +430,7 @@ class InputFFDirect(InputForceField):
             pes=self.pes.fetch(),
             pes_path=self.pes_path.fetch(),
             batch_size=self.batch_size.fetch(),
+            batch_request=self.batch_request.fetch(),
         )
 
 
@@ -1190,7 +1201,7 @@ class InputFFCavPhSocket(InputFFSocket):
 
         if self.threaded.fetch() == False:
             raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
-        if self.batch.fetch():
+        if self.mpibatch.fetch():
             raise ValueError("FFCavPhSocket does not support batched socket requests.")
 
         # just use threaded throughout
