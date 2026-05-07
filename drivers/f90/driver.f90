@@ -54,7 +54,7 @@
       INTEGER cbuf, rid, length
       CHARACTER(LEN=65536) :: initbuffer      ! it's unlikely a string this large will ever be passed...      
       CHARACTER(LEN=65536) :: string,string1,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=30000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability
+      CHARACTER(LEN=90000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
 
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -70,7 +70,7 @@
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
 
-      DOUBLE PRECISION, ALLOCATABLE :: dipz_der(:, :) ! Dipole (z-component) derivative (water_dip_pol model)
+      DOUBLE PRECISION, ALLOCATABLE :: dip_der(:, :) ! Dipole derivative (water_dip_pol model)
       DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
 
       ! NEIGHBOUR LIST ARRAYS
@@ -905,8 +905,8 @@
                DO i = 1, 3
                   vpars(i+1) = cell_h(i, i)
                ENDDO
-               IF (.NOT. ALLOCATED(dipz_der)) ALLOCATE (dipz_der(nat, 3))
-               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dipz_der, pol)
+               IF (.NOT. ALLOCATED(dip_der)) ALLOCATE (dip_der(nat, 9))
+               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dip_der, pol)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -1052,8 +1052,8 @@
             ELSEIF (vstyle==31) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                longbuffer = TRIM(string)
-               WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
-               WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dipz_der),"],"
+               WRITE(string2, *) "(a,3x,", 9*nat - 1, '(f15.8, ","),f15.8,3x,a)'
+               WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dip_der),"],"
                longbuffer = TRIM(longbuffer)//TRIM(longstring)
                WRITE(string, '(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
                longbuffer = TRIM(longbuffer)//TRIM(string)
