@@ -1,5 +1,21 @@
 #!/usr/bin/env python
-"""An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
+"""An interface for the [MACE](https://github.com/ACEsuit/mace) calculator that supports batched evaluation."""
+
+try:
+    import mace  # pylint: disable=unused-import
+
+except Exception:
+    msg = (
+        "You are trying to use the MACE client of i-PI, "
+        "but it seems that you have not installed MACE.\n"
+        "Please install MACE via:\n"
+        "    pip install mace-torch\n"
+        "For more information, visit:\n"
+        "    https://github.com/ACEsuit/mace"
+    )
+
+    print(msg)
+    raise
 
 import argparse
 import json

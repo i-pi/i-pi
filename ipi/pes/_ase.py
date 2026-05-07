@@ -1,5 +1,21 @@
 """Interface with ASE calculators"""
 
+try:
+    import ase  # pylint: disable=unused-import
+
+except Exception:
+    msg = (
+        "You are trying to use the ASE client of i-PI, "
+        "but it seems that you have not installed ASE.\n"
+        "Please install ASE via:\n"
+        "    pip install ase\n"
+        "For more information, visit:\n"
+        "    https://gitlab.com/ase/ase"
+    )
+
+    print(msg)
+    raise
+
 import json
 import numpy as np
 from ipi.pes.dummy import Dummy_driver
