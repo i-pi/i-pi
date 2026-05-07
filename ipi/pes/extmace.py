@@ -42,10 +42,20 @@ ase_like_properties = {
     "atomic_dipoles": ("natoms", 3),
     "atomic-oxn-dipole": ("natoms", 3),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
+    "BECx": ("natoms", 3),  # BEC[:,:,0]
+    "BECy": ("natoms", 3),  # BEC[:,:,1]
+    "BECz": ("natoms", 3),  # BEC[:,:,2]
     "piezoelectric": (3, 3, 3),
 }
 
 to_ignore_properties = ["interaction_energy", "node_feats"]
+
+def add_bec_inplace(data: Dict[str,torch.Tensor],bec:torch.Tensor):
+    """Add the Born Effective Charges to the output data dictionary in-place, 
+    splitting the 3x3 tensor into three separate arrays for ASE compatibility."""
+    data["BECx"] = bec[0, :, :]
+    data["BECy"] = bec[1, :, :]
+    data["BECz"] = bec[2, :, :]
 
 
 class Extended_MACE_driver(ASEDriver):
@@ -404,9 +414,10 @@ class ExtendedMACECalculator(MACECalculator):
                 data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
 
                 # store to output results
-                data["BEC"] = bec.moveaxis(
-                    0, 1
-                )  # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
+                # data["BEC"] = bec.moveaxis(
+                #     0, 2
+                # )  # (mu_xyz,node,R_xyz) --> (node,R_xyz,mu_xyz)
+                add_bec_inplace(data,bec)
 
                 if dmu_deta is not None:
                     cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
@@ -467,8 +478,9 @@ class ExtendedMACECalculator(MACECalculator):
         if compute_bec and "BEC" not in data:
             bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
             # store to output results
-            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
-            data["BEC"] = bec.moveaxis(0, 1)
+            # (mu_xyz,node,R_xyz) --> (node,R_xyz,mu_xyz)
+            # data["BEC"] = bec.moveaxis(0, 2)
+            add_bec_inplace(data,bec)
             if dmu_deta is not None:
                 dmu_deta = dmu_deta.moveaxis(0, 1)
                 cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
