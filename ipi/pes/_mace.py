@@ -137,7 +137,6 @@ class MACE_driver(ASEDriver):
             return self.compute([cell], [pos])
 
 
-# --------------------------------------- #
 class BatchedMACE(MACECalculator):
     """
     Batched evaluation for MACE:
@@ -550,7 +549,7 @@ if __name__ == "__main__":
     print(
         f"Initializing MACECalculator with model '{args.model}' on device '{args.device}'..."
     )
-    calc = MACECalculator(model_paths=args.model, device=args.device, **mace_kwargs)
+    calc = BatchedMACE(model_paths=args.model, device=args.device, **mace_kwargs)
     print("Calculator initialized.")
 
     print("Evaluating structures with MACE model...")
