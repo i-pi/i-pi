@@ -1,5 +1,6 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
+import os
 import sys
 import ast
 import importlib
@@ -116,6 +117,9 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
     spec = importlib.util.find_spec(f"{__package__}.{module_name}")
     if not spec or not spec.origin or not spec.origin.endswith(".py"):
         continue
+
+    if os.path.basename(spec.origin) == "tools.py":
+        continue  # skip private modules
 
     driver_class, driver_name = scan_pes_file(spec.origin)
     if not (driver_class and driver_name):
