@@ -18,7 +18,6 @@ from mace.tools.torch_geometric.dataloader import DataLoader
 
 from ipi.pes._ase import ASEDriver
 from ipi.pes.tools import JSONLogger, ModelResults, Parent
-from ipi.utils.timing import Timer, timeit
 
 # --------------------------------------- #
 __DRIVER_NAME__ = "mace"
@@ -82,7 +81,6 @@ class MACE_driver(ASEDriver):
         self.batched_calculator = BatchedMACE(
             model_paths=self.model,
             device=self.device,
-            get_extras=lambda: self.extra,
             **self.mace_kwargs,
         )
 
@@ -150,19 +148,15 @@ class BatchedMACE(MACECalculator):
     def __init__(
         self,
         instructions: dict = {},
-        get_extras: callable = None,
         *argc,
         **kwargs,
     ):
-        if get_extras is not None:
-            self.get_extras = get_extras
 
         self.instructions = instructions
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
         log = self.instructions.pop("log", None)
-        self.logger = Timer(log is not None, log)
         log = self.instructions.pop("log_results", None)
         self.results_logger = JSONLogger(log)
         self.batch_size = self.instructions.pop("batch_size", 1)
@@ -173,7 +167,6 @@ class BatchedMACE(MACECalculator):
         super().__init__(*argc, **kwargs)
         assert not self.use_compile, "self.use_compile=True is not supported yet."
 
-    @timeit(name="preprocess")
     def preprocess(self, atoms: List[Atoms]) -> Tuple[DataLoader, Dict[str, bool]]:
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
@@ -279,7 +272,6 @@ class BatchedMACE(MACECalculator):
             for a in np.split(batch["positions"], batch["ptr"][1:], axis=0)[:-1]
         ]
 
-    @timeit(name="compute_batched", report=True)
     def compute_batched(self, atoms: List[Atoms]) -> List[Parent]:
         """
         Evaluate the model(s) on a list of structures.
@@ -301,41 +293,35 @@ class BatchedMACE(MACECalculator):
             Natoms = self.batch2natoms(batch)
 
             for i, model in enumerate(self.models):
-                with self.logger.section("forward"):
-                    out: dict[str, torch.Tensor] = model(
-                        batch,
-                        training=training,
-                        **forward_kwargs,
-                    )
 
-                    out = self.augment_output(out, batch, training, compute_bec)
+                out: dict[str, torch.Tensor] = model(
+                    batch,
+                    training=training,
+                    **forward_kwargs,
+                )
+
+                out = self.augment_output(out, batch, training, compute_bec)
 
                 # collect the results
-                with self.logger.section("postprocess pt.1"):
-                    ignored = set(to_ignore_properties)
-                    if "ignore" in self.instructions:
-                        ignored |= set(self.instructions["ignore"])
+                ignored = set(to_ignore_properties)
+                if "ignore" in self.instructions:
+                    ignored |= set(self.instructions["ignore"])
 
-                    results_tensors = {}
+                results_tensors = {}
 
-                    for key, value in out.items():
-                        if value is None or key in ignored:
-                            continue
+                for key, value in out.items():
+                    if value is None or key in ignored:
+                        continue
 
-                        results_tensors[key] = value.detach().cpu().numpy()
+                    results_tensors[key] = value.detach().cpu().numpy()
 
-                    model_results[i].store(Natoms, results_tensors)
+                model_results[i].store(Natoms, results_tensors)
 
         # re-order results
-        with self.logger.section("postprocess pt.2"):
-            out = ModelResults.mean(model_results)
-            [
-                self.results_logger.save(a, f"results.{n}.json")
-                for n, a in enumerate(out)
-            ]
+        out = ModelResults.mean(model_results)
+        [self.results_logger.save(a, f"results.{n}.json") for n, a in enumerate(out)]
         return out
 
-    @timeit("augment_output")
     def augment_output(
         self,
         data: Dict[str, torch.Tensor],
@@ -354,7 +340,6 @@ class BatchedMACE(MACECalculator):
 
         return data
 
-    @timeit("get_forces_stress")
     def get_forces_stress(
         self, data: Dict[str, torch.Tensor], batch: Batch, training: bool
     ) -> Dict[str, torch.Tensor]:
@@ -391,7 +376,6 @@ class BatchedMACE(MACECalculator):
 
         return data
 
-    @timeit("compute_dmu_dR")
     def compute_dmu_dR(
         self, data: Dict[str, torch.Tensor], batch: Batch
     ) -> torch.Tensor:
