@@ -155,8 +155,6 @@ class BatchedMACE(MACECalculator):
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
-        log = self.instructions.pop("log", None)
-        log = self.instructions.pop("log_results", None)
         self.batch_size = self.instructions.pop("batch_size", 1)
         if "arrays_keys" not in kwargs:
             kwargs["arrays_keys"] = {}
