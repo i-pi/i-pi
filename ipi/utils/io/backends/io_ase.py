@@ -10,7 +10,7 @@ using the Atomic Simulation Environment
 import sys
 import re
 import numpy as np
-from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.units import Constants
 
 try:

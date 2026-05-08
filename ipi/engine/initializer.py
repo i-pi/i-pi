@@ -13,8 +13,6 @@ overwrite data given elsewhere.
 
 import math
 
-import numpy as np
-
 from ipi.utils.array_backend import xp
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes

@@ -20,7 +20,7 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["NormalModeMover"]
 
 import numpy as np
-from ipi.utils.array_backend import xp, xp_size, to_numpy
+from ipi.utils.array_backend import xp, xp_size
 import os
 
 import math

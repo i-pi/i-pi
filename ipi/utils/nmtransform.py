@@ -5,7 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
 import math
 
 from array_api_compat import is_numpy_namespace

@@ -13,7 +13,6 @@ import math
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit

@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.array_backend import xp
 
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import dstrip

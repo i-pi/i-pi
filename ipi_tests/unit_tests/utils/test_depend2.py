@@ -5,8 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-import pickle
-
 import numpy as np
 
 import ipi.engine.atoms
