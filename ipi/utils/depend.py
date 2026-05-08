@@ -341,6 +341,8 @@ class depend_value(depend_base):
 
 def _is_scalar_index(index, ndim):
     """True if `array[index]` returns a scalar for an array of rank `ndim`."""
+    if isinstance(index, (slice, type(Ellipsis))):
+        return False
     # 0-d arrays/tensors index like plain integers (len() would raise on torch).
     if getattr(index, "ndim", None) == 0:
         return ndim <= 1

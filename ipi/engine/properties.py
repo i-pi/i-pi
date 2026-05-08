@@ -375,7 +375,9 @@ class Properties:
                 "dimension": "energy",
                 "help": "The Suzuki-Chin operator estimator for the potential energy of the physical system.",
                 "func": (
-                    lambda: 2.0 / self.beads.nbeads * xp.sum(self.forces.pots[::2])
+                    lambda: 2.0
+                    / self.beads.nbeads
+                    * xp.sum(dstrip(self.forces.pots)[::2])
                 ),
             },
             "potential_tdsc": {
@@ -2046,7 +2048,7 @@ class Properties:
         eop = (
             1.5 * self.beads.natoms / beta
             - (0.50 * vir1)
-            + xp.mean(self.forces.pots[::2])
+            + xp.mean(dstrip(self.forces.pots)[::2])
         )
 
         r3 = 1.5 * self.beads.natoms / beta2
@@ -3185,11 +3187,12 @@ class Trajectories:
         # helper arrays to make it more obvious what we are computing
         dq = xp.zeros((self.system.beads.natoms, 3))
         f = xp.zeros((self.system.beads.natoms, 3))
+        q = dstrip(self.system.beads.q)
+        qc = dstrip(self.system.beads.qc)
+        forces_f = dstrip(self.system.forces.f)
         for b in range(self.system.beads.nbeads):
-            dq[:] = (self.system.beads.q[b] - self.system.beads.qc).reshape(
-                (self.system.beads.natoms, 3)
-            )
-            f[:] = self.system.forces.f[b].reshape((self.system.beads.natoms, 3))
+            dq[:] = (q[b] - qc).reshape((self.system.beads.natoms, 3))
+            f[:] = forces_f[b].reshape((self.system.beads.natoms, 3))
             rv[:, 0] += dq[:, 0] * f[:, 1] + dq[:, 1] * f[:, 0]
             rv[:, 1] += dq[:, 0] * f[:, 2] + dq[:, 2] * f[:, 0]
             rv[:, 2] += dq[:, 1] * f[:, 2] + dq[:, 2] * f[:, 1]

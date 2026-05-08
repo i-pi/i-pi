@@ -194,9 +194,10 @@ def to_numpy(x):
         x = x._value
     if isinstance(x, np.ndarray):
         return x
-    try:
-        return np.asarray(x)
-    except TypeError:
-        from array_api_compat import to_device
+    # Non-host backends (torch CUDA, jax, cupy, ...) need an explicit
+    # host move before numpy can extract the buffer. array_api_compat's
+    # top-level to_device dispatches per-backend (it's not on the
+    # namespace itself).
+    from array_api_compat import to_device
 
-        return np.asarray(to_device(x, "cpu"))
+    return np.asarray(to_device(x, "cpu"))

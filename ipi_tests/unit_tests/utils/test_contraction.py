@@ -74,8 +74,10 @@ def check_centroid_pos(n, q):
     """
 
     beads_big = check_up_and_down_scaling(n, q)
-    rescale_big = nmtransform.mk_rs_matrix(n, 1)
-    rescale_q = nmtransform.mk_rs_matrix(q.shape[0], 1)
+    # mk_rs_matrix returns xp arrays (torch tensors under the torch backend);
+    # np.dot can't accept non-host tensors, so coerce both operands to numpy.
+    rescale_big = to_numpy(nmtransform.mk_rs_matrix(n, 1))
+    rescale_q = to_numpy(nmtransform.mk_rs_matrix(q.shape[0], 1))
 
     centroid_big = np.dot(rescale_big, to_numpy(beads_big))
     centroid_q = np.dot(rescale_q, q)

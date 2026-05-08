@@ -722,7 +722,7 @@ def min_trm(f, h, tr):
     DXE = xp.zeros((ndim, 1))
 
     for i in range(0, ndim):
-        if float(xp.abs(d[i])) > 1e-5:
+        if float(xp.abs(d[i, 0])) > 1e-5:
             DXE[i] = gE[i] / d[i]
 
     min_d = float(xp.min(d))

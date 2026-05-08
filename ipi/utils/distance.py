@@ -4,8 +4,6 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-import numpy as np
-
 from ipi.utils.array_backend import xp
 
 __all__ = ["vector_separation"]
@@ -36,7 +34,7 @@ def vector_separation(cell_h, cell_ih, qi, qj):
     """
 
     sij = (cell_ih) @ ((qi - qj).T)  # column vectors needed
-    sij -= np.rint(sij)
+    sij -= xp.round(sij)
 
     dij = ((cell_h) @ (sij)).T  # back to i-pi shape
     rij = xp.linalg.norm(dij, axis=1)

@@ -403,10 +403,11 @@ class DummyIntegrator:
 
         # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
-            m3 = dstrip(beads.m3)
-            p = dstrip(beads.p)
+            pnm = dstrip(self.nm.pnm)
+            dynm3 = dstrip(self.nm.dynm3)
             self.ensemble.eens += float(
-                0.5 * xp.sum(p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof])
+                0.5
+                * xp.sum(pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof])
             )
             self.nm.pnm[:, self.fixatoms_dof] = 0.0
 

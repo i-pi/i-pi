@@ -369,7 +369,7 @@ class DummyOptimizer:
 
         e = abs((fx - u0) / self.beads.natoms)
         info("@GEOP", verbosity.medium)
-        info("   Current energy             %e" % (fx))
+        info("   Current energy             %e" % (float(fx)))
         info(
             "   Position displacement      %e  Tolerance %e"
             % (float(x), self.tolerances["position"]),
@@ -382,7 +382,7 @@ class DummyOptimizer:
         )
         info(
             "   Energy difference per atom %e  Tolerance %e"
-            % (e, self.tolerances["energy"]),
+            % (float(e), self.tolerances["energy"]),
             verbosity.medium,
         )
 
@@ -449,7 +449,7 @@ class BFGSOptimizer(DummyOptimizer):
             for dqb in self.old_f:
                 dqb[self.fixatoms_dof] = 0.0
 
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
+            fdf0 = (self.old_u[0], -self.old_f[:, self.gm.fixatoms_mask])
 
             # Reduce dimensionality
             masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
@@ -479,7 +479,7 @@ class BFGSOptimizer(DummyOptimizer):
             )
 
         else:
-            fdf0 = (self.old_u, -self.old_f)
+            fdf0 = (self.old_u[0], -self.old_f)
 
             # Do one iteration of BFGS
             # The invhessian and the directions are updated inside.
@@ -504,7 +504,7 @@ class BFGSOptimizer(DummyOptimizer):
 
         # Exit simulation step
         d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
-        self.exitstep(self.forces.pot, self.old_u, d_x_max)
+        self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
 class BFGSTRMOptimizer(DummyOptimizer):
@@ -559,7 +559,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
             # The Hessian is updated inside. Everything is passed inside BFGSTRM() in masked form, including the Hessian
             BFGSTRM(
                 masked_old_x,
-                self.old_u,
+                self.old_u[0],
                 self.old_f[:, self.gm.fixatoms_mask],
                 masked_hessian,
                 self.tr,
@@ -575,7 +575,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
             # Make one step. ( A step is finished when a movement is accepted)
             BFGSTRM(
                 self.old_x,
-                self.old_u,
+                self.old_u[0],
                 self.old_f,
                 self.hessian,
                 self.tr,
@@ -593,7 +593,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
         # Exit simulation step
         d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
-        self.exitstep(self.forces.pot, self.old_u, d_x_max)
+        self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
 # ---------------------------------------------------------------------------------------
@@ -662,7 +662,7 @@ class LBFGSOptimizer(DummyOptimizer):
             # self.gm is reduced inside its __init__() and __call__() functions
             masked_qlist = self.qlist[:, self.gm.fixatoms_mask]
             masked_glist = self.glist[:, self.gm.fixatoms_mask]
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
+            fdf0 = (self.old_u[0], -self.old_f[:, self.gm.fixatoms_mask])
 
             # We update everything within L_BFGS (and all other calls).
             L_BFGS(
@@ -686,7 +686,7 @@ class LBFGSOptimizer(DummyOptimizer):
             self.glist[:, self.gm.fixatoms_mask] = masked_glist
 
         else:
-            fdf0 = (self.old_u, -self.old_f)
+            fdf0 = (self.old_u[0], -self.old_f)
 
             # We update everything  within L_BFGS (and all other calls).
             L_BFGS(
@@ -715,7 +715,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         # Exit simulation step
         d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
-        self.exitstep(self.forces.pot, self.old_u, d_x_max)
+        self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
 class Damped_BFGSOptimizer(DummyOptimizer):
@@ -764,7 +764,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             for dqb in self.old_f:
                 dqb[self.fixatoms_dof] = 0.0
 
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
+            fdf0 = (self.old_u[0], -self.old_f[:, self.gm.fixatoms_mask])
 
             # Reduce dimensionality
             masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
@@ -789,7 +789,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             )
 
         else:
-            fdf0 = (self.old_u, -self.old_f)
+            fdf0 = (self.old_u[0], -self.old_f)
 
             # Do one iteration of Damped_BFGS
             # The invhessian and the directions are updated inside.
@@ -810,7 +810,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
 
         # Exit simulation step
         d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
-        self.exitstep(self.forces.pot, self.old_u, d_x_max)
+        self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
 class SDOptimizer(DummyOptimizer):

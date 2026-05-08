@@ -44,15 +44,17 @@ def logsumlog(lasa, lbsb):
        (log(|A+B|), sign(A+B)) as a tuple
     """
 
-    la, sa = lasa
-    lb, sb = lbsb
+    # scalar math helper: coerce to python floats so callers can pass
+    # 0-d xp tensors (numpy or torch, on any device).
+    la, sa = float(lasa[0]), float(lasa[1])
+    lb, sb = float(lbsb[0]), float(lbsb[1])
 
     if la > lb:
         sr = sa
-        lr = la + np.log(1.0 + sb * np.exp(lb - la))
+        lr = la + math.log(1.0 + sb * math.exp(lb - la))
     else:
         sr = sb
-        lr = lb + np.log(1.0 + sa * np.exp(la - lb))
+        lr = lb + math.log(1.0 + sa * math.exp(la - lb))
 
     return (lr, sr)
 

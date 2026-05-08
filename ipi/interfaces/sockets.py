@@ -979,7 +979,10 @@ class InterfaceSocket(object):
                 verbosity.low,
             )
         if self.mode == "unix":
-            os.unlink(self.sockets_prefix + self.address)
+            try:
+                os.unlink(self.sockets_prefix + self.address)
+            except FileNotFoundError:
+                pass
 
     def poll(self):
         """Called in the main thread loop.

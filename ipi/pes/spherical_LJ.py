@@ -10,6 +10,7 @@ calculator and an i-PI driver.
 
 import json
 import numpy as np
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
@@ -137,6 +138,10 @@ class Spherical_LJ_driver(Dummy_driver):
         Core method that calculates energy and forces for given atoms using
         the spherical Lennard-Jones potential.
         """
+
+        # numpy-coded PES: convert at the boundary so the rest is plain numpy
+        cell = to_numpy(cell)
+        pos = to_numpy(pos)
 
         potential, forces, vir, extras = super().compute_structure(cell, pos)
 
