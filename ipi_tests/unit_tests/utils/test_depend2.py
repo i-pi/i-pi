@@ -69,10 +69,7 @@ def test_dot():
 
 
 def test_dotf():
-    """Depend: ddot (wrapper over numpy.dot that unwraps depend operands)."""
-    # dp.ddot dstrips its args and calls np.dot, so it only makes sense
-    # when the backend is numpy. Under torch, construct temporaries via xp
-    # and use `@` instead.
+    """Depend: `@` on depend_array operands returns a raw backend array."""
     c = a @ b
     assert isinstance(c, type(xp.zeros((1,))))
 

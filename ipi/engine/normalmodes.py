@@ -528,7 +528,7 @@ class NormalModes:
         that can be multiplied to propagate the normal modes dynamics"""
 
         pq_ms = xp.zeros((2, 2, self.nbeads, self.natoms * 3))
-        pq_ms[:] = xp.moveaxis(dstrip(self.prop_pq), 0, -1)[:, :, :, None]
+        pq_ms[:] = xp.permute_dims(dstrip(self.prop_pq), (1, 2, 0))[:, :, :, None]
         pq_ms[0, 1] *= dstrip(self.beads.m3)
         pq_ms[1, 0] /= dstrip(self.beads.m3)
 
@@ -580,7 +580,6 @@ class NormalModes:
 
         pq_ms = xp.zeros((2, 2, self.nbeads, len(self.open_paths_coords)))
         prop = dstrip(self.o_prop_pq)
-        # moveaxis(prop, 0, -1) for a 3-D array is permute_dims(prop, (1, 2, 0))
         pq_ms[:] = xp.permute_dims(prop, (1, 2, 0))[:, :, :, None]
         pq_ms[0, 1] *= dstrip(self.beads.m3[:, self.open_paths_coords])
         pq_ms[1, 0] /= dstrip(self.beads.m3[:, self.open_paths_coords])

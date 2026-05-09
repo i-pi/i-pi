@@ -137,7 +137,7 @@ def _load_backend(name):
         # UserWarning about it. Allocating any tensor on the target
         # device forces primary-context creation now; subsequent
         # threads inherit it implicitly via `cudaSetDevice`.
-        if dev != "cpu" and dev.startswith("cuda") and torch.cuda.is_available():
+        if dev.startswith("cuda") and torch.cuda.is_available():
             torch.cuda.init()
             torch.empty(0, device=dev)
             # Also prime torch.linalg.eigh: its lazy wrapper is not

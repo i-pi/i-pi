@@ -231,8 +231,8 @@ class ForceField:
                     r["t_dispatched"] = time.time()
                     r["result"] = [
                         0.0 - self.offset,
-                        np.zeros(len(r["pos"]), float),
-                        np.zeros((3, 3), float),
+                        xp.zeros(len(r["pos"])),
+                        xp.zeros((3, 3)),
                         {"raw": ""},
                     ]
                     r["status"] = "Done"
@@ -425,8 +425,8 @@ class FFEval(ForceField):
     def evaluate(self, request):
         request["result"] = [
             0.0,
-            np.zeros(len(request["pos"]), float),
-            np.zeros((3, 3), float),
+            xp.zeros(len(request["pos"])),
+            xp.zeros((3, 3)),
             {"raw": ""},
         ]
         request["status"] = "Done"
@@ -1321,7 +1321,7 @@ class FFsGDML(FFEval):
         r["result"] = [
             E[0] * self.energyUnits_to_hartree,
             F.flatten() * self.forceUnits_to_hartreebohr,
-            np.zeros((3, 3), float),
+            xp.zeros((3, 3)),
             {"raw": ""},
         ]
         r["status"] = "Done"
@@ -1431,8 +1431,8 @@ class FFCommittee(ForceField):
 
         r["result"] = [
             0.0,
-            np.zeros(len(r["pos"]), float),
-            np.zeros((3, 3), float),
+            xp.zeros(len(r["pos"])),
+            xp.zeros((3, 3)),
             "",
         ]
 
@@ -1776,8 +1776,8 @@ class FFRotations(ForceField):
 
         r["result"] = [
             0.0,
-            np.zeros(len(r["pos"]), float),
-            np.zeros((3, 3), float),
+            xp.zeros(len(r["pos"])),
+            xp.zeros((3, 3)),
             "",
         ]
 
@@ -1894,7 +1894,7 @@ class PhotonDriver:
         elif self.ph_rep == "dense":
             self.n_photon = self.n_mode
         self.n_photon_3 = self.n_photon * 3
-        self.pos_ph = np.zeros(self.n_photon_3)
+        self.pos_ph = xp.zeros(self.n_photon_3)
 
         # construct cavity mode frequency array for all photons
         self.omega_k = xp.asarray([self.omega_c])

@@ -155,7 +155,7 @@ class AlKMC(Motion):
             for j in range(self.nsites):
                 rij[3 * j : 3 * j + 3] -= self.sites[i]
             self.dcell.array_pbc(rij)
-            rij.shape = (self.nsites, 3)
+            rij = rij.reshape((self.nsites, 3))
             for j in range(i):
                 if ((rij[j]) @ (rij[j])) < a02:  # found nearest neighbor
                     self.neigh[i, nneigh[i]] = j
@@ -365,9 +365,9 @@ class AlKMC(Motion):
         qend = self.qcache[nstr].copy()
         # finds atom matching assuming initial and final states differ only by a vacancy swap and are based on unique_idx lists
         midx = self.unique_idx_match(list(ostr), list(nstr))[0 : self.natoms]
-        qend.shape = (self.natoms, 3)
+        qend = qend.reshape((self.natoms, 3))
         qend[:] = qend[midx]
-        qend.shape = 3 * self.natoms
+        qend = qend.reshape(3 * self.natoms)
 
         qts = qend - qstart
         self.dcell.array_pbc(qts)  # use pbc!

@@ -51,8 +51,6 @@ __all__ = [
     "dstrip",
     "depraise",
     "dproperties",
-    "ddot",
-    "noddot",
 ]
 
 
@@ -690,17 +688,6 @@ setattr(depend_array, "__abs__", _make_unop(abs, "__abs__"))
 # ----------------------------------------------------------------------
 # Module-level helpers
 # ----------------------------------------------------------------------
-
-
-# Kept for backward compatibility with callers that imported `noddot`.
-# The historical `np.dot = noddot` global patch is removed: `__array_ufunc__`
-# now handles `np.dot` correctly for depend_array inputs.
-noddot = np.dot
-
-
-def ddot(da, db):
-    """`np.dot` on the unwrapped operands."""
-    return np.dot(dstrip(da), dstrip(db))
 
 
 def dstrip(da):

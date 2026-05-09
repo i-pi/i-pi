@@ -601,8 +601,8 @@ class StringMover(Motion):
             dq = -self.stringgrad * dt
             if xp.any(xp.abs(dq) > self.big_step):
                 info(" @EULER: WARNING: hit the big_step.")
-                dq *= self.big_step / np.amax(xp.abs(dq))
-            info(" @EULER: maxdispl is %g" % np.amax(xp.abs(dq)))
+                dq *= self.big_step / xp.max(xp.abs(dq))
+            info(" @EULER: maxdispl is %g" % xp.max(xp.abs(dq)))
             self.beads.q[1:-1, fixatoms_mask] += dq.reshape((nbeads - 2, -1))
             # info(" @EULER: calling the mapper.", vrb.debug)
             self.stringgm.dbeads.q[:] = dstrip(self.beads.q)
@@ -660,12 +660,12 @@ class StringMover(Motion):
 
         # Check convergence at the resampled positions.
         # dx = current resampled position - previous resampled position.
-        dx = np.amax(xp.abs(self.beads.q[1:-1, fixatoms_mask] - self.old_x))
-        de = np.amax(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
+        dx = xp.max(xp.abs(self.beads.q[1:-1, fixatoms_mask] - self.old_x))
+        de = xp.max(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
         if (
             (de <= self.tolerances["energy"])
             and (dx <= self.tolerances["position"])
-            and (np.amax(xp.abs(f_perp)) <= self.tolerances["force"])
+            and (xp.max(xp.abs(f_perp)) <= self.tolerances["force"])
         ):
             info(
                 decor
@@ -692,7 +692,7 @@ class StringMover(Motion):
             )
             info(
                 " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-                % (np.amax(xp.abs(f_perp)).item(), self.tolerances["force"]),
+                % (xp.max(xp.abs(f_perp)).item(), self.tolerances["force"]),
                 vrb.debug,
             )
             info(
@@ -873,7 +873,7 @@ class StringMover(Motion):
 
         # # Check preliminary convergence: only the perpendicular component of the force
         # # at the NOT resampled positions - because this costs nothing.
-        # if np.amax(xp.abs(f_perp)) <= self.tolerances["force"]:
+        # if xp.max(xp.abs(f_perp)) <= self.tolerances["force"]:
         #     info(
         #         " @STRING: The force before resampling has converged. Step: %i\n"
         #         % step,
@@ -885,7 +885,7 @@ class StringMover(Motion):
         #         nbeads,
         #     )
         #     # dx = current resampled position - previous resampled position.
-        #     dx = np.amax(xp.abs(self.beads.q[1:-1, fixmask] - self.old_x))
+        #     dx = xp.max(xp.abs(self.beads.q[1:-1, fixmask] - self.old_x))
 
         #     # Here we check forces on the resampled positions, which costs
         #     # an additional force evaluation. We again call it via the mapper
@@ -898,10 +898,10 @@ class StringMover(Motion):
         #     )
         #     if (
         #         (
-        #             np.amax(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
+        #             xp.max(xp.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
         #             <= self.tolerances["energy"]
         #         )
-        #         and (np.amax(xp.abs(f_perp)) <= self.tolerances["force"])
+        #         and (xp.max(xp.abs(f_perp)) <= self.tolerances["force"])
         #         and (dx <= self.tolerances["position"])
         #     ):
         #         info(
@@ -925,7 +925,7 @@ class StringMover(Motion):
         #         info(
         #             " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
         #             % (
-        #                 np.amax(xp.abs(self.stringpot - old_stringpot))
+        #                 xp.max(xp.abs(self.stringpot - old_stringpot))
         #                 / (nbeads * natoms),
         #                 self.tolerances["energy"],
         #             ),
@@ -933,7 +933,7 @@ class StringMover(Motion):
         #         )
         #         info(
         #             " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-        #             % (np.amax(xp.abs(self.stringgrad)), self.tolerances["force"]),
+        #             % (xp.max(xp.abs(self.stringgrad)), self.tolerances["force"]),
         #             vrb.debug,
         #         )
         #         info(
@@ -944,7 +944,7 @@ class StringMover(Motion):
         # else:  # the 1st check didn't pass
         #     info(
         #         " @STRING: Not converged, f_perp_1 = %.8f, tol = %f"
-        #         % (np.amax(xp.abs(self.stringgrad)), self.tolerances["force"]),
+        #         % (xp.max(xp.abs(self.stringgrad)), self.tolerances["force"]),
         #         vrb.debug,
         #     )
 
@@ -1060,10 +1060,10 @@ class StringMover(Motion):
         # Check convergence criteria
         if (
             (
-                np.amax(xp.abs(self.stringpot - old_stringpot)) / self.beads.natoms
+                xp.max(xp.abs(self.stringpot - old_stringpot)) / self.beads.natoms
                 <= self.tolerances["energy"]
             )
-            and (np.amax(xp.abs(self.stringgrad)) <= self.tolerances["force"])
+            and (xp.max(xp.abs(self.stringgrad)) <= self.tolerances["force"])
             and (dx <= self.tolerances["position"])
         ):
             info(
@@ -1082,7 +1082,7 @@ class StringMover(Motion):
                 " @STRING_CLIMB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                 % (
                     (
-                        np.amax(xp.abs(self.stringpot - old_stringpot))
+                        xp.max(xp.abs(self.stringpot - old_stringpot))
                         / self.beads.natoms
                     ).item(),
                     self.tolerances["energy"],
@@ -1092,7 +1092,7 @@ class StringMover(Motion):
             info(
                 " @STRING_CLIMB: Not converged, climbgrad = %.8f, tol = %f"
                 % (
-                    np.amax(xp.abs(self.stringgrad)).item(),
+                    xp.max(xp.abs(self.stringgrad)).item(),
                     self.tolerances["force"],
                 ),
                 vrb.debug,

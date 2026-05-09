@@ -183,24 +183,26 @@ class Planetary(Motion):
         noisy elements of the covariance and frequency matrices for
         far-away atoms"""
 
-        q = np.array(self.dbeads[0].q).reshape(self.natoms, 3)
-        sij = q[:, np.newaxis, :] - q
-        sij = sij.transpose().reshape(3, self.natoms**2)
+        q = xp.reshape(dstrip(self.dbeads[0].q), (self.natoms, 3))
+        sij = q[:, None, :] - q
+        # torch's no-arg .transpose() raises; use array-API permute_dims.
+        sij = xp.reshape(xp.permute_dims(sij, (2, 1, 0)), (3, self.natoms**2))
         # find minimum distances between atoms (rigorous for cubic cell)
-        sij = np.matmul(self.dcell.ih, sij)
-        sij -= np.around(sij)
-        sij = np.matmul(self.dcell.h, sij)
-        sij = sij.reshape(3, self.natoms, self.natoms).transpose()
+        sij = dstrip(self.dcell.ih) @ sij
+        sij = sij - xp.round(sij)
+        sij = dstrip(self.dcell.h) @ sij
+        sij = xp.permute_dims(
+            xp.reshape(sij, (3, self.natoms, self.natoms)), (2, 1, 0)
+        )
         # take square magnitudes of distances
         sij = xp.sum(sij * sij, axis=2)
-        # screen with Heaviside step function
-        sij = (sij < self.screen**2).astype(float)
-        # sij = xp.exp(-sij / (self.screen**2))
-        # acount for 3 dimensions
-        sij = np.concatenate((sij, sij, sij), axis=0)
-        sij = np.concatenate((sij, sij, sij), axis=1)
-        sij = sij.reshape(-1).reshape(-1, self.natoms).transpose()
-        sij = sij.reshape(-1).reshape(-1, 3 * self.natoms).transpose()
+        # screen with Heaviside step function (bool → float via *1.0)
+        sij = (sij < self.screen**2) * 1.0
+        # account for 3 dimensions
+        sij = xp.concat((sij, sij, sij), axis=0)
+        sij = xp.concat((sij, sij, sij), axis=1)
+        sij = xp.reshape(xp.reshape(sij, (-1,)), (-1, self.natoms)).T
+        sij = xp.reshape(xp.reshape(sij, (-1,)), (-1, 3 * self.natoms)).T
         return sij
 
     def save_matrix(self, matrix):
