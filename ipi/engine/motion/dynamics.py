@@ -397,17 +397,16 @@ class DummyIntegrator:
             vcom = xp.sum(p.reshape((-1, 3)), axis=0) / Mnb
             beads.p -= (m3 * vcom).reshape((nb, -1))
 
-            self.ensemble.eens += float(
-                xp.sum(vcom**2) * 0.5 * Mnb
-            )  # COM kinetic energy.
+            # COM kinetic energy: keep on the active backend; converting
+            # to host here forces a cudaStreamSynchronize per step.
+            self.ensemble.eens += xp.sum(vcom**2) * 0.5 * Mnb
 
         # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
             pnm = dstrip(self.nm.pnm)
             dynm3 = dstrip(self.nm.dynm3)
-            self.ensemble.eens += float(
-                0.5
-                * xp.sum(pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof])
+            self.ensemble.eens += 0.5 * xp.sum(
+                pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof]
             )
             self.nm.pnm[:, self.fixatoms_dof] = 0.0
 
