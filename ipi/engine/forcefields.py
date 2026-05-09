@@ -2044,10 +2044,29 @@ class PhotonDriver:
         # Ekx/Eky are 1-D; transpose is a no-op for them.
         coeff_x = Ekx @ self.ftilde_kx
         coeff_y = Eky @ self.ftilde_ky
-        # np.kron is not in the array-API; lift inputs to numpy for this op
-        fx = xp.asarray(-np.kron(to_numpy(coeff_x), to_numpy(charge_array_bath)))
-        fy = xp.asarray(-np.kron(to_numpy(coeff_y), to_numpy(charge_array_bath)))
-        return fx, fy
+
+        # 1-D Kronecker product as an outer product + flatten — keeps the
+        # op backend-native (np.kron has no array-API equivalent). The
+        # reshape upfront tolerates 0-D scalars (single-bath case), which
+        # np.kron also accepted.
+        def _kron1d(a, b):
+            a = xp.reshape(xp.asarray(a), (-1,))
+            b = xp.reshape(xp.asarray(b), (-1,))
+            return (a[:, None] * b[None, :]).reshape(-1)
+
+        if dipole_der is None:
+            fx = -_kron1d(coeff_x, charge_array_bath)
+            fy = -_kron1d(coeff_y, charge_array_bath)
+            fz = xp.zeros_like(fx)
+        else:
+            fx = -_kron1d(coeff_x, dipole_der[::9]) - _kron1d(coeff_y, dipole_der[3::9])
+            fy = -_kron1d(coeff_x, dipole_der[1::9]) - _kron1d(
+                coeff_y, dipole_der[4::9]
+            )
+            fz = -_kron1d(coeff_x, dipole_der[2::9]) - _kron1d(
+                coeff_y, dipole_der[5::9]
+            )
+        return fx, fy, fz
 
 
 class FFCavPhSocket(FFSocket):
@@ -2350,6 +2369,7 @@ class FFCavPhSocket(FFSocket):
         # 3. At this moment, we combine the small requests to a big mega request (updated results)
         # Socket receive lifts f/vir to the active backend, so the accumulator must match.
         result_tot = [0.0, xp.zeros(len(pbcpos)), xp.zeros((3, 3)), {}]
+        bath_extras = []
         for idx, newreq in enumerate(newreq_lst):
             u, f, vir, extra = newreq["result"]
             result_tot[0] += u
@@ -2365,30 +2385,70 @@ class FFCavPhSocket(FFSocket):
         # will be set as zero. This is to avoid double counting of photonic contributions when multiple drivers are attached.
 
         if self.ph.apply_photon:
-            # 4. calculate total dipole moment array for N baths
-            dx_array, dy_array, dz_array = self.calc_dipole_xyz_mm(
-                pos=pbcpos_atoms,
-                n_bath=self.n_independent_bath,
-                charge_array_bath=self.charge_array,
-            )
-            # check the size of photon modes + molecules to match the total number of particles
-            if self.ph.n_photon + self.n_independent_bath * xp_size(
-                self.charge_array
-            ) != int(len(pbcpos) // 3):
-                softexit.trigger(
-                    "Total number of photons + molecules does not match total number of particles"
-                )
-            # info("mux = %.6f muy = %.6f muz = %.6f [units of a.u.]" %(dipole_x_tot, dipole_y_tot, dipole_z_tot), verbosity.medium)
-            # 5. calculate photonic contribution of total energy
-            e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
-            # 6. calculate photonic forces
-            f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
-            # 7. calculate cavity forces on nuclei
-            fx_cav, fy_cav = self.ph.get_nuc_cav_forces(
-                dx_array=dx_array,
-                dy_array=dy_array,
-                charge_array_bath=self.charge_array,
-            )
+
+            # this path is for the driver coupled to the photons; we need
+            # to compute photonic contributions to energy and forces.
+            if self.evaluate_photon:
+
+                if self.dipole_surface:
+                    has_dipole_der = ("dipole" in extra) and (
+                        "dipole_derivative" in extra
+                    )
+                    check_dipole_der = (len(extra["dipole"]) == 3) and (
+                        len(extra["dipole_derivative"])
+                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    )
+                    if not has_dipole_der or not check_dipole_der:
+                        softexit.trigger(
+                            "Dipole surface is turned on, but the required dipole information is not provided in extras. "
+                            "Please check if the driver provides the dipole and its derivative information in extras, "
+                            "and make sure the size of dipole and dipole derivative information matches the number of atoms. "
+                            "If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                        )
+
+                    # dipole driver path. !!! ONLY WORKS FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
+                    dx_array = xp.asarray([extra["dipole"][0]])
+                    dy_array = xp.asarray([extra["dipole"][1]])
+                    dipole_der = xp.asarray(extra["dipole_derivative"])
+
+                else:
+                    # fall back to the original charge-array path
+                    if self.ph.n_photon + self.n_independent_bath * xp_size(
+                        self.charge_array
+                    ) != int(len(pbcpos) // 3):
+                        softexit.trigger(
+                            "Total number of photons + molecules does not match total number of particles"
+                        )
+                    # 4. calculate total dipole moment array for N baths
+                    dx_array, dy_array, _ = self.calc_dipole_xyz_mm(
+                        pos=pbcpos_atoms,
+                        n_bath=self.n_independent_bath,
+                        charge_array_bath=self.charge_array,
+                    )
+
+                # 5. photonic contribution to total energy
+                e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
+                # 6. photonic forces
+                f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
+                # 7. cavity forces on nuclei
+                if self.dipole_surface:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array, dy_array=dy_array, dipole_der=dipole_der
+                    )
+                else:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array,
+                        dy_array=dy_array,
+                        charge_array_bath=self.charge_array,
+                    )
+
+            # extra drivers attached to i-pi just contribute nuclear forces;
+            # zero-out the photonic terms here to avoid double counting.
+            else:
+                e_ph = 0
+                f_ph = 0
+                fx_cav, fy_cav, fz_cav = 0, 0, 0
+
             # 8. add cavity effects to our output
             result_tot[0] += e_ph
             result_tot[1][:ndim_tot:3] += fx_cav
