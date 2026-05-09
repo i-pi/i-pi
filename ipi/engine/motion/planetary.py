@@ -191,9 +191,7 @@ class Planetary(Motion):
         sij = dstrip(self.dcell.ih) @ sij
         sij = sij - xp.round(sij)
         sij = dstrip(self.dcell.h) @ sij
-        sij = xp.permute_dims(
-            xp.reshape(sij, (3, self.natoms, self.natoms)), (2, 1, 0)
-        )
+        sij = xp.permute_dims(xp.reshape(sij, (3, self.natoms, self.natoms)), (2, 1, 0))
         # take square magnitudes of distances
         sij = xp.sum(sij * sij, axis=2)
         # screen with Heaviside step function (bool → float via *1.0)
