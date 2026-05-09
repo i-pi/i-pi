@@ -12,8 +12,8 @@ concurrency:
 
 jobs:
   torch-cpu-tests:
-    runs-on: ubuntu-24.04
-    name: Unit + examples on torch CPU backend / Python 3.12
+    runs-on: ubuntu-26.04
+    name: Unit + examples on torch CPU backend / Python 3.13
 
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       - name: setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: install gfortran
         run: |
