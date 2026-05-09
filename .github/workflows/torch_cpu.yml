@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   torch-cpu-tests:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     name: Unit + examples on torch CPU backend / Python 3.13
 
     steps:
