@@ -82,10 +82,10 @@ def test_increment():
 
 
 def test_dot():
-    """Depend: Dot test"""
-    # Under torch, aten ops reject depend_array wrappers — extract raw via .value first.
-    c = xp.tensordot(a.value, b.value, axes=([-1], [-2]))
-    print((type(c)))
+    """Depend: free-function tensordot accepts depend_array operands."""
+    # __array__ (numpy) and __torch_function__ (torch) make depend_array
+    # transparent for free-function calls; no .value needed.
+    c = xp.tensordot(a, b, axes=([-1], [-2]))
     assert isinstance(c, type(xp.zeros((1,))))
 
 
@@ -93,6 +93,33 @@ def test_dotf():
     """Depend: `@` on depend_array operands returns a raw backend array."""
     c = a @ b
     assert isinstance(c, type(xp.zeros((1,))))
+
+
+def test_array_protocol():
+    """numpy interop: np.asarray(da) converts via __array__."""
+    da = dp.depend_array(name="x", value=xp.zeros((3, 4)))
+    arr = np.asarray(da)
+    assert isinstance(arr, np.ndarray)
+    assert arr.shape == (3, 4)
+    # dtype override
+    arr32 = np.asarray(da, dtype=np.float32)
+    assert arr32.dtype == np.float32
+    # Common scipy / I/O path: numpy then aggregate
+    assert float(np.sum(np.asarray(da))) == 0.0
+
+
+def test_torch_function():
+    """xp free functions accept a depend_array on either backend.
+
+    On numpy backend, `__array__` handles the unwrap; on torch
+    `__torch_function__` dispatches via the depend_array class.
+    """
+    da = dp.depend_array(name="x", value=xp.zeros((3, 4)) + 2.0)
+    s = xp.sum(da)
+    assert not isinstance(s, dp.depend_array)
+    assert float(s) == 24.0
+    n = xp.linalg.vector_norm(da)
+    assert not isinstance(n, dp.depend_array)
 
 
 def test_readonly():

@@ -465,15 +465,68 @@ class depend_array(depend_base):
     def value(self):
         """Raw backend tensor after refresh.
 
-        Use when passing the whole tensor to a free function (e.g.
-        ``xp.sum``, ``xp.linalg.norm``, ``scipy.X``) or to bind a raw
-        local for a tight loop and skip per-access tainted checks.
-        Slice access ``da[idx]`` already returns a raw view; reach for
-        ``.value`` only when you want the whole tensor.
+        Use to bind a raw local once when the same tensor is touched
+        repeatedly in a hot loop, skipping per-access tainted checks.
+        For one-off passes to free functions, just pass ``da`` directly:
+        ``__array__`` and ``__torch_function__`` make the wrapper
+        transparent at the boundary.
         """
         if self._status.tainted:
             self._refresh()
         return self._value
+
+    # ------------------------------------------------------------------
+    # Cross-framework transparency protocols
+    #
+    # Lets ``np.X(da)``, ``scipy.X(da)``, JSON encoders, ASE, ...
+    # (anything that ducktypes on ``__array__``) accept a depend_array
+    # without an explicit ``.value`` at the call site. Similarly for
+    # ``torch.X(da)`` via ``__torch_function__``.
+    # ------------------------------------------------------------------
+
+    def __array__(self, dtype=None, copy=None):
+        """Numpy array protocol.
+
+        On a numpy backend ``_value`` is already an ndarray and
+        ``np.asarray`` is zero-copy. On a torch backend numpy will
+        recursively call ``_value.__array__()`` to copy host-side —
+        the correct semantic at the numpy boundary, but it implies
+        a device→host transfer for torch CUDA tensors. The ``copy``
+        kwarg (numpy ≥2.0) is accepted for forward-compat; numpy
+        decides copy semantics on its side.
+        """
+        if self._status.tainted:
+            self._refresh()
+        if dtype is None:
+            return np.asarray(self._value)
+        return np.asarray(self._value, dtype=dtype)
+
+    @classmethod
+    def __torch_function__(cls, func, types, args=(), kwargs=None):
+        """Torch custom-class dispatch.
+
+        Lets ``torch.X(da)`` and ``array_api_compat.torch.X(da)``
+        accept a depend_array operand: we walk args/kwargs, refresh
+        and unwrap any depend_array, then forward the call on the raw
+        operands. Fired by torch only for ops that mix a tensor with
+        a non-tensor like-array on the left or in a free-function
+        call; the depend_array arithmetic dunders already unwrap
+        before reaching torch, so ``da OP raw`` stays on the fast
+        path.
+        """
+        if kwargs is None:
+            kwargs = {}
+
+        def _unwrap(a):
+            if isinstance(a, depend_array):
+                if a._status.tainted:
+                    a._refresh()
+                return a._value
+            return a
+
+        new_args = tuple(_unwrap(a) for a in args)
+        new_kwargs = {k: _unwrap(v) for k, v in kwargs.items()}
+        return func(*new_args, **new_kwargs)
 
     # ------------------------------------------------------------------
     # Cover any other attribute (.astype, .copy, .tobytes, .ctypes, .view, ...)
