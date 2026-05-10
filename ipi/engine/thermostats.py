@@ -156,7 +156,7 @@ class Thermostat:
            each degree of freedom.
         """
 
-        return xp.sqrt(dstrip(self.m))
+        return xp.sqrt(self.m.value)
 
     def step(self):
         """Dummy thermostat step."""
@@ -194,7 +194,7 @@ class ThermoLangevin(Thermostat):
 
     def get_T_on_sm(self):
         """Calculates the combined mass scaling and thermostat damping."""
-        return self.T / dstrip(self.sm)
+        return self.T / self.sm
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -245,10 +245,10 @@ class ThermoLangevin(Thermostat):
         that `H + ethermo` is conserved.
         """
 
-        # Cache depend handles once per call.
-        p_src = dstrip(self.p)  # physical momentum
-        T_on_sm = dstrip(self.T_on_sm)  # T / sm
-        sm = dstrip(self.sm)  # sqrt(mass)
+        # Cache raw tensors once per call.
+        p_src = self.p.value  # physical momentum
+        T_on_sm = self.T_on_sm  # T / sm (depend_value → already raw via dproperties)
+        sm = self.sm.value  # sqrt(mass)
         S = self.S  # sqrt(kT (1 - T^2))
         invT2 = 1.0 / (self.T * self.T)  # 1 / T^2
 
@@ -400,7 +400,14 @@ class ThermoPILE_L(Thermostat):
 
             # bind thermostat t to the it-th bead
 
-            t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
+            t.bind(
+                pm=(
+                    nm._pnm.dslice((it, slice(None))),
+                    nm._dynm3.dslice((it, slice(None))),
+                ),
+                prng=self.prng,
+                fixdof=fixdof,
+            )
             if it == 0:
                 # the following lines pipe a different temperature to the centroid, if requested
                 if self.pilect > 0.0:
@@ -445,7 +452,7 @@ class ThermoPILE_L(Thermostat):
         # Also include an optional scaling factor to reduce the intensity of NM thermostats.
         # Vectorised: dynomegak[0] is the centroid (always 0); the rest are the
         # non-centroid normal modes that this thermostat drives.
-        return 1.0 / (2.0 * self.pilescale * dstrip(self.nm.dynomegak)[1:])
+        return 1.0 / (2.0 * self.pilescale * self.nm.dynomegak[1:])
 
     def get_ethermo(self):
         """Computes the total energy transferred to the heat bath for all the
@@ -518,8 +525,8 @@ class ThermoSVR(Thermostat):
         Journal of Chemical Physics 126, 014101 (2007)
         """
 
-        p = dstrip(self.p)
-        K = float(0.5 * (p @ (p / dstrip(self.m))))
+        p = self.p.value
+        K = float(0.5 * (p @ (p / self.m.value)))
 
         # rescaling is un-defined if the KE is zero
         if K == 0.0:
@@ -627,7 +634,14 @@ class ThermoPILE_G(ThermoPILE_L):
         fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
 
         t = self._thermos[0]
-        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
+        t.bind(
+            pm=(
+                nm._pnm.dslice((0, slice(None))),
+                nm._dynm3.dslice((0, slice(None))),
+            ),
+            prng=self.prng,
+            fixdof=fixdof0,
+        )
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
             dpipe(self._npilect, t._temp)
@@ -968,7 +982,11 @@ class ThermoNMGLE(Thermostat):
         for t in self._thermos:
             t.s = self.s[it]  # gets the s's as a slice of self.s
             t.bind(
-                pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng
+                pm=(
+                    nm._pnm.dslice((it, slice(None))),
+                    nm._dynm3.dslice((it, slice(None))),
+                ),
+                prng=self.prng,
             )  # bind thermostat t to the it-th normal mode
 
             # pipes temp and dt
@@ -1062,7 +1080,11 @@ class ThermoNMGLEG(ThermoNMGLE):
         t = ThermoSVR(self.temp, self.dt, self.tau)
 
         t.bind(
-            pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng
+            pm=(
+                nm._pnm.dslice((0, slice(None))),
+                nm._dynm3.dslice((0, slice(None))),
+            ),
+            prng=self.prng,
         )  # bind global thermostat to centroid
 
         # pipes temp and dt
@@ -1181,8 +1203,8 @@ class ThermoCL(Thermostat):
         """Updates the bound momentum vector with a langevin thermostat."""
 
         et = self.ethermo
-        p = xp.asarray(dstrip(self.p), copy=True)
-        sm = dstrip(self.sm)
+        p = xp.asarray(self.p.value, copy=True)
+        sm = self.sm.value
 
         p /= sm
 
@@ -1197,7 +1219,8 @@ class ThermoCL(Thermostat):
         self.ethermo = et
 
         if self.apat > 0 and self.idstep and ((self.intau != 0) ^ (self.idtau != 0)):
-            ekin = ((dstrip(self.p)) @ (dstrip(self.p) / dstrip(self.m))) * 0.5
+            p = self.p.value
+            ekin = ((p) @ (p / self.m.value)) * 0.5
             mytemp = ekin / Constants.kb / self.ndof * 2
 
             if self.intau != 0:
@@ -1259,8 +1282,8 @@ class ThermoFFL(ThermoLangevin):
         """Updates the bound momentum vector with a fast-forward langevin thermostat."""
 
         et = self.ethermo
-        p = xp.asarray(dstrip(self.p), copy=True)
-        sm = dstrip(self.sm)
+        p = xp.asarray(self.p.value, copy=True)
+        sm = self.sm.value
 
         p /= sm
 

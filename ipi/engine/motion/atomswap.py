@@ -116,7 +116,7 @@ class AtomSwap(Motion):
 
             old_energy = self.forces.pot
             # swap the atom positions
-            q_src = dstrip(self.beads.q)
+            q_src = self.beads.q.value
             self.dbeads.q[:] = q_src
             self.dbeads.q[:, 3 * i : 3 * i + 3] = q_src[:, 3 * j : 3 * j + 3]
             self.dbeads.q[:, 3 * j : 3 * j + 3] = q_src[:, 3 * i : 3 * i + 3]

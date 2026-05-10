@@ -9,7 +9,6 @@ import os
 import numpy as np
 
 from ipi.utils.array_backend import xp, xp_size, to_numpy
-from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, info
 
 
@@ -26,8 +25,8 @@ def get_dynmat(h, m3, nbeads=1):
             "@get_dynmat: The provided hessian hasn't the proper dimension (3*natoms, 3*natoms*nbeads) "
         )
 
-    m3 = dstrip(m3)
-    h = dstrip(h)
+    m3 = getattr(m3, "value", m3)
+    h = getattr(h, "value", h)
     ism = xp.reshape(m3, (1, -1)) ** (-0.5)
     ismT = xp.reshape(m3[0], (-1, 1)) ** (-0.5)
 
@@ -53,10 +52,10 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
     info(" @clean_hessian: asr = %s " % asr, verbosity.medium)
     # Inputs may arrive wrapped in depend_arrays; peel them once.
-    m = dstrip(m)
-    m3 = dstrip(m3)
-    q = dstrip(q)
-    h = dstrip(h)
+    m = getattr(m, "value", m)
+    m3 = getattr(m3, "value", m3)
+    q = getattr(q, "value", q)
+    h = getattr(h, "value", h)
     # Set some useful things
     ii = natoms * nbeads
     mm = xp.tile(m, (nbeads,))

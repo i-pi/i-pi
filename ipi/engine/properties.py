@@ -14,7 +14,6 @@ import numpy as np
 from ipi.utils.array_backend import xp
 
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
@@ -377,7 +376,7 @@ class Properties:
                 "func": (
                     lambda: 2.0
                     / self.beads.nbeads
-                    * xp.sum(dstrip(self.forces.pots)[::2])
+                    * xp.sum(self.forces.pots.value[::2])
                 ),
             },
             "potential_tdsc": {
@@ -1080,7 +1079,7 @@ class Properties:
                 % bead
             )
 
-        prop_vec = dstrip(prop_vec)
+        prop_vec = getattr(prop_vec, "value", prop_vec)
         if bead < 0:
             atom_vec = xp.zeros(3)
             for b in range(self.beads.nbeads):
@@ -1152,8 +1151,8 @@ class Properties:
             elif self.motion.fixcom:
                 eff_number_fixed_dof = (
                     3
-                    * xp.sum(dstrip(self.beads.m)[atom_ids])
-                    / xp.sum(dstrip(self.beads.m))
+                    * xp.sum(self.beads.m.value[atom_ids])
+                    / xp.sum(self.beads.m.value)
                 )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
 
             if nm != "":
@@ -1217,10 +1216,10 @@ class Properties:
                 "Quantum centroid virial kinetic energy estimator not applicable to bosons"
             )
 
-        f = dstrip(self.forces.f)
+        f = self.forces.f.value
         # subtracts centroid
-        q = xp.asarray(dstrip(self.beads.q), copy=True)
-        qc = dstrip(self.beads.qc)
+        q = xp.asarray(self.beads.q.value, copy=True)
+        qc = self.beads.qc.value
         for b in range(self.beads.nbeads):
             q[b] -= qc
 
@@ -1248,8 +1247,8 @@ class Properties:
     def get_scpottd(self):
         """Calculates the Suzuki-Chin thermodynamic potential energy estimator."""
         v = 0.0
-        pots = dstrip(self.forces.pots)
-        potssc = dstrip(self.forces.potssc)
+        pots = self.forces.pots.value
+        potssc = self.forces.potssc.value
         for k in range(self.beads.nbeads):
             if k % 2 == 0:
                 v += 2.0 * pots[k] / 3.0 + 2.0 * (potssc[k] + pots[k] / 3.0)
@@ -1279,9 +1278,9 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        f = dstrip(self.forces.f)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
+        f = self.forces.f.value
 
         acv = 0.0
         ncount = 0
@@ -1350,10 +1349,10 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        f = dstrip(self.forces.f)
-        fsc = dstrip(self.forces.fsc)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
+        f = self.forces.f.value
+        fsc = self.forces.fsc.value
 
         acv = 0.0
         ncount = 0
@@ -1478,8 +1477,8 @@ class Properties:
            skip_atom_indices:
                 atoms not to be considered in the distinguishable estimator (e.g. bosons)
         """
-        q = dstrip(self.beads.q)
-        m = dstrip(self.beads.m)
+        q = self.beads.q.value
+        m = self.beads.m.value
         PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
 
         atd = 0.0
@@ -1516,8 +1515,8 @@ class Properties:
             * self.beads.nbeads
             * self.beads.natoms
         )
-        pots = dstrip(self.forces.pots)
-        potssc = dstrip(self.forces.potssc)
+        pots = self.forces.pots.value
+        potssc = self.forces.potssc.value
         v = 0.0
 
         for k in range(self.beads.nbeads):
@@ -1644,10 +1643,10 @@ class Properties:
             except ValueError:
                 raise ValueError("Normal mode index is not a valid integer")
 
-        pnm = dstrip(self.nm.pnm)
-        dm3 = dstrip(self.nm.dynm3)
-        p = dstrip(self.beads.p)
-        m3 = dstrip(self.beads.m3)
+        pnm = self.nm.pnm.value
+        dm3 = self.nm.dynm3.value
+        p = self.beads.p.value
+        m3 = self.beads.m3.value
         kmd = 0.0
         ncount = 0
 
@@ -1710,7 +1709,7 @@ class Properties:
     def get_kstress_md(self):
         """Calculates the (bead-average) classical kinetic stress of the simulation (pp^T/m)"""
 
-        # sp = (dstrip(self.beads.p) / dstrip(self.beads.sm3)).reshape(-1, 3)
+        # sp = (self.beads.p.value / self.beads.sm3.value).reshape(-1, 3)
         # return sp.T @ sp
 
         # uses normal modes to keep into account also possible mass-scaling
@@ -1761,9 +1760,9 @@ class Properties:
         """Computes the center of mass velocity for the system or for a specified species"""
 
         if bead < 0:
-            p = dstrip(self.beads.pc)
+            p = self.beads.pc.value
         else:
-            p = dstrip(self.beads[bead])
+            p = self.beads[bead]
         pcom = xp.zeros(3)
         tm = 0
         for i in range(self.beads.natoms):
@@ -1805,9 +1804,9 @@ class Properties:
         ai = 3 * i
         aj = 3 * j
 
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        f = dstrip(self.forces.f)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
+        f = self.forces.f.value
 
         # I implement this for the most general case. In practice T_ij = <p_i p_j>/(2sqrt(m_i m_j))
         kcv = xp.zeros((6))
@@ -1865,8 +1864,8 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
         nat = self.beads.natoms
         nb = self.beads.nbeads
         rg_tot = 0.0
@@ -1900,11 +1899,11 @@ class Properties:
         """
 
         kst = xp.zeros((3, 3))
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
-        fall = dstrip(self.forces.f + self.forces.fsc)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
+        pc = self.beads.pc.value
+        m = self.beads.m.value
+        fall = self.forces.f + self.forces.fsc
         na3 = 3 * self.beads.natoms
 
         for b in range(self.beads.nbeads):
@@ -1929,11 +1928,11 @@ class Properties:
         """
 
         kst = xp.zeros((3, 3))
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
-        fall = dstrip(self.forces.f)
+        q = self.beads.q.value
+        qc = self.beads.qc.value
+        pc = self.beads.pc.value
+        m = self.beads.m.value
+        fall = self.forces.f.value
         na3 = 3 * self.beads.natoms
 
         for b in range(self.beads.nbeads):
@@ -1987,7 +1986,7 @@ class Properties:
 
         u = xp.asarray([float(ux), float(uy), float(uz)])
         u_size = (u) @ (u)
-        q = dstrip(self.beads.q)
+        q = self.beads.q.value
         nat = self.beads.natoms
         nb = self.beads.nbeads
         nx_tot = 0.0
@@ -2027,10 +2026,10 @@ class Properties:
         eps = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         beta2 = beta**2
-        qc = dstrip(self.beads.qc)
-        q = dstrip(self.beads.q)
+        qc = self.beads.qc.value
+        q = self.beads.q.value
 
-        self.dcell.h = dstrip(self.cell.h)
+        self.dcell.h = self.cell.h
         self.dbeads.q[::2] = self.beads.q[::2] + eps * (q - qc)[::2]
 
         vir1 = (
@@ -2048,7 +2047,7 @@ class Properties:
         eop = (
             1.5 * self.beads.natoms / beta
             - (0.50 * vir1)
-            + xp.mean(dstrip(self.forces.pots)[::2])
+            + xp.mean(self.forces.pots.value[::2])
         )
 
         r3 = 1.5 * self.beads.natoms / beta2
@@ -2081,20 +2080,20 @@ class Properties:
         dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dcell.h = self.cell.h
-        qc = dstrip(self.beads.qc)
-        q = dstrip(self.beads.q)
-        v0 = dstrip(self.forces.pot) / self.beads.nbeads
+        qc = self.beads.qc.value
+        q = self.beads.q.value
+        v0 = self.forces.pot / self.beads.nbeads
         while True:
             splus = math.sqrt(1.0 + dbeta)
             sminus = math.sqrt(1.0 - dbeta)
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
-            vplus = dstrip(self.dforces.pot) / self.beads.nbeads
+            vplus = self.dforces.pot / self.beads.nbeads
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - sminus) + sminus * q[b, :]
-            vminus = dstrip(self.dforces.pot) / self.beads.nbeads
+            vminus = self.dforces.pot / self.beads.nbeads
 
             if verbosity.debug:
                 print(
@@ -2162,8 +2161,8 @@ class Properties:
         self.dforces.alpha = self.forces.alpha
         self.dcell.h = self.cell.h
 
-        qc = dstrip(self.beads.qc)
-        q = dstrip(self.beads.q)
+        qc = self.beads.qc.value
+        q = self.beads.q.value
 
         v0 = (self.forces.pot + self.forces.potsc) / self.beads.nbeads
 
@@ -2254,9 +2253,9 @@ class Properties:
         ni = 0
 
         # strips dependency control since we are not gonna change the true beads in what follows
-        q = dstrip(self.beads.q)
-        #        f = dstrip(self.forces.f)
-        qc = dstrip(self.beads.qc)
+        q = self.beads.q.value
+        #        f = self.forces.f.value
+        qc = self.beads.qc.value
 
         for i in range(self.beads.natoms):
             # selects only the atoms we care about
@@ -2360,9 +2359,9 @@ class Properties:
         ni = 0
 
         # strips dependency control since we are not gonna change the true beads in what follows
-        q = dstrip(self.beads.q)
-        f = dstrip(self.forces.f)
-        qc = dstrip(self.beads.qc)
+        q = self.beads.q.value
+        f = self.forces.f.value
+        qc = self.beads.qc.value
 
         for i in range(self.beads.natoms):
             # selects only the atoms we care about
@@ -2461,7 +2460,7 @@ class Properties:
         ni = 0
 
         # strips dependency control since we are not gonna change the true beads in what follows
-        q = dstrip(self.beads.q)
+        q = self.beads.q.value
         betaP = 1.0 / (Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
         for i in range(self.beads.natoms):
@@ -2538,8 +2537,8 @@ class Properties:
         sc2sum = 0.0
         ni = 0
 
-        qc = dstrip(self.beads.qc)
-        q = dstrip(self.beads.q)
+        qc = self.beads.qc.value
+        q = self.beads.q.value
         v0 = self.forces.pot
         self.dbeads.q = q
 
@@ -2613,9 +2612,9 @@ class Properties:
         ni = 0
 
         # strips dependency control since we are not gonna change the true beads in what follows
-        q = dstrip(self.beads.q)
-        f = dstrip(self.forces.f)
-        #        m3 = dstrip(self.beads.m3)         #
+        q = self.beads.q.value
+        f = self.forces.f.value
+        #        m3 = self.beads.m3.value         #
         #        pots = self.forces.pots            # -//-
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
@@ -2736,9 +2735,9 @@ class Properties:
 
         ni = 0
 
-        qc = dstrip(self.beads.qc)
-        q = dstrip(self.beads.q)
-        f = dstrip(self.forces.f)
+        qc = self.beads.qc.value
+        q = self.beads.q.value
+        f = self.forces.f.value
         v0 = self.forces.pot
         pots = self.forces.pots
 
@@ -2763,7 +2762,7 @@ class Properties:
             # this is the extra correction from Suzuki-Chin terms in the hamiltonian.
             # first, the part with |F(q)|^2. this is the scaled-coordinates F with mass m'
             # minus the original coordinates with mass m
-            df = dstrip(self.dforces.f)
+            df = self.dforces.f.value
             dpots = self.dforces.pots
 
             # Suzuki-Chin correction
@@ -2807,8 +2806,8 @@ class Properties:
         )
 
     def get_chin_correction(self):
-        f = dstrip(self.forces.f)
-        m3 = dstrip(self.beads.m3)
+        f = self.forces.f.value
+        m3 = self.beads.m3.value
         pots = self.forces.pots
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
@@ -2830,8 +2829,8 @@ class Properties:
         return xp.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
-        f = dstrip(self.forces.f)
-        m3 = dstrip(self.beads.m3)
+        f = self.forces.f.value
+        m3 = self.beads.m3.value
         #        pots = self.forces.pots    #
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
@@ -2871,8 +2870,8 @@ class Properties:
             iatom = -1
             latom = atom
 
-        f = dstrip(self.forces.f)
-        m3 = dstrip(self.beads.m3)
+        f = self.forces.f.value
+        m3 = self.beads.m3.value
         #        pots = self.forces.pots                                                #
         #        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)  # -//-
 
@@ -3058,7 +3057,7 @@ class Trajectories:
                 "dimension": "force",
                 "help": "The force acting on the centroid.",
                 "func": (
-                    lambda: xp.sum(dstrip(self.system.forces.f), axis=0)
+                    lambda: xp.sum(self.system.forces.f.value, axis=0)
                     / float(self.system.beads.nbeads)
                 ),
             },
@@ -3187,9 +3186,9 @@ class Trajectories:
         # helper arrays to make it more obvious what we are computing
         dq = xp.zeros((self.system.beads.natoms, 3))
         f = xp.zeros((self.system.beads.natoms, 3))
-        q = dstrip(self.system.beads.q)
-        qc = dstrip(self.system.beads.qc)
-        forces_f = dstrip(self.system.forces.f)
+        q = self.system.beads.q.value
+        qc = self.system.beads.qc.value
+        forces_f = self.system.forces.f.value
         for b in range(self.system.beads.nbeads):
             dq[:] = (q[b] - qc).reshape((self.system.beads.natoms, 3))
             f[:] = forces_f[b].reshape((self.system.beads.natoms, 3))
@@ -3208,8 +3207,8 @@ class Trajectories:
         gyration radius can be recovered as sqrt(rx^2+ry^2+rz^2).
         """
 
-        q = dstrip(self.system.beads.q)
-        qc = dstrip(self.system.beads.qc)
+        q = self.system.beads.q.value
+        qc = self.system.beads.qc.value
         nat = self.system.beads.natoms
         nb = self.system.beads.nbeads
         rg = xp.zeros(3 * nat)
@@ -3249,7 +3248,7 @@ class Trajectories:
         nb = self.system.beads.nbeads
         zetatd = xp.zeros((nat, 3))
         # strips dependency control since we are not gonna change the true beads in what follows
-        q = dstrip(self.system.beads.q)
+        q = self.system.beads.q.value
 
         for i in range(nat):
             # selects only the atoms we care about
@@ -3306,8 +3305,8 @@ class Trajectories:
         nb = self.system.beads.nbeads
         zetasc = xp.zeros((nat, 3))
 
-        qc = dstrip(self.system.beads.qc)
-        q = dstrip(self.system.beads.q)
+        qc = self.system.beads.qc.value
+        q = self.system.beads.q.value
         v0 = self.system.forces.pot / nb
         self.dbeads.q = q
 

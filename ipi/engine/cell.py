@@ -52,7 +52,7 @@ class Cell:
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
-        return Cell(xp.asarray(dstrip(self.h), copy=True))
+        return Cell(xp.asarray(self.h.value, copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
@@ -67,17 +67,17 @@ class Cell:
     def apply_pbc(self, atom):
         """Minimum-image wrap of a single atom's position into the cell."""
 
-        s = dstrip(self.ih) @ dstrip(atom.q)
+        s = self.ih @ atom.q
         s = s - xp.round(s)
-        return dstrip(self.h) @ s
+        return self.h @ s
 
     def array_pbc(self, pos):
         """Minimum-image wrap of a position array (n_atoms*3,) in place."""
 
-        s = dstrip(pos).reshape(-1, 3)
-        s = dstrip(self.ih) @ s.T
+        s = pos[:].reshape(-1, 3)
+        s = self.ih @ s.T
         s = s - xp.round(s)
-        s = (dstrip(self.h) @ s).T
+        s = (self.h @ s).T
         pos[:] = s.reshape(-1)
 
     def minimum_distance(self, atom1, atom2):
@@ -87,9 +87,9 @@ class Cell:
         shorter than the smallest width between parallel cell faces.
         """
 
-        s = dstrip(self.ih) @ (dstrip(atom1.q) - dstrip(atom2.q))
+        s = self.ih @ (atom1.q - atom2.q)
         s = s - xp.round(s)
-        return dstrip(self.h) @ s
+        return self.h @ s
 
 
 dproperties(Cell, ["h", "ih", "V"])
@@ -125,17 +125,17 @@ class GenericCell(Cell):
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
-        return GenericCell(xp.asarray(dstrip(self.h), copy=True))
+        return GenericCell(xp.asarray(self.h.value, copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
 
-        return xp.linalg.inv(dstrip(self.h))
+        return xp.linalg.inv(self.h.value)
 
     def get_volume(self):
         """Calculates the volume of the system box."""
 
-        return xp.linalg.det(dstrip(self.h))
+        return xp.linalg.det(self.h.value)
 
 
 dproperties(GenericCell, ["h", "ih", "V"])

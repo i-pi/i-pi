@@ -20,27 +20,48 @@ b = dp.depend_array(name="b", value=xp.zeros((2, 2)))
 
 
 def test_slicing():
-    """Depend: Slicing test"""
-    # Integer index into a 2D array returns a row (sub-array), not a scalar
+    """Depend: __getitem__ returns raw backend views (no depend wrapping)."""
+    raw_t = type(xp.zeros((1,)))
+    # Integer index into a 2D array returns a backend row view.
     c = a[0]
-    print((type(c)))
-    assert isinstance(c, dp.depend_array)
-    # Slice of a 1D array must also return a depend_array, not a plain ndarray
-    d1 = dp.depend_array(name="d1", value=np.zeros(6))
+    assert isinstance(c, raw_t)
+    assert not isinstance(c, dp.depend_array)
+    # 1D slice returns a backend view, not a depend_array.
+    d1 = dp.depend_array(name="d1", value=xp.zeros(6))
     s = d1[2:5]
-    assert isinstance(
-        s, dp.depend_array
-    ), f"1D slice returned {type(s)}, expected depend_array"
-    # Ellipsis on a 2D array returns a depend_array view, not a scalar
-    assert isinstance(a[...], dp.depend_array)
-    # Tuple-with-slice on a 2D array returns a depend_array view
-    assert isinstance(a[0, :], dp.depend_array)
-    # Fancy indexing on a 1D array returns a depend_array
-    assert isinstance(d1[[0, 2, 4]], dp.depend_array)
-    # Full multidim integer index on a 2D array returns a raw scalar
+    assert isinstance(s, raw_t)
+    assert not isinstance(s, dp.depend_array)
+    # Ellipsis and tuple-with-slice return backend views.
+    assert isinstance(a[...], raw_t) and not isinstance(a[...], dp.depend_array)
+    assert isinstance(a[0, :], raw_t) and not isinstance(a[0, :], dp.depend_array)
+    # Full multidim integer index returns a backend scalar.
     assert not isinstance(a[0, 0], dp.depend_array)
-    # Integer index on a 1D array returns a raw scalar
+    # Integer index on a 1D array returns a backend scalar.
     assert not isinstance(d1[2], dp.depend_array)
+
+
+def test_dslice():
+    """Depend: dslice returns a depend-aware slice that shares _status."""
+    parent = dp.depend_array(name="parent", value=xp.zeros((4, 3)))
+    child = parent.dslice((1, slice(None)))
+    assert isinstance(child, dp.depend_array)
+    # Status is shared by reference (taint propagation works both ways).
+    assert child._status is parent._status
+    # Refresh delegation: child knows its parent.
+    assert child._parent is parent
+
+
+def test_value():
+    """Depend: .value returns the raw backend tensor and triggers refresh."""
+    raw_t = type(xp.zeros((1,)))
+    da = dp.depend_array(name="x", value=xp.zeros((3, 2)))
+    v = da.value
+    assert isinstance(v, raw_t)
+    # Mutating through the parent's __setitem__ retaints downstream
+    # consumers; .value reflects the latest data on next read.
+    da[0, 0] = 1.0
+    v2 = da.value
+    assert float(v2[0, 0]) == 1.0
 
 
 def test_addition():
@@ -62,8 +83,8 @@ def test_increment():
 
 def test_dot():
     """Depend: Dot test"""
-    # Under torch, aten ops reject depend_array wrappers — dstrip first.
-    c = xp.tensordot(dp.dstrip(a), dp.dstrip(b), axes=([-1], [-2]))
+    # Under torch, aten ops reject depend_array wrappers — extract raw via .value first.
+    c = xp.tensordot(a.value, b.value, axes=([-1], [-2]))
     print((type(c)))
     assert isinstance(c, type(xp.zeros((1,))))
 

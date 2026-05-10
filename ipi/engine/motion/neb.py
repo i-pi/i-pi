@@ -14,7 +14,6 @@ from ipi.utils.array_backend import xp, xp_size
 import time
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import Damped_BFGS, FIRE
 from ipi.utils.messages import verbosity, info
@@ -85,13 +84,13 @@ class NEBGradientMapper(object):
                 "Calculating all beads once to get potentials on the endpoints",
                 verbosity.medium,
             )
-            self.allpots = xp.asarray(dstrip(self.dforces.pots), copy=True)
+            self.allpots = xp.asarray(self.dforces.pots.value, copy=True)
             # We want to be greedy about force calls,
             # so we transfer from full beads to the reduced ones.
             # MR note, 2024: The call below is overly convoluted and
             # likely unnecessary. It should be possible to dump values
             # now, or use usual transfer_forces. Needs deep revision.
-            tmp_f = xp.asarray(dstrip(self.dforces.f), copy=True)[1:-1]
+            tmp_f = xp.asarray(self.dforces.f.value, copy=True)[1:-1]
             tmp_v = xp.asarray(self.allpots, copy=True)[1:-1]
             self.rforces.transfer_forces_manual(
                 new_q=[self.dbeads.q[1:-1]],
@@ -99,10 +98,10 @@ class NEBGradientMapper(object):
                 new_forces=[tmp_f],
             )
         be = self.allpots
-        be[1:-1] = xp.asarray(dstrip(self.rforces.pots), copy=True)
+        be[1:-1] = xp.asarray(self.rforces.pots.value, copy=True)
 
         # Forces
-        rbf = xp.asarray(dstrip(self.rforces.f), copy=True)[:, self.fixatoms_mask]
+        rbf = xp.asarray(self.rforces.f.value, copy=True)[:, self.fixatoms_mask]
 
         # Number of images
         nimg = self.dbeads.nbeads
@@ -270,7 +269,7 @@ class NEBClimbGrMapper(object):
 
         # Reduced forces
         # We don't need copy() because flatten() implies copying.
-        rbf = dstrip(self.rforces.f)[:, self.fixatoms_mask].flatten()
+        rbf = self.rforces.f.value[:, self.fixatoms_mask].flatten()
 
         # I think here it's better to use plain tangents.
         # Then we don't need energies of the neighboring beads.
@@ -283,7 +282,7 @@ class NEBClimbGrMapper(object):
         rbf -= 2 * ((rbf) @ (tau)) * tau
 
         # Return the potential energy and gradient of the climbing bead
-        e = float(dstrip(self.rforces.pot))
+        e = float(self.rforces.pot)
         g = -rbf
         info("@NEB_CLIMB: NEBClimbGrMapper finished.", verbosity.debug)
         return e, g
@@ -510,7 +509,7 @@ class NEBMover(Motion):
             softexit.trigger(
                 status="bad", message="ERROR: climbing bead is the endpoint."
             )
-        q_src = dstrip(self.beads.q)
+        q_src = self.beads.q.value
         self.climbgm.rbeads.q[:] = q_src[cl_indx]
         self.climbgm.q_prev[:] = q_src[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = q_src[cl_indx + 1, self.climbgm.fixatoms_mask]
@@ -519,7 +518,7 @@ class NEBMover(Motion):
             % (str(self.climbgm.q_prev.shape), str(self.climbgm.q_next.shape)),
             verbosity.debug,
         )
-        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
+        n_activedim = xp_size(self.beads.q[0]) - len(self.fixatoms_dof)
         if self.hessian.shape != (n_activedim, n_activedim):
             self.hessian = np.eye(n_activedim)
 
@@ -531,8 +530,8 @@ class NEBMover(Motion):
         # If climbing is launched from geometries rather than i-pi restart,
         # these need to be initialized
         if self.full_f.shape == (0,) or self.full_v.shape == (0,):
-            self.full_f = xp.asarray(dstrip(self.nebgm.dforces.f), copy=True)
-            self.full_v = xp.asarray(dstrip(self.nebgm.dforces.pots), copy=True)
+            self.full_f = xp.asarray(self.nebgm.dforces.f.value, copy=True)
+            self.full_v = xp.asarray(self.nebgm.dforces.pots.value, copy=True)
             info(
                 " @NEB_CLIMB: full_f and full_v are initialized in init_climb()."
                 "\n\tself.full_f.shape: %s"
@@ -549,7 +548,7 @@ class NEBMover(Motion):
         self.dt_fire = 0.1
 
         self.old_x = xp.asarray(
-            dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]), copy=True
+            self.beads.q[cl_indx, self.climbgm.fixatoms_mask], copy=True
         )
         self.stage = "climb"
         return cl_indx
@@ -594,7 +593,7 @@ class NEBMover(Motion):
 
         info(" @NEB STEP %d, stage: %s" % (step, self.stage), verbosity.debug)
 
-        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
+        n_activedim = xp_size(self.beads.q[0]) - len(self.fixatoms_dof)
 
         # Check if we restarted a converged calculation (by mistake)
         if self.stage == "converged":
@@ -641,12 +640,12 @@ class NEBMover(Motion):
 
                     # Store old bead positions
                     self.old_x = xp.asarray(
-                        dstrip(self.beads.q[1:-1, self.nebgm.fixatoms_mask]), copy=True
+                        self.beads.q[1:-1, self.nebgm.fixatoms_mask], copy=True
                     )
 
                     # At step 0, we also need to store full forces and pots.
-                    self.full_f = xp.asarray(dstrip(self.nebgm.dforces.f), copy=True)
-                    self.full_v = xp.asarray(dstrip(self.nebgm.dforces.pots), copy=True)
+                    self.full_f = xp.asarray(self.nebgm.dforces.f.value, copy=True)
+                    self.full_v = xp.asarray(self.nebgm.dforces.pots.value, copy=True)
 
                     # With multiple stages, the size of the hessian is different
                     # at each stage, therefore we check.
@@ -702,18 +701,16 @@ class NEBMover(Motion):
                     self.nebpot, self.nebgrad = self.nebgm(
                         self.beads.q[1:-1, self.nebgm.fixatoms_mask]
                     )
-                    self.old_x = dstrip(
-                        xp.asarray(
-                            dstrip(self.beads.q)[1:-1, self.nebgm.fixatoms_mask],
-                            copy=True,
-                        )
+                    self.old_x = xp.asarray(
+                        self.beads.q.value[1:-1, self.nebgm.fixatoms_mask],
+                        copy=True,
                     )
 
                     self.v = -self.a * self.nebgrad
 
                     # At step 0, we also need to store full forces and pots
-                    self.full_f = xp.asarray(dstrip(self.nebgm.dforces.f), copy=True)
-                    self.full_v = xp.asarray(dstrip(self.nebgm.dforces.pots), copy=True)
+                    self.full_f = xp.asarray(self.nebgm.dforces.f.value, copy=True)
+                    self.full_v = xp.asarray(self.nebgm.dforces.pots.value, copy=True)
 
                 # Store potential and force gradient for convergence criterion
                 old_nebpot = (
@@ -768,16 +765,16 @@ class NEBMover(Motion):
             )
 
             # Store old positions
-            self.old_x[:] = dstrip(self.beads.q)[1:-1, self.nebgm.fixatoms_mask]
+            self.old_x[:] = self.beads.q.value[1:-1, self.nebgm.fixatoms_mask]
 
             # This transfers forces from the mapper to the "main" beads,
             # so that recalculation won't be triggered after the step.
             # I need to keep forces up to date, because I should be able to output
             # full potentials and full forces.
             tmp_f = xp.asarray(self.full_f, copy=True)
-            tmp_f[1:-1] = dstrip(self.nebgm.rforces.f)
+            tmp_f[1:-1] = self.nebgm.rforces.f.value
             tmp_v = xp.asarray(self.full_v, copy=True)
-            tmp_v[1:-1] = dstrip(self.nebgm.rforces.pots)
+            tmp_v[1:-1] = self.nebgm.rforces.pots.value
             self.forces.transfer_forces_manual(
                 new_q=[
                     self.beads.q,
@@ -793,8 +790,8 @@ class NEBMover(Motion):
             # Full-dimensional forces are not really needed all the time,
             # but it's easier to have it. They are needed in reduced-beads modes,
             # i.e. in "endpoints" and "climb".
-            self.full_f = dstrip(self.forces.f)
-            self.full_v = dstrip(self.forces.pots)
+            self.full_f = self.forces.f.value
+            self.full_v = self.forces.pots.value
 
             info(
                 " @NEB: remaining max force component: {}".format(
@@ -954,7 +951,7 @@ class NEBMover(Motion):
             )
 
             # Store old positions
-            self.old_x[:] = dstrip(self.beads.q)[
+            self.old_x[:] = self.beads.q.value[
                 self.cl_indx, self.climbgm.fixatoms_mask
             ]
 
@@ -975,8 +972,8 @@ class NEBMover(Motion):
                     tmp_f,
                 ],
             )
-            self.full_f = dstrip(self.forces.f)
-            self.full_v = dstrip(self.forces.pots)
+            self.full_f = self.forces.f.value
+            self.full_v = self.forces.pots.value
 
             self.qtime += time.time()
 

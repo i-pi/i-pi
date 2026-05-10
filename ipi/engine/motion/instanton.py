@@ -22,7 +22,6 @@ from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -384,7 +383,9 @@ class PesMapper(object):
     def __call__(self, x, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        full_q = xp.asarray(x, copy=True)
+        # x may arrive as a depend_array (when called with `self.beads.q`);
+        # the [:] returns a raw view on either depend_array or raw tensor.
+        full_q = xp.asarray(x[:], copy=True)
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces = self.interpolation(full_q, full_mspath)
         self.dbeads.q[:] = x[:]
@@ -570,7 +571,7 @@ class FrictionMapper(PesMapper):
         for i in range(self.dbeads.nbeads):
             ss_np[i] = self.sqrtm(s_np[i] + np.eye(nphys) * 0.000000001)
 
-        q_np = to_numpy(dstrip(self.dbeads.q))
+        q_np = to_numpy(self.dbeads.q.value)
         gq_np = np.zeros(self.dbeads.q.shape)
         for nd in range(3 * self.dbeads.natoms):
             try:
@@ -638,7 +639,9 @@ class FrictionMapper(PesMapper):
     def __call__(self, x, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        full_q = xp.asarray(x, copy=True)
+        # x may arrive as a depend_array (when called with `self.beads.q`);
+        # the [:] returns a raw view on either depend_array or raw tensor.
+        full_q = xp.asarray(x[:], copy=True)
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces, indexes, reduced_forces = self.interpolation(
             full_q, full_mspath, get_all_info=True
@@ -1142,7 +1145,7 @@ class DummyOptimizer:
                 info("We are going to compute the final hessian", verbosity.low)
                 current_hessian = get_hessian(
                     gm=self.mapper.gm,
-                    x0=xp.asarray(dstrip(self.beads.q), copy=True),
+                    x0=xp.asarray(self.beads.q.value, copy=True),
                     natoms=self.beads.natoms,
                     nbeads=self.beads.nbeads,
                     fixatoms_dof=self.fixatoms_dof,
@@ -1193,9 +1196,9 @@ class DummyOptimizer:
     def update_old_pos_for(self):
         """Update 'old' positions and forces arrays"""
 
-        self.optarrays["old_x"][:] = dstrip(self.beads.q)
-        self.optarrays["old_u"][:] = dstrip(self.forces.pots)
-        self.optarrays["old_f"][:] = dstrip(self.forces.f)
+        self.optarrays["old_x"][:] = self.beads.q.value
+        self.optarrays["old_u"][:] = self.forces.pots.value
+        self.optarrays["old_f"][:] = self.forces.f.value
 
     def print_geo(self, step):
         """Small interface to call the function that prints thet instanton geometry"""
@@ -1382,7 +1385,7 @@ class HessianOptimizer(DummyOptimizer):
         if self.options["hessian_init"]:
             full_hessian = get_hessian(
                 gm=self.mapper.gm,
-                x0=xp.asarray(dstrip(self.beads.q), copy=True),
+                x0=xp.asarray(self.beads.q.value, copy=True),
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
                 fixatoms_dof=self.fixatoms_dof,
@@ -1854,13 +1857,13 @@ class LBFGSOptimizer(DummyOptimizer):
             self.optarrays["old_x"]
             == xp.zeros((self.beads.nbeads, 3 * self.beads.natoms))
         ).all():
-            self.optarrays["old_x"][:] = dstrip(self.beads.q)
+            self.optarrays["old_x"][:] = self.beads.q.value
 
         # Specific for LBFGS
         if xp.linalg.norm(self.optarrays["d"]) == 0.0:
             # f = self.forces.f + self.mapper.sm.f
             f = self.mapper.f
-            self.optarrays["d"] += dstrip(f) / xp.sqrt(((f.flatten()) @ (f.flatten())))
+            self.optarrays["d"] += f / xp.sqrt(((f.flatten()) @ (f.flatten())))
 
         self.update_old_pos_for()
         self.init = True
@@ -1882,7 +1885,7 @@ class LBFGSOptimizer(DummyOptimizer):
         self.print_geo(step)
 
         # Check Exit and only then update old arrays
-        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.optarrays["old_x"])))
+        d_x_max = float(xp.max(xp.abs(self.beads.q.value - self.optarrays["old_x"])))
         self.exit = self.exitstep(d_x_max, step)
         self.update_old_pos_for()
 

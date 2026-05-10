@@ -13,7 +13,7 @@ import numpy as np
 
 from ipi.utils.array_backend import xp
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dproperties, depend_value, dstrip
+from ipi.utils.depend import dproperties, depend_value
 from ipi.utils.units import Constants
 
 # __all__ = ['AlchemyMC']
@@ -89,14 +89,14 @@ class AlchemyMC(Motion):
 
         """Does one round of alchemical exchanges."""
         # record the spring energy (divided by mass) for each atom in the exchange chain
-        # q = dstrip(self.beads.q)
+        # q = self.beads.q.value
         nb = self.beads.nbeads
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)
         if lenlist == 0:
             raise ValueError("Atoms exchange list is empty in alchemical sampler.")
         atomspring = np.zeros(lenlist)
-        wk2 = dstrip(self.nm.omegak2)
+        wk2 = self.nm.omegak2.value
 
         i = 0
         for atomnum in axlist:

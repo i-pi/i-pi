@@ -212,7 +212,7 @@ class ConstraintSolverBase:
 
         self.beads = beads
         # Sets the initial value of the constraint positions
-        q = dstrip(beads.q[0])
+        q = beads.q[0]
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
 
@@ -270,17 +270,19 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        p = xp.asarray(dstrip(self.beads.p[0]), copy=True)
+        p = xp.asarray(self.beads.p[0], copy=True)
 
         for constr in self.constraint_list:
-            dg = dstrip(constr.Dg)
+            dg = constr.Dg.value
             ic = constr.i3_unique
             b = (dg) @ (p[ic] / constr.m3)
 
             if spla is None:
-                x = xp.linalg.solve(dstrip(constr.Gram), b)
+                x = xp.linalg.solve(constr.Gram.value, b)
             else:
-                x = spla.cho_solve(dstrip(constr.GramChol), b)
+                # GramChol is a depend_value wrapping a (c, lower) tuple
+                # in the scipy path; dproperties already unwraps it.
+                x = spla.cho_solve(constr.GramChol, b)
 
             p[ic] -= (xp.transpose(dg)) @ (x)
         self.beads.p[0] = p
@@ -292,24 +294,26 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        m3 = dstrip(self.beads.m3[0])
-        p = xp.asarray(dstrip(self.beads.p[0]), copy=True)
-        q = xp.asarray(dstrip(self.beads.q[0]), copy=True)
+        m3 = self.beads.m3[0]
+        p = xp.asarray(self.beads.p[0], copy=True)
+        q = xp.asarray(self.beads.q[0], copy=True)
 
         for constr in self.constraint_list:
-            dg = dstrip(constr.Dg)
+            dg = constr.Dg.value
 
             if spla is None:
-                gram = dstrip(constr.Gram)
+                gram = constr.Gram.value
             else:
-                chol_gram = dstrip(constr.GramChol)
+                # GramChol is a depend_value wrapping a tuple in the scipy
+                # path; dproperties already unwraps it.
+                chol_gram = constr.GramChol
 
             ic = constr.i3_unique
             constr.q = q[ic]
 
             # iterative projection on the manifold
             for i in range(self.maxit):
-                g = dstrip(constr.g)
+                g = constr.g.value
                 # bailout condition
                 if self.tolerance > xp.linalg.norm(g, ord=self.norm_order):
                     break
@@ -399,7 +403,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
     def step_A(self):
         """Unconstrained A-step (coordinate integration)"""
-        self.beads.q[0] += self.beads.p[0] / dstrip(self.beads.m3)[0] * self.qdt
+        self.beads.q[0] += self.beads.p[0] / self.beads.m3.value[0] * self.qdt
 
     def step_B(self, level=0):
         """Unconstrained B-step (momentum integration)"""
@@ -515,17 +519,17 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
         the thermostat and the projective step do not necessarily commute
         (e.g. in GLE) by doing a MTS splitting scheme"""
 
-        m3 = dstrip(self.beads.m3)
+        m3 = self.beads.m3.value
         for i in range(self.nsteps_o):
             self.thermostat.step()
 
             # accumulates conserved quantity
-            p = dstrip(self.beads.p)
+            p = self.beads.p.value
             self.ensemble.eens += ((p.flatten()) @ ((p / m3).flatten())) * 0.5
 
             self.proj_cotangent()
 
-            p = xp.asarray(dstrip(self.beads.p), copy=True)
+            p = xp.asarray(self.beads.p.value, copy=True)
             self.ensemble.eens -= ((p.flatten()) @ ((p / m3).flatten())) * 0.5
 
     def step(self, step=None):

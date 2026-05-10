@@ -95,10 +95,10 @@ class InputAtoms(Input):
 
         super(InputAtoms, self).store()
         self.natoms.store(atoms.natoms)
-        self.q.store(dstrip(atoms.q))
-        self.p.store(dstrip(atoms.p))
-        self.m.store(dstrip(atoms.m))
-        self.names.store(dstrip(atoms.names))
+        self.q.store(atoms.q.value)
+        self.p.store(atoms.p.value)
+        self.m.store(atoms.m.value)
+        self.names.store(atoms.names.value)
 
     def fetch(self):
         """Creates an atoms object.

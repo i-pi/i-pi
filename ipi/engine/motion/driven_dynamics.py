@@ -131,15 +131,19 @@ class EDAIntegrator(DummyIntegrator):
 
     def EDAforces(self, time):
         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
-        Z = dstrip(self.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
-        E = self.Electric_Field.Efield(time)  # vector of shape (3)
+        # Lift both operands to the active backend: Efield returns numpy
+        # unconditionally (see ElectricField.Efield), and bec may be numpy
+        # in some construction paths. Without the explicit lift, mixed
+        # numpy/torch matmul fails on the torch backend.
+        Z = xp.asarray(self.Born_Charges.bec.value)
+        E = xp.asarray(self.Electric_Field.Efield(time))
         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
 
     def dipole_dtime(self, bead=-1):
         """Compute the time derivative of the electric dipole of the system"""
-        Z = dstrip(
-            self.Born_Charges.bec
+        Z = xp.asarray(
+            self.Born_Charges.bec.value
         )  # Born Effective Charges: shape == (nbeads,3xNatoms,3)
         v = self.beads.p / self.beads.m3  # velocities: shape == (nbeads,3xNatoms)
         if bead >= 0:

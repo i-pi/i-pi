@@ -1,7 +1,6 @@
 import numpy as np
 
 from ipi.utils.array_backend import xp, xp_size, to_numpy
-from ipi.utils.depend import dstrip
 from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -18,9 +17,9 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     nbeads = sm.fix.fixbeads.nbeads
     natoms = sm.fix.fixbeads.natoms
     coef = sm.coef  # new_disc
-    m3 = dstrip(sm.fix.fixbeads.m3)
+    m3 = sm.fix.fixbeads.m3.value
     omega2 = sm.omegan**2
-    h = dstrip(h)
+    h = getattr(h, "value", h)
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
@@ -180,8 +179,8 @@ def get_imvector(h, m3):
     OUT    imv    = eigenvector corresponding to the imaginary mode
     """
     info("@get_imvector", verbosity.high)
-    h = dstrip(h)
-    m3 = dstrip(m3)
+    h = getattr(h, "value", h)
+    m3 = getattr(m3, "value", m3)
     if xp_size(h) != xp_size(m3) ** 2:
         raise ValueError(
             "@Get_imvector. Initial hessian size does not match system size."
@@ -339,9 +338,9 @@ class Fix(object):
 
         self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
         clone = beads.clone()
-        self.fixbeads.q[:] = self.get_active_vector(dstrip(clone.q), 1)
-        self.fixbeads.m[:] = self.get_active_vector(dstrip(clone.m), 0)
-        self.fixbeads.names[:] = self.get_active_vector(dstrip(clone.names), 0)
+        self.fixbeads.q[:] = self.get_active_vector(clone.q.value, 1)
+        self.fixbeads.m[:] = self.get_active_vector(clone.m.value, 0)
+        self.fixbeads.names[:] = self.get_active_vector(clone.names.value, 0)
 
         mask3a = np.ones(9 * self.natoms, dtype=bool)
         for i in range(9):

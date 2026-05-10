@@ -202,29 +202,29 @@ class NormalModes:
         self._qnm = depend_array(
             name="qnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func={"q": (lambda: self.transform.b2nm(dstrip(self.beads.q)))},
+            func={"q": (lambda: self.transform.b2nm(self.beads.q.value))},
             synchro=sync_q,
         )
         self._pnm = depend_array(
             name="pnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func={"p": (lambda: self.transform.b2nm(dstrip(self.beads.p)))},
+            func={"p": (lambda: self.transform.b2nm(self.beads.p.value))},
             synchro=sync_p,
         )
 
         # must overwrite the functions
-        self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))}
-        self.beads._p._func = {"pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))}
+        self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(self.qnm.value))}
+        self.beads._p._func = {"pnm": (lambda: self.transform.nm2b(self.pnm.value))}
         self.beads._q.add_synchro(sync_q)
         self.beads._p.add_synchro(sync_p)
 
         # also within the "atomic" interface to beads
         for b in range(self.nbeads):
             self.beads._blist[b]._q._func = {
-                "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
+                "qnm": (lambda: self.transform.nm2b(self.qnm.value))
             }
             self.beads._blist[b]._p._func = {
-                "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
+                "pnm": (lambda: self.transform.nm2b(self.pnm.value))
             }
             self.beads._blist[b]._q.add_synchro(sync_q)
             self.beads._blist[b]._p.add_synchro(sync_p)
@@ -239,7 +239,7 @@ class NormalModes:
             self._fnm = depend_array(
                 name="fnm",
                 value=np.zeros((self.nbeads, 3 * self.natoms), float),
-                func=(lambda: self.transform.b2nm(dstrip(self.forces.f))),
+                func=(lambda: self.transform.b2nm(self.forces.f.value)),
                 dependencies=[self.forces._f],
             )
         else:  # have a fall-back plan when we don't want to initialize a force mechanism, e.g. for ring-polymer initialization
@@ -480,7 +480,7 @@ class NormalModes:
            The first element is the centroid frequency (0.0).
         """
 
-        return dstrip(self.omegak) / xp.sqrt(dstrip(self.nm_factor))
+        return self.omegak.value / xp.sqrt(self.nm_factor.value)
 
     def get_prop_pq(self):
         """Gets the exact or Cayley-transformed normal mode propagator matrix.
@@ -528,9 +528,9 @@ class NormalModes:
         that can be multiplied to propagate the normal modes dynamics"""
 
         pq_ms = xp.zeros((2, 2, self.nbeads, self.natoms * 3))
-        pq_ms[:] = xp.permute_dims(dstrip(self.prop_pq), (1, 2, 0))[:, :, :, None]
-        pq_ms[0, 1] *= dstrip(self.beads.m3)
-        pq_ms[1, 0] /= dstrip(self.beads.m3)
+        pq_ms[:] = xp.permute_dims(self.prop_pq.value, (1, 2, 0))[:, :, :, None]
+        pq_ms[0, 1] *= self.beads.m3.value
+        pq_ms[1, 0] /= self.beads.m3.value
 
         return pq_ms
 
@@ -579,10 +579,10 @@ class NormalModes:
         """
 
         pq_ms = xp.zeros((2, 2, self.nbeads, len(self.open_paths_coords)))
-        prop = dstrip(self.o_prop_pq)
+        prop = self.o_prop_pq.value
         pq_ms[:] = xp.permute_dims(prop, (1, 2, 0))[:, :, :, None]
-        pq_ms[0, 1] *= dstrip(self.beads.m3[:, self.open_paths_coords])
-        pq_ms[1, 0] /= dstrip(self.beads.m3[:, self.open_paths_coords])
+        pq_ms[0, 1] *= self.beads.m3[:, self.open_paths_coords]
+        pq_ms[1, 0] /= self.beads.m3[:, self.open_paths_coords]
 
         return pq_ms
 
@@ -724,7 +724,7 @@ class NormalModes:
 
         dm3 = xp.zeros(self.beads.m3.shape)
         for b in range(self.nbeads):
-            dm3[b] = dstrip(self.beads.m3)[b] * dstrip(self.nm_factor)[b]
+            dm3[b] = self.beads.m3[b] * self.nm_factor[b]
 
         # dynamical masses for the open paths
         for j in self.open_paths:
@@ -737,14 +737,14 @@ class NormalModes:
         """Returns the total spring energy and spring force."""
 
         # classical simulation - do nothing!
-        vspring, fspring = 0.0, xp.zeros_like(dstrip(self.qnm))
+        vspring, fspring = 0.0, xp.zeros_like(self.qnm.value)
         if self.nbeads == 1:
             return vspring, fspring
 
         if len(self.bosons) < self.natoms:
             # computes harmonic potential in normal-modes representation
-            qnm = dstrip(self.qnm)
-            sqnm = qnm * dstrip(self.beads.sm3)
+            qnm = self.qnm.value
+            sqnm = qnm * self.beads.sm3.value
             q2 = (sqnm**2).sum(axis=1)
 
             vspring += (self.omegak2 * q2).sum()
@@ -814,7 +814,7 @@ class NormalModes:
             # Since the dynamics are done in Cartesian coordinates below (including all modes),
             # I need to revert centroid step done separately in qcstep
             self.qnm[0, :] -= (
-                dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
+                self.pnm[0, :] / self.beads.m3[0] * self.dt
             )
 
             # Free ring polymer dynamics are done with smaller time step detlat = dt/nmts
@@ -822,7 +822,7 @@ class NormalModes:
 
             for j in range(0, self.nmts):
                 self.beads.p += 0.5 * dt * self.fspring
-                self.beads.q += dt * self.beads.p / dstrip(self.beads.m3)
+                self.beads.q += dt * self.beads.p / self.beads.m3
                 # The depend machinery will take care of automatically calculating
                 # the forces at the updated positions.
                 self.beads.p += 0.5 * dt * self.fspring
@@ -886,10 +886,10 @@ class NormalModes:
             """
 
             # detach arrays
-            pnm = dstrip(self.pnm)
-            qnm = dstrip(self.qnm)
+            pnm = self.pnm.value
+            qnm = self.qnm.value
 
-            prop_pq_ms = dstrip(self.prop_pq_ms)
+            prop_pq_ms = self.prop_pq_ms.value
             new_pnm = pnm[1:] * prop_pq_ms[0, 0, 1:] + qnm[1:] * prop_pq_ms[0, 1, 1:]
             new_qnm = pnm[1:] * prop_pq_ms[1, 0, 1:] + qnm[1:] * prop_pq_ms[1, 1, 1:]
 
@@ -897,7 +897,7 @@ class NormalModes:
             # and do open path propagation. NB this will be slow, will probably need some optimization
             # to run large calculations with this
             if len(self.open_paths) > 0:
-                o_prop_pq_ms = dstrip(self.o_prop_pq_ms)
+                o_prop_pq_ms = self.o_prop_pq_ms.value
                 opc = self.open_paths_coords
                 new_pnm[:, opc] = (
                     pnm[1:, opc] * o_prop_pq_ms[0, 0, 1:]
@@ -930,8 +930,8 @@ class NormalModes:
 
         """
         # include the partially adiabatic CMD mass scaling
-        pnm = dstrip(self.pnm) / dstrip(self.beads.sm3)
-        kmd = 0.5 * (pnm**2).sum(axis=1) / dstrip(self.nm_factor)
+        pnm = self.pnm.value / self.beads.sm3.value
+        kmd = 0.5 * (pnm**2).sum(axis=1) / self.nm_factor.value
 
         return kmd
 
@@ -958,7 +958,7 @@ class NormalModes:
         """
 
         # computes mass and nm_scaling-scaled momenta
-        spnm = (dstrip(self.pnm) / xp.sqrt(dstrip(self.nm_factor)[:, None])) / dstrip(
+        spnm = (self.pnm.value / xp.sqrt(self.nm_factor.value[:, None])) / (
             self.beads.sm3
         )
         spnm = spnm.reshape(-1, 3)  # reshape for quick outer product

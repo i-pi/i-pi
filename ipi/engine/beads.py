@@ -152,7 +152,15 @@ class Beads:
         # create proxies to access the individual beads as Atoms objects
         # TODO: ACTUALLY THIS IS ONLY USED HERE METHINK, SO PERHAPS WE COULD REMOVE IT TO DECLUTTER THE CODE.
         self._blist = [
-            Atoms(natoms, _prebind=(self.q[i, :], self.p[i, :], self.m, self.names))
+            Atoms(
+                natoms,
+                _prebind=(
+                    self._q.dslice((i, slice(None))),
+                    self._p.dslice((i, slice(None))),
+                    self._m,
+                    self._names,
+                ),
+            )
             for i in range(nbeads)
         ]
 
@@ -186,21 +194,21 @@ class Beads:
             nbeads = self.nbeads
 
         newbd = Beads(self.natoms, nbeads)
-        newbd.q[:] = dstrip(self.q)[:nbeads]
-        newbd.p[:] = dstrip(self.p)[:nbeads]
-        newbd.m[:] = dstrip(self.m)
-        newbd.names[:] = dstrip(self.names)
+        newbd.q[:] = self.q[:nbeads]
+        newbd.p[:] = self.p[:nbeads]
+        newbd.m[:] = self.m
+        newbd.names[:] = self.names
         return newbd
 
     def m3tosm3(self):
         """Takes the mass array and returns the square rooted mass array."""
 
-        return xp.sqrt(dstrip(self.m3))
+        return xp.sqrt(self.m3.value)
 
     def mtominv(self):
         """Inverse per-atom mass; cached so hot paths avoid a per-step divide."""
 
-        return 1.0 / dstrip(self.m)
+        return 1.0 / self.m
 
     def mtom3(self):
         """Takes the mass array for each bead and returns one with an element
@@ -212,7 +220,7 @@ class Beads:
         """
 
         m3 = xp.zeros((self.nbeads, 3 * self.natoms))
-        m3[:, 0 : 3 * self.natoms : 3] = dstrip(self.m)
+        m3[:, 0 : 3 * self.natoms : 3] = self.m.value
         m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         return m3
@@ -220,12 +228,12 @@ class Beads:
     def get_qc(self):
         """Gets the centroid coordinates."""
 
-        return xp.sum(dstrip(self.q), axis=0) / self.nbeads
+        return xp.sum(self.q.value, axis=0) / self.nbeads
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
-        return xp.sum(dstrip(self.p), axis=0) / self.nbeads
+        return xp.sum(self.p.value, axis=0) / self.nbeads
 
     def kin_gather(self):
         """Gets the kinetic energy for all the replicas.
@@ -272,8 +280,8 @@ class Beads:
         """
 
         epath = 0.0
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q.value
+        m = self.m3[0]
         for b in range(self.nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
@@ -297,8 +305,8 @@ class Beads:
         natoms = self.natoms
         f = np.zeros((nbeads, 3 * natoms), float)
 
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q.value
+        m = self.m3[0]
         for b in range(nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
@@ -351,10 +359,10 @@ class Beads:
            value: The Atoms object that holds the new values.
         """
 
-        self._blist[index].p[:] = dstrip(value.p)
-        self._blist[index].q[:] = dstrip(value.q)
-        self._blist[index].m[:] = dstrip(value.m)
-        self._blist[index].names[:] = dstrip(value.names)
+        self._blist[index].p[:] = value.p
+        self._blist[index].q[:] = value.q
+        self._blist[index].m[:] = value.m
+        self._blist[index].names[:] = value.names
 
 
 dproperties(

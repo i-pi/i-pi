@@ -14,7 +14,6 @@ import numpy as np
 
 import ipi.utils.mathtools as mt
 from ipi.utils.array_backend import to_numpy
-from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
 __all__ = ["print_pdb_path", "print_pdb", "read_pdb"]
@@ -48,7 +47,7 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     natoms = beads.natoms
     nbeads = beads.nbeads
     qs_all = (to_numpy(beads.q) * atoms_conv).reshape(nbeads, natoms, 3)
-    lab = dstrip(beads.names)
+    lab = beads.names.value
     for j in range(nbeads):
         qs = qs_all[j]
         for i in range(natoms):
@@ -113,7 +112,7 @@ def print_pdb(
 
     natoms = atoms.natoms
     qs = (to_numpy(atoms.q) * atoms_conv).reshape(natoms, 3)
-    lab = dstrip(atoms.names)
+    lab = atoms.names.value
     for i in range(natoms):
         data = (
             i + 1,

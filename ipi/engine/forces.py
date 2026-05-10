@@ -227,7 +227,7 @@ class ForceBead:
            An array containing all the components of the force.
         """
 
-        return dstrip(self.ufvx[1])
+        return self.ufvx[1]
 
     def get_vir(self):
         """Calls get_all routine of forcefield to update the virial.
@@ -237,7 +237,7 @@ class ForceBead:
            by the volume.
         """
 
-        vir = dstrip(self.ufvx[2])
+        vir = self.ufvx[2]
         vir[1, 0] = 0.0
         vir[2, 0:2] = 0.0
         return vir
@@ -489,7 +489,7 @@ class ForceComponent:
         # `xp.asarray(list_of_tensors)` doesn't stack under torch; use
         # `xp.stack` which is the array-API verb for concatenating
         # along a new leading axis.
-        return xp.stack([dstrip(b.vir) for b in self._forces])
+        return xp.stack([b.vir.value for b in self._forces])
 
     def f_gather(self):
         """Obtains the force vector for each replica.
@@ -502,7 +502,7 @@ class ForceComponent:
         newf = xp.zeros((self.nbeads, 3 * self.natoms))
         self.queue()
         for b in range(self.nbeads):
-            newf[b] = xp.asarray(dstrip(self._forces[b].f))
+            newf[b] = xp.asarray(self._forces[b].f.value)
 
         return newf
 
@@ -516,7 +516,7 @@ class ForceComponent:
             Virial sum.
         """
 
-        return xp.sum(dstrip(self.virs), axis=0)
+        return xp.sum(self.virs.value, axis=0)
 
 
 dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
@@ -592,7 +592,7 @@ class ScaledForceComponent:
             Virial sum.
         """
 
-        return xp.sum(dstrip(self.virs), axis=0)
+        return xp.sum(self.virs.value, axis=0)
 
     def queue(self):
         pass  # this should be taken care of when the force/potential/etc is accessed
@@ -675,13 +675,13 @@ class MTSForces:
                 fk += (
                     weight
                     * mts_weights[level]
-                    * mrpc[index].b2tob1(dstrip(mforces[index].f))
+                    * mrpc[index].b2tob1(mforces[index].f.value)
                 )
         return fk
 
     def get_vir_mts(self):
         """Fetches ONLY the total virial associated with a given MTS level."""
-        return xp.sum(dstrip(self.virs), axis=0)
+        return xp.sum(self.virs.value, axis=0)
 
     def get_virs_mts(self):
         """Fetches ONLY the total virial associated with a given MTS level."""
@@ -697,7 +697,7 @@ class MTSForces:
                 and mforces[index].mts_weights[level] != 0
                 and mforces[index].weight != 0
             ):
-                dmvirs = dstrip(mforces[index].virs)
+                dmvirs = mforces[index].virs.value
                 dv = mrpc[index].b2tob1(dmvirs)
                 rp += mforces[index].weight * mforces[index].mts_weights[level] * dv
         return rp
@@ -789,7 +789,7 @@ class Forces:
         # a "function factory" to generate functions to automatically update
         # contracted paths
         def make_rpc(rpc, beads):
-            return lambda: rpc.b1tob2(dstrip(beads.q))
+            return lambda: rpc.b1tob2(beads.q.value)
 
         # creates new force objects, possibly acting on contracted path
         # representations. note that this new object is always created even if no contraction is required.
@@ -988,7 +988,7 @@ class Forces:
         self._virsc = depend_value(
             name="virsc",
             dependencies=[self._potssc],
-            func=(lambda: xp.sum(dstrip(self.virssc), axis=0)),
+            func=(lambda: xp.sum(self.virssc.value, axis=0)),
         )
 
         # Add dependencies from the force weights, that are applied here when the total
@@ -1052,7 +1052,7 @@ class Forces:
             force_data.append(
                 (
                     # will also need bead positions, see _load_state
-                    deepcopy(dstrip(mself.beads.q)),
+                    deepcopy(mself.beads.q.value),
                     bead_forces,
                 )
             )
@@ -1199,7 +1199,7 @@ class Forces:
             Virial sum.
         """
 
-        return xp.sum(dstrip(self.virs), axis=0)
+        return xp.sum(self.virs.value, axis=0)
 
     def pots_component(self, index, weighted=True, interpolate=True):
         """Fetches the index^th component of the total potential."""
@@ -1210,7 +1210,7 @@ class Forces:
             else:
                 return xp.zeros(self.mrpc[index].nbeads2)
         else:
-            pots = xp.asarray(dstrip(self.mforces[index].pots), copy=True)
+            pots = xp.asarray(self.mforces[index].pots.value, copy=True)
             if weighted:
                 pots *= self.mforces[index].weight
             if interpolate:
@@ -1226,7 +1226,7 @@ class Forces:
             else:
                 return xp.zeros((self.mrpc[index].nbeads2, 3 * self.natoms))
         else:
-            forces = xp.asarray(dstrip(self.mforces[index].f), copy=True)
+            forces = xp.asarray(self.mforces[index].f.value, copy=True)
             if weighted:
                 forces *= self.mforces[index].weight
             if interpolate:
@@ -1242,7 +1242,7 @@ class Forces:
             else:
                 return xp.zeros((self.mrpc[index].nbeads2, 3, 3))
         else:
-            virs = xp.asarray(dstrip(self.mforces[index].virs), copy=True)
+            virs = xp.asarray(self.mforces[index].virs.value, copy=True)
             if weighted:
                 virs *= self.mforces[index].weight
             if interpolate:
@@ -1266,7 +1266,7 @@ class Forces:
             exit()
 
         # calculates the finite displacement.
-        fbase = dstrip(self.f)
+        fbase = self.f.value
         eps = self.mforces[index].epsilon
         # foverm is a 0-d tensor under the torch backend — use xp so the
         # sqrt / abs stay on the active namespace.
@@ -1284,8 +1284,8 @@ class Forces:
         dq = delta * fbase / self.beads.m3
 
         # stores the force component.
-        fbase = self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
-        mvirs = dstrip(self.mforces[index].virs)
+        fbase = self.mrpc[index].b2tob1(self.mforces[index].f.value)
+        mvirs = self.mforces[index].virs.value
         vbase = self.mrpc[index].b2tob1(mvirs)
 
         # uses a fwd difference if epsilon > 0.
@@ -1314,21 +1314,21 @@ class Forces:
                     self.dcell = self.cell.clone()
                     self.dforces = self.clone(self.dbeads, self.dcell)
 
-                self.dcell.h = dstrip(self.cell.h)
+                self.dcell.h = self.cell.h
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
 
                 # displaces odd beads only.
-                self.dbeads.q = dstrip(self.beads.q)[1::2] - dq[1::2]
+                self.dbeads.q = self.beads.q[1::2] - dq[1::2]
 
                 # calculates the force.
                 fminus = self.dforces.mrpc[index].b2tob1(
-                    dstrip(self.dforces.mforces[index].f)
+                    self.dforces.mforces[index].f.value
                 )
 
                 # calculates the virial.
-                dmvirs = dstrip(self.dforces.mforces[index].virs)
+                dmvirs = self.dforces.mforces[index].virs.value
                 vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
@@ -1343,7 +1343,7 @@ class Forces:
                     self.dcell = self.cell.clone()
                     self.dforces = self.clone(self.dbeads, self.dcell)
 
-                self.dcell.h = dstrip(self.cell.h)
+                self.dcell.h = self.cell.h
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
@@ -1353,11 +1353,11 @@ class Forces:
 
                 # calculates the force.
                 fplus = self.dforces.mrpc[index].b2tob1(
-                    dstrip(self.dforces.mforces[index].f)
+                    self.dforces.mforces[index].f.value
                 )
 
                 # calculates the virial.
-                dmvirs = dstrip(self.dforces.mforces[index].virs)
+                dmvirs = self.dforces.mforces[index].virs.value
                 vplus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
@@ -1372,7 +1372,7 @@ class Forces:
                 self.dcell = self.cell.clone()
                 self.dforces = self.clone(self.dbeads, self.dcell)
 
-            self.dcell.h = dstrip(self.cell.h)
+            self.dcell.h = self.cell.h
 
             f_4th_order = fbase * 0.0
             v_4th_order = vbase * 0.0
@@ -1381,19 +1381,19 @@ class Forces:
             if self.alpha == 0:
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
                 self.dbeads.q[: self.nbeads // 2] = (
-                    dstrip(self.beads.q)[1::2] + dq[1::2]
+                    self.beads.q[1::2] + dq[1::2]
                 )
                 self.dbeads.q[-self.nbeads // 2 :] = (
-                    dstrip(self.beads.q)[1::2] - dq[1::2]
+                    self.beads.q[1::2] - dq[1::2]
                 )
 
                 # calculates the forces.
                 fplusminus = self.dforces.mrpc[index].b2tob1(
-                    dstrip(self.dforces.mforces[index].f)
+                    self.dforces.mforces[index].f.value
                 )
 
                 # calculates the virial.
-                dmvirs = dstrip(self.dforces.mforces[index].virs)
+                dmvirs = self.dforces.mforces[index].virs.value
                 vplusminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
@@ -1419,12 +1419,12 @@ class Forces:
 
                 # calculates the forces.
                 fplus = self.dforces.mrpc[index].b2tob1(
-                    dstrip(self.dforces.mforces[index].f)
+                    self.dforces.mforces[index].f.value
                 )
 
                 # calculates the virial.
                 vplus = xp.zeros((self.nbeads, 3, 3))
-                dmvirs = dstrip(self.dforces.mforces[index].virs)
+                dmvirs = self.dforces.mforces[index].virs.value
                 vplus += self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # displaces the beads.
@@ -1432,11 +1432,11 @@ class Forces:
 
                 # calculates the forces.
                 fminus = self.dforces.mrpc[index].b2tob1(
-                    dstrip(self.dforces.mforces[index].f)
+                    self.dforces.mforces[index].f.value
                 )
 
                 # calculates the virial.
-                dmvirs = dstrip(self.dforces.mforces[index].virs)
+                dmvirs = self.dforces.mforces[index].virs.value
                 vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
@@ -1469,7 +1469,7 @@ class Forces:
                 rf += (
                     self.mforces[k].weight
                     * self.mforces[k].mts_weights.sum()
-                    * self.mrpc[k].b2tob1(dstrip(self.mforces[k].f))
+                    * self.mrpc[k].b2tob1(self.mforces[k].f.value)
                 )
         return rf
 
@@ -1498,7 +1498,7 @@ class Forces:
                 rp += (
                     self.mforces[k].weight
                     * self.mforces[k].mts_weights.sum()
-                    * self.mrpc[k].b2tob1(dstrip(self.mforces[k].pots))
+                    * self.mrpc[k].b2tob1(self.mforces[k].pots.value)
                 )
         return rp
 
@@ -1562,7 +1562,7 @@ class Forces:
         rp = xp.zeros((self.nbeads, 3, 3))
         for k in range(self.nforces):
             if self.mforces[k].weight != 0:
-                dmvirs = dstrip(self.mforces[k].virs)
+                dmvirs = self.mforces[k].virs.value
                 # "expand" to the total number of beads the virials from the
                 # contracted one, element by element
                 rp += (
@@ -1579,41 +1579,36 @@ class Forces:
             exit()
 
         # this evaluates the square forces contribution to the SC potential (only the difference with the Trotter potential is returned)
-        return self.coeffsc_part_1.T * dstrip(
-            self.pots
-        ) + self.coeffsc_part_2.T * xp.sum(
-            dstrip(self.f) / self.beads.m3 * dstrip(self.f), axis=1
+        f = self.f.value
+        return self.coeffsc_part_1.T * self.pots + self.coeffsc_part_2.T * xp.sum(
+            f / self.beads.m3 * f, axis=1
         )
 
     def get_fsc_part_1(self):
         """Obtains the linear component of Suzuki-Chin correction to the force."""
 
-        return self.coeffsc_part_1 * dstrip(self.f)
+        return self.coeffsc_part_1 * self.f
 
     def get_fsc_part_2(self):
         """Obtains the quadratic component of Suzuki-Chin correction to the force."""
 
-        return self.coeffsc_part_2 * dstrip(self.f_4th_order)
+        return self.coeffsc_part_2 * self.f_4th_order
 
     def get_virssc_part_1(self):
         """Obtains the linear component of Suzuki-Chin correction to the virial."""
-        return self.coeffsc_part_1.reshape((self.beads.nbeads, 1, 1)) * dstrip(
-            self.virs
-        )
+        return self.coeffsc_part_1.reshape((self.beads.nbeads, 1, 1)) * self.virs
 
     def get_virssc_part_2(self):
         """Obtains the quadratic component of Suzuki-Chin correction to the virial."""
-        return self.coeffsc_part_2.reshape((self.beads.nbeads, 1, 1)) * dstrip(
-            self.vir_4th_order
-        )
+        return self.coeffsc_part_2.reshape((self.beads.nbeads, 1, 1)) * self.vir_4th_order
 
     def get_fsc(self):
         """Obtains the total Suzuki-Chin correction to the force."""
-        return dstrip(self.fsc_part_1) + dstrip(self.fsc_part_2)
+        return self.fsc_part_1 + self.fsc_part_2
 
     def get_virssc(self):
         """Obtains the total Suzuki-Chin correction to the force."""
-        return dstrip(self.virssc_part_1) + dstrip(self.virssc_part_2)
+        return self.virssc_part_1 + self.virssc_part_2
 
     def get_coeffsc_part_1(self):
         """Obtains the coefficients of the linear part of the Suzuki-Chin correction."""

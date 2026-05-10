@@ -10,8 +10,6 @@ import math
 from array_api_compat import is_numpy_namespace
 
 from ipi.utils.array_backend import xp
-from ipi.utils.depend import dstrip
-
 from ipi.utils.messages import verbosity, info, warning
 
 _IS_NUMPY_BACKEND = is_numpy_namespace(xp)
@@ -281,7 +279,7 @@ class nm_rescale(object):
            q: A matrix with nbeads1 rows, in the bead representation.
         """
 
-        q = dstrip(q)
+        q = getattr(q, "value", q)
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
             q_scal = xp.asarray(q, copy=True)
@@ -316,7 +314,7 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = xp.asarray(dstrip(q), copy=True)
+            q_scal = xp.asarray(getattr(q, "value", q), copy=True)
         else:
             # see b1tob2 for the rationale for dealing with open path transformations
             q_scal = xp.tensordot(self._b2tob1, q, axes=([1], [0]))

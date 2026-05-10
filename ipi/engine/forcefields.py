@@ -24,7 +24,6 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.array_backend import xp, xp_size, to_numpy
-from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
@@ -165,7 +164,7 @@ class ForceField:
         # `xp` ops, can work in place). We hand the xp tensor through to
         # the ForceRequest unchanged; any numpy conversion needed for the
         # socket wire format happens inside sockets.py at the byte boundary.
-        pbcpos = xp.asarray(dstrip(atoms.q), copy=True)
+        pbcpos = xp.asarray(atoms.q.value, copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -197,8 +196,8 @@ class ForceField:
             "pos": pbcpos,
             "active": self.iactive,
             "cell": (
-                xp.asarray(dstrip(cell.h), copy=True),
-                xp.asarray(dstrip(cell.ih), copy=True),
+                xp.asarray(cell.h.value, copy=True),
+                xp.asarray(cell.ih.value, copy=True),
             ),
             "pars": par_str,
             "result": None,
@@ -953,8 +952,8 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = to_numpy(dstrip(myatoms.q)) * 0.0
-        self.masses = to_numpy(dstrip(myatoms.m))
+        self.charges = to_numpy(myatoms.q) * 0.0
+        self.masses = to_numpy(myatoms.m)
         self.lastq = xp.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -989,8 +988,8 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = to_numpy(dstrip(self.system_force.f)).reshape((-1, 3))
-            vir[:] = -to_numpy(dstrip(self.system_force.vir))
+            f[:] = to_numpy(self.system_force.f).reshape((-1, 3))
+            vir[:] = -to_numpy(self.system_force.vir)
             self.plumed.cmd("setEnergy", float(self.system_force.pot))
 
         # must hold a copy of cell and positions because plumed stores a pointer!
@@ -1015,8 +1014,8 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= to_numpy(dstrip(self.system_force.f)).flatten()
-            vir[:] -= -to_numpy(dstrip(self.system_force.vir))
+            f[:] -= to_numpy(self.system_force.f).flatten()
+            vir[:] -= -to_numpy(self.system_force.vir)
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1054,7 +1053,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            request = {"pos": pos[:], "cell": (cell[:], None), "result": None}
             self.evaluate(request)
 
         if self.compute_work:
@@ -1732,9 +1731,9 @@ class FFRotations(ForceField):
 
             rot_atoms = atoms.clone()
             rot_cell = GenericCell(
-                R @ xp.asarray(dstrip(cell.h), copy=True)
+                R @ xp.asarray(cell.h.value, copy=True)
             )  # NB we need generic cell orientation
-            rot_atoms.q[:] = (xp.reshape(dstrip(rot_atoms.q), (-1, 3)) @ R.T).flatten()
+            rot_atoms.q[:] = (xp.reshape(rot_atoms.q.value, (-1, 3)) @ R.T).flatten()
 
             rots.append((R, w))
             ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1743,10 +1742,10 @@ class FFRotations(ForceField):
                 # also add a "flipped rotation" to the evaluation list
                 R = R * -1
 
-                rot_cell = GenericCell(R @ xp.asarray(dstrip(cell.h), copy=True))
+                rot_cell = GenericCell(R @ xp.asarray(cell.h.value, copy=True))
                 rot_atoms = atoms.clone()
                 rot_atoms.q[:] = (
-                    xp.reshape(dstrip(rot_atoms.q), (-1, 3)) @ R.T
+                    xp.reshape(rot_atoms.q.value, (-1, 3)) @ R.T
                 ).flatten()
 
                 rots.append((R, w))
@@ -2268,7 +2267,7 @@ class FFCavPhSocket(FFSocket):
         else:
             par_str = " "
 
-        pbcpos = xp.asarray(dstrip(atoms.q), copy=True)
+        pbcpos = xp.asarray(atoms.q.value, copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -2313,8 +2312,8 @@ class FFCavPhSocket(FFSocket):
                     "pos": pbcpos_local,
                     "active": iactive_local,
                     "cell": (
-                        xp.asarray(dstrip(cell.h), copy=True),
-                        xp.asarray(dstrip(cell.ih), copy=True),
+                        xp.asarray(cell.h.value, copy=True),
+                        xp.asarray(cell.ih.value, copy=True),
                     ),
                     "pars": par_str,
                     "result": None,
@@ -2465,8 +2464,8 @@ class FFCavPhSocket(FFSocket):
                 "pos": pbcpos,
                 "active": self.iactive,
                 "cell": (
-                    xp.asarray(dstrip(cell.h), copy=True),
-                    xp.asarray(dstrip(cell.ih), copy=True),
+                    xp.asarray(cell.h.value, copy=True),
+                    xp.asarray(cell.ih.value, copy=True),
                 ),
                 "pars": par_str,
                 "result": result_tot,

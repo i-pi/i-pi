@@ -15,7 +15,7 @@ from ipi.utils.array_backend import xp
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
-from ipi.utils.depend import dstrip, depend_value
+from ipi.utils.depend import depend_value
 from ipi.engine.cell import Cell
 from ipi.utils.units import Constants
 import ipi.utils.io as io
@@ -328,7 +328,7 @@ class AlKMC(Motion):
         for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.optimizer[ieval].step(i)
-        newq = xp.asarray(dstrip(self.dbeads[ieval].q[0]), copy=True)
+        newq = xp.asarray(self.dbeads[ieval].q[0], copy=True)
         newpot = self.dforces[ieval].pot
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
@@ -657,14 +657,14 @@ class AlKMC(Motion):
         print("Finishing step at ", "".join(self.state))
 
         # updates the positions
-        self.cell.h = dstrip(self.dcell.h)
+        self.cell.h = self.dcell.h.value
 
         uidx = self.unique_idx(self.state)
         ruidx = np.zeros(self.nsites, int)
         ruidx[uidx] = list(range(self.nsites))
 
         self.sites[self.unique_idx(self.state)]
-        oldq = xp.asarray(dstrip(self.beads.q[0]), copy=True)
+        oldq = xp.asarray(self.beads.q[0], copy=True)
 
         newq = np.zeros(self.nsites * 3, float)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)

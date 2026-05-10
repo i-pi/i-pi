@@ -14,7 +14,6 @@ import numpy as np
 
 import ipi.utils.mathtools as mt
 from ipi.utils.array_backend import to_numpy
-from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
 __all__ = ["print_xyz_path", "print_xyz", "read_xyz"]
@@ -42,7 +41,7 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     natoms = beads.natoms
     nbeads = beads.nbeads
     qs_all = (to_numpy(beads.q) * atoms_conv).reshape(nbeads, natoms, 3)
-    lab = dstrip(beads.names)
+    lab = beads.names.value
     for j in range(nbeads):
         filedesc.write(
             f"{natoms}\n# bead: {j} CELL(abcABC): "
@@ -80,7 +79,7 @@ def print_xyz(
         f"{alpha:10.5f}  {beta:10.5f}  {gamma:10.5f}  {title}\n"
     )
     qs = (to_numpy(atoms.q) * atoms_conv).reshape(natoms, 3)
-    lab = dstrip(atoms.names)
+    lab = atoms.names.value
     for i in range(natoms):
         filedesc.write(
             f"{lab[i]:>8s} {qs[i, 0]:12.5e} {qs[i, 1]:12.5e} {qs[i, 2]:12.5e}\n"

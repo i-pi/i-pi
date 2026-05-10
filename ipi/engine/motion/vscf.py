@@ -145,8 +145,8 @@ class NormalModeMover(Motion):
                 "Calculation not possible for number of beads greater than one."
             )
 
-        self.ism = 1 / xp.sqrt(dstrip(self.beads.m3[-1]))
-        self.m = dstrip(self.beads.m)
+        self.ism = 1 / xp.sqrt(self.beads.m3[-1])
+        self.m = self.beads.m.value
         self.calc.bind(self)
 
         self.dbeads = self.beads.clone(nbeads=self.nparallel)
@@ -429,9 +429,9 @@ class IMF(DummyCalculator):
             # Adds to the list of "sampled configuration" the one that
             # corresponds to the minimum.
             q0 = 0.0
-            v0 = xp.asarray(dstrip(self.imm.forces.pots), copy=True)[0] / self.nprim
+            v0 = xp.asarray(self.imm.forces.pots.value, copy=True)[0] / self.nprim
             f0 = (
-                (xp.asarray(dstrip(self.imm.forces.f), copy=True)[0])
+                (xp.asarray(self.imm.forces.f.value, copy=True)[0])
                 @ (xp.real(self.imm.V.T[step]))
             ) / self.nprim
 
@@ -479,13 +479,13 @@ class IMF(DummyCalculator):
                     # Stores the "anharmonic" component of the potential
                     # and the force.
                     dv = (
-                        xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0]
+                        xp.asarray(self.imm.dforces.pots.value, copy=True)[0]
                         / self.nprim
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
                     df = (
-                        xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0]
+                        xp.asarray(self.imm.dforces.f.value, copy=True)[0]
                         @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
@@ -521,13 +521,13 @@ class IMF(DummyCalculator):
                     # Stores the "anharmonic" component of the potential
                     # and the force.
                     dv = (
-                        xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0]
+                        xp.asarray(self.imm.dforces.pots.value, copy=True)[0]
                         / self.nprim
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
                     df = (
-                        xp.asarray(dstrip(self.imm.dforces.f), copy=True)[0]
+                        xp.asarray(self.imm.dforces.f.value, copy=True)[0]
                         @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
@@ -851,7 +851,7 @@ class VSCF(IMF):
                 )
             else:
                 self.v0 = (
-                    xp.asarray(dstrip(self.imm.forces.pots), copy=True)[0] / self.nprim
+                    xp.asarray(self.imm.forces.pots.value, copy=True)[0] / self.nprim
                 )
                 outfile = self.imm.output_maker.get_output(self.v_offset_filename)
                 np.savetxt(outfile, [float(self.v0)])
@@ -1105,12 +1105,12 @@ class VSCF(IMF):
                             self.v_coupled[k] = self.v_indep_list[self.inm_index][i]
                         else:
                             self.imm.dbeads.q = (
-                                dstrip(self.imm.beads.q)
+                                self.imm.beads.q.value
                                 + displacements_nmi[i] * unit_displacement_nmi
                                 + displacements_nmj[j] * unit_displacement_nmj
                             )
                             self.v_coupled[k] = (
-                                dstrip(self.imm.dforces.pots)[0] / self.nprim
+                                self.imm.dforces.pots.value[0] / self.nprim
                             )
                         didjv.append(
                             [
@@ -1410,7 +1410,7 @@ class VSCF(IMF):
         counter = -1
         while True:
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
-            v = xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+            v = xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
@@ -1418,11 +1418,11 @@ class VSCF(IMF):
                 # Adds two extra points required later for solid spline fitting at edges.
                 self.imm.dbeads.q -= dev
                 v_indeps.append(
-                    xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+                    xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
                 )
                 self.imm.dbeads.q -= dev
                 v_indeps.append(
-                    xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+                    xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
                 )
                 break
 
@@ -1436,7 +1436,7 @@ class VSCF(IMF):
         counter = 1
         while True:
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
-            v = xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+            v = xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
@@ -1444,11 +1444,11 @@ class VSCF(IMF):
                 # add two extra points required later for solid spline fitting at edges
                 self.imm.dbeads.q += dev
                 v_indeps.append(
-                    xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+                    xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
                 )
                 self.imm.dbeads.q += dev
                 v_indeps.append(
-                    xp.asarray(dstrip(self.imm.dforces.pots), copy=True)[0] / self.nprim
+                    xp.asarray(self.imm.dforces.pots.value, copy=True)[0] / self.nprim
                 )
                 break
 

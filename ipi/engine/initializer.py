@@ -22,7 +22,6 @@ from ipi.utils.io import read_file
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.nmtransform import nm_rescale
-from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, warning, info
 
 __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
@@ -380,14 +379,14 @@ class Initializer:
                         "length", v.units, 1.0
                     )
                 elif v.mode == "chk":
-                    rh = dstrip(init_chk(v.value)[1].h)
+                    rh = init_chk(v.value)[1].h
                 elif init_file(v.mode, v.value)[1].h.trace() == -3:
                     # In case the file do not contain any
                     # + cell parameters, the diagonal elements of the cell will be
                     # +set to -1 from the io_units and nothing is read here.
                     continue
                 else:
-                    rh = dstrip(init_file(v.mode, v.value, cell_units=v.units)[1].h)
+                    rh = init_file(v.mode, v.value, cell_units=v.units)[1].h
 
                 if fcell:
                     warning("Overwriting previous cell parameters", verbosity.low)
@@ -407,7 +406,7 @@ class Initializer:
                 if v.mode == "manual":
                     rm = v.value * unit_to_internal("mass", v.units, 1.0)
                 else:
-                    rm = dstrip(init_beads(v, self.nbeads).m)
+                    rm = init_beads(v, self.nbeads).m
 
                 if v.bead < 0:  # we are initializing the path
                     if fmom and fmass:
@@ -438,7 +437,7 @@ class Initializer:
                 if v.mode == "manual":
                     rn = v.value
                 else:
-                    rn = dstrip(init_beads(v, self.nbeads).names)
+                    rn = init_beads(v, self.nbeads).names
 
                 if v.bead < 0:  # we are initializing the path
                     if v.index < 0:
@@ -508,9 +507,9 @@ class Initializer:
                     rnatoms = simul.beads.natoms
                 rbeads = Beads(rnatoms, simul.beads.nbeads)
                 if v.index < 0:
-                    rbeads.m[:] = dstrip(simul.beads.m)
+                    rbeads.m[:] = simul.beads.m
                 else:
-                    rbeads.m[:] = dstrip(simul.beads.m)[v.index]
+                    rbeads.m[:] = simul.beads.m[v.index]
                 rnm = NormalModes(
                     mode=simul.nm.mode,
                     transform_method=simul.nm.transform_method,
@@ -524,14 +523,14 @@ class Initializer:
                 # with (possibly) shifted-frequencies NM
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
-                    * xp.sqrt(dstrip(rnm.dynm3))
+                    * xp.sqrt(rnm.dynm3.value)
                     * math.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
                 if v.index < 0:
-                    simul.beads.p = dstrip(rbeads.p)
+                    simul.beads.p = rbeads.p
                 else:
-                    simul.beads.p[:, 3 * v.index : 3 * (v.index + 1)] = dstrip(rbeads.p)
+                    simul.beads.p[:, 3 * v.index : 3 * (v.index + 1)] = rbeads.p
                 fmom = True
 
             elif k == "momenta":

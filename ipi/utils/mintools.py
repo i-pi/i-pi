@@ -62,8 +62,6 @@ import numpy as np
 import math
 
 from ipi.utils.array_backend import xp, xp_size
-from ipi.utils.depend import dstrip
-
 # import time
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info, warning
@@ -1548,10 +1546,10 @@ def nichols(f0, d, dynmax, m3, big_step, mode=1):
     """
 
     # Inputs may arrive wrapped in depend_arrays; peel once.
-    f0 = dstrip(f0)
-    m3 = dstrip(m3)
-    d = dstrip(d)
-    dynmax = dstrip(dynmax)
+    f0 = getattr(f0, "value", f0)
+    m3 = getattr(m3, "value", m3)
+    d = getattr(d, "value", d)
+    dynmax = getattr(dynmax, "value", dynmax)
     # Resize
     ndim = xp_size(f0)
     shape = f0.shape

@@ -46,17 +46,17 @@ class Atom:
               list. Note that indices start from 0.
         """
 
-        self.p = system.p[3 * index : 3 * index + 3]
-        self.q = system.q[3 * index : 3 * index + 3]
-        self.m = system.m[index : index + 1]
-        self.name = system.names[index : index + 1]
-        self.m3 = system.m3[3 * index : 3 * index + 3]
+        self.p = system._p.dslice(slice(3 * index, 3 * index + 3))
+        self.q = system._q.dslice(slice(3 * index, 3 * index + 3))
+        self.m = system._m.dslice(slice(index, index + 1))
+        self.name = system._names.dslice(slice(index, index + 1))
+        self.m3 = system._m3.dslice(slice(3 * index, 3 * index + 3))
 
     @property
     def kin(self):
         """Calculates the contribution of the atom to the kinetic energy."""
 
-        p = dstrip(self.p)
+        p = self.p.value
         return (p @ p) / (2.0 * self.m)
 
     @property
@@ -65,7 +65,7 @@ class Atom:
         tensor.
         """
 
-        p = dstrip(self.p)
+        p = self.p.value
         ks = xp.zeros((3, 3), dtype=p.dtype)
         for i in range(3):
             for j in range(i, 3):
@@ -151,9 +151,9 @@ class Atoms:
         """
 
         newat = Atoms(self.natoms)
-        newat.q[:] = dstrip(self.q)
-        newat.p[:] = dstrip(self.p)
-        newat.m[:] = dstrip(self.m)
+        newat.q[:] = self.q
+        newat.p[:] = self.p
+        newat.m[:] = self.m
         newat.names[:] = self.names
         return newat
 
@@ -233,7 +233,7 @@ class Atoms:
            by the mass.
         """
 
-        m = dstrip(self.m)
+        m = self.m.value
         m3 = xp.zeros(3 * self.natoms, dtype=m.dtype)
         m3[0 : 3 * self.natoms : 3] = m
         m3[1 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
@@ -243,16 +243,16 @@ class Atoms:
     def get_kin(self):
         """Calculates the total kinetic energy of the system."""
 
-        p = dstrip(self.p)
-        return 0.5 * (p @ (p / dstrip(self.m3)))
+        p = self.p.value
+        return 0.5 * (p @ (p / self.m3.value))
 
     def get_kstress(self):
         """Calculates the total contribution of the atoms to the kinetic stress
         tensor -- not volume-scaled
         """
 
-        p = dstrip(self.p)
-        m = dstrip(self.m)
+        p = self.p.value
+        m = self.m.value
         px = p[0::3]
         py = p[1::3]
         pz = p[2::3]

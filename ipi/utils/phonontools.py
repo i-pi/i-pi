@@ -1,9 +1,6 @@
 import numpy as np
 
 from ipi.utils.array_backend import xp
-from ipi.utils.depend import dstrip
-
-
 def apply_asr(asr, dm, beads, return_trans_matrix=False):
     """
     Removes the translations and/or rotations depending on the asr mode.
@@ -13,11 +10,11 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
         return dm
 
     nat = beads.natoms
-    ism = 1 / xp.sqrt(dstrip(beads.m3)[-1])
-    m = dstrip(beads.m)
+    ism = 1 / xp.sqrt(beads.m3[-1])
+    m = beads.m.value
 
     # Computes the centre of mass.
-    qr = xp.reshape(dstrip(beads.q), (nat, 3))
+    qr = xp.reshape(beads.q.value, (nat, 3))
     com = (xp.matrix_transpose(qr) @ m) / xp.sum(m)
     qminuscom = qr - com
     # Computes the moment of inertia tensor.

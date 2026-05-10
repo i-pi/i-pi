@@ -37,7 +37,7 @@ def ensemble_swap(ens1, ens2):
     if ens1.pext != ens2.pext:
         ens1.pext, ens2.pext = ens2.pext, ens1.pext
     if xp.linalg.norm(ens1.stressext - ens2.stressext) > 1e-10:
-        tmp = xp.asarray(dstrip(ens1.stressext), copy=True)
+        tmp = xp.asarray(ens1.stressext.value, copy=True)
         ens1.stressext[:] = ens2.stressext
         ens2.stressext[:] = tmp
     if len(ens1.bweights) != len(ens2.bweights):
@@ -50,13 +50,13 @@ def ensemble_swap(ens1, ens2):
         )
     if not np.array_equal(ens1.bweights, ens2.bweights):
         ens1.bweights, ens2.bweights = (
-            xp.asarray(dstrip(ens2.bweights), copy=True),
-            xp.asarray(dstrip(ens1.bweights), copy=True),
+            xp.asarray(ens2.bweights.value, copy=True),
+            xp.asarray(ens1.bweights.value, copy=True),
         )
     if not np.array_equal(ens1.hweights, ens2.hweights):
         ens1.hweights, ens2.hweights = (
-            xp.asarray(dstrip(ens2.hweights), copy=True),
-            xp.asarray(dstrip(ens1.hweights), copy=True),
+            xp.asarray(ens2.hweights.value, copy=True),
+            xp.asarray(ens1.hweights.value, copy=True),
         )
 
 
@@ -146,10 +146,10 @@ class Ensemble:
             econs=0.0,
             temp=self.temp,
             pext=self.pext,
-            stressext=xp.asarray(dstrip(self.stressext), copy=True),
+            stressext=xp.asarray(self.stressext.value, copy=True),
             bcomponents=self.bcomp,
-            bweights=xp.asarray(dstrip(self.bweights), copy=True),
-            hweights=xp.asarray(dstrip(self.hweights), copy=True),
+            bweights=xp.asarray(self.bweights.value, copy=True),
+            hweights=xp.asarray(self.hweights.value, copy=True),
             time=self.time,
         )
 

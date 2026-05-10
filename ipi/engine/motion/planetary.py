@@ -165,9 +165,9 @@ class Planetary(Motion):
 
     def increment(self, dnm):
         # accumulates an estimate of the frequency matrix
-        sm3 = dstrip(self.dbeads.sm3)
-        qms = dstrip(dnm.qnm) * sm3
-        fms = dstrip(dnm.fnm) / sm3
+        sm3 = self.dbeads.sm3.value
+        qms = dnm.qnm.value * sm3
+        fms = dnm.fnm.value / sm3
         fms[0, :] = 0
         qms[0, :] = 0
         qms *= (dnm.omegak**2)[:, np.newaxis]
@@ -183,14 +183,14 @@ class Planetary(Motion):
         noisy elements of the covariance and frequency matrices for
         far-away atoms"""
 
-        q = xp.reshape(dstrip(self.dbeads[0].q), (self.natoms, 3))
+        q = xp.reshape(self.dbeads[0].q, (self.natoms, 3))
         sij = q[:, None, :] - q
         # torch's no-arg .transpose() raises; use array-API permute_dims.
         sij = xp.reshape(xp.permute_dims(sij, (2, 1, 0)), (3, self.natoms**2))
         # find minimum distances between atoms (rigorous for cubic cell)
-        sij = dstrip(self.dcell.ih) @ sij
+        sij = self.dcell.ih.value @ sij
         sij = sij - xp.round(sij)
-        sij = dstrip(self.dcell.h) @ sij
+        sij = self.dcell.h.value @ sij
         sij = xp.permute_dims(xp.reshape(sij, (3, self.natoms, self.natoms)), (2, 1, 0))
         # take square magnitudes of distances
         sij = xp.sum(sij * sij, axis=2)

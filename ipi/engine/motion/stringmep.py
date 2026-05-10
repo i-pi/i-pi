@@ -8,12 +8,11 @@ See the "licenses" directory for full license information.
 """
 
 import numpy as np
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, xp_size
 from numpy.linalg import norm as npnorm
 import time
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
 from ipi.utils.messages import verbosity as vrb, info  # , warning
@@ -90,8 +89,8 @@ class StringGradientMapper(object):
         self.dbeads.q[1:-1, self.fixatoms_mask] = rbq
 
         # Forces and energies
-        rbf = xp.asarray(dstrip(self.rforces.f), copy=True)[:, self.fixatoms_mask]
-        be = xp.asarray(dstrip(self.rforces.pots), copy=True)
+        rbf = xp.asarray(self.rforces.f.value, copy=True)[:, self.fixatoms_mask]
+        be = xp.asarray(self.rforces.pots.value, copy=True)
 
         # Calculate the force component perpendicular to the spline.
         tangent = spline_derv(self.dbeads.q[:, self.fixatoms_mask], self.dbeads.nbeads)[
@@ -159,8 +158,8 @@ class GradientMapper(object):
         self.dbeads.q[1:-1, self.fixatoms_mask] = rbq
 
         # Forces
-        rbf = xp.asarray(dstrip(self.rforces.f), copy=True)[:, self.fixatoms_mask]
-        be = xp.asarray(dstrip(self.rforces.pots), copy=True)
+        rbf = xp.asarray(self.rforces.f.value, copy=True)[:, self.fixatoms_mask]
+        be = xp.asarray(self.rforces.pots.value, copy=True)
 
         # Return potential energy of the whole string and full force gradient
         e = be.sum()
@@ -225,7 +224,7 @@ class StringClimbGrMapper(object):
 
         # Reduced forces
         # We don't need copy() because flatten() implies copying.
-        rbf = dstrip(self.rforces.f)[:, self.fixatoms_mask].flatten()
+        rbf = self.rforces.f.value[:, self.fixatoms_mask].flatten()
 
         # I think here it's better to use plain tangents.
         # Then we don't need energies of the neighboring beads.
@@ -359,7 +358,7 @@ class StringMover(Motion):
         # and reduce it if needed, because someone may want to provide
         # existing Hessian of the full system.
         if self.mode in ["damped_bfgs", "bfgstrm"]:
-            n_activedim = beads.q[0].size - len(self.fixatoms_dof)
+            n_activedim = xp_size(beads.q[0]) - len(self.fixatoms_dof)
             if self.stage == "string":
                 if self.hessian.size == (n_activedim * (beads.nbeads - 2)) ** 2:
                     # Desired dimension
@@ -406,7 +405,7 @@ class StringMover(Motion):
                         " according to its size.",
                         vrb.high,
                     )
-                elif self.hessian.size == (beads.q[0].size * beads.q[0].size):
+                elif self.hessian.size == (xp_size(beads.q[0]) * xp_size(beads.q[0])):
                     info(
                         " @STRINGMover: Hessian of the climber has size (3natoms x 3natoms), "
                         "will be masked by fixatoms.",
@@ -449,7 +448,7 @@ class StringMover(Motion):
             softexit.trigger(
                 status="bad", message="ERROR: climbing bead is the endpoint."
             )
-        q_src = dstrip(self.beads.q)
+        q_src = self.beads.q.value
         self.climbgm.rbeads.q[:] = q_src[cl_indx]
         self.climbgm.q_prev[:] = q_src[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = q_src[cl_indx + 1, self.climbgm.fixatoms_mask]
@@ -466,7 +465,7 @@ class StringMover(Motion):
 
         if self.mode in ["damped_bfgs", "bfgstrm"]:
             # Initialize BFGS Hessian for a single bead
-            n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
+            n_activedim = xp_size(self.beads.q[0]) - len(self.fixatoms_dof)
             if self.hessian.shape != (n_activedim, n_activedim):
                 self.hessian = np.eye(n_activedim)
         elif self.mode == "fire":
@@ -478,7 +477,7 @@ class StringMover(Motion):
             self.dt_fire = 0.1
 
         self.old_x = xp.asarray(
-            dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]), copy=True
+            self.beads.q[cl_indx, self.climbgm.fixatoms_mask], copy=True
         )
         self.stage = "climb"
         return cl_indx
@@ -506,10 +505,10 @@ class StringMover(Motion):
         natoms = self.beads.natoms
         fixatoms_mask = self.stringgm.fixatoms_mask
 
-        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
+        n_activedim = xp_size(self.beads.q[0]) - len(self.fixatoms_dof)
 
         # Store 'old' resampled positions
-        self.old_x[:] = dstrip(self.beads.q)[1:-1, fixatoms_mask]
+        self.old_x[:] = self.beads.q.value[1:-1, fixatoms_mask]
 
         # 'Self' stringpot will be updated later on,
         # therefore we store the copy to check convergence in the end.
@@ -571,7 +570,7 @@ class StringMover(Motion):
 
         elif self.mode == "fire":
             # Only initialize velocity for fresh start, not for RESTART
-            if step == 0 and self.v.size == 0:
+            if step == 0 and xp_size(self.v) == 0:
                 # Mapper has already been called in the step()
                 self.v = -self.a * self.stringgrad
 
@@ -605,7 +604,7 @@ class StringMover(Motion):
             info(" @EULER: maxdispl is %g" % xp.max(xp.abs(dq)))
             self.beads.q[1:-1, fixatoms_mask] += dq.reshape((nbeads - 2, -1))
             # info(" @EULER: calling the mapper.", vrb.debug)
-            self.stringgm.dbeads.q[:] = dstrip(self.beads.q)
+            self.stringgm.dbeads.q[:] = self.beads.q.value
             # self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
 
         # TODO: Routines for L-BFGS, SD, CG
@@ -647,8 +646,8 @@ class StringMover(Motion):
         )
         # Full-dimensional forces are needed in reduced-beads modes,
         # i.e. in "endpoints" and "climb".
-        self.full_f = dstrip(self.forces.f)
-        self.full_v = dstrip(self.forces.pots)
+        self.full_f = self.forces.f.value
+        self.full_v = self.forces.pots.value
 
         # Calculate the force component perpendicular to the spline to check convergence.
         tangent = spline_derv(self.beads.q[:, fixatoms_mask], nbeads)[1:-1]
@@ -858,8 +857,8 @@ class StringMover(Motion):
 
         # # Full-dimensional forces are needed in reduced-beads modes,
         # # i.e. in "endpoints" and "climb".
-        # self.full_f = dstrip(self.forces.f)
-        # self.full_v = dstrip(self.forces.pots)
+        # self.full_f = self.forces.f.value
+        # self.full_v = self.forces.pots.value
 
         # # We need the force component perpendicular to the spline to check convergence.
         # tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
@@ -1033,7 +1032,7 @@ class StringMover(Motion):
         )
 
         # Store old positions
-        self.old_x[:] = dstrip(self.beads.q)[self.cl_indx, self.climbgm.fixatoms_mask]
+        self.old_x[:] = self.beads.q.value[self.cl_indx, self.climbgm.fixatoms_mask]
 
         # This transfers forces from the climbing mapper to the "main" beads,
         # so that recalculation won't be triggered after the step.
@@ -1052,8 +1051,8 @@ class StringMover(Motion):
                 tmp_f,
             ],
         )
-        self.full_f = dstrip(self.forces.f)
-        self.full_v = dstrip(self.forces.pots)
+        self.full_f = self.forces.f.value
+        self.full_v = self.forces.pots.value
 
         self.qtime += time.time()
 
@@ -1138,8 +1137,8 @@ class StringMover(Motion):
 
                 # Store full forces and pots
                 info(" @STRING: calling the full force at step 0.", vrb.debug)
-                self.full_f = xp.asarray(dstrip(self.stringgm.dforces.f), copy=True)
-                self.full_v = xp.asarray(dstrip(self.stringgm.dforces.pots), copy=True)
+                self.full_f = xp.asarray(self.stringgm.dforces.f.value, copy=True)
+                self.full_v = xp.asarray(self.stringgm.dforces.pots.value, copy=True)
                 # Initialize the mapper forces for the first time
                 # Since we just called full forces, it makes sense to transfer them to the
                 # reduced beads (rbeads). No fixmask here, rforces are not the same
@@ -1161,7 +1160,7 @@ class StringMover(Motion):
                 )
                 # Store old bead positions at step 0
                 self.old_x = xp.asarray(
-                    dstrip(self.beads.q[1:-1, self.stringgm.fixatoms_mask]), copy=True
+                    self.beads.q[1:-1, self.stringgm.fixatoms_mask], copy=True
                 )
 
             self.path_step_textbook2002(step)

@@ -632,15 +632,15 @@ class TrajectoryOutput(BaseOutput):
             "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = dstrip(self.system.beads.names)
-            fatom.q[:] = dstrip(data)[b]
+            fatom.names[:] = self.system.beads.names
+            fatom.q[:] = data[b]
         else:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = dstrip(self.system.beads.names)
-            fatom.q[:] = dstrip(data)
+            fatom.names[:] = self.system.beads.names
+            fatom.q[:] = data
 
         fcell = Cell()
-        fcell.h = dstrip(self.system.cell.h)
+        fcell.h = self.system.cell.h
 
         if units == "":
             units = "automatic"

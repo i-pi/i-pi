@@ -10,7 +10,6 @@ from copy import deepcopy
 
 import numpy as np
 
-from ipi.utils.depend import dstrip
 from ipi.utils.units import unit_to_internal, unit_to_user, Constants
 from ipi.engine.simulation import Simulation
 from ipi.engine.motion import Dynamics
@@ -118,13 +117,13 @@ class InteractiveSimulation(Simulation):
             structures = []
             for b in range(system.beads.nbeads):
                 struc = ase.Atoms(
-                    positions=dstrip(system.beads.q[b]).reshape(-1, 3)
+                    positions=system.beads.q[b].reshape(-1, 3)
                     * unit_to_user("length", "ase", 1.0),
-                    symbols=dstrip(system.beads.names),
-                    cell=dstrip(system.cell.h).T * unit_to_user("length", "ase", 1.0),
+                    symbols=system.beads.names.value,
+                    cell=system.cell.h.value.T * unit_to_user("length", "ase", 1.0),
                 )
                 struc.set_momenta(
-                    dstrip(system.beads.p[b]).reshape(-1, 3)
+                    system.beads.p[b].reshape(-1, 3)
                     * unit_to_user("momentum", "ase", 1.0)
                 )
                 # set a dummy ASE calculator to be able to attach forces and
@@ -132,9 +131,9 @@ class InteractiveSimulation(Simulation):
                 # when the user calls `get_structures()`, so they should always
                 # reflect the current state of the simulation.
                 struc.calc = calculators.DummyASECalculator(
-                    energy=dstrip(system.forces.pots[b])
+                    energy=system.forces.pots[b]
                     * unit_to_user("energy", "ase", 1.0),
-                    forces=dstrip(system.forces.f[b]).reshape(-1, 3)
+                    forces=system.forces.f[b].reshape(-1, 3)
                     * unit_to_user("force", "ase", 1.0),
                 )
                 structures.append(struc)
@@ -178,7 +177,7 @@ class InteractiveSimulation(Simulation):
             # initialize in the nm basis to handle PIMD mass scaling
             s.nm.pnm[:] = (
                 self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
-                * np.sqrt(dstrip(s.nm.dynm3))
+                * np.sqrt(s.nm.dynm3.value)
                 * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
             )
 

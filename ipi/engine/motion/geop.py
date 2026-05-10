@@ -16,7 +16,6 @@ import time
 
 from ipi.utils.array_backend import xp, xp_size
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
@@ -227,7 +226,7 @@ class LineMapper(object):
         )
         e = self.dforces.pot  # Energy
         g = -(
-            (dstrip(self.dforces.f[:, self.fixatoms_mask]).flatten())
+            (self.dforces.f[:, self.fixatoms_mask].flatten())
             @ (self.d.flatten())
         )  # Gradient
         return e, g
@@ -360,12 +359,12 @@ class DummyOptimizer:
         self.qtime += time.time()
 
         if len(self.fixatoms_dof) > 0:
-            ftmp = xp.asarray(dstrip(self.forces.f), copy=True)
+            ftmp = xp.asarray(self.forces.f.value, copy=True)
             for dqb in ftmp:
                 dqb[self.fixatoms_dof] = 0.0
             fmax = float(xp.max(xp.abs(ftmp)))
         else:
-            fmax = float(xp.max(xp.abs(dstrip(self.forces.f))))
+            fmax = float(xp.max(xp.abs(self.forces.f.value)))
 
         e = abs((fx - u0) / self.beads.natoms)
         info("@GEOP", verbosity.medium)
@@ -433,7 +432,7 @@ class BFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing BFGS", verbosity.debug)
-            self.d += dstrip(self.forces.f) / xp.sqrt(
+            self.d += self.forces.f.value / xp.sqrt(
                 ((self.forces.f.flatten()) @ (self.forces.f.flatten()))
             )
 
@@ -441,9 +440,9 @@ class BFGSOptimizer(DummyOptimizer):
                 for dqb in self.d:
                     dqb[self.fixatoms_dof] = 0.0
 
-        self.old_x[:] = dstrip(self.beads.q)
-        self.old_u[:] = dstrip(self.forces.pot)
-        self.old_f[:] = dstrip(self.forces.f)
+        self.old_x[:] = self.beads.q.value
+        self.old_u[:] = self.forces.pot
+        self.old_f[:] = self.forces.f.value
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -497,13 +496,13 @@ class BFGSOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions and forces
-        self.beads.q = dstrip(self.gm.dbeads.q)
+        self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
+        d_x_max = float(xp.max(xp.abs(self.beads.q.value - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
@@ -541,9 +540,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing BFGSTRM", verbosity.debug)
-        self.old_x[:] = dstrip(self.beads.q)
-        self.old_u[:] = dstrip(self.forces.pot)
-        self.old_f[:] = dstrip(self.forces.f)
+        self.old_x[:] = self.beads.q.value
+        self.old_u[:] = self.forces.pot
+        self.old_f[:] = self.forces.f.value
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -586,13 +585,13 @@ class BFGSTRMOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions and forces
-        self.beads.q = dstrip(self.gm.dbeads.q)
+        self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
+        d_x_max = float(xp.max(xp.abs(self.beads.q.value - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
@@ -644,13 +643,13 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing L-BFGS", verbosity.debug)
-            self.d += dstrip(self.forces.f) / xp.sqrt(
+            self.d += self.forces.f.value / xp.sqrt(
                 ((self.forces.f.flatten()) @ (self.forces.f.flatten()))
             )
 
-        self.old_x[:] = dstrip(self.beads.q)
-        self.old_u[:] = dstrip(self.forces.pot)
-        self.old_f[:] = dstrip(self.forces.f)
+        self.old_x[:] = self.beads.q.value
+        self.old_u[:] = self.forces.pot
+        self.old_f[:] = self.forces.f.value
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -708,13 +707,13 @@ class LBFGSOptimizer(DummyOptimizer):
         self.gm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = dstrip(self.gm.dbeads.q)
+        self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
 
         # Exit simulation step
-        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
+        d_x_max = float(xp.max(xp.abs(self.beads.q.value - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
@@ -756,9 +755,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         self.qtime = -time.time()
         info("\nMD STEP %d" % step, verbosity.debug)
 
-        self.old_x[:] = dstrip(self.beads.q)
-        self.old_u[:] = dstrip(self.forces.pot)
-        self.old_f[:] = dstrip(self.forces.f)
+        self.old_x[:] = self.beads.q.value
+        self.old_u[:] = self.forces.pot
+        self.old_f[:] = self.forces.f.value
 
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
@@ -804,12 +803,12 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
         # Update positions
-        self.beads.q = dstrip(self.gm.dbeads.q)
+        self.beads.q = self.gm.dbeads.q
         # This enforces the update of the forces
         self.forces.transfer_forces(self.gm.dforces)
 
         # Exit simulation step
-        d_x_max = float(xp.max(xp.abs(dstrip(self.beads.q) - self.old_x)))
+        d_x_max = float(xp.max(xp.abs(self.beads.q.value - self.old_x)))
         self.exitstep(self.forces.pot, self.old_u[0], d_x_max)
 
 
@@ -836,26 +835,26 @@ class SDOptimizer(DummyOptimizer):
         info("\nMD STEP %d" % step, verbosity.debug)
 
         # Store previous forces for warning exit condition
-        self.old_f[:] = dstrip(self.forces.f)
+        self.old_f[:] = self.forces.f.value
 
         # Check for fixatoms
         if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
                 dqb[self.fixatoms_dof] = 0.0
 
-        dq1 = dstrip(self.old_f)
+        dq1 = self.old_f
 
         # Move direction for steepest descent
         dq1_unit = dq1 / xp.sqrt(((dq1.flatten()) @ (dq1.flatten())))
         info(" @GEOP: Determined SD direction", verbosity.debug)
 
         # Set position and direction inside the mapper
-        self.lm.set_dir(dstrip(self.beads.q), dq1_unit)
+        self.lm.set_dir(self.beads.q.value, dq1_unit)
 
         # Reuse initial value since we have energy and forces already
         u0, du0 = (
             self.forces.pot,
-            ((dstrip(self.forces.f.flatten())) @ (dq1_unit.flatten())),
+            ((self.forces.f.value.flatten()) @ (dq1_unit.flatten())),
         )
 
         # Do one SD iteration; return positions and energy
@@ -872,12 +871,12 @@ class SDOptimizer(DummyOptimizer):
         self.lm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = dstrip(self.lm.dbeads.q)
+        self.beads.q = self.lm.dbeads.q
         self.forces.transfer_forces(
             self.lm.dforces
         )  # This forces the update of the forces
 
-        d_x = xp.abs(dstrip(self.beads.q) - self.lm.x0)
+        d_x = xp.abs(self.beads.q.value - self.lm.x0)
         x = xp.linalg.norm(d_x)
         # Automatically adapt the search step for the next iteration.
         # Relaxes better with very small step --> multiply by factor of 0.1 or 0.01
@@ -923,7 +922,7 @@ class CGOptimizer(DummyOptimizer):
         info("\nMD STEP %d" % step, verbosity.debug)
 
         if step == 0:
-            gradf1 = dq1 = dstrip(self.forces.f)
+            gradf1 = dq1 = self.forces.f.value
 
             # Move direction for 1st conjugate gradient step
             dq1_unit = dq1 / xp.sqrt(((gradf1.flatten()) @ (gradf1.flatten())))
@@ -932,7 +931,7 @@ class CGOptimizer(DummyOptimizer):
         else:
             gradf0 = self.old_f
             dq0 = self.d
-            gradf1 = dstrip(self.forces.f)
+            gradf1 = self.forces.f.value
             beta = (((gradf1.flatten() - gradf0.flatten())) @ (gradf1.flatten())) / (
                 ((gradf0.flatten()) @ (gradf0.flatten()))
             )
@@ -948,12 +947,12 @@ class CGOptimizer(DummyOptimizer):
             for dqb in dq1_unit:
                 dqb[self.fixatoms_dof] = 0.0
 
-        self.lm.set_dir(dstrip(self.beads.q), dq1_unit)
+        self.lm.set_dir(self.beads.q.value, dq1_unit)
 
         # Reuse initial value since we have energy and forces already
         u0, du0 = (
             self.forces.pot,
-            ((dstrip(self.forces.f.flatten())) @ (dq1_unit.flatten())),
+            ((self.forces.f.value.flatten()) @ (dq1_unit.flatten())),
         )
 
         # Do one CG iteration; return positions and energy
@@ -969,12 +968,12 @@ class CGOptimizer(DummyOptimizer):
         self.lm.fcount = 0
 
         # Update positions and forces
-        self.beads.q = dstrip(self.lm.dbeads.q)
+        self.beads.q = self.lm.dbeads.q
         self.forces.transfer_forces(
             self.lm.dforces
         )  # This forces the update of the forces
 
-        d_x = xp.abs(dstrip(self.beads.q) - self.lm.x0)
+        d_x = xp.abs(self.beads.q.value - self.lm.x0)
         x = xp.linalg.norm(d_x)
         # Automatically adapt the search step for the next iteration.
         # Relaxes better with very small step --> multiply by factor of 0.1 or 0.01

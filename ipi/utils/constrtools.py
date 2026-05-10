@@ -137,7 +137,7 @@ class ConstraintBase:
         """Computes a cholesky decomposition of the mass-scaled Jacobian,
         used in a few places"""
 
-        dg = xp.asarray(dstrip(self.Dg), copy=True)
+        dg = xp.asarray(self.Dg.value, copy=True)
         dgm = dg / self.m3
         return (dg) @ (dgm.T)
 
@@ -224,17 +224,17 @@ class RigidBondConstraint(ValueConstraintBase):
         super(RigidBondConstraint, self).bind(beads)
         # if constraint values are not specified, initializes based on the first frame
         if self._calc_cons:
-            self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
-            self.constraint_values = xp.sqrt(dstrip(self.g))
+            self.q = beads.q[0][self.i3_unique.flatten()]
+            self.constraint_values = xp.sqrt(self.g.value)
 
     def gfunc(self):
         """
         Calculates the deviation of the constraint frp, its target
         """
 
-        q = dstrip(self.q)
+        q = self.q.value
         r = np.zeros(self.ncons)
-        constraint_distances = dstrip(self.constraint_values)
+        constraint_distances = self.constraint_values.value
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
             c_dist = constraint_distances[i]
@@ -252,7 +252,7 @@ class RigidBondConstraint(ValueConstraintBase):
         Calculates the Jacobian of the constraint.
         """
 
-        q = dstrip(self.qprev)
+        q = self.qprev.value
         # constrained_indices = self.constrained_indices
         r = np.zeros((self.ncons, self.n_unique * 3))
         for i in range(self.ncons):
@@ -284,17 +284,17 @@ class AngleConstraint(ValueConstraintBase):
         # initial geometry
         if self._calc_cons:
             self.constraint_values = np.pi / 2  # so that cos(angle) = 0
-            self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
-            self.constraint_values = np.arccos(dstrip(self.g))
+            self.q = beads.q[0][self.i3_unique.flatten()]
+            self.constraint_values = np.arccos(self.g.value)
 
     def gfunc(self):
         """
         Calculates the constraint.
         """
 
-        q = dstrip(self.q)
+        q = self.q.value
         r = np.zeros(self.ncons)
-        constraint_cosines = xp.cos(dstrip(self.constraint_values))
+        constraint_cosines = xp.cos(self.constraint_values.value)
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
             c_cos = constraint_cosines[i]
@@ -311,7 +311,7 @@ class AngleConstraint(ValueConstraintBase):
         Calculates the Jacobian of the constraint.
         """
 
-        q = dstrip(self.qprev)
+        q = self.qprev.value
         r = np.zeros((self.ncons, self.n_unique * 3))
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
@@ -364,7 +364,7 @@ class EckartConstraint(ConstraintBase):
     def bind(self, beads):
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
-            self.qref[:] = dstrip(beads.q[0])[self.i3_unique].reshape((-1, 3))
+            self.qref[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
         self._g.add_dependency(self._constraint_values)
         self._Dg.add_dependency(self._constraint_values)
 
@@ -372,7 +372,7 @@ class EckartConstraint(ConstraintBase):
         self._mtot = depend_value(
             name="mtot",
             value=1.0,
-            func=(lambda: dstrip(self.m3)[::3].sum()),
+            func=(lambda: self.m3.value[::3].sum()),
             dependencies=[self._m3],
         )
 
@@ -382,7 +382,7 @@ class EckartConstraint(ConstraintBase):
             value=np.zeros(3, float),
             func=(
                 lambda: xp.sum(
-                    dstrip(self.qref) * dstrip(self.m3).reshape((-1, 3)), axis=0
+                    self.qref.value * self.m3.value.reshape((-1, 3)), axis=0
                 )
                 / self.mtot
             ),
@@ -391,15 +391,15 @@ class EckartConstraint(ConstraintBase):
         # qref in its centre of mass frame
         self._qref_rel = depend_array(
             name="qref_rel",
-            value=np.zeros_like(dstrip(self.qref)),
-            func=(lambda: dstrip(self.qref) - dstrip(self.qref_com)),
+            value=np.zeros_like(self.qref.value),
+            func=(lambda: self.qref.value - self.qref_com.value),
             dependencies=[self._qref, self._qref_com],
         )
         # qref in the CoM frame, mass-weighted
         self._mqref_rel = depend_array(
             name="mqref_rel",
-            value=np.zeros_like(dstrip(self.qref)),
-            func=(lambda: dstrip(self.qref_rel) * dstrip(self.m3).reshape((-1, 3))),
+            value=np.zeros_like(self.qref.value),
+            func=(lambda: self.qref_rel.value * self.m3.value.reshape((-1, 3))),
             dependencies=[self._qref_rel, self._m3],
         )
         # Make constraint function and gradient depend on the parameters
@@ -413,13 +413,13 @@ class EckartConstraint(ConstraintBase):
         Calculates the constraint.
         """
 
-        q = dstrip(self.q).reshape((-1, 3))
-        m = dstrip(self.m3).reshape((-1, 3))
-        qref = dstrip(self.qref)
+        q = self.q.value.reshape((-1, 3))
+        m = self.m3.value.reshape((-1, 3))
+        qref = self.qref.value
         r = np.zeros(self.ncons)
         Delta = q - qref
         r[:3] = xp.sum(m * Delta, axis=0) / self.mtot
-        r[3:] = xp.sum(np.cross(dstrip(self.mqref_rel), Delta), axis=0) / self.mtot
+        r[3:] = xp.sum(np.cross(self.mqref_rel.value, Delta), axis=0) / self.mtot
         return r
 
     def Dgfunc(self, reduced=False):
@@ -428,8 +428,8 @@ class EckartConstraint(ConstraintBase):
         """
 
         r = np.zeros((self.ncons, self.n_unique, 3))
-        m = dstrip(self.m3).reshape((-1, 3))
-        mqref_rel = dstrip(self.mqref_rel)
+        m = self.m3.value.reshape((-1, 3))
+        mqref_rel = self.mqref_rel.value
         for i in range(3):
             r[i, :, i] = m[:, i]
         # Eckart rotation, x-component
@@ -524,7 +524,7 @@ class ConstraintList(ConstraintBase):
         """
         Compute the Jacobian of the constraint function.
         """
-        q = dstrip(self.qprev)
+        q = self.qprev.value
         r = np.zeros((self.ncons, np.size(q)))
         si = 0
         for ic, constr in enumerate(self.constraint_list):

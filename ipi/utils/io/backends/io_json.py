@@ -14,8 +14,6 @@ import numpy as np
 
 import ipi.utils.mathtools as mt
 from ipi.utils.array_backend import to_numpy
-from ipi.utils.depend import dstrip
-
 __all__ = ["print_json_path", "print_json", "read_json", "iter_json"]
 
 
@@ -50,7 +48,7 @@ def print_json(
 
     natoms = atoms.natoms
     qs = to_numpy(atoms.q) * atoms_conv
-    lab = dstrip(atoms.names)
+    lab = atoms.names.value
 
     data = {}
     data["natoms"] = natoms

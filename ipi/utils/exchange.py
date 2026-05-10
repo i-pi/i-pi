@@ -65,8 +65,8 @@ class ExchangePotential:
         self._qbosons = depend_array(
             name="qbosons",
             value=np.zeros((self.nbeads, self.nbosons, 3)),
-            func=lambda: dstrip(self.beads.q).reshape(self.nbeads, -1, 3)[
-                :, dstrip(self.bosons)
+            func=lambda: self.beads.q.value.reshape(self.nbeads, -1, 3)[
+                :, self.bosons.value
             ],
             dependencies=[self.beads._q, self.bosons],
         )
@@ -75,7 +75,7 @@ class ExchangePotential:
         self._bead_diff_intra = depend_array(
             name="bead_diff_intra",
             value=xp.zeros((self.nbeads - 1, self.nbosons, 3)),
-            func=lambda: xp.diff(dstrip(self.qbosons), axis=0),
+            func=lambda: xp.diff(self.qbosons.value, axis=0),
             dependencies=[self._qbosons],
         )
 
@@ -84,8 +84,8 @@ class ExchangePotential:
             name="bead_diff_inter_first_last_bead",
             value=xp.zeros((self.nbosons, self.nbosons, 3)),
             func=lambda: (
-                dstrip(self.qbosons)[0, :, None, :]
-                - dstrip(self.qbosons)[self.nbeads - 1, None, :, :]
+                self.qbosons.value[0, :, None, :]
+                - self.qbosons.value[self.nbeads - 1, None, :, :]
             ),
             dependencies=[self._qbosons],
         )
@@ -164,7 +164,7 @@ class ExchangePotential:
         """
         Ensures that all the bosons have the same mass, and returns it.
         """
-        masses = dstrip(self.beads.m)[dstrip(self.bosons)]
+        masses = self.beads.m.value[self.bosons.value]
         if not xp.all(masses == masses[0]):
             raise ValueError(
                 "Bosons must have the same mass, found %s for bosons %s"
@@ -179,9 +179,9 @@ class ExchangePotential:
         """
         Emks = xp.zeros((self.nbosons, self.nbosons))
 
-        intra_spring_energies = xp.sum(dstrip(self.bead_diff_intra) ** 2, axis=(0, -1))
+        intra_spring_energies = xp.sum(self.bead_diff_intra.value ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = xp.sum(
-            dstrip(self.bead_diff_inter_first_last_bead) ** 2, axis=-1
+            self.bead_diff_inter_first_last_bead.value ** 2, axis=-1
         )
 
         spring_potential_prefix = 0.5 * self.boson_m * self.omegan2
@@ -219,7 +219,7 @@ class ExchangePotential:
 
         for m in range(1, self.nbosons + 1):
             # For numerical stability
-            subdivision_potentials = V[:m] + dstrip(self.cycle_energies)[:m, m - 1]
+            subdivision_potentials = V[:m] + self.cycle_energies.value[:m, m - 1]
             Elong = xp.min(subdivision_potentials)
 
             sig = xp.sum(xp.exp(-self.betaP * (subdivision_potentials - Elong)))
@@ -239,7 +239,7 @@ class ExchangePotential:
 
         for l in range(self.nbosons - 1, 0, -1):
             # For numerical stability
-            subdivision_potentials = dstrip(self.cycle_energies)[l, l:] + RV[l + 1 :]
+            subdivision_potentials = self.cycle_energies.value[l, l:] + RV[l + 1 :]
             Elong = xp.min(subdivision_potentials)
 
             sig = xp.sum(
@@ -267,16 +267,16 @@ class ExchangePotential:
         F = xp.zeros((self.nbeads, self.nbosons, 3))
 
         spring_force_prefix = (-1.0) * self.boson_m * self.omegan2
-        bead_diff_intra = dstrip(self.bead_diff_intra)
+        bead_diff_intra = self.bead_diff_intra.value
         F[1:-1, :, :] = spring_force_prefix * (
             -bead_diff_intra[1:, :] + xp.roll(bead_diff_intra, shift=1, axis=0)[1:, :]
         )
 
         # force on endpoint beads
         #
-        cycle_energies = dstrip(self.cycle_energies)
-        prefix_V = dstrip(self.prefix_V)
-        suffix_V = dstrip(self.suffix_V)
+        cycle_energies = self.cycle_energies.value
+        prefix_V = self.prefix_V.value
+        suffix_V = self.suffix_V  # depend_value → already raw via dproperties
 
         connection_probs = xp.zeros((self.nbosons, self.nbosons))
         # close cycle probabilities:
@@ -305,7 +305,7 @@ class ExchangePotential:
             -self.betaP * (prefix_V[1:-1] + suffix_V[1:-1] - prefix_V[self.nbosons])
         )
 
-        bead_diff_inter_first_last_bead = dstrip(self.bead_diff_inter_first_last_bead)
+        bead_diff_inter_first_last_bead = self.bead_diff_inter_first_last_bead.value
 
         # on the last bead:
         #
@@ -363,8 +363,8 @@ class ExchangePotential:
         return xp.exp(
             -self.betaP
             * (
-                xp.trace(dstrip(self.cycle_energies))
-                - dstrip(self.prefix_V)[self.nbosons]
+                xp.trace(self.cycle_energies.value)
+                - self.prefix_V.value[self.nbosons]
             )
             - math.log(math.factorial(self.nbosons))
         )
@@ -377,7 +377,7 @@ class ExchangePotential:
         """
         return xp.exp(
             -self.betaP
-            * (dstrip(self.cycle_energies)[0, -1] - dstrip(self.prefix_V)[self.nbosons])
+            * (self.cycle_energies.value[0, -1] - self.prefix_V.value[self.nbosons])
         )
 
     def get_kinetic_td(self):
@@ -385,8 +385,8 @@ class ExchangePotential:
         kinetic energy estimator for identical particles.
         Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116.
         """
-        cycle_energies = dstrip(self.cycle_energies)
-        prefix_V = dstrip(self.prefix_V)
+        cycle_energies = self.cycle_energies.value
+        prefix_V = self.prefix_V.value
 
         est = xp.zeros(self.nbosons + 1)
 
@@ -439,7 +439,7 @@ class ExchangePotential:
             W[m] = (1.0 / m) * xp.sum(
                 perm_sign
                 * W[:m]
-                * xp.exp(-self.betaP * dstrip(self.cycle_energies)[:m, m - 1])
+                * xp.exp(-self.betaP * self.cycle_energies.value[:m, m - 1])
             )
 
         return W[-1]

@@ -24,7 +24,6 @@ from ipi.utils.array_backend import xp, xp_size, to_numpy
 
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils.phonontools import apply_asr as _apply_asr
@@ -95,8 +94,8 @@ class DynMatrixMover(Motion):
                 "Calculation not possible for number of beads greater than one."
             )
 
-        self.ism = 1 / xp.sqrt(dstrip(self.beads.m3[-1]))
-        self.m = dstrip(self.beads.m)
+        self.ism = 1 / xp.sqrt(self.beads.m3[-1])
+        self.m = self.beads.m.value
         self.phcalc.bind(self)
 
         self.dbeads = self.beads.clone()
@@ -267,10 +266,10 @@ class FDPhononCalculator(DummyPhononCalculator):
             dev[step] = self.dm.deltax
             # displaces kth d.o.f by delta.
             self.dm.dbeads.q = self.dm.beads.q + dev
-            plus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True)
+            plus = -xp.asarray(self.dm.dforces.f.value, copy=True)
             # displaces kth d.o.f by -delta.
             self.dm.dbeads.q = self.dm.beads.q - dev
-            minus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True)
+            minus = -xp.asarray(self.dm.dforces.f.value, copy=True)
             # computes a row of force-constant matrix
             dmrow = (
                 (plus - minus) / (2 * self.dm.deltax) * self.dm.ism[step] * self.dm.ism
@@ -320,10 +319,10 @@ class NMFDPhononCalculator(FDPhononCalculator):
         dev = xp.real(self.dm.V[:, step] / vknorm) * self.dm.deltax
         # displaces by -delta along kth normal mode.
         self.dm.dbeads.q = self.dm.beads.q + dev
-        plus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True).flatten()
+        plus = -xp.asarray(self.dm.dforces.f.value, copy=True).flatten()
         # displaces by -delta along kth normal mode.
         self.dm.dbeads.q = self.dm.beads.q - dev
-        minus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True).flatten()
+        minus = -xp.asarray(self.dm.dforces.f.value, copy=True).flatten()
         # computes a row of the refined dynmatrix, in the basis of the eigenvectors of the first dynmatrix
         dmrowk = (plus - minus) / (2 * self.dm.deltax / vknorm)
         self.dm.refdynmatrix[step] = (self.dm.V.T) @ (dmrowk)
@@ -348,10 +347,10 @@ class ENMFDPhononCalculator(NMFDPhononCalculator):
         dev = xp.real(self.dm.V[:, step] / vknorm) * edelta
         # displaces by -delta along kth normal mode.
         self.dm.dbeads.q = self.dm.beads.q + dev
-        plus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True).flatten()
+        plus = -xp.asarray(self.dm.dforces.f.value, copy=True).flatten()
         # displaces by -delta along kth normal mode.
         self.dm.dbeads.q = self.dm.beads.q - dev
-        minus = -xp.asarray(dstrip(self.dm.dforces.f), copy=True).flatten()
+        minus = -xp.asarray(self.dm.dforces.f.value, copy=True).flatten()
         # computes a row of the refined dynmatrix, in the basis of the eigenvectors of the first dynmatrix
         dmrowk = (plus - minus) / (2 * edelta / vknorm)
         self.dm.refdynmatrix[step] = (self.dm.V.T) @ (dmrowk)

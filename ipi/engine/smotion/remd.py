@@ -147,7 +147,7 @@ class ReplicaExchange(Smotion):
                 try:  # if motion has a barostat, and the barostat has a reference cell, does the swap
                     # as that when there are very different pressures, the cell should reflect the
                     # pressure/temperature dependence. this also changes the barostat conserved quantities
-                    bjh = xp.asarray(dstrip(sl[j].motion.barostat.h0.h), copy=True)
+                    bjh = xp.asarray(sl[j].motion.barostat.h0.h.value, copy=True)
                     sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
                     sl[i].motion.barostat.h0.h[:] = bjh
                 except AttributeError:
@@ -198,7 +198,7 @@ class ReplicaExchange(Smotion):
                         except AttributeError:
                             pass
                     try:
-                        bjh = xp.asarray(dstrip(sl[j].motion.barostat.h0.h), copy=True)
+                        bjh = xp.asarray(sl[j].motion.barostat.h0.h.value, copy=True)
                         sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
                         sl[i].motion.barostat.h0.h[:] = bjh
                     except AttributeError:

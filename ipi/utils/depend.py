@@ -48,7 +48,6 @@ __all__ = [
     "synchronizer",
     "dpipe",
     "dcopy",
-    "dstrip",
     "depraise",
     "dproperties",
 ]
@@ -336,22 +335,12 @@ class depend_value(depend_base):
     def __set__(self, instance, value):
         self.set(value)
 
-
-def _is_scalar_index(index, ndim):
-    """True if `array[index]` returns a scalar for an array of rank `ndim`."""
-    if isinstance(index, (slice, type(Ellipsis))):
-        return False
-    # 0-d arrays/tensors index like plain integers (len() would raise on torch).
-    if getattr(index, "ndim", None) == 0:
-        return ndim <= 1
-    if hasattr(index, "__len__"):
-        if len(index) == ndim and isinstance(index, tuple):
-            for i in index:
-                if isinstance(i, slice):
-                    return False
-            return True
-        return False
-    return ndim <= 1
+    @property
+    def value(self):
+        """Wrapped scalar after refresh. Symmetric with depend_array.value."""
+        if self._status.tainted:
+            self._refresh()
+        return self._value
 
 
 class depend_array(depend_base):
@@ -372,7 +361,7 @@ class depend_array(depend_base):
     with backend-native tensors on the hot path (e.g. `pdt`, `qdt_on_m`).
     """
 
-    __slots__ = ("_value", "_parent", "_on_host")
+    __slots__ = ("_value", "_parent", "_on_host", "_stored_index")
 
     def __init__(
         self,
@@ -386,9 +375,18 @@ class depend_array(depend_base):
         base=None,
         parent=None,
         on_host=False,
+        stored_index=None,
     ):
         self._on_host = bool(on_host)
         asarray_kwargs = {"device": "cpu"} if self._on_host else {}
+        # `_stored_index` is only set when this depend_array is a `dslice`
+        # slice-view of `parent`. On refresh, the slice's `_value` is re-
+        # derived as `parent._value[_stored_index]`. On numpy/torch this
+        # produces a memory-share view (transparent / cheap). On jax it
+        # would produce a copy — slice-view writes via `__setitem__` rely
+        # on memory-share, so jax support requires routing setitem
+        # through the parent (future work).
+        self._stored_index = stored_index
         if base is not None:
             # Slice-view: wrap an already-allocated view of the parent;
             # storage location is inherited automatically.
@@ -397,6 +395,10 @@ class depend_array(depend_base):
             # Sentinel used by __deepcopy__; members will be overwritten.
             self._value = xp.empty(0, **asarray_kwargs)
         else:
+            # Peel a depend_array/value wrapper so xp.asarray sees the raw
+            # backend tensor (torch.asarray rejects depend_array directly).
+            if isinstance(value, depend_base):
+                value = value._value
             # xp only handles numeric dtypes; strings/objects stay as numpy.
             # Try xp first so torch tensors (possibly on non-CPU devices)
             # pass through without a numpy round-trip that would force a
@@ -459,6 +461,20 @@ class depend_array(depend_base):
     def imag(self):
         return self._value.imag
 
+    @property
+    def value(self):
+        """Raw backend tensor after refresh.
+
+        Use when passing the whole tensor to a free function (e.g.
+        ``xp.sum``, ``xp.linalg.norm``, ``scipy.X``) or to bind a raw
+        local for a tight loop and skip per-access tainted checks.
+        Slice access ``da[idx]`` already returns a raw view; reach for
+        ``.value`` only when you want the whole tensor.
+        """
+        if self._status.tainted:
+            self._refresh()
+        return self._value
+
     # ------------------------------------------------------------------
     # Cover any other attribute (.astype, .copy, .tobytes, .ctypes, .view, ...)
     # ------------------------------------------------------------------
@@ -520,22 +536,53 @@ class depend_array(depend_base):
         self.set(value, manual=True)
 
     def __getitem__(self, index):
+        """Raw view of a slice (or scalar for full-rank integer index).
+
+        Triggers ``_refresh`` if tainted. The returned object is the
+        backend tensor's own slice/scalar type; the depend wrapper does
+        not survive the read. For a slice that participates in the
+        depend chain, use ``dslice`` instead.
+        """
         if self._status.tainted:
             self._refresh()
-        if _is_scalar_index(index, self._value.ndim):
-            return self._value[index]
+        return self._value[index]
+
+    def dslice(self, index):
+        """Slice that participates in the depend chain.
+
+        Returns a ``depend_array`` slice-view sharing ``_status`` with
+        the parent: tainting the parent taints the slice (and vice-
+        versa), and writes through the slice propagate to the parent's
+        dependants. Used when the slice is stored as state for a
+        consumer that itself participates in the depend chain (e.g.
+        per-bead :class:`Atoms` constructed via ``_prebind``).
+
+        For ordinary reads use ``da[index]`` (raw view, no depend
+        wrapping).
+
+        Implementation: the slice-view records ``_stored_index`` and on
+        every ``_refresh`` re-derives ``_value`` as
+        ``parent._value[stored_index]``. On numpy/torch the re-derive
+        returns a memory-share view (cheap, behaviour identical to a
+        permanently-aliased slice). On jax the re-derive would copy —
+        full jax support additionally requires routing slice-view
+        writes through ``parent.__setitem__``.
+        """
+        if self._status.tainted:
+            self._refresh()
         return depend_array(
             value=None,
             base=self._value[index],
             name=self._name,
             status=self._status,
             parent=self,
+            stored_index=index,
         )
 
     def __setitem__(self, index, value):
         # Safety net: some backends (e.g. torch) reject a depend_array RHS
-        # outright. Callers are expected to dstrip() explicitly; this peel
-        # costs ~12 ns and only fires when someone forgot.
+        # outright. Callers are expected to pass raw via `.value` explicitly;
+        # this peel costs ~12 ns and only fires when someone forgot.
         if isinstance(value, depend_base):
             value = value._value
         status = self._status
@@ -567,13 +614,18 @@ class depend_array(depend_base):
         """Slice-view aware refresh.
 
         A slice-view shares `_status` with its parent but its `_value`
-        is only a narrow view. Recomputing through `update_auto` must
-        happen on the parent, which owns the full-shape storage; the
-        slice's `_value` (a view) then observes the refreshed data for
-        free, and the shared `tainted` flag is cleared by the parent.
+        is a narrow projection of the parent's storage. Recompute through
+        `update_auto` happens on the parent (which owns the full-shape
+        buffer); the slice's `_value` is then re-derived as
+        `parent._value[stored_index]`. On numpy/torch the re-derive is a
+        memory-share view (cheap, equivalent to a permanently-aliased
+        slice). On jax it would copy — that path is not yet wired (slice-
+        view writes still rely on memory-share via `__setitem__`).
         """
         if self._parent is not None:
             self._parent._refresh()
+            if self._stored_index is not None:
+                self._value = self._parent._value[self._stored_index]
         else:
             super()._refresh()
 
@@ -690,21 +742,6 @@ setattr(depend_array, "__abs__", _make_unop(abs, "__abs__"))
 # ----------------------------------------------------------------------
 
 
-def dstrip(da):
-    """Return the underlying array/value without depend machinery.
-
-    Passes non-depend inputs through unchanged. This is needed because
-    a computed `depend_value`/`depend_array` accessed via the
-    `dproperties` descriptor returns the raw ndarray/scalar (not the
-    wrapper), and several call sites `dstrip` that result a second
-    time. The historical low-verbosity warning for the non-depend case
-    has been removed.
-    """
-    if isinstance(da, (depend_array, depend_value)):
-        return da._value
-    return da
-
-
 def dpipe(dfrom, dto, item=-1):
     """Synchonizes two depend objects.
 
@@ -719,7 +756,12 @@ def dpipe(dfrom, dto, item=-1):
     """
 
     if item < 0:
-        dto._func = lambda: dstrip(dfrom.__get__(dfrom, dfrom.__class__))
+
+        def _func():
+            v = dfrom.__get__(dfrom, dfrom.__class__)
+            return v.value if isinstance(v, depend_base) else v
+
+        dto._func = _func
     else:
         dto._func = lambda i=item: dfrom.__getitem__(i)
     dto.add_dependency(dfrom)

@@ -25,7 +25,6 @@ import numpy as np
 from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.motion.motion import Motion
 
-from ipi.utils.depend import dstrip
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
@@ -140,10 +139,10 @@ class SCPhononsMover(Motion):
 
         # Sets temperature.
         self.temp = self.ensemble.temp
-        self.m = xp.asarray(dstrip(self.beads.m), copy=True)
+        self.m = xp.asarray(self.beads.m.value, copy=True)
 
         # Initializes mass related arrays.
-        self.m3 = dstrip(self.beads.m3)[-1]
+        self.m3 = self.beads.m3.value[-1]
         self.im3 = 1.0 / self.m3
         self.sqm3 = xp.sqrt(self.m3)
         self.isqm3 = xp.sqrt(self.im3)
@@ -267,7 +266,7 @@ class SCPhononator(DummyPhononator):
         self.apply_hpf()
         self.get_KnD()
         self.iD[self.dm.isc] = xp.asarray(self.dm.iD, copy=True)
-        self.q[self.dm.isc] = xp.asarray(dstrip(self.dm.beads.q), copy=True)
+        self.q[self.dm.isc] = xp.asarray(self.dm.beads.q.value, copy=True)
         self.dm.oldK = self.dm.K
         self.dm.imc = 1
 
@@ -296,7 +295,7 @@ class SCPhononator(DummyPhononator):
         outfile = self.dm.output_maker.get_output(
             self.dm.prefix + ".q." + str(self.dm.isc)
         )
-        np.savetxt(outfile, to_numpy(dstrip(self.dm.beads.q)))
+        np.savetxt(outfile, to_numpy(self.dm.beads.q.value))
         outfile.close_stream()
         info(" @SCP: Saving the mean position.", verbosity.medium)
 
@@ -312,7 +311,7 @@ class SCPhononator(DummyPhononator):
         outfile = self.dm.output_maker.get_output(
             self.dm.prefix + ".V0." + str(self.dm.isc)
         )
-        np.savetxt(outfile, to_numpy(dstrip(self.dm.forces.pots)))
+        np.savetxt(outfile, to_numpy(self.dm.forces.pots.value))
         outfile.close_stream()
         info(" @SCP: Saving the minimum potential.", verbosity.medium)
 
@@ -404,8 +403,8 @@ class SCPhononator(DummyPhononator):
             x = self.x[self.dm.isc, imcmin:imcmax]
             self.dm.dbeads.q = x
 
-            v = xp.asarray(dstrip(self.dm.dforces.pots), copy=True)
-            f = xp.asarray(dstrip(self.dm.dforces.f), copy=True)
+            v = xp.asarray(self.dm.dforces.pots.value, copy=True)
+            f = xp.asarray(self.dm.dforces.f.value, copy=True)
 
             self.v[self.dm.isc, imcmin:imcmax] = v[:]
             self.f[self.dm.isc, imcmin:imcmax] = f[:]
@@ -715,8 +714,8 @@ class SCPhononator(DummyPhononator):
         qp, Kp, i = self.dm.beads.q, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
-        avg_f = dstrip(self.f[i])[-1] * 0.0
-        var_f = dstrip(self.f[i])[-1] * 0.0
+        avg_f = self.f[i][-1] * 0.0
+        var_f = self.f[i][-1] * 0.0
         norm = 0.0
         batch_w = np.zeros(self.dm.isc)
 
