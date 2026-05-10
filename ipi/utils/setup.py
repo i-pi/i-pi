@@ -103,6 +103,14 @@ def install_driver(force_install=False):
     # moves the file to the bin/ folder
     try:
         shutil.copy(os.path.join(build_dir, "driver.x"), ipi_driver_path)
-    except:
+    except shutil.SameFileError:
+        # bin/i-pi-driver already points at the built driver.x (e.g. via a
+        # symlink set up by the editable install). Nothing to copy.
+        info(
+            f"i-pi-driver at {ipi_driver_path} already resolves to the built "
+            f"driver.x; skipping copy.",
+            verbosity.low,
+        )
+    except Exception:
         warning("Failed to copy the driver to the bin folder", verbosity.low)
         raise
