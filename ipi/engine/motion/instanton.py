@@ -19,7 +19,7 @@ from importlib import util
 
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
-from ipi.engine.motion import Motion, MotionExit
+from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -249,7 +249,19 @@ class InstantonMotion(Motion):
         self.optimizer.bind(self)
 
     def step(self, step=None):
+        if self.optimizer.exit:
+            self.finish(
+                status="success",
+                message="Geometry optimization converged. Exiting simulation",
+            )
+            return
+
         self.optimizer.step(step)
+        if self.optimizer.exit:
+            self.finish(
+                status="success",
+                message="Geometry optimization converged. Exiting simulation",
+            )
 
 
 class PesMapper(object):
@@ -320,9 +332,7 @@ class PesMapper(object):
             try:
                 from scipy.interpolate import interp1d
             except ImportError:
-                raise MotionExit(
-                    status="bad", message="Scipy required to use  max_ms >0"
-                )
+                raise ImportError("Scipy required to use max_ms > 0")
 
             indexes = list()
             indexes.append(0)
@@ -340,9 +350,8 @@ class PesMapper(object):
                 verbosity.low,
             )
             if len(indexes) <= 2:
-                raise MotionExit(
-                    status="bad",
-                    message="Too few beads fulfill criteria. Please reduce max_ms or max_e",
+                raise ValueError(
+                    "Too few beads fulfill criteria. Please reduce max_ms or max_e"
                 )
         else:
             indexes = np.arange(self.dbeads.nbeads)
@@ -457,10 +466,7 @@ class FrictionMapper(PesMapper):
                 )  # dgdq = s ** 0.5 -> won't work for multiD
             except Warning:
                 print(eta[i])
-                raise MotionExit(
-                    status="bad",
-                    message="The provided friction is not positive definite",
-                )
+                raise ValueError("The provided friction is not positive definite")
 
     def set_fric_spec_dens(self, fric_spec_dens_data, fric_spec_dens_ener):
         """Computes and sets the laplace transform of the friction tensor"""
@@ -595,10 +601,7 @@ class FrictionMapper(PesMapper):
                     )  # dgdq = s ** 0.5 -> won't work for multiD
                 except Warning:
                     print(s[i])
-                    raise MotionExit(
-                        status="bad",
-                        message="The provided friction is not positive definite",
-                    )
+                    raise ValueError("The provided friction is not positive definite")
 
         gq = self.obtain_g(s)
         gq_k = np.dot(self.C, gq)
@@ -938,10 +941,7 @@ class Mapper(object):
         elif mode == "springs":
             e, g = self.sm(x, new_disc)
         else:
-            raise MotionExit(
-                status="bad",
-                message="Mode not recognized when calling FullMapper",
-            )
+            raise ValueError("Mode not recognized when calling FullMapper")
 
         if apply_fix:
             g = self.fix.get_active_vector(g, 1)
@@ -1224,19 +1224,12 @@ class DummyOptimizer:
     def pre_step(self, step=None, adaptative=False):
         """General tasks that have to be performed before actual step"""
 
-        if self.exit:
-            raise MotionExit(
-                status="success",
-                message="Geometry optimization converged. Exiting simulation",
-            )
-
         if not self.init:
             self.initialize(step)
 
         if adaptative:
-            raise MotionExit(
-                status="bad",
-                message="Adaptative discretization is not fully implemented",
+            raise NotImplementedError(
+                "Adaptative discretization is not fully implemented"
             )
             # new_coef = <implement_here>
             # self.mapper.set_coef(coef)

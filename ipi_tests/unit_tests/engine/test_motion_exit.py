@@ -1,6 +1,6 @@
 import pytest
 
-from ipi.engine.motion import Motion, MotionExit
+from ipi.engine.motion import Motion
 from ipi.engine.simulation import Simulation
 
 
@@ -12,11 +12,6 @@ class _System:
 class _FinishingMotion(Motion):
     def step(self, step=None):
         self.finish(status="success", message="finished cleanly")
-
-
-class _ExitingMotion(Motion):
-    def step(self, step=None):
-        raise MotionExit(status="bad", message="requested clean exit")
 
 
 def _make_simulation(motion):
@@ -38,16 +33,6 @@ def test_motion_finish_marks_simulation_finished():
     assert simulation.finished
     assert simulation.exit_status == "success"
     assert simulation.exit_message == "finished cleanly"
-
-
-def test_motion_exit_request_marks_simulation_finished():
-    simulation = _make_simulation(_ExitingMotion())
-
-    simulation.run_step(0)
-
-    assert simulation.finished
-    assert simulation.exit_status == "bad"
-    assert simulation.exit_message == "requested clean exit"
 
 
 def test_motion_finish_rejects_unknown_status():

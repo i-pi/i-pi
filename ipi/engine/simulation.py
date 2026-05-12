@@ -22,7 +22,6 @@ from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
-from ipi.engine.motion.motion import MotionExit
 import threading
 
 from concurrent.futures import ThreadPoolExecutor
@@ -364,7 +363,7 @@ class Simulation:
             # exit requests without screwing the trajectory
 
             steptime = -time.time()
-            if softexit.triggered or self.finished or self._check_finished_motions():
+            if softexit.triggered or self.finished:
                 break
 
             # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
@@ -373,7 +372,7 @@ class Simulation:
 
             self.run_step(self.step)
 
-            if softexit.triggered or self._check_finished_motions():
+            if softexit.triggered or self.finished:
                 # Don't write if we are about to exit.
                 break
 
@@ -431,29 +430,6 @@ class Simulation:
 
         self.rollback = False
 
-    def _check_finished_motions(self):
-        motions = [s.motion for s in self.syslist]
-        if self.smotion is not None:
-            motions.append(self.smotion)
-
-        for motion in motions:
-            if getattr(motion, "finished", False):
-                self.finished = True
-                self.exit_status = motion.exit_status or "success"
-                self.exit_message = motion.exit_message
-                return True
-        return False
-
-    def _finish_motion(self, motion, exit_request):
-        if hasattr(motion, "finish"):
-            motion.finish(exit_request.status, exit_request.message)
-            return self._check_finished_motions()
-
-        self.finished = True
-        self.exit_status = exit_request.status
-        self.exit_message = exit_request.message
-        return True
-
     def run_step(self, step):
         if len(self.syslist) > 0 and self.threading:
             stepthreads = []
@@ -463,41 +439,35 @@ class Simulation:
                 st = self.executor.submit(s.motion.step, step=step)
                 stepthreads.append((st, s.motion))
 
-            motion_finished = False
             for st, motion in stepthreads:
                 if softexit.triggered:
                     return
-                try:
-                    st.result()
-                except MotionExit as exit_request:
-                    self._finish_motion(motion, exit_request)
-                    motion_finished = True
-                    continue
-                if self._check_finished_motions():
-                    motion_finished = True
+                st.result()
+                if motion.finished:
+                    self.finished = True
+                    self.exit_status = motion.exit_status or "success"
+                    self.exit_message = motion.exit_message
 
-            if motion_finished:
+            if self.finished:
                 return
         else:
             for s in self.syslist:
-                try:
-                    s.motion.step(step=step)
-                except MotionExit as exit_request:
-                    self._finish_motion(s.motion, exit_request)
-                    return
+                s.motion.step(step=step)
                 if softexit.triggered:
                     return
-                if self._check_finished_motions():
+                if s.motion.finished:
+                    self.finished = True
+                    self.exit_status = s.motion.exit_status or "success"
+                    self.exit_message = s.motion.exit_message
                     return
 
         # does the "super motion" step
         if self.smotion is not None:
-            try:
-                self.smotion.step(step)
-            except MotionExit as exit_request:
-                self._finish_motion(self.smotion, exit_request)
-                return
-            self._check_finished_motions()
+            self.smotion.step(step)
+            if self.smotion.finished:
+                self.finished = True
+                self.exit_status = self.smotion.exit_status or "success"
+                self.exit_message = self.smotion.exit_message
 
     def stop(self):
         for k, f in self.fflist.items():

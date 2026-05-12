@@ -11,7 +11,7 @@ import numpy as np
 from numpy.linalg import norm as npnorm
 import time
 
-from ipi.engine.motion import Motion, MotionExit
+from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
 from ipi.utils.messages import verbosity as vrb, info  # , warning
@@ -424,11 +424,9 @@ class StringMover(Motion):
                     raise ValueError("Hessian size does not match system size.")
 
         if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            self.finish(
-                status="bad",
-                message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",
+            raise ValueError(
+                "All atoms are fixed, geometry won't change. Exiting simulation."
             )
-            return
 
         self.stringgm.bind(self)
         self.climbgm.bind(self)
@@ -445,9 +443,7 @@ class StringMover(Motion):
             vrb.medium,
         )
         if cl_indx in [0, self.beads.nbeads - 1]:
-            raise MotionExit(
-                status="bad", message="ERROR: climbing bead is the endpoint."
-            )
+            raise ValueError("ERROR: climbing bead is the endpoint.")
         self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
         self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
@@ -524,11 +520,7 @@ class StringMover(Motion):
                 ):
                     print("Dimensions of the Hessian and of the beads:")
                     print((self.hessian.shape, self.beads.q.shape))
-                    self.finish(
-                        status="bad",
-                        message="Wrong Hessian size in String step.",
-                    )
-                    return
+                    raise ValueError("Wrong Hessian size in String step.")
 
             if self.mode == "damped_bfgs":
                 info(" @STRING: before Damped_BFGS() call", vrb.debug)
@@ -608,11 +600,9 @@ class StringMover(Motion):
         # TODO: Routines for L-BFGS, SD, CG
         else:
             print("Error: mode %s is not supported." % self.mode)
-            self.finish(
-                status="bad",
-                message="Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization.",
+            raise NotImplementedError(
+                "Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization."
             )
-            return
 
         # Update 'main' beads positions
         self.beads.q[:] = self.stringgm.dbeads.q
@@ -714,11 +704,9 @@ class StringMover(Motion):
 
         11.02.2022: doesn't work yet.
         """
-        self.finish(
-            status="bad",
-            message="Optimizers for path_step_single_f_call() are not yet implemented.",
+        raise NotImplementedError(
+            "Optimizers for path_step_single_f_call() are not yet implemented."
         )
-        return
         # self.ptime = self.ttime = 0
         # self.qtime = -time.time()
         # # Shortcuts for prettier expresions
@@ -1013,11 +1001,9 @@ class StringMover(Motion):
 
         # TODO: Routines for L-BFGS, SD, CG, ...
         else:
-            self.finish(
-                status="bad",
-                message="Try damped_bfgs or fire, other algorithms are not implemented for climbing image optimization.",
+            raise NotImplementedError(
+                "Try damped_bfgs or fire, other algorithms are not implemented for climbing image optimization."
             )
-            return
 
         # Update positions
         self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
@@ -1122,11 +1108,9 @@ class StringMover(Motion):
         # First, optimization of endpoints, if required
         if self.endpoints["optimize"] and self.stage == "endpoints":
             # TODO self.endpoints_step(step)
-            self.finish(
-                status="bad",
-                message="Optimization of the endpoints of a string is not implemented yet.",
+            raise NotImplementedError(
+                "Optimization of the endpoints of a string is not implemented yet."
             )
-            return
 
         # Endpoints are optimized, or their optimization is not required
         elif self.stage == "string":
@@ -1186,7 +1170,7 @@ def spline_resample(q, nbeads):
         new_q - resampled coordinates
     """
     if nbeads <= 2:
-        raise MotionExit(status="bad", message="Nbeads < 3 in string optimization.")
+        raise ValueError("Nbeads < 3 in string optimization.")
 
     # First, we calculate the current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
@@ -1243,7 +1227,7 @@ def spline_derv(q, nbeads):
         tangent - full-dimensional tangent of the spline, shape (nbeads, 3N).
     """
     if nbeads <= 2:
-        raise MotionExit(status="bad", message="Nbeads < 3 in string optimization.")
+        raise ValueError("Nbeads < 3 in string optimization.")
 
     # First, we calculate current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.

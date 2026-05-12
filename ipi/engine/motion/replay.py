@@ -108,8 +108,7 @@ class Replay(Motion):
                     "the number of files should be equal to the number of beads.",
                     verbosity.low,
                 )
-                self.finish(status="bad", message=" # Error in replay input.")
-                return
+                raise ValueError("Error in replay input.")
         while True:
             self.rstep += 1
             try:

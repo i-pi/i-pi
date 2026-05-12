@@ -157,9 +157,8 @@ class GeopMotion(Motion):
         self.optimizer.bind(self)
 
         if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            self.finish(
-                status="bad",
-                message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation",
+            raise ValueError(
+                "All atoms are fixed, geometry won't change. Exiting simulation"
             )
 
     def step(self, step=None):

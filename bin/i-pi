@@ -23,24 +23,21 @@ import os
 
 # Check that we have the import path for this i-PI set and if not, add it.
 dir_root = os.path.realpath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
-)
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
 if not dir_root in sys.path:
     sys.path.insert(0, dir_root)
 
 from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 
-
 def profile_exit(prefix="profile"):
     # write out the outputs of the profiler
-    import yappi
-
+    import yappi            
     yappi.stop()
-    # yappi.get_thread_stats().print_all()
+    #yappi.get_thread_stats().print_all()
     yfs = yappi.get_func_stats()
-    yfs.save(prefix + ".kgrind", type="callgrind")
-    ypo = open(prefix + ".yappi", "w")
+    yfs.save(prefix+".kgrind", type="callgrind")
+    ypo = open(prefix+".yappi", "w")
     yfs.print_all(out=ypo)
     ypo.close()
 
@@ -52,22 +49,16 @@ def main(fn_input, options):
     if options.do_yappi:
         try:
             import yappi
-
             yappi.set_clock_type(options.yappi_clock)
             yappi.start(builtins=True, profile_threads=True)
-            # register the output function for the profiler so it is
+            # register the output function for the profiler so it is 
             # called whatever the way i-PI ends
             softexit.register_function(profile_exit, prefix=options.yappi_prefix)
         except ImportError:
-            raise ImportError("Profiling requires the `yappi` package.")
+            raise ImportError('Profiling requires the `yappi` package.')            
 
     # construct simulation based on input file
-    simulation = Simulation.load_from_xml(
-        open(fn_input),
-        request_banner=True,
-        custom_verbosity=options.verbosity,
-        sockets_prefix=options.sockets_prefix,
-    )
+    simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
     # run the simulation
     simulation.run()
@@ -82,70 +73,46 @@ def main(fn_input, options):
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     # TODO: Use argparse once we move to Python 2.7.
 
     from optparse import OptionParser
 
-    parser = OptionParser(
-        usage="%prog [options] <input file>",
-        description="The main i-PI executable used to run "
-        "a simulation, given an XML input file.",
-    )
+    parser = OptionParser(usage='%prog [options] <input file>',
+                          description='The main i-PI executable used to run '
+                                      'a simulation, given an XML input file.'
+                          )
 
-    parser.add_option(
-        "-p",
-        "--profile",
-        action="store_true",
-        dest="do_yappi",
-        default=False,
-        help="Profile this run using yappi.",
-    )
+    parser.add_option('-p', '--profile',
+                      action='store_true', dest='do_yappi', default=False,
+                      help='Profile this run using yappi.')
 
-    parser.add_option(
-        "--profiler-clock",
-        dest="yappi_clock",
-        default="cpu",
-        choices=["cpu", "wall"],
-        help="Type of profiling timing: `wall` for wall-clock timing, and `cpu` for CPU timing.",
-    )
+    parser.add_option('--profiler-clock', dest='yappi_clock', default="cpu",
+                      choices=['cpu', 'wall'],
+                      help='Type of profiling timing: `wall` for wall-clock timing, and `cpu` for CPU timing.')
+    
+    parser.add_option('--profiler-output', dest='yappi_prefix', default="profile",                      
+                      help='Prefix for profiler files.')
 
-    parser.add_option(
-        "--profiler-output",
-        dest="yappi_prefix",
-        default="profile",
-        help="Prefix for profiler files.",
-    )
+    parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
+                      choices=['quiet', 'low', 'medium', 'high', 'debug'],
+                      help='Define the verbosity level.')
 
-    parser.add_option(
-        "-V",
-        "--verbosity",
-        dest="verbosity",
-        default=None,
-        choices=["quiet", "low", "medium", "high", "debug"],
-        help="Define the verbosity level.",
-    )
-
-    parser.add_option(
-        "-S",
-        "--sockets_prefix",
-        dest="sockets_prefix",
-        default=None,
-        help="Prefix for profiler files.",
-    )
+    parser.add_option('-S', '--sockets_prefix', dest='sockets_prefix', default=None,
+                      help='Prefix for profiler files.')
 
     options, args = parser.parse_args()
 
     # make sure that we have exactly one input file and it exists
     if len(args) == 0:
-        parser.error("No input file name provided.")
+        parser.error('No input file name provided.')
     elif len(args) > 1:
-        parser.error("Provide only one input file name.")
+        parser.error('Provide only one input file name.')
     else:
         fn_in = args[0]
         if not os.path.exists(fn_in):
-            parser.error("Input file not found: {:s}".format(fn_in))
+            parser.error('Input file not found: {:s}'.format(fn_in))
 
     # Everything is ready. Go!
     main(args[0], options)

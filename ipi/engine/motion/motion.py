@@ -9,15 +9,6 @@ import numpy as np
 from ipi.utils.depend import depend_value, dproperties
 
 
-class MotionExit(Exception):
-    """Request that the simulation loop exits after the current motion step."""
-
-    def __init__(self, status="success", message=""):
-        super(MotionExit, self).__init__(message)
-        self.status = status
-        self.message = message
-
-
 class Motion:
     """Base motion calculation class.
 
