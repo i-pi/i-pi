@@ -159,9 +159,7 @@ class Replay(Motion):
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
                     self.beads.q[:] = mybeads.q
-                    self.finish(
-                        status="success", message=" # Read single checkpoint"
-                    )
+                    self.finish(status="success", message=" # Read single checkpoint")
                     return
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
                 if mycell.V > 0:

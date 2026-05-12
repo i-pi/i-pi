@@ -1074,9 +1074,7 @@ class StringMover(Motion):
                 vrb.medium,
             )
             self.stage = "converged"
-            self.finish(
-                status="success", message="STRING_CLIMB finished successfully."
-            )
+            self.finish(status="success", message="STRING_CLIMB finished successfully.")
             return
 
         else:
