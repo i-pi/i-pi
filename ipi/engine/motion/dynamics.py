@@ -16,7 +16,6 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
-from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 
 
@@ -77,9 +76,9 @@ class Dynamics(Motion):
             if (thermostat.__class__.__name__ == "ThermoNMGLEG") and (
                 len(fixatoms_dof) > 0
             ):
-                softexit.trigger(
-                    status="bad",
-                    message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE not yet supported. Use a local thermostat. !!",
+                raise ValueError(
+                    "Fixed atoms and global thermostat on the centroid with NMGLE "
+                    "are not supported. Use a local thermostat."
                 )
             self.thermostat = thermostat
 

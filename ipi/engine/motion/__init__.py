@@ -5,7 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
-from .motion import Motion
+from .motion import Motion, MotionExit
 from .dynamics import Dynamics
 from .constrained_dynamics import ConstrainedDynamics
 from .replay import Replay

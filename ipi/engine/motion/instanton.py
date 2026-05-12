@@ -19,9 +19,8 @@ from importlib import util
 
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
-from ipi.engine.motion import Motion
+from ipi.engine.motion import Motion, MotionExit
 from ipi.utils.depend import dstrip
-from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell
@@ -212,14 +211,14 @@ class InstantonMotion(Motion):
             )
             found = util.find_spec("scipy")
             if found is None:
-                softexit.trigger(
+                raise ImportError(
                     "Scipy is required to use NR or lanczos optimization but could not be found"
                 )
 
         if self.options["friction"]:
             found = util.find_spec("scipy")
             if found is None:
-                softexit.trigger(
+                raise ImportError(
                     "Scipy is required to use friction in a instanton calculation but could not be found"
                 )
 
@@ -321,7 +320,7 @@ class PesMapper(object):
             try:
                 from scipy.interpolate import interp1d
             except ImportError:
-                softexit.trigger(
+                raise MotionExit(
                     status="bad", message="Scipy required to use  max_ms >0"
                 )
 
@@ -341,7 +340,7 @@ class PesMapper(object):
                 verbosity.low,
             )
             if len(indexes) <= 2:
-                softexit.trigger(
+                raise MotionExit(
                     status="bad",
                     message="Too few beads fulfill criteria. Please reduce max_ms or max_e",
                 )
@@ -458,7 +457,10 @@ class FrictionMapper(PesMapper):
                 )  # dgdq = s ** 0.5 -> won't work for multiD
             except Warning:
                 print(eta[i])
-                softexit.trigger("The provided friction is not positive definite")
+                raise MotionExit(
+                    status="bad",
+                    message="The provided friction is not positive definite",
+                )
 
     def set_fric_spec_dens(self, fric_spec_dens_data, fric_spec_dens_ener):
         """Computes and sets the laplace transform of the friction tensor"""
@@ -593,7 +595,10 @@ class FrictionMapper(PesMapper):
                     )  # dgdq = s ** 0.5 -> won't work for multiD
                 except Warning:
                     print(s[i])
-                    softexit.trigger("The provided friction is not positive definite")
+                    raise MotionExit(
+                        status="bad",
+                        message="The provided friction is not positive definite",
+                    )
 
         gq = self.obtain_g(s)
         gq_k = np.dot(self.C, gq)
@@ -933,7 +938,10 @@ class Mapper(object):
         elif mode == "springs":
             e, g = self.sm(x, new_disc)
         else:
-            softexit.trigger("Mode not recognized when calling  FullMapper")
+            raise MotionExit(
+                status="bad",
+                message="Mode not recognized when calling FullMapper",
+            )
 
         if apply_fix:
             g = self.fix.get_active_vector(g, 1)
@@ -1217,7 +1225,7 @@ class DummyOptimizer:
         """General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger(
+            raise MotionExit(
                 status="success",
                 message="Geometry optimization converged. Exiting simulation",
             )
@@ -1226,13 +1234,12 @@ class DummyOptimizer:
             self.initialize(step)
 
         if adaptative:
-            softexit.trigger(
+            raise MotionExit(
                 status="bad",
                 message="Adaptative discretization is not fully implemented",
             )
             # new_coef = <implement_here>
             # self.mapper.set_coef(coef)
-            raise NotImplementedError
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)

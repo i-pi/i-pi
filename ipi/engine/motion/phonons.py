@@ -24,7 +24,6 @@ import numpy as np
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
-from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 
@@ -111,7 +110,7 @@ class DynMatrixMover(Motion):
             self.printall(
                 self.prefix, self.refdynmatrix.copy(), fixatoms_dof=self.fixatoms_dof
             )
-            softexit.trigger(
+            self.finish(
                 status="success",
                 message="Dynamic matrix is calculated. Exiting simulation",
             )

@@ -10,7 +10,6 @@ import os
 from fnmatch import fnmatch
 
 from ipi.engine.motion import Motion
-from ipi.utils.softexit import softexit
 from ipi.utils.io import read_file, read_file_raw
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.units import unit_to_internal
@@ -109,7 +108,8 @@ class Replay(Motion):
                     "the number of files should be equal to the number of beads.",
                     verbosity.low,
                 )
-                softexit.trigger(status="bad", message=" # Error in replay input.")
+                self.finish(status="bad", message=" # Error in replay input.")
+                return
         while True:
             self.rstep += 1
             try:
@@ -159,16 +159,18 @@ class Replay(Motion):
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
                     self.beads.q[:] = mybeads.q
-                    softexit.trigger(
+                    self.finish(
                         status="success", message=" # Read single checkpoint"
                     )
+                    return
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
                 if mycell.V > 0:
                     self.cell.h[:] = mycell.h
             except EOFError:
-                softexit.trigger(
+                self.finish(
                     status="success", message=" # Finished reading re-run trajectory"
                 )
+                return
             if (step is None) or (self.rstep > step):
                 break
 

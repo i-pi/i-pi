@@ -11,9 +11,8 @@ import numpy as np
 from numpy.linalg import norm as npnorm
 import time
 
-from ipi.engine.motion import Motion
+from ipi.engine.motion import Motion, MotionExit
 from ipi.utils.depend import dstrip
-from ipi.utils.softexit import softexit
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
 from ipi.utils.messages import verbosity as vrb, info  # , warning
 from ipi.engine.beads import Beads
@@ -425,10 +424,11 @@ class StringMover(Motion):
                     raise ValueError("Hessian size does not match system size.")
 
         if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            softexit.trigger(
+            self.finish(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",
             )
+            return
 
         self.stringgm.bind(self)
         self.climbgm.bind(self)
@@ -445,7 +445,7 @@ class StringMover(Motion):
             vrb.medium,
         )
         if cl_indx in [0, self.beads.nbeads - 1]:
-            softexit.trigger(
+            raise MotionExit(
                 status="bad", message="ERROR: climbing bead is the endpoint."
             )
         self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
@@ -524,10 +524,11 @@ class StringMover(Motion):
                 ):
                     print("Dimensions of the Hessian and of the beads:")
                     print((self.hessian.shape, self.beads.q.shape))
-                    softexit.trigger(
+                    self.finish(
                         status="bad",
                         message="Wrong Hessian size in String step.",
                     )
+                    return
 
             if self.mode == "damped_bfgs":
                 info(" @STRING: before Damped_BFGS() call", vrb.debug)
@@ -607,10 +608,11 @@ class StringMover(Motion):
         # TODO: Routines for L-BFGS, SD, CG
         else:
             print("Error: mode %s is not supported." % self.mode)
-            softexit.trigger(
+            self.finish(
                 status="bad",
                 message="Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization.",
             )
+            return
 
         # Update 'main' beads positions
         self.beads.q[:] = self.stringgm.dbeads.q
@@ -675,10 +677,11 @@ class StringMover(Motion):
                 self.stage = "climb"
             else:
                 self.stage = "converged"
-                softexit.trigger(
+                self.finish(
                     status="success",
                     message="String MEP finished successfully at STEP %i." % step,
                 )
+                return
 
         else:
             info(
@@ -711,10 +714,11 @@ class StringMover(Motion):
 
         11.02.2022: doesn't work yet.
         """
-        softexit.trigger(
+        self.finish(
             status="bad",
             message="Optimizers for path_step_single_f_call() are not yet implemented.",
         )
+        return
         # self.ptime = self.ttime = 0
         # self.qtime = -time.time()
         # # Shortcuts for prettier expresions
@@ -751,7 +755,7 @@ class StringMover(Motion):
         #         ):
         #             print("Dimensions of the Hessian and of the beads:")
         #             print((self.hessian.shape, self.beads.q.shape))
-        #             softexit.trigger(
+        #             self.finish(
         #                 status="bad",
         #                 message="Wrong Hessian size in String step.",
         #             )
@@ -819,7 +823,7 @@ class StringMover(Motion):
         # # TODO: Routines for L-BFGS, SD, CG
         # else:
         #     print("Error: mode %s is not supported." % self.mode)
-        #     softexit.trigger(
+        #     self.finish(
         #         status="bad",
         #         message="Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization.",
         #     )
@@ -912,7 +916,7 @@ class StringMover(Motion):
         #             self.stage = "climb"
         #         else:
         #             self.stage = "converged"
-        #             softexit.trigger(
+        #             self.finish(
         #                 status="success",
         #                 message="String MEP finished successfully at STEP %i." % step,
         #             )
@@ -1009,10 +1013,11 @@ class StringMover(Motion):
 
         # TODO: Routines for L-BFGS, SD, CG, ...
         else:
-            softexit.trigger(
+            self.finish(
                 status="bad",
                 message="Try damped_bfgs or fire, other algorithms are not implemented for climbing image optimization.",
             )
+            return
 
         # Update positions
         self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
@@ -1069,9 +1074,10 @@ class StringMover(Motion):
                 vrb.medium,
             )
             self.stage = "converged"
-            softexit.trigger(
+            self.finish(
                 status="success", message="STRING_CLIMB finished successfully."
             )
+            return
 
         else:
             info(
@@ -1109,18 +1115,20 @@ class StringMover(Motion):
 
         # Check if we restart a converged calculation (by mistake)
         if self.stage == "converged":
-            softexit.trigger(
+            self.finish(
                 status="success",
                 message="String MEP has already converged. Exiting simulation.",
             )
+            return
 
         # First, optimization of endpoints, if required
         if self.endpoints["optimize"] and self.stage == "endpoints":
             # TODO self.endpoints_step(step)
-            softexit.trigger(
+            self.finish(
                 status="bad",
                 message="Optimization of the endpoints of a string is not implemented yet.",
             )
+            return
 
         # Endpoints are optimized, or their optimization is not required
         elif self.stage == "string":
@@ -1180,7 +1188,7 @@ def spline_resample(q, nbeads):
         new_q - resampled coordinates
     """
     if nbeads <= 2:
-        softexit.trigger(status="bad", message="Nbeads < 3 in string optimization.")
+        raise MotionExit(status="bad", message="Nbeads < 3 in string optimization.")
 
     # First, we calculate the current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
@@ -1237,7 +1245,7 @@ def spline_derv(q, nbeads):
         tangent - full-dimensional tangent of the spline, shape (nbeads, 3N).
     """
     if nbeads <= 2:
-        softexit.trigger(status="bad", message="Nbeads < 3 in string optimization.")
+        raise MotionExit(status="bad", message="Nbeads < 3 in string optimization.")
 
     # First, we calculate current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
@@ -1493,7 +1501,7 @@ def print_distances(q, nbeads):
 #        N_dn = 0
 #        N_up += 1
 #        if N_up > Nmax:
-#            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
+#            raise RuntimeError("@FIRE is stuck for %d steps. We stop here." % N_up)
 #        dt = max(dt * fdec, dtmin)
 #        a = astart
 #        # correct uphill motion

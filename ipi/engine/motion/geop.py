@@ -16,7 +16,6 @@ import time
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
-from ipi.utils.softexit import softexit
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
 
@@ -158,7 +157,7 @@ class GeopMotion(Motion):
         self.optimizer.bind(self)
 
         if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            softexit.trigger(
+            self.finish(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation",
             )
@@ -167,7 +166,7 @@ class GeopMotion(Motion):
         if self.optimizer.converged:
             # if required, exit upon convergence. otherwise just return without action
             if self.conv_exit:
-                softexit.trigger(
+                self.finish(
                     status="success",
                     message="Geometry optimization converged. Exiting simulation",
                 )

@@ -9,6 +9,15 @@ import numpy as np
 from ipi.utils.depend import depend_value, dproperties
 
 
+class MotionExit(Exception):
+    """Request that the simulation loop exits after the current motion step."""
+
+    def __init__(self, status="success", message=""):
+        super(MotionExit, self).__init__(message)
+        self.status = status
+        self.message = message
+
+
 class Motion:
     """Base motion calculation class.
 
@@ -47,6 +56,18 @@ class Motion:
             self.fixatoms_dof = fixatoms_dof
 
         self.beads = self.cell = self.forces = self.prng = self.nm = self.enstype = None
+        self.finished = False
+        self.exit_status = None
+        self.exit_message = ""
+
+    def finish(self, status="success", message=""):
+        """Requests a clean simulation exit from the main simulation loop."""
+
+        if status not in ("success", "restartable", "bad"):
+            raise ValueError("Unknown motion exit status: " + str(status))
+        self.finished = True
+        self.exit_status = status
+        self.exit_message = message
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.
