@@ -257,11 +257,6 @@ class InstantonMotion(Motion):
             return
 
         self.optimizer.step(step)
-        if self.optimizer.exit:
-            self.finish(
-                status="success",
-                message="Geometry optimization converged. Exiting simulation",
-            )
 
 
 class PesMapper(object):
