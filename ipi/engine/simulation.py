@@ -464,10 +464,6 @@ class Simulation:
         # does the "super motion" step
         if self.smotion is not None:
             self.smotion.step(step)
-            if self.smotion.finished:
-                self.finished = True
-                self.exit_status = self.smotion.exit_status or "success"
-                self.exit_message = self.smotion.exit_message
 
     def stop(self):
         for k, f in self.fflist.items():
