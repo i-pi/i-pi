@@ -443,7 +443,8 @@ class StringMover(Motion):
             vrb.medium,
         )
         if cl_indx in [0, self.beads.nbeads - 1]:
-            raise ValueError("ERROR: climbing bead is the endpoint.")
+            self.finish(status="bad", message="ERROR: climbing bead is the endpoint.")
+            return None
         self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
         self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
@@ -1001,9 +1002,11 @@ class StringMover(Motion):
 
         # TODO: Routines for L-BFGS, SD, CG, ...
         else:
-            raise NotImplementedError(
-                "Try damped_bfgs or fire, other algorithms are not implemented for climbing image optimization."
+            self.finish(
+                status="bad",
+                message="Try damped_bfgs or fire, other algorithms are not implemented for climbing image optimization.",
             )
+            return
 
         # Update positions
         self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
@@ -1156,6 +1159,8 @@ class StringMover(Motion):
             # We need to initialize climbing once
             if np.all(self.climbgm.q_prev == 0.0) or np.all(self.climbgm.q_next == 0.0):
                 self.cl_indx = self.init_climb()
+                if self.finished:
+                    return
             self.climb_step(step)
 
 

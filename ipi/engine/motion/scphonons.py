@@ -185,9 +185,11 @@ class SCPhononsMover(Motion):
 
     def step(self, step=None):
         if self.isc == self.max_iter:
-            raise RuntimeError(
-                " @SCP: Reached maximum iterations. Terminating the SCP calculation."
+            self.finish(
+                status="bad",
+                message=" @SCP: Reached maximum iterations. Terminating the SCP calculation.",
             )
+            return
         if self.imc == 0:
             self.phononator.reset()
         elif self.imc >= 1 and self.imc <= self.max_steps:

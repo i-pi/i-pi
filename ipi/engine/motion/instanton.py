@@ -256,7 +256,14 @@ class InstantonMotion(Motion):
             )
             return
 
-        self.optimizer.step(step)
+        try:
+            self.optimizer.step(step)
+        except ValueError as err:
+            bad_friction = str(err) == "The provided friction is not positive definite"
+            if bad_friction and self.optimizer.options.get("frictionSD", False):
+                self.finish(status="bad", message=str(err))
+                return
+            raise
 
 
 class PesMapper(object):
