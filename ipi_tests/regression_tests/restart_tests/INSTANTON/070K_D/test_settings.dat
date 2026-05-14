@@ -1,0 +1,4 @@
+driver_model doublewell_1D
+address localhost
+port 33330
+socket_mode unix
