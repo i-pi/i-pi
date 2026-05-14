@@ -47,6 +47,18 @@ class Motion:
             self.fixatoms_dof = fixatoms_dof
 
         self.beads = self.cell = self.forces = self.prng = self.nm = self.enstype = None
+        self.finished = False
+        self.exit_status = None
+        self.exit_message = ""
+
+    def finish(self, status="success", message=""):
+        """Requests a clean simulation exit from the main simulation loop."""
+
+        if status not in ("success", "restartable", "bad"):
+            raise ValueError("Unknown motion exit status: " + str(status))
+        self.finished = True
+        self.exit_status = status
+        self.exit_message = message
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.

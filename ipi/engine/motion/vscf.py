@@ -29,7 +29,6 @@ from ipi.utils.depend import *
 
 # from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
-from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 # from ipi.utils.io import print_file
@@ -339,6 +338,7 @@ class IMF(DummyCalculator):
 
         if step == self.total_steps:
             self.terminate()
+            return
 
         # Ignores (near) zero modes.
         if step < self.imm.nz:
@@ -747,7 +747,7 @@ class IMF(DummyCalculator):
             " @NM: ALL QUANTITIES PER PRIMITIVE UNIT CELL (WHERE APPLICABLE) \n",
             verbosity.low,
         )
-        softexit.trigger(
+        self.imm.finish(
             status="success", message=" @NM: The IMF calculation has terminated."
         )
 
@@ -1246,6 +1246,7 @@ class VSCF(IMF):
 
         else:
             self.terminate()
+            return
 
     def solver(self):
         """
@@ -1409,6 +1410,7 @@ class VSCF(IMF):
                 np.save(outfile, self.evecs_vscf)
                 outfile.close_stream()
                 self.terminate()
+                return
 
     def one_dimensional_mapper(self, step):
         """
@@ -1471,9 +1473,9 @@ class VSCF(IMF):
 
     def terminate(self):
         """
-        Triggers a soft exit.
+        Requests a clean exit.
         """
 
-        softexit.trigger(
+        self.imm.finish(
             status="success", message=" @NM: The VSCF calculation has terminated."
         )

@@ -19,6 +19,10 @@ class MultiMotion(Motion):
               motion will be constrained or not. Defaults to False.
         """
 
+        self.finished = False
+        self.exit_status = None
+        self.exit_message = ""
+
         self._dt = depend_value(name="dt", func=self.get_totdt)
         self.mlist = motionlist
         for m in self.mlist:
@@ -45,6 +49,12 @@ class MultiMotion(Motion):
     def step(self, step=None):
         for m in self.mlist:
             m.step(step)
+            if m.finished:
+                self.finish(
+                    status=m.exit_status or "success",
+                    message=m.exit_message,
+                )
+                return
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.

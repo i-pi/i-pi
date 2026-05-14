@@ -1,0 +1,35 @@
+<simulation mode="static" verbosity="medium">
+   <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+    <trajectory stride="1" filename="pos_c" format="xyz"> x_centroid </trajectory>
+    <trajectory stride="1" filename="frc_c" format="xyz"> f_centroid </trajectory>
+   </output>
+   <prng>
+      <seed> 123456 </seed>
+   </prng>
+   <total_steps> 10 </total_steps>
+   <ffsocket name="harm3d" mode="unix">
+       <address> localhost </address> 
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' units='angstrom'>init.xyz</file>
+	   <cell mode='abc' units='angstrom'> [100, 100, 100] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="harm3d"> </force>
+       </forces>
+       <motion mode="minimize">
+            <optimizer mode="cg">
+                <ls_options>
+		   <tolerance> 1e-4 </tolerance>
+	        </ls_options> 
+                <tolerances>
+                    <energy> 5e-6 </energy>
+                    <force> 5e-6 </force>
+                    <position> 5e-6 </position>
+                </tolerances>
+           </optimizer>
+       </motion>
+   </system>
+</simulation>
