@@ -895,7 +895,7 @@ class FFPlumed(FFEval):
         self.compute_work = compute_work
         self.init_file = init_file
 
-        if self.init_file.mode == "xyz":
+        if self.init_file.mode in ["xyz", "pdb", "ase"]:
             infile = open(self.init_file.value, "r")
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
