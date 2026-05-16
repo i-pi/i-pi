@@ -902,6 +902,12 @@ class FFPlumed(FFEval):
             mycell = myframe["cell"]
             myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+        else:
+            raise ValueError(
+                "Unsupported init file format for FFPlumed: "
+                + self.init_file.mode
+                + ". Supported formats are xyz, pdb and ase."
+            )
 
         self.natoms = myatoms.natoms
         self.plumed.cmd("setRealPrecision", 8)  # i-PI uses double precision
