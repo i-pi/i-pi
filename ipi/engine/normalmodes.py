@@ -201,12 +201,14 @@ class NormalModes:
             func={"q": (lambda: self.transform.b2nm(dstrip(self.beads.q)))},
             synchro=sync_q,
         )
+        self._qnm._timing_label = "NormalModes qnm"
         self._pnm = depend_array(
             name="pnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func={"p": (lambda: self.transform.b2nm(dstrip(self.beads.p)))},
             synchro=sync_p,
         )
+        self._pnm._timing_label = "NormalModes pnm"
 
         # must overwrite the functions
         self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))}

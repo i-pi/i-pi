@@ -74,12 +74,12 @@ class Dynamics(Motion):
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
-            if (
-                thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
-            ) and (len(fixatoms_dof) > 0):
+            if (thermostat.__class__.__name__ == "ThermoNMGLEG") and (
+                len(fixatoms_dof) > 0
+            ):
                 softexit.trigger(
                     status="bad",
-                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE not yet supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -170,7 +170,9 @@ class Dynamics(Motion):
         dpipe(self._ntemp, self.thermostat._temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
-        self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
+        self.thermostat.bind(
+            beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof, fixcom=self.fixcom
+        )
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(self._ntemp, self.barostat._temp)
@@ -386,13 +388,14 @@ class DummyIntegrator:
 
             self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
+        # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
-            m3 = dstrip(beads.m3)
-            p = dstrip(beads.p)
+            pnm = dstrip(self.nm.pnm)
+            dynm3 = dstrip(self.nm.dynm3)
             self.ensemble.eens += 0.5 * np.sum(
-                p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
+                pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof]
             )
-            beads.p[:, self.fixatoms_dof] = 0.0
+            self.nm.pnm[:, self.fixatoms_dof] = 0.0
 
 
 dproperties(
@@ -432,22 +435,22 @@ class NVEIntegrator(DummyIntegrator):
                     dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
                 )
         else:
-            timers.start("[+++]F(++++)")
+            timers.start("F")
             f = dstrip(self.forces.mts_forces[level].f)
-            timers.stop("[+++]F(++++)")
+            timers.stop("F")
             
-            timers.start("[+++]Verlet")
+            timers.start("Verlet")
             self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
                 self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
-            timers.stop("[+++]Verlet")
+            timers.stop("Verlet")
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        timers.start("[+++]Centr. Verlet")
+        timers.start("Centr. Verlet")
         self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
-        timers.stop("[+++]Centr. Verlet")
+        timers.stop("Centr. Verlet")
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -480,9 +483,9 @@ class NVEIntegrator(DummyIntegrator):
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.qcstep()
-                timers.start("[+++]Free RingPol. Verlet")
+                timers.start("Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("[+++]Free RingPol. Verlet")
+                timers.stop("Free RingPol. Verlet")
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -493,9 +496,9 @@ class NVEIntegrator(DummyIntegrator):
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.qcstep()
-                timers.start("[+++]Free RingPol. Verlet")
+                timers.start("Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("[+++]Free RingPol. Verlet")
+                timers.stop("Free RingPol. Verlet")
             else:
                 self.mtsprop_ab(index + 1)
 
@@ -550,39 +553,40 @@ class NVTIntegrator(NVEIntegrator):
         """Does one simulation time step."""
 
         if self.splitting == "obabo":
-            timers.start("[++]Thermostat Step(***)")
+            timers.start("Thermostat Step")
             # thermostat is applied for dt/2
             self.tstep()
-            timers.stop("[++]Thermostat Step(***)")
+            timers.stop("Thermostat Step")
 
-            #timers.start("[++]PConstraints")
-            self.pconstraints() # timing: 0.00 ms
-            #timers.stop("[++]PConstraints")
+            self.pconstraints()
 
-
-            
-            timers.start("[++]MTS propagation(+++)")
+            timers.start("MTS propagation")
             # forces are integerated for dt with MTS.
             self.mtsprop(0)
-            timers.stop("[++]MTS propagation(+++)")
+            timers.stop("MTS propagation")
 
-            timers.start("[++]Thermostat Step(***)")
+            timers.start("Thermostat Step")
             # thermostat is applied for dt/2
             self.tstep()
-            timers.stop("[++]Thermostat Step(***)")
-            
+            timers.stop("Thermostat Step")
 
-            #timers.start("[++]PConstraints")
-            self.pconstraints() # timing: 0.00 ms
-            #timers.stop("[++]PConstraints")
-            
+            self.pconstraints()
 
         elif self.splitting == "baoab":
+            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
+            timers.stop("MTS propagation BA")
+
+            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
+            timers.stop("Thermostat Step")
+
             self.pconstraints()
+
+            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
+            timers.stop("MTS propagation AB")
 
 
 class NVTCCIntegrator(NVTIntegrator):
@@ -620,7 +624,9 @@ class NVTCCIntegrator(NVTIntegrator):
         self.nm.pnm[0, :] = 0.0
         self.pconstraints()
 
-        # self.qcstep() # for the moment I just avoid doing the centroid step.
+        # The centroid is constrained, so qcstep is skipped, but the internal
+        # ring-polymer modes still need the two half-step free propagations.
+        self.nm.free_qstep()
         self.nm.free_qstep()
 
         self.pstep()
@@ -663,21 +669,25 @@ class NPTIntegrator(NVTIntegrator):
 
         self._stresscheck = False
 
+        timers.start("Barostat pstep")
         self.barostat.pstep(level)
+        timers.stop("Barostat pstep")
         super(NPTIntegrator, self).pstep(level)
-        # self.pconstraints()
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
 
+        timers.start("Barostat qcstep")
         self.barostat.qcstep()
+        timers.stop("Barostat qcstep")
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
 
         self.thermostat.step()
+        timers.start("Barostat Thermostat Step")
         self.barostat.thermostat.step()
-        # self.pconstraints()
+        timers.stop("Barostat Thermostat Step")
 
 
 class NSTIntegrator(NPTIntegrator):
@@ -773,11 +783,22 @@ class SCIntegrator(NVTIntegrator):
 
         elif self.splitting == "baoab":
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
+            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
+            timers.stop("MTS propagation BA")
+
+            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
+            timers.stop("Thermostat Step")
+
             self.pconstraints()
+
+            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
+            timers.stop("MTS propagation AB")
+
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
 
@@ -808,19 +829,25 @@ class SCNPTIntegrator(SCIntegrator):
 
         self._stresscheck = False
 
+        timers.start("Barostat pstep")
         self.barostat.pstep(level)
+        timers.stop("Barostat pstep")
         super(SCNPTIntegrator, self).pstep(level)
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
 
+        timers.start("Barostat qcstep")
         self.barostat.qcstep()
+        timers.stop("Barostat qcstep")
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
 
         self.thermostat.step()
+        timers.start("Barostat Thermostat Step")
         self.barostat.thermostat.step()
+        timers.stop("Barostat Thermostat Step")
 
     def step(self, step=None):
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
@@ -843,12 +870,27 @@ class SCNPTIntegrator(SCIntegrator):
             self.pconstraints()
 
         elif self.splitting == "baoab":
+            timers.start("Barostat SC Step")
             self.barostat.pscstep()
+            timers.stop("Barostat SC Step")
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
+            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
+            timers.stop("MTS propagation BA")
+
+            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
+            timers.stop("Thermostat Step")
+
             self.pconstraints()
+
+            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
+            timers.stop("MTS propagation AB")
+
+            timers.start("Barostat SC Step")
             self.barostat.pscstep()
+            timers.stop("Barostat SC Step")
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5

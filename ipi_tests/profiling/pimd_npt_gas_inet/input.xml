@@ -3,6 +3,7 @@
          <latency>  1.00000000e-04</latency>
          <address> localhost </address> <port> 12345 </port>
          <exit_on_disconnect> False </exit_on_disconnect>
+         <consolidate_messages> True </consolidate_messages>  
    </ffsocket>
    <total_steps>4000</total_steps>
    <output prefix='simulation'>

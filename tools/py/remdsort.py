@@ -111,6 +111,7 @@ def main(inputfile, prefix="SRT_"):
                 "velocities",
                 "forces",
                 "extras",
+                "extras_bias",
             ]:  # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for b in range(nbeads):
@@ -127,7 +128,7 @@ def main(inputfile, prefix="SRT_"):
                             filename = o.filename
                         ofilename = prefix + filename
                         if o.ibead < 0 or o.ibead == b:
-                            if getkey(o.what) == "extras":
+                            if getkey(o.what) in ["extras", "extras_bias"]:
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
                                 # Sets format of extras as None

@@ -49,6 +49,7 @@
           <sigma units="picosecond"> 0.05 </sigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
         </efield>
         <bec mode="file"> bec.txt  </bec>
+        <asr_threshold > 1e-5 </asr_threshold>
       </driven_dynamics>
     </motion>
 

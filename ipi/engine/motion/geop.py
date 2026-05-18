@@ -20,7 +20,6 @@ from ipi.utils.softexit import softexit
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
 
-
 __all__ = ["GeopMotion"]
 
 

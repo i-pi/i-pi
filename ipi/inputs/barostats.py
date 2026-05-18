@@ -14,7 +14,6 @@ from ipi.inputs.thermostats import *
 from ipi.engine.cell import Cell
 from ipi.inputs.cell import *
 
-
 __all__ = ["InputBaro"]
 
 

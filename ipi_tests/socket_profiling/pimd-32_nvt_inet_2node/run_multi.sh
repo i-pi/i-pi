@@ -1,8 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=test
-#SBATCH --time=02:00:00
 
-#SBATCH --partition=cpu
 #SBATCH --mem-per-cpu=2000
 #SBATCH -N 2  --ntasks-per-node=32
 #SBATCH --cpus-per-task=1
@@ -59,18 +56,14 @@ NODE=$DRIVER_NODES
 # Launch i-PI server on first two nodes
 # -------------------------------
 
-echo "Launching drivers on node $NODE..."
-srun -N1 -n1  -w $NODE bash -c "
-    # Mount once per node
+srun -N1 -n32  -w $NODE bash -c "
     source /scratch/c_ccmd/GroupBin/i-pi-stable/env.sh
 
-    # Launch multiple driver tasks in background
-    for ((i=1;i<=${DRIVERS_PER_NODE};i++)); do
-        i-pi-py_driver -m dummy -a ${SERVER_NODE} -p ${IPI_PORT} &
-    done
+    i-pi-py_driver -m dummy -a ${SERVER_NODE} -p ${IPI_PORT} &
 
     wait
 " &> log.driver.$NODE &
+
 
 # Wait for all processes to finish
 wait

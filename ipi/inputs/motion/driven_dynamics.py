@@ -17,7 +17,6 @@ from ipi.inputs.thermostats import *
 from ipi.inputs.cell import *
 from copy import copy
 
-
 __all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC"]
 
 
@@ -121,6 +120,7 @@ class InputBEC(InputArray):
     # type hint and static programming
     mode: InputAttribute
     shape: InputAttribute
+    asr_threshold: InputValue
 
     def __init__(self, help=None, dimension=None, units=None, default=None, dtype=None):
         """Initializes InputBEC.
@@ -148,6 +148,7 @@ class InputBEC(InputArray):
         mode = self.mode.fetch()
         if mode in ["manual", "file"]:
             super().parse(xml, text)
+            mode = "manual"
         elif mode == "none":
             self.value = np.full((0, 3), np.nan)
         elif mode == "driver":
@@ -175,7 +176,11 @@ class InputBEC(InputArray):
         # It is necessary that `BEC` has a `mode` attribute otherwise this value will not be
         # correctly save to a RESTART file.
         mode = self.mode.fetch()
-        return BEC(cbec=mode == "driver", bec=bec.reshape((-1, 3)), mode=mode)
+        return BEC(
+            cbec=mode == "driver",
+            bec=bec.reshape((-1, 3)),
+            mode=mode,
+        )
 
 
 class InputDrivenDynamics(InputDynamics):
@@ -204,6 +209,17 @@ class InputDrivenDynamics(InputDynamics):
                 "default": input_default(factory=BEC),
                 "dimension": "number",
                 "help": "The Born Effective Charges tensors (cartesian coordinates)",
+            },
+        ),
+        "asr_threshold": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1e-8,
+                "help": "Acoustic Sum Rule (ASR) threshold. "
+                + "The code will stop if the Born Effective Charges will not satisfy at ASR with that threshold. "
+                + "Pay attention that the threshold will be multiplied by the total number of atoms.",
+                "dimension": "number",
             },
         ),
     }
@@ -243,3 +259,4 @@ class InputDrivenDynamics(InputDynamics):
         super().store(dyn)
         self.efield.store(dyn.Electric_Field)
         self.bec.store(dyn.Born_Charges)
+        self.asr_threshold.store(dyn.asr_threshold)

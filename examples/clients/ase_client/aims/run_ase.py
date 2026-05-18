@@ -27,7 +27,7 @@ workdir = "aims_rundir"
 aux_settings = {"label": workdir}
 calc = Aims(**usr_settings, **dft_settings, **aux_settings)
 
-atoms.set_calculator(calc)
+atoms.calc = calc
 
 # Create Client ############################
 # inet

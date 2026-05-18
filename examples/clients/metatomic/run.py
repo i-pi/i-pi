@@ -2,7 +2,7 @@
 import ase
 import ase.io
 
-from ipi.utils.scripting import (
+from ipi.scripting import (
     simulation_xml,
     forcefield_xml,
     motion_nvt_xml,

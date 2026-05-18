@@ -1,8 +1,5 @@
 #!/bin/bash 
-#SBATCH --job-name=test
-#SBATCH --time=1:00:00
 
-#SBATCH --partition=cpu
 #SBATCH --mem-per-cpu=2000
 #SBATCH -N 1  --ntasks-per-node=34
 

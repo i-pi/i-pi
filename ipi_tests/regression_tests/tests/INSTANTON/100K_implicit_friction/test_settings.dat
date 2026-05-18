@@ -4,3 +4,4 @@ flags  -o 'w_b=500,v0=2085,m=1837.36223469,delta=0,eta0=1.5,eps1=-1.0,eps2=0,del
 address localhost
 port 33335
 socket_mode unix
+timeout 60

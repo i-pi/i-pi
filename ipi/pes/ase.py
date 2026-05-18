@@ -7,7 +7,6 @@ from .dummy import Dummy_driver
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
-
 read = None
 
 __DRIVER_NAME__ = "ase"

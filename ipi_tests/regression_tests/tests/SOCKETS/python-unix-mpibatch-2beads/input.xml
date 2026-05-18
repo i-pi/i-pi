@@ -10,7 +10,7 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffsocket name='lammps' mode='shm' batch='true' pbc='false' matching='lock'>
+  <ffsocket name='lammps' mode='unix' mpibatch='true' pbc='false' matching='lock'>
     <address>localhost</address>
   </ffsocket>
   <system>

@@ -15,7 +15,6 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
 
-
 __all__ = ["Beads"]
 
 class Beads:
@@ -128,7 +127,9 @@ class Beads:
                 else None
             ),
         )
+        self._q._timing_label = "Beads q"
         self._p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
+        self._p._timing_label = "Beads p"
 
         # position and momentum of the centroid
         self._qc = depend_array(

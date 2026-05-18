@@ -22,7 +22,6 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
-
 __all__ = ["InputSimulation"]
 
 
@@ -250,11 +249,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             _obj,
         ) in enumerate(_fflist + simul.syslist):
             if self.extra[_ii] == 0:
-                if isinstance(_obj, eforcefields.FFCavPhSocket):
-                    _iobj = iforcefields.InputFFCavPhSocket()
-                    _iobj.store(_obj)
-                    self.extra[_ii] = ("ffcavphsocket", _iobj)
-                elif isinstance(_obj, eforcefields.FFSocket):
+                if type(_obj) is eforcefields.FFSocket:
                     _iobj = iforcefields.InputFFSocket()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsocket", _iobj)
@@ -294,6 +289,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFRotations()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffrotations", _iobj)
+                elif isinstance(_obj, eforcefields.FFCavPhSocket):
+                    _iobj = iforcefields.InputFFCavPhSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcavphsocket", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -328,14 +327,13 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
         # just one simulation object
         verbosity.level = self.verbosity.fetch()
 
+        sys_entries = []
         syslist = []
         fflist = []
-        system_inputs = []
-        forcefield_inputs = []
-
+        batched_shm_forcefields = set()
         for k, v in self.extra:
             if k in ["system", "system_template"]:
-                system_inputs.append((k, v))
+                sys_entries.append((k, v))
             elif k in [
                 "ffsocket",
                 "ffdirect",
@@ -349,28 +347,25 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffrotations",
                 "ffcavphsocket",
             ]:
-                forcefield_inputs.append((k, v))
+                new_ff = v.fetch()
+                if k in ["ffsocket", "ffcavphsocket"]:
+                    # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
+                    new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
+                    if (
+                        k == "ffsocket"
+                        and new_ff.socket.mode == "shm"
+                        and getattr(new_ff, "mpibatch", False)
+                    ):
+                        batched_shm_forcefields.add(new_ff.name)
+                fflist.append(new_ff)
 
-        batched_shm_forcefields = set()
-        for k, v in forcefield_inputs:
-            new_ff = v.fetch()
-            if k in ["ffsocket", "ffcavphsocket"]:
-                # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
-                new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
-            if (
-                isinstance(new_ff, eforcefields.FFSocket)
-                and new_ff.socket.mode == "shm"
-                and new_ff.mpibatch
-            ):
-                # Used later to decide which systems should build Beads.q on SHM.
-                batched_shm_forcefields.add(new_ff.name)
-            fflist.append(new_ff)
-
-        for k, v in system_inputs:
+        for k, v in sys_entries:
             if k == "system":
                 syslist.append(v.fetch(batched_shm_forcefields=batched_shm_forcefields))
             elif k == "system_template":
-                syslist += v.fetch(batched_shm_forcefields=batched_shm_forcefields)
+                syslist += v.fetch(
+                    batched_shm_forcefields=batched_shm_forcefields
+                )
 
         # this creates a simulation object which gathers all the little bits
         import ipi.engine.simulation as esimulation  # import here as otherwise this is the mother of all circular imports...

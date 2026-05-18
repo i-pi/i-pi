@@ -1,5 +1,4 @@
-"""Functions used to read input files in JSON format.
-"""
+"""Functions used to read input files in JSON format."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers

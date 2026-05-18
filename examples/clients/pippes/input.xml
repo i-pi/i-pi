@@ -1,0 +1,39 @@
+<simulation verbosity="low">
+    <output prefix="simulation">
+    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, kinetic_md, kinetic_cv, kinetic_cv(O), kinetic_cv(H)] </properties>
+<trajectory filename='pos' stride='10' format='xyz' cell_units='angstrom'> positions </trajectory>
+<trajectory filename='for' stride='10' format='xyz' cell_units='angstrom'> forces </trajectory>
+    <trajectory filename="xc" format="xyz" stride="10"> x_centroid{angstrom} </trajectory>
+    <trajectory filename="vc" format="xyz" stride="10"> v_centroid </trajectory>
+    <checkpoint stride="2000" filename="restart" overwrite="true"/>
+    </output>
+    <total_steps> 2000 </total_steps>
+    <prng><seed> 9815 </seed></prng>
+    <ffsocket mode="unix" name="driver">
+        <address> driver </address>
+        <port> 31415 </port>
+        <latency> 0.001 </latency>
+        <timeout> 4000 </timeout>
+    </ffsocket>
+           <system>
+             <initialize nbeads="1">
+               <file mode="xyz" units='angstrom'> csmin.opt </file>
+               <cell mode="abc"> [ 10000.0, 10000.0, 10000.0 ] </cell>
+               <velocities mode="thermal" units="kelvin"> 100 </velocities>
+             </initialize>
+             <forces><force forcefield="driver"/></forces>
+            <ensemble>
+               <temperature units="kelvin">100</temperature>
+            </ensemble>
+            <motion mode="dynamics">
+                <fixcom>True</fixcom>
+              <dynamics mode="nvt">
+                <timestep units="femtosecond">0.5</timestep>
+        <thermostat mode='pile_g'>
+          <tau units='femtosecond'> 100 </tau>
+          <pile_lambda> 0.5 </pile_lambda>
+        </thermostat>
+              </dynamics>
+            </motion>
+            </system>
+</simulation>

@@ -271,8 +271,7 @@ def get_identification_info():
 def banner():
     """Prints out a banner."""
 
-    print(
-        rf"""
+    print(rf"""
  ____       ____       ____       ____
 /    \     /    \     /    \     /    \
 |  #################################  |
@@ -288,8 +287,7 @@ def banner():
 |  #################################  |
 \____/     \____/     \____/     \____/
 
-    """
-    )
+    """)
 
     info_string = get_identification_info()
     print(info_string)

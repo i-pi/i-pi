@@ -17,7 +17,6 @@ import ipi.engine.thermostats as ethermostats
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 
-
 __all__ = ["InputThermo"]
 
 

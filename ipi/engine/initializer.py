@@ -23,7 +23,6 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.messages import verbosity, warning, info
 
-
 __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
 
 
@@ -258,9 +257,9 @@ def set_vector(iif, dq, rq):
        rq: The vector to initialize from.
     """
 
-    (nbeads, natoms) = rq.shape
+    nbeads, natoms = rq.shape
     natoms //= 3
-    (dbeads, datoms) = dq.shape
+    dbeads, datoms = dq.shape
     datoms //= 3
 
     # Check that indices make sense

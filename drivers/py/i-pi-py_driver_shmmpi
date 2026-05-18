@@ -30,9 +30,10 @@ from multiprocessing import resource_tracker, shared_memory
 description = """
 Minimal MPI Python driver for i-PI batch mode.
 
-Implements the socket protocol expected by FFBatch/ForceBatchBead: rank 0
-handles control messages, reads/writes shared-memory buffers when --shm is
-enabled, and scatters bead positions across MPI ranks for evaluation.
+Rank 0 handles the socket control protocol. In plain unix/inet mode it
+receives one batched position payload and distributes work across MPI ranks.
+In SHM mode it can either use Scatter/Gather or, with ``--shm-local-slices``,
+let one rank per bead read and write its own shared-memory slice directly.
 """
 def recv_data(sock, data):
     """Fetches binary data from i-PI socket."""
@@ -98,13 +99,14 @@ def run_shmdriver(
     f_debug=False,
     sockets_prefix="/tmp/ipi_",
     shm=True,
+    shm_local_slices=False,
 ):
-    """Batch socket client for i-PI with SHM data exchange.
+    """Batch socket client for i-PI with optional SHM data exchange.
 
-    Rank 0 handles the socket protocol and SHM buffer mapping, broadcasts
-    cell/nbead metadata to all ranks, scatters bead positions, and gathers
-    forces/energies/virials before writing results back to SHM and signaling
-    readiness to i-PI.
+    Rank 0 handles the socket protocol. In plain unix/inet mode it receives
+    one batched request and distributes work across MPI ranks. In SHM mode it
+    maps the server-owned buffers and either uses Scatter/Gather or direct
+    per-rank bead slices before signaling readiness to i-PI.
     """
 
     comm = MPI.COMM_WORLD
@@ -145,6 +147,19 @@ def run_shmdriver(
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
 
+    cell_shm = None
+    icell_shm = None
+    pot_shm = None
+    pos_shm = None
+    f_shm = None
+    vir_shm = None
+    cell_snp = None
+    icell_snp = None
+    pot_snp = None
+    pos_snp = None
+    f_snp = None
+    vir_snp = None
+
     while True:
         timers.set_step(request_count)
         if rank == 0:
@@ -173,7 +188,8 @@ def run_shmdriver(
             if rank == 0:
                 rid = recv_data(sock, np.int32())
                 initlen = recv_data(sock, np.int32())
-                initstr = recv_data(sock, np.chararray(initlen))
+                initstr = recv_data(sock, np.zeros(initlen, np.dtype("S1")))
+                init_payload = None
                 if shm:
                     # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
                     nat = recv_data(sock, np.int32())
@@ -190,6 +206,43 @@ def run_shmdriver(
                     print("Driver initing SHM with buffer names:")
                     print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
 
+                    init_payload = (
+                        int(nat),
+                        int(nbeads),
+                        pos_bufname,
+                        h_bufname,
+                        ih_bufname,
+                        pot_bufname,
+                        f_bufname,
+                        vir_bufname,
+                    )
+                
+                if f_verbose:
+                    print(f"Rank {rank} initing with rid, initstr: {rid}, {initstr}")
+                f_init = True
+            else:
+                init_payload = None
+
+            if shm:
+                init_payload = comm.bcast(init_payload, root=0)
+                (
+                    nat,
+                    nbeads,
+                    pos_bufname,
+                    h_bufname,
+                    ih_bufname,
+                    pot_bufname,
+                    f_bufname,
+                    vir_bufname,
+                ) = init_payload
+
+                if shm_local_slices and size != int(nbeads):
+                    raise RuntimeError(
+                        "SHM local-slices mode requires one MPI rank per bead "
+                        f"(got size={size}, nbeads={nbeads})."
+                    )
+
+                if rank == 0 or shm_local_slices:
                     cell_shm = attach_shared_memory(h_bufname)
                     icell_shm = attach_shared_memory(ih_bufname)
                     pot_shm = attach_shared_memory(pot_bufname)
@@ -204,10 +257,6 @@ def run_shmdriver(
                     pos_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=pos_shm.buf)
                     f_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=f_shm.buf)
                     vir_snp = np.ndarray((nbeads, 3,3), dtype=np.float64, buffer=vir_shm.buf)
-                
-                if f_verbose:
-                    print(f"Rank {rank} initing with rid, initstr: {rid}, {initstr}")
-                f_init = True
             f_init = comm.bcast(f_init, root=0)
 
         elif header == Message("POSDATA"):
@@ -235,82 +284,105 @@ def run_shmdriver(
                 
                 timers.stop("Read Posdata")
             else:
-                nbeads = None
-                nat = None
+                if not (shm and shm_local_slices):
+                    nbeads = None
+                    nat = None
 
-            timers.start("MPI Bcast")
+            if shm and shm_local_slices:
+                pos_local = pos_snp[rank].reshape((nat, 3))
+                cell = cell_snp
+                icell = icell_snp
 
-            # fist, broadcast nat, nbeads, and cell data to other ranks
-            if rank == 0:
-                    buf = np.concatenate([
-                        np.atleast_1d(np.int32(nbeads)),
-                        np.atleast_1d(np.int32(nat)),
-                        cell.ravel(),
-                        icell.ravel(),
-                    ])
-            else:
-                buf = np.empty(20, dtype=np.float64)
-            
-            comm.Bcast([buf, MPI.DOUBLE], root=0)
+                timers.start("Run Driver")
+                results = driver(cell, pos_local)
+                timers.stop("Run Driver")
 
-            # unpack after broadcast
-            nbeads = np.int32(buf[0])
-            nat = np.int32(buf[1])
-            cell = buf[2:11].reshape(3,3)
-            icell = buf[11:].reshape(3,3)
-            
-            timers.stop("MPI Bcast")
-            
-            if rank == 0:
-                # pos is shape (nbeads, nat, 3)
-                sendbuf = pos
-            else:
-                sendbuf = None
+                pot_snp[rank] = results[0]
+                f_snp[rank, :] = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
+                vir_snp[rank, :, :] = np.asarray(results[2], dtype=np.float64).reshape(3, 3)
 
-            # Allocate local slice on each worker
-            recvbuf = np.empty((nat, 3), dtype=np.float64)
+                timers.start("MPI Gather Results")
+                comm.Barrier()
+                timers.stop("MPI Gather Results")
 
-            timers.start("MPI Scatter Pos")
-            comm.Scatter(sendbuf, recvbuf, root=0)
-            pos_local = recvbuf
-            timers.stop("MPI Scatter Pos")
-
-            timers.start("Run Driver(+)")
-            results = driver(cell, pos_local)
-            
-            timers.stop("Run Driver(+)")
-
-            local_pot = np.asarray([results[0]], dtype=np.float64)
-            local_force = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
-            local_vir = np.asarray(results[2], dtype=np.float64).reshape(9)
-
-            if rank == 0:
-                if shm:
-                    # Gather directly into the SHM-backed result arrays so
-                    # GETFORCE only needs to notify i-PI that results are ready.
+                if rank == 0:
                     pot = pot_snp
-                    force = f_snp.reshape((nbeads, nat * 3))
-                    vir = vir_snp.reshape((nbeads, 9))
-                else:
-                    pot = np.empty(size, dtype=np.float64)
-                    force = np.empty((size, nat * 3), dtype=np.float64)
-                    vir = np.empty((size, 9), dtype=np.float64)
+                    force = f_snp
+                    vir = vir_snp
             else:
-                pot = None
-                force = None
-                vir = None
+                timers.start("MPI Bcast")
 
-            timers.start("MPI Gather Results")
-            comm.Gather([local_pot, MPI.DOUBLE], [pot, MPI.DOUBLE], root=0)
-            comm.Gather([local_force, MPI.DOUBLE], [force, MPI.DOUBLE], root=0)
-            comm.Gather([local_vir, MPI.DOUBLE], [vir, MPI.DOUBLE], root=0)
-            extras = comm.gather(results[3], root=0)
-            timers.stop("MPI Gather Results")
+                # fist, broadcast nat, nbeads, and cell data to other ranks
+                if rank == 0:
+                        buf = np.concatenate([
+                            np.atleast_1d(np.int32(nbeads)),
+                            np.atleast_1d(np.int32(nat)),
+                            cell.ravel(),
+                            icell.ravel(),
+                        ])
+                else:
+                    buf = np.empty(20, dtype=np.float64)
+                
+                comm.Bcast([buf, MPI.DOUBLE], root=0)
 
-            if rank == 0:
-                pot = np.asarray(pot, dtype=np.float64)
-                force = np.asarray(force, dtype=np.float64).reshape((nbeads, nat * 3))
-                vir = np.asarray(vir, dtype=np.float64).reshape((nbeads, 3, 3))
+                # unpack after broadcast
+                nbeads = np.int32(buf[0])
+                nat = np.int32(buf[1])
+                cell = buf[2:11].reshape(3,3)
+                icell = buf[11:].reshape(3,3)
+                
+                timers.stop("MPI Bcast")
+                
+                if rank == 0:
+                    # pos is shape (nbeads, nat, 3)
+                    sendbuf = pos
+                else:
+                    sendbuf = None
+
+                # Allocate local slice on each worker
+                recvbuf = np.empty((nat, 3), dtype=np.float64)
+
+                timers.start("MPI Scatter Pos")
+                comm.Scatter(sendbuf, recvbuf, root=0)
+                pos_local = recvbuf
+                timers.stop("MPI Scatter Pos")
+
+                timers.start("Run Driver")
+                results = driver(cell, pos_local)
+                
+                timers.stop("Run Driver")
+
+                local_pot = np.asarray([results[0]], dtype=np.float64)
+                local_force = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
+                local_vir = np.asarray(results[2], dtype=np.float64).reshape(9)
+
+                if rank == 0:
+                    if shm:
+                        # Gather directly into the SHM-backed result arrays so
+                        # GETFORCE only needs to notify i-PI that results are ready.
+                        pot = pot_snp
+                        force = f_snp.reshape((nbeads, nat * 3))
+                        vir = vir_snp.reshape((nbeads, 9))
+                    else:
+                        pot = np.empty(size, dtype=np.float64)
+                        force = np.empty((size, nat * 3), dtype=np.float64)
+                        vir = np.empty((size, 9), dtype=np.float64)
+                else:
+                    pot = None
+                    force = None
+                    vir = None
+
+                timers.start("MPI Gather Results")
+                comm.Gather([local_pot, MPI.DOUBLE], [pot, MPI.DOUBLE], root=0)
+                comm.Gather([local_force, MPI.DOUBLE], [force, MPI.DOUBLE], root=0)
+                comm.Gather([local_vir, MPI.DOUBLE], [vir, MPI.DOUBLE], root=0)
+                extras = comm.gather(results[3], root=0)
+                timers.stop("MPI Gather Results")
+
+                if rank == 0:
+                    pot = np.asarray(pot, dtype=np.float64)
+                    force = np.asarray(force, dtype=np.float64).reshape((nbeads, nat * 3))
+                    vir = np.asarray(vir, dtype=np.float64).reshape((nbeads, 3, 3))
 
             f_data = True
 
@@ -346,7 +418,7 @@ def run_shmdriver(
         elif header == Message("EXIT"):
             if rank == 0:
                 print("Received exit message from i-PI. Bye bye!")
-                if shm:
+                if shm and cell_shm is not None:
                     cell_shm.close()
                     icell_shm.close()
                     pot_shm.close()
@@ -354,6 +426,13 @@ def run_shmdriver(
                     f_shm.close()
                     vir_shm.close()
                 timers.summary("driver_timing_breakdown")
+            elif shm and shm_local_slices and cell_shm is not None:
+                cell_shm.close()
+                icell_shm.close()
+                pot_shm.close()
+                pos_shm.close()
+                f_shm.close()
+                vir_shm.close()
             return
 
 if __name__ == "__main__":
@@ -379,7 +458,13 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Use shared memory communication",
-    )   
+    )
+    parser.add_argument(
+        "--shm-local-slices",
+        action="store_true",
+        default=False,
+        help="In SHM batch mode on a single node, let each MPI rank read/write its own bead slices directly from shared memory instead of using Scatter/Gather.",
+    )
     parser.add_argument(
         "-a",
         "--address",
@@ -452,4 +537,5 @@ if __name__ == "__main__":
         f_debug=args.debug,
         sockets_prefix=args.sockets_prefix,
         shm=args.shm,
+        shm_local_slices=args.shm_local_slices,
     )
