@@ -17,6 +17,7 @@ from ipi.engine.atoms import Atoms
 
 __all__ = ["Beads"]
 
+
 class Beads:
     """Storage for the beads positions and velocities.
 
@@ -114,7 +115,9 @@ class Beads:
         # positions and momenta. bead representation, base storage used everywhere
         self._q = depend_array(
             name="q",
-            value=None if self._shm_q_enabled else np.zeros((nbeads, 3 * natoms), float),
+            value=(
+                None if self._shm_q_enabled else np.zeros((nbeads, 3 * natoms), float)
+            ),
             storage="shm" if self._shm_q_enabled else None,
             storage_opts=(
                 {

@@ -82,7 +82,14 @@ class _DependNodeStats:
 
 
 class _DependEdgeStats:
-    __slots__ = ("total_ns", "count", "max_ns", "total_after_ns", "count_after", "max_after_ns")
+    __slots__ = (
+        "total_ns",
+        "count",
+        "max_ns",
+        "total_after_ns",
+        "count_after",
+        "max_after_ns",
+    )
 
     def __init__(self):
         self.total_ns = 0
@@ -91,6 +98,7 @@ class _DependEdgeStats:
         self.total_after_ns = 0
         self.count_after = 0
         self.max_after_ns = 0
+
 
 class TimingManager:
     """Collects elapsed times and writes a human-readable + tabular summary.
@@ -363,7 +371,9 @@ class TimingManager:
             "row_fmt": row_fmt,
         }
 
-    def _summary_header_lines(self, title=None, avg_header="Avg(ms/MDstep)", max_header="Max(ms/MDstep)"):
+    def _summary_header_lines(
+        self, title=None, avg_header="Avg(ms/MDstep)", max_header="Max(ms/MDstep)"
+    ):
         layout = self._summary_layout()
         lines = []
         if title is None:
@@ -463,33 +473,47 @@ class TimingManager:
             incoming.add(child_name)
             edge_children[parent_name].append((child_name, edge))
         for parent_name in edge_children:
-            edge_children[parent_name].sort(key=lambda item: item[1].total_ns, reverse=True)
+            edge_children[parent_name].sort(
+                key=lambda item: item[1].total_ns, reverse=True
+            )
 
         roots = [name for name in self._timer_nodes.keys() if name not in incoming]
         roots.sort(key=lambda name: self._timer_nodes[name].total_ns, reverse=True)
         global_total = sum(self.get_total(name) for name in roots)
         if global_total <= 0.0:
-            global_total = sum(self.get_total(name) for name in self._timer_nodes.keys())
+            global_total = sum(
+                self.get_total(name) for name in self._timer_nodes.keys()
+            )
 
         # Helper to register a row
-        def record_row(name, avg_skip, avg_all, max_skip, max_all,
-                       count, total, indent_level, parent_total):
+        def record_row(
+            name,
+            avg_skip,
+            avg_all,
+            max_skip,
+            max_all,
+            count,
+            total,
+            indent_level,
+            parent_total,
+        ):
             total_pct = (total / global_total * 100) if global_total > 0 else 0.0
             parent_pct = (total / parent_total * 100) if parent_total > 0 else 0.0
 
-            rows.append({
-                "Name": name,
-                "Indent": indent_level,
-                "Avg(ms/MDstep)": avg_skip,
-                "Total%": total_pct,
-                "Parent%": parent_pct,
-                "Avg_all(ms/MDstep)": avg_all,
-                "Max(ms/MDstep)": max_skip,
-                "Max_all(ms/MDstep)": max_all,
-                "Count": count,
-                "Total(ms)": total
-            })
-
+            rows.append(
+                {
+                    "Name": name,
+                    "Indent": indent_level,
+                    "Avg(ms/MDstep)": avg_skip,
+                    "Total%": total_pct,
+                    "Parent%": parent_pct,
+                    "Avg_all(ms/MDstep)": avg_all,
+                    "Max(ms/MDstep)": max_skip,
+                    "Max_all(ms/MDstep)": max_all,
+                    "Count": count,
+                    "Total(ms)": total,
+                }
+            )
 
         # ---------------- Print identical header ----------------
         for line in self._summary_header_lines():
@@ -497,8 +521,14 @@ class TimingManager:
         visited = set()
 
         # Local helper for printing line AND recording DF row
-        def print_line(name, skip_first, indent_level, parent_name=None,
-                       ancestor_has_more=None, is_last=None):
+        def print_line(
+            name,
+            skip_first,
+            indent_level,
+            parent_name=None,
+            ancestor_has_more=None,
+            is_last=None,
+        ):
             if ancestor_has_more is None:
                 ancestor_has_more = []
             avg_all = self.get_average(name)
@@ -507,8 +537,10 @@ class TimingManager:
             max_skip = self.get_max(name, skip_first)
             total = self.get_total(name)
             count = self.get_count(name)
-            #for some reason indented number print doesnt work yet
-            tree_prefix, indent_width = self._build_tree_prefix(ancestor_has_more, is_last)
+            # for some reason indented number print doesnt work yet
+            tree_prefix, indent_width = self._build_tree_prefix(
+                ancestor_has_more, is_last
+            )
             indent_width = len(tree_prefix)
             rendered_name = f"{tree_prefix}{self._display_name(name)}"
             print(
@@ -524,9 +556,17 @@ class TimingManager:
             )
 
             parent_total = self.get_total(parent_name) if parent_name else total
-            record_row(name, avg_skip, avg_all, max_skip, max_all, count,
-                       total, indent_level, parent_total)
-
+            record_row(
+                name,
+                avg_skip,
+                avg_all,
+                max_skip,
+                max_all,
+                count,
+                total,
+                indent_level,
+                parent_total,
+            )
 
         def print_children(parent_name, indent_level, ancestor_has_more):
             parent_node = self._timer_nodes[parent_name]
@@ -554,7 +594,9 @@ class TimingManager:
             if children:
                 steps_after = max(self.steps_seen - skip_first, 0)
                 remainder = (
-                    (parent_node.self_after_ns * 1.0e-6) / steps_after if steps_after > 0 else 0.0
+                    (parent_node.self_after_ns * 1.0e-6) / steps_after
+                    if steps_after > 0
+                    else 0.0
                 )
                 parent_avg = self.get_average(parent_name, skip_first)
                 if parent_avg > 0:
@@ -599,7 +641,7 @@ class TimingManager:
 
         # Write dataframe
         df = pd.DataFrame(rows)
-        df.to_csv(f"{filename}.dat", sep=";", index=False, float_format='%.4f')
+        df.to_csv(f"{filename}.dat", sep=";", index=False, float_format="%.4f")
 
         # Print to console what user would normally see
         print(log_buffer.getvalue(), end="")
@@ -615,13 +657,17 @@ class TimingManager:
         roots = set(self._depend_nodes.keys())
         for _, child_id in self._depend_edges.keys():
             roots.discard(child_id)
-        roots = sorted(roots, key=lambda nid: self._depend_nodes[nid].total_ns, reverse=True)
+        roots = sorted(
+            roots, key=lambda nid: self._depend_nodes[nid].total_ns, reverse=True
+        )
 
         edge_children = defaultdict(list)
         for (parent_id, child_id), edge in self._depend_edges.items():
             edge_children[parent_id].append((child_id, edge))
         for parent_id in edge_children:
-            edge_children[parent_id].sort(key=lambda item: item[1].total_ns, reverse=True)
+            edge_children[parent_id].sort(
+                key=lambda item: item[1].total_ns, reverse=True
+            )
 
         rows = []
         lines = self._summary_header_lines(
@@ -630,11 +676,15 @@ class TimingManager:
             max_header="Max(ms/call)",
         )
 
-        global_total_ms = sum(node.total_ns for node in self._depend_nodes.values()) * 1.0e-6
+        global_total_ms = (
+            sum(node.total_ns for node in self._depend_nodes.values()) * 1.0e-6
+        )
 
         visited = set()
 
-        def visit(node_id, parent_id=None, indent=0, ancestor_has_more=None, is_last=None):
+        def visit(
+            node_id, parent_id=None, indent=0, ancestor_has_more=None, is_last=None
+        ):
             if ancestor_has_more is None:
                 ancestor_has_more = []
             node = self._depend_nodes[node_id]
@@ -644,7 +694,9 @@ class TimingManager:
             avg_call_ms = total_ms / node.count if node.count > 0 else 0.0
             max_after_ms = node.max_ns * 1.0e-6
 
-            tree_prefix, indent_width = self._build_tree_prefix(ancestor_has_more, is_last)
+            tree_prefix, indent_width = self._build_tree_prefix(
+                ancestor_has_more, is_last
+            )
             label = f"{tree_prefix}{node.name}"
             lines.append(
                 self._format_summary_row(
@@ -662,8 +714,12 @@ class TimingManager:
                 if parent_id is not None
                 else total_ms
             )
-            total_pct = (total_ms / global_total_ms * 100.0) if global_total_ms > 0 else 0.0
-            parent_pct = (total_ms / parent_total_ms * 100.0) if parent_total_ms > 0 else 0.0
+            total_pct = (
+                (total_ms / global_total_ms * 100.0) if global_total_ms > 0 else 0.0
+            )
+            parent_pct = (
+                (total_ms / parent_total_ms * 100.0) if parent_total_ms > 0 else 0.0
+            )
             rows.append(
                 {
                     "Name": node.name,
@@ -682,7 +738,9 @@ class TimingManager:
             visited.add(node_id)
             children = edge_children.get(node_id, [])
             child_ancestor_has_more = (
-                ancestor_has_more + [not is_last] if is_last is not None else ancestor_has_more
+                ancestor_has_more + [not is_last]
+                if is_last is not None
+                else ancestor_has_more
             )
             child_total_avg = 0.0
             for idx, (child_id, edge) in enumerate(children):
@@ -705,7 +763,8 @@ class TimingManager:
                 else:
                     percent = "Remainder: 0.0%"
                 remainder_indent = "".join(
-                    "│   " if has_more else "    " for has_more in child_ancestor_has_more
+                    "│   " if has_more else "    "
+                    for has_more in child_ancestor_has_more
                 )
                 lines.append(
                     self._format_summary_row(

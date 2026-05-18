@@ -571,8 +571,7 @@ class ForceComponent:
         self._forces = []
         self.beads = beads
         self.batch_mode = (
-            isinstance(self.ff, FFSocket)
-            and getattr(self.ff, "mpibatch", False)
+            isinstance(self.ff, FFSocket) and getattr(self.ff, "mpibatch", False)
         ) or getattr(self.ff, "batch_request", False)
 
         if self.batch_mode:
@@ -913,11 +912,7 @@ class MTSForces:
             ):
                 f = dstrip(mforces[index].f)
                 timers.start("B2B1")
-                fk += (
-                    weight
-                    * mts_weights[level]
-                    * mrpc[index].b2tob1(f)
-                )
+                fk += weight * mts_weights[level] * mrpc[index].b2tob1(f)
                 timers.stop("B2B1")
         timers.stop("Get Forces MTS")
         return fk

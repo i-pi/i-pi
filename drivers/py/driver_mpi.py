@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-'''
+"""
 import builtins, traceback
 
 _real_import = builtins.__import__
@@ -11,8 +11,7 @@ def tracing_import(name, *args, **kwargs):
     return _real_import(name, *args, **kwargs)
 
 builtins.__import__ = tracing_import
-'''
-
+"""
 
 import socket
 import argparse
@@ -35,6 +34,8 @@ receives one batched position payload and distributes work across MPI ranks.
 In SHM mode it can either use Scatter/Gather or, with ``--shm-local-slices``,
 let one rank per bead read and write its own shared-memory slice directly.
 """
+
+
 def recv_data(sock, data):
     """Fetches binary data from i-PI socket."""
     blen = data.itemsize * data.size
@@ -56,12 +57,14 @@ def recv_data(sock, data):
     else:
         return np.frombuffer(buf[0:blen], data.dtype).reshape(data.shape)
 
+
 def send_data(sock, data):
     """Sends binary data to i-PI socket."""
     if np.isscalar(data):
         data = np.array([data], data.dtype)
     buf = data.tobytes()
     sock.sendall(buf)
+
 
 def send_datas(sock, *args, extras=None):
     """Send multiple scalars/arrays and an optional extras string in one go."""
@@ -76,7 +79,9 @@ def send_datas(sock, *args, extras=None):
     if extras is not None:
         sock.sendall(extras.encode("utf-8"))
 
+
 HDRLEN = 12  # number of characters of the default message strings
+
 
 def Message(mystr):
     """Returns a header of standard length HDRLEN."""
@@ -89,6 +94,7 @@ def attach_shared_memory(name):
     shm = shared_memory.SharedMemory(name=name)
     resource_tracker.unregister(shm._name, "shared_memory")
     return shm
+
 
 def run_driver(
     unix=False,
@@ -114,7 +120,7 @@ def run_driver(
     size = comm.Get_size()
 
     t_start = time.perf_counter()
-    
+
     def dbg_print(msg):
         if f_debug and rank == 0:
             elapsed = time.perf_counter() - t_start
@@ -182,7 +188,7 @@ def run_driver(
                 else:
                     sock.sendall(Message("READY"))
                     if f_verbose:
-                        print(f"Driver ready")
+                        print("Driver ready")
 
         elif header == Message("INIT"):
             if rank == 0:
@@ -204,7 +210,14 @@ def run_driver(
                     vir_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
 
                     print("Driver initing SHM with buffer names:")
-                    print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
+                    print(
+                        pos_bufname,
+                        h_bufname,
+                        ih_bufname,
+                        pot_bufname,
+                        f_bufname,
+                        vir_bufname,
+                    )
 
                     init_payload = (
                         int(nat),
@@ -216,7 +229,7 @@ def run_driver(
                         f_bufname,
                         vir_bufname,
                     )
-                
+
                 if f_verbose:
                     print(f"Rank {rank} initing with rid, initstr: {rid}, {initstr}")
                 f_init = True
@@ -251,12 +264,20 @@ def run_driver(
                     vir_shm = attach_shared_memory(vir_bufname)
 
                     # allocating numpy arrays in shared memory on the same buffer as in the server
-                    cell_snp = np.ndarray((3,3), dtype=np.float64, buffer=cell_shm.buf)
-                    icell_snp = np.ndarray((3,3), dtype=np.float64, buffer=icell_shm.buf)
+                    cell_snp = np.ndarray((3, 3), dtype=np.float64, buffer=cell_shm.buf)
+                    icell_snp = np.ndarray(
+                        (3, 3), dtype=np.float64, buffer=icell_shm.buf
+                    )
                     pot_snp = np.ndarray((nbeads), dtype=np.float64, buffer=pot_shm.buf)
-                    pos_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=pos_shm.buf)
-                    f_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=f_shm.buf)
-                    vir_snp = np.ndarray((nbeads, 3,3), dtype=np.float64, buffer=vir_shm.buf)
+                    pos_snp = np.ndarray(
+                        (nbeads, nat * 3), dtype=np.float64, buffer=pos_shm.buf
+                    )
+                    f_snp = np.ndarray(
+                        (nbeads, nat * 3), dtype=np.float64, buffer=f_shm.buf
+                    )
+                    vir_snp = np.ndarray(
+                        (nbeads, 3, 3), dtype=np.float64, buffer=vir_shm.buf
+                    )
             f_init = comm.bcast(f_init, root=0)
 
         elif header == Message("POSDATA"):
@@ -278,10 +299,8 @@ def run_driver(
                         )
                     nat = -nat_token
                     nbeads = int(recv_data(sock, np.int32()))
-                    pos = recv_data(
-                        sock, np.zeros((nbeads, nat * 3), dtype=np.float64)
-                    )
-                
+                    pos = recv_data(sock, np.zeros((nbeads, nat * 3), dtype=np.float64))
+
                 timers.stop("Read Posdata")
             else:
                 if not (shm and shm_local_slices):
@@ -298,8 +317,12 @@ def run_driver(
                 timers.stop("Run Driver")
 
                 pot_snp[rank] = results[0]
-                f_snp[rank, :] = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
-                vir_snp[rank, :, :] = np.asarray(results[2], dtype=np.float64).reshape(3, 3)
+                f_snp[rank, :] = np.asarray(results[1], dtype=np.float64).reshape(
+                    nat * 3
+                )
+                vir_snp[rank, :, :] = np.asarray(results[2], dtype=np.float64).reshape(
+                    3, 3
+                )
 
                 comm.Barrier()
 
@@ -312,25 +335,27 @@ def run_driver(
 
                 # fist, broadcast nat, nbeads, and cell data to other ranks
                 if rank == 0:
-                        buf = np.concatenate([
+                    buf = np.concatenate(
+                        [
                             np.atleast_1d(np.int32(nbeads)),
                             np.atleast_1d(np.int32(nat)),
                             cell.ravel(),
                             icell.ravel(),
-                        ])
+                        ]
+                    )
                 else:
                     buf = np.empty(20, dtype=np.float64)
-                
+
                 comm.Bcast([buf, MPI.DOUBLE], root=0)
 
                 # unpack after broadcast
                 nbeads = np.int32(buf[0])
                 nat = np.int32(buf[1])
-                cell = buf[2:11].reshape(3,3)
-                icell = buf[11:].reshape(3,3)
-                
+                cell = buf[2:11].reshape(3, 3)
+                icell = buf[11:].reshape(3, 3)
+
                 timers.stop("MPI Bcast Metadata")
-                
+
                 if rank == 0:
                     # pos is shape (nbeads, nat, 3)
                     sendbuf = pos
@@ -347,7 +372,7 @@ def run_driver(
 
                 timers.start("Run Driver")
                 results = driver(cell, pos_local)
-                
+
                 timers.stop("Run Driver")
 
                 local_pot = np.asarray([results[0]], dtype=np.float64)
@@ -374,12 +399,13 @@ def run_driver(
                 comm.Gather([local_pot, MPI.DOUBLE], [pot, MPI.DOUBLE], root=0)
                 comm.Gather([local_force, MPI.DOUBLE], [force, MPI.DOUBLE], root=0)
                 comm.Gather([local_vir, MPI.DOUBLE], [vir, MPI.DOUBLE], root=0)
-                extras = comm.gather(results[3], root=0)
                 timers.stop("MPI Gather Results")
 
                 if rank == 0:
                     pot = np.asarray(pot, dtype=np.float64)
-                    force = np.asarray(force, dtype=np.float64).reshape((nbeads, nat * 3))
+                    force = np.asarray(force, dtype=np.float64).reshape(
+                        (nbeads, nat * 3)
+                    )
                     vir = np.asarray(vir, dtype=np.float64).reshape((nbeads, 3, 3))
 
             f_data = True
@@ -387,7 +413,7 @@ def run_driver(
         elif header == Message("GETFORCE"):
             if rank == 0:
                 # we update SHM first, than send message via socket
-                '''
+                """
                 if not isinstance(force, np.ndarray) or force.dtype != np.float64:
                     raise ValueError("Forces must be float64 numpy array")
                 if not isinstance(vir, np.ndarray) or vir.dtype != np.float64:
@@ -396,7 +422,7 @@ def run_driver(
                     raise ValueError("Force array shape mismatch")
                 if len(vir.flatten()) != nbeads * 9:
                     raise ValueError("Virial shape mismatch")
-                '''
+                """
                 if shm:
                     timers.start("Notify Force Ready")
                     sock.sendall(Message("FORCEREADY"))
@@ -410,9 +436,9 @@ def run_driver(
                     send_data(sock, vir)
                     send_data(sock, np.int32(0))
                     timers.stop("Write Force Results")
-                
+
                 f_data = False
-        
+
         elif header == Message("EXIT"):
             if rank == 0:
                 print("Received exit message from i-PI. Bye bye!")
@@ -433,6 +459,7 @@ def run_driver(
                 vir_shm.close()
             return
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
 
@@ -440,8 +467,10 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
 
     parser.add_argument(
-        "--debug", action="store_true", default=False,
-        help="Detailed timing output for debugging MPI and socket performance."
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Detailed timing output for debugging MPI and socket performance.",
     )
     parser.add_argument(
         "-u",
