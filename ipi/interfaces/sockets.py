@@ -22,7 +22,6 @@ from multiprocessing import shared_memory
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
-from ipi.utils.timing_manager import timers
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -502,7 +501,9 @@ class Driver(DriverSocket):
                             MESSAGE["posdata"]  # header
                             + h_ih[0].tobytes()  # cell
                             + h_ih[1].tobytes()  # inverse cell
-                            + np.int32(len(pos) // 3).tobytes()  # length of position array
+                            + np.int32(
+                                len(pos) // 3
+                            ).tobytes()  # length of position array
                             + pos.tobytes()  # positions
                         )
                 self.status = Status.Up | Status.Busy

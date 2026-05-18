@@ -220,8 +220,7 @@ class InputSystem(Input):
         shm_batch = any(
             # Only full-bead batched SHM forcefields need canonical Beads.q to
             # be allocated in SHM from the start.
-            fc.ffield in batched_shm_forcefields
-            and fc.nbeads in (0, beads_nbeads)
+            fc.ffield in batched_shm_forcefields and fc.nbeads in (0, beads_nbeads)
             for fc in fcomponents
         )
 

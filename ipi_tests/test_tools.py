@@ -392,7 +392,9 @@ class Runner(object):
                     raise ValueError("Driver mode has to be either unix, shm or inet")
 
                 if driver_info["driver_command"][driver_idx] is not None:
-                    clientcall = driver_info["driver_command"][driver_idx] + " " + clientcall
+                    clientcall = (
+                        driver_info["driver_command"][driver_idx] + " " + clientcall
+                    )
 
                 cmd = clientcall
 

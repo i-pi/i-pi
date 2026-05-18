@@ -19,6 +19,7 @@ from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
 from ipi.utils.timing_manager import timers
 
+
 class Dynamics(Motion):
     """self (path integral) molecular dynamics class.
 
@@ -437,7 +438,7 @@ class NVEIntegrator(DummyIntegrator):
             timers.start("F")
             f = dstrip(self.forces.mts_forces[level].f)
             timers.stop("F")
-            
+
             timers.start("Verlet")
             self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
@@ -688,6 +689,7 @@ class NPTIntegrator(NVTIntegrator):
         self.barostat.thermostat.step()
         timers.stop("Barostat Thermostat Step")
         # self.pconstraints()
+
 
 class NSTIntegrator(NPTIntegrator):
     """Ensemble object for constant pressure simulations.

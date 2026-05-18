@@ -363,9 +363,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             if k == "system":
                 syslist.append(v.fetch(batched_shm_forcefields=batched_shm_forcefields))
             elif k == "system_template":
-                syslist += v.fetch(
-                    batched_shm_forcefields=batched_shm_forcefields
-                )
+                syslist += v.fetch(batched_shm_forcefields=batched_shm_forcefields)
 
         # this creates a simulation object which gathers all the little bits
         import ipi.engine.simulation as esimulation  # import here as otherwise this is the mother of all circular imports...

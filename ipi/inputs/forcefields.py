@@ -260,7 +260,6 @@ class InputFFSocket(InputForceField):
                 "help": "Specifies whether all beads should be sent to the driver in one batched request.",
             },
         ),
-
         "matching": (
             InputAttribute,
             {
@@ -377,6 +376,7 @@ class InputFFSocket(InputForceField):
             raise ValueError("Negative latency parameter specified.")
         if self.timeout.fetch() < 0.0:
             raise ValueError("Negative timeout parameter specified.")
+
 
 class InputFFDirect(InputForceField):
     fields = {
