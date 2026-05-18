@@ -1,13 +1,29 @@
 """Interface with ASE calculators"""
 
+try:
+    import ase  # noqa: F401
+
+except Exception:
+    msg = (
+        "You are trying to use the ASE client of i-PI, "
+        "but it seems that you have not installed ASE.\n"
+        "Please install ASE via:\n"
+        "    pip install ase\n"
+        "For more information, visit:\n"
+        "    https://gitlab.com/ase/ase"
+    )
+
+    print(msg)
+    raise
+
 import json
 import numpy as np
-from .dummy import Dummy_driver
+from ipi.pes.dummy import Dummy_driver
 
 from ipi.utils.units import unit_to_internal, unit_to_user
-from ipi.utils.messages import warning
 
-read = None
+from ase.io import read
+from ase import Atoms
 
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"
@@ -35,14 +51,6 @@ class ASEDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        global read
-        try:
-            from ase.io import read
-        except ImportError:
-            warning("Could not find or import the ASE module")
-
-        global all_changes
-        from ase.calculators.calculator import all_changes
 
         self.template = template
         self.capabilities = []
@@ -63,18 +71,22 @@ class ASEDriver(Dummy_driver):
         self.template_ase = read(self.template)
         self.ase_calculator = None
 
-    def compute_structure(self, cell, pos):
-        """Get energies, forces, and stresses from the ASE calculator
-        This routine assumes that the client will take positions
-        in angstrom, and return energies in electronvolt, and forces
-        in ev/ang.
-        """
-
+    def convert_units(self, cell: np.ndarray, pos: np.ndarray):
         # ASE calculators assume angstrom and eV units
         pos = unit_to_user("length", "angstrom", pos)
         # ASE expects cell-vectors-as-rows
         cell = unit_to_user("length", "angstrom", cell.T)
         # applies the cell and positions to the template
+        return cell, pos
+
+    def compute_structure(self, cell: np.ndarray, pos: np.ndarray):
+        """Get energies, forces, and stresses from the ASE calculator
+        This routine assumes that the client will take positions
+        in angstrom, and return energies in electronvolt, and forces
+        in ev/ang.
+        """
+        cell, pos = self.convert_units(cell, pos)
+
         structure = self.template_ase.copy()
         structure.positions[:] = pos
         structure.cell[:] = cell
@@ -83,11 +95,15 @@ class ASEDriver(Dummy_driver):
         # Do the actual calculation
         properties = structure.get_properties(self.capabilities)
 
+        return self.post_process(properties, structure)
+
+    def post_process(self, properties, structure: Atoms):
+
         pot = properties["energy"] if "energy" in self.capabilities else 0.0
         force = (
             properties["forces"]
             if "forces" in self.capabilities
-            else np.zeros_like(pos)
+            else np.zeros_like(structure.positions)
         )
         stress = properties["stress"] if "stress" in self.capabilities else np.zeros(9)
         if len(stress) == 6:
@@ -101,7 +117,7 @@ class ASEDriver(Dummy_driver):
                 )
             delta = np.abs(stress - stress.T).sum()
             if delta > 1e-6:
-                warning(
+                raise ValueError(
                     f"The stress tensor should be symmetric, but its antisymmetric part has norm {delta}."
                 )
 

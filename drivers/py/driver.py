@@ -5,20 +5,9 @@ import numpy as np
 from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
 
-
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
 """
-
-HDRLEN = 12  # number of characters of the default message strings
-
-
-def Message(mystr):
-    """Returns a header of standard length HDRLEN."""
-
-    # convert to bytestream since we'll be sending this over a socket
-    return str.ljust(str.upper(mystr), HDRLEN).encode()
-
 
 
 def recv_data(sock, data):
@@ -54,44 +43,14 @@ def send_data(sock, data):
     sock.send(buf)
 
 
-def open_driver_socket(unix, address, port, sockets_prefix):
-    """Opens the control socket to i-PI."""
-
-    if unix:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect(sockets_prefix + address)
-    else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        sock.connect((address, port))
-    return sock
+HDRLEN = 12  # number of characters of the default message strings
 
 
-def validate_force_payload(force, vir, pos):
-    """Checks returned force/virial arrays before sending them back."""
+def Message(mystr):
+    """Returns a header of standard length HDRLEN."""
 
-    if not isinstance(force, np.ndarray) and force.dtype == np.float64:
-        raise ValueError(
-            "driver returned forces with the wrong type: we need a "
-            "numpy.ndarray containing 64-bit floating points values"
-        )
-
-    if not isinstance(vir, np.ndarray) and vir.dtype == np.float64:
-        raise ValueError(
-            "driver returned virial with the wrong type: we need a "
-            "numpy.ndarray containing 64-bit floating points values"
-        )
-
-    if force.size != pos.size:
-        raise ValueError(
-            "driver returned forces with the wrong size: number of "
-            "atoms and dimensions must match positions"
-        )
-
-    if vir.size != 9:
-        raise ValueError(
-            "driver returned a virial tensor which does not have 9 components"
-        )
+    # convert to bytestream since we'll be sending this over a socket
+    return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
 def run_driver(
@@ -104,7 +63,15 @@ def run_driver(
 ):
     """Minimal socket client for i-PI."""
 
-    sock = open_driver_socket(unix, address, port, sockets_prefix)
+    # Opens a socket to i-PI
+    if unix:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(sockets_prefix + address)
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # this reduces latency for the small messages passed by the i-PI protocol
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sock.connect((address, port))
 
     f_init = False
     f_data = False
@@ -118,8 +85,6 @@ def run_driver(
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
-    extras = ""
-
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
         if f_verbose:
@@ -136,11 +101,9 @@ def run_driver(
             # initialization
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
-            initstr = recv_data(sock, np.chararray(initlen))
-
+            initstr = recv_data(sock, np.empty(initlen, dtype="S1"))
             if f_verbose:
-                print(rid, "Initing...")
-
+                print(rid, initstr)
             f_init = True  # we are initialized now
         elif header == Message("POSDATA"):
             # receives structural information
@@ -162,8 +125,32 @@ def run_driver(
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
         elif header == Message("GETFORCE"):
-            validate_force_payload(force, vir, pos)
             sock.sendall(Message("FORCEREADY"))
+
+            # sanity check in the returned values (catches bugs and inconsistencies in the implementation)
+            if not isinstance(force, np.ndarray) and force.dtype == np.float64:
+                raise ValueError(
+                    "driver returned forces with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if not isinstance(vir, np.ndarray) and vir.dtype == np.float64:
+                raise ValueError(
+                    "driver returned virial with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if len(force.flatten()) != len(pos.flatten()):
+                raise ValueError(
+                    "driver returned forces with the wrong size: number of "
+                    "atoms and dimensions must match positions"
+                )
+
+            if len(vir.flatten()) != 9:
+                raise ValueError(
+                    "driver returned a virial tensor which does not have 9 components"
+                )
+
             send_data(sock, np.float64(pot))
             send_data(sock, np.int32(nat))
             send_data(sock, force)
@@ -187,13 +174,6 @@ if __name__ == "__main__":
         default=False,
         help="Use a UNIX domain socket.",
     )
-    parser.add_argument(
-        "-s",
-        "--shm",
-        action="store_true",
-        default=False,
-        help="Use shared memory communication",
-    )   
     parser.add_argument(
         "-a",
         "--address",
@@ -257,17 +237,11 @@ if __name__ == "__main__":
 
     d_f = cls(*driver_args, **driver_kwargs)
 
-    if args.shm:
-        raise NotImplementedError(
-            "Non-batched shm mode is no longer supported by i-pi-py_driver. "
-            "Use i-pi-py_mpidriver with batched shm instead."
-        )
-    else:
-        run_driver(
-            unix=args.unix,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-        )
+    run_driver(
+        unix=args.unix,
+        address=args.address,
+        port=args.port,
+        driver=d_f,
+        f_verbose=args.verbose,
+        sockets_prefix=args.sockets_prefix,
+    )

@@ -116,7 +116,6 @@ class Cell:
 
         return np.dot(self.h, s)
 
-   
     def array_pbc(self, pos):
         """
         Apply minimum image convention to positions.

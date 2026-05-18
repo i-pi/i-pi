@@ -16,7 +16,6 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
-from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 from ipi.utils.timing_manager import timers
 
@@ -77,9 +76,9 @@ class Dynamics(Motion):
             if (thermostat.__class__.__name__ == "ThermoNMGLEG") and (
                 len(fixatoms_dof) > 0
             ):
-                softexit.trigger(
-                    status="bad",
-                    message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE not yet supported. Use a local thermostat. !!",
+                raise ValueError(
+                    "Fixed atoms and global thermostat on the centroid with NMGLE "
+                    "are not supported. Use a local thermostat."
                 )
             self.thermostat = thermostat
 
@@ -524,7 +523,6 @@ class NVEIntegrator(DummyIntegrator):
     def mtsprop(self, index):
         # just calls the two pieces together
         self.mtsprop_ba(index)
-        
         self.mtsprop_ab(index)
 
     def step(self, step=None):
@@ -673,6 +671,7 @@ class NPTIntegrator(NVTIntegrator):
         self.barostat.pstep(level)
         timers.stop("Barostat pstep")
         super(NPTIntegrator, self).pstep(level)
+        # self.pconstraints()
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
@@ -688,7 +687,7 @@ class NPTIntegrator(NVTIntegrator):
         timers.start("Barostat Thermostat Step")
         self.barostat.thermostat.step()
         timers.stop("Barostat Thermostat Step")
-
+        # self.pconstraints()
 
 class NSTIntegrator(NPTIntegrator):
     """Ensemble object for constant pressure simulations.

@@ -90,7 +90,7 @@ def attach_shared_memory(name):
     resource_tracker.unregister(shm._name, "shared_memory")
     return shm
 
-def run_shmdriver(
+def run_driver(
     unix=False,
     address="",
     port=12345,
@@ -301,16 +301,14 @@ def run_shmdriver(
                 f_snp[rank, :] = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
                 vir_snp[rank, :, :] = np.asarray(results[2], dtype=np.float64).reshape(3, 3)
 
-                timers.start("MPI Gather Results")
                 comm.Barrier()
-                timers.stop("MPI Gather Results")
 
                 if rank == 0:
                     pot = pot_snp
                     force = f_snp
                     vir = vir_snp
             else:
-                timers.start("MPI Bcast")
+                timers.start("MPI Bcast Metadata")
 
                 # fist, broadcast nat, nbeads, and cell data to other ranks
                 if rank == 0:
@@ -331,7 +329,7 @@ def run_shmdriver(
                 cell = buf[2:11].reshape(3,3)
                 icell = buf[11:].reshape(3,3)
                 
-                timers.stop("MPI Bcast")
+                timers.stop("MPI Bcast Metadata")
                 
                 if rank == 0:
                     # pos is shape (nbeads, nat, 3)
@@ -528,7 +526,7 @@ if __name__ == "__main__":
 
     d_f = cls(*driver_args, **driver_kwargs)
 
-    run_shmdriver(
+    run_driver(
         unix=True if args.shm else args.unix,
         address=args.address,
         port=args.port,

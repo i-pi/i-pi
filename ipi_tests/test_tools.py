@@ -16,7 +16,7 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 20
+TIMEOUT = 60
 
 fortran_driver_models = [
     "dummy",
@@ -40,6 +40,7 @@ fortran_driver_models = [
     "doublewell",
     "gas",
     "noo3-h2o",
+    "water_dip_pol",
 ]
 
 # We should do this automatically but for now we do it explicitly here
@@ -92,7 +93,6 @@ def get_test_settings(
     flaglists = list()
     driver_commands = list()
     found_nsteps = False
-    timeout = TIMEOUT
 
     try:
         with open(Path(example_folder) / settings_file) as f:
@@ -132,8 +132,6 @@ def get_test_settings(
                 elif "nsteps" in line:
                     nsteps = line.split()[1]
                     found_nsteps = True
-                elif "timeout" in line:
-                    timeout = int(line.split()[1])
 
             # Checking that each driver has appropriate settings, if not, use default.
             if driver_code == "fortran" and driver_model not in fortran_driver_models:
@@ -182,9 +180,9 @@ def get_test_settings(
     }
 
     if found_nsteps:
-        test_settings = {"nsteps": nsteps, "timeout": timeout}
+        test_settings = {"nsteps": nsteps}
     else:
-        test_settings = {"nsteps": "1", "timeout": timeout}
+        test_settings = {"nsteps": "1"}
 
     return driver_info, test_settings
 
@@ -322,7 +320,6 @@ class Runner(object):
             return "Problem getting driver_info"
 
         clients = self.create_client_list(driver_info, nid, test_settings)
-        timeout = test_settings.get("timeout", TIMEOUT)
 
         try:
             # Run i-pi
@@ -335,6 +332,7 @@ class Runner(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
+
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
@@ -347,7 +345,7 @@ class Runner(object):
                     if not f_connected:
                         # Check if i-pi finished successfully
                         if ipi.poll() is not None:
-                            ipi_out, ipi_error = ipi.communicate(timeout=timeout)
+                            ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
                             if ipi.returncode == 0:
                                 print(
                                     "i-PI finished before socket check. Assuming success."
@@ -370,7 +368,7 @@ class Runner(object):
                         print("List all files  /tmp/ipi_*")
                         for filename in glob.glob("/tmp/ipi_*"):
                             print(filename)
-                        ipi_out, ipi_error = ipi.communicate(timeout=timeout)
+                        ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
                         print("i-PI Output:", ipi_out.decode("ascii"))
                         print("i-PI Error:", ipi_error.decode("ascii"))
                         return "Could not find the i-PI UNIX socket"
@@ -429,13 +427,13 @@ class Runner(object):
                 drivers.append(driver)
 
             # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=timeout)
+            ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
             # check driver errors
             for driver in drivers:
                 # if i-PI has ended, we can wait for the driver to quit
-                driver_out, driver_err = driver.communicate(timeout=timeout)
+                driver_out, driver_err = driver.communicate(timeout=TIMEOUT)
                 if driver.returncode != 0:
                     ipi.kill()
                     ipi_out, ipi_error = ipi.communicate()

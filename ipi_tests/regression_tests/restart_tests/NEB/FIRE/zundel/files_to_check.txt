@@ -1,0 +1,20 @@
+        filename                        format      icol,rtol,atol  icol,rtol,atol ...
+--------------------------------------------------------------------------------------
+ref_simulation.neb                      numpy       all,1.e-7,1e-6
+ref_simulation.neb                      numpy       all
+ref_simulation.pos_00.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_01.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_02.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_03.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_04.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_05.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_06.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_07.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_08.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_09.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_10.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_11.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_12.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_13.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_14.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5
+ref_simulation.pos_15.xyz                 xyz       0,2e-6,2e-5  1,2e-6,2e-5  2,2e-6,2e-5

@@ -4,5 +4,4 @@ driver_command bash run_driver.sh
 address localhost
 port 31415
 socket_mode shm
-timeout 60
 flags -o 0.12356216778762334

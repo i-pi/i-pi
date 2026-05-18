@@ -1,6 +1,6 @@
 """An interface for the [SO3LR](https://github.com/general-molecular-simulations/so3lr) calculator"""
 
-from .ase import ASEDriver
+from ._ase import ASEDriver
 from ipi.utils.messages import verbosity, warning
 
 So3lrCalculator = None

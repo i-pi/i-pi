@@ -218,6 +218,9 @@ class Simulation:
 
         self.chk = None
         self.rollback = True
+        self.finished = False
+        self.exit_status = "success"
+        self.exit_message = " @ SIMULATION: Exiting cleanly."
 
     def bind(self, read_only=False):
         """Calls the bind routines for all the objects in the simulation.
@@ -364,10 +367,8 @@ class Simulation:
             # exit requests without screwing the trajectory
 
             steptime = -time.time()
-            timers.start("Softexit Check")
-            if softexit.triggered:
+            if softexit.triggered or self.finished:
                 break
-            timers.stop("Softexit Check")
 
             # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
             timers.start("ChkPoint Save Check")
@@ -380,7 +381,7 @@ class Simulation:
             self.run_step(self.step)
             timers.stop("MD Step")
 
-            if softexit.triggered:
+            if softexit.triggered or self.finished:
                 # Don't write if we are about to exit.
                 break
 
@@ -452,16 +453,28 @@ class Simulation:
             for s in self.syslist:
                 # creates separate threads for the different systems
                 st = self.executor.submit(s.motion.step, step=step)
-                stepthreads.append(st)
+                stepthreads.append((st, s.motion))
 
-            for st in stepthreads:
+            for st, motion in stepthreads:
                 if softexit.triggered:
                     return
                 st.result()
+                if motion.finished:
+                    self.finished = True
+                    self.exit_status = motion.exit_status or "success"
+                    self.exit_message = motion.exit_message
+
+            if self.finished:
+                return
         else:
             for s in self.syslist:
                 s.motion.step(step=step)
                 if softexit.triggered:
+                    return
+                if s.motion.finished:
+                    self.finished = True
+                    self.exit_status = s.motion.exit_status or "success"
+                    self.exit_message = s.motion.exit_message
                     return
 
         # does the "super motion" step
