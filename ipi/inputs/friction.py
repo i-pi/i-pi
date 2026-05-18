@@ -32,6 +32,14 @@ class InputFriction(Input):
                 "help": "...",
             },
         ),
+        "Ap": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=((0, 0),)),
+                "help": "Momentum-plus-auxiliary drift matrix for non-Markovian GLE, Ap = [[0, theta^T], [-theta, A]].",
+            },
+        ),
         "debug_alpha_input": (
             InputArray,
             {
@@ -72,6 +80,7 @@ class InputFriction(Input):
         self.debug_mf_mode.store(friction.debug_mf_mode)
 
         self.Lambda.store(friction.Lambda)
+        self.Ap.store(friction.Ap)
         self.debug_alpha_input.store(friction.debug_alpha_input)
         self.sigma_static.store(friction.sigma_static)
 
@@ -84,6 +93,7 @@ class InputFriction(Input):
             debug_mf_mode=self.debug_mf_mode.fetch(),
             
             Lambda=self.Lambda.fetch(),
+            Ap=self.Ap.fetch(),
             debug_alpha_input=self.debug_alpha_input.fetch(),
             sigma_static=self.sigma_static.fetch(),
 

@@ -30,6 +30,7 @@ full Cartesian system (n_atoms).
 
 import json
 import numpy as np
+from scipy.linalg import expm, cholesky
 
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
@@ -38,7 +39,7 @@ from ipi.engine.beads import Beads
 from ipi.utils.depend import depend_value,  dproperties
 from ipi.utils.messages import info, verbosity, warning
 
-
+# Markovian static
 def _apply_mass_scaled_ou(p, sm, drift, noise_scale, noise):
     """Applies an exact OU step in mass-scaled coordinates."""
 
@@ -48,21 +49,45 @@ def _apply_mass_scaled_ou(p, sm, drift, noise_scale, noise):
     deltah -= np.sum(p_ms * p_ms)
     return p_ms * sm, 0.5 * deltah
 
-
+# Markovian variable
 def _apply_mass_scaled_matrix_ou(s, A, dt, kbt, noise):
-    """Applies an exact matrix OU step in mass-scaled coordinates."""
+    """Applies an exact matrix OU step in mass-scaled coordinates.
+    We diagonalise to independent modes similar to R. J. Maurer et al, PRL, 2017 """
 
     et = 0.5 * float(np.dot(s, s))
-    A = 0.5 * (A + A.T)
-    evals, evecs = np.linalg.eigh(A)
+
+    A = 0.5 * (A + A.T) # Confusing notation. The A matrix here is not the same A matrix defined in GLE case. 
+    evals, evecs = np.linalg.eigh(A) # This is mode diagonalization to treat each mode seperately as independent OU process.
+
     evals = np.clip(evals, 0.0, None)
     c = np.exp(-evals * dt)
     s2 = np.sqrt(1.0 - c * c)
     y = evecs.T @ s
     y = c * y + np.sqrt(kbt) * s2 * noise
     s = evecs @ y
+
     et -= 0.5 * float(np.dot(s, s))
     return s, et
+
+# Non-markovian variable
+def _compute_aux_ou_matrices(A, dt, kbt):
+    """Build exact OU drift/noise matrices for auxiliary variables. i.e builds T and S.
+
+    The auxiliary covariance is canonical with variance kBT in each auxiliary
+    coordinate, so S S^T = kBT * (I - T T^ßT).
+    """
+
+    A = np.asarray(A, dtype=float)
+    T = expm(-A * dt)
+    C = float(kbt) * (np.eye(A.shape[0]) - T @ T.T)
+    C = 0.5 * (C + C.T)
+    try:
+        S = cholesky(C, lower=True, check_finite=False)
+    except Exception:
+        evals, evecs = np.linalg.eigh(C)
+        evals = np.clip(evals, 0.0, None)
+        S = evecs @ (np.sqrt(evals)[:, None] * evecs.T)
+    return T, S
 
 
 class FrictionBath:
@@ -122,18 +147,20 @@ class FrictionGLE(FrictionBath):
             self.S_aux = None
             return
 
-        # Non-Markovian scaffold:
-        # `s` is reserved for auxiliary bath variables only, not the system
-        # momentum. The eventual implementation should populate:
-        #   - theta : coupling vectors entering S40/S42
-        #   - A_aux : auxiliary drift matrices
-        #   - T_aux : exp(-A_aux * dt/2), Eq. (S38)
-        #   - S_aux : noise matrices satisfying Eq. (S38)
-        self.s = np.zeros(self.state_shape(), dtype=float)
-        self.theta = None
-        self.A_aux = None
+        # Non-Markovian state:
+        # `s` stores auxiliary bath variables only, not the physical momentum.
+        # The user-facing input follows George's notation and supplies Ap,
+        # whose first row gives theta and whose lower-right block is A.
+        self.theta = np.asarray(self.friction.Ap[0, 1:], dtype=float).copy()
+        self.A_aux = np.asarray(self.friction.Ap[1:, 1:], dtype=float).copy()
+        self.ns = int(self.theta.size)
         self.T_aux = None
         self.S_aux = None
+        self.s = np.zeros(self.state_shape(), dtype=float)
+        if self.friction.prng is not None and self.ns > 0:
+            self.s[:] = np.sqrt(self.friction._kbt_rp()) * self.friction.prng.gvec(
+                self.s.shape
+            )
 
     def is_markovian(self) -> bool:
         return str(self.friction.bath_mode) == "markovian"
@@ -141,10 +168,11 @@ class FrictionGLE(FrictionBath):
     def state_shape(self):
         if self.is_markovian():
             return (0,)
-        # Future non-Markovian layout: one auxiliary stack per bead and
-        # Cartesian DOF. The auxiliary dimension is left at zero until the OU
-        # embedding fit is implemented.
-        return (int(self.friction.beads.nbeads), 0, 3 * int(self.friction.beads.natoms))
+        return (
+            int(self.friction.beads.nbeads),
+            int(self.friction.Ap.shape[0] - 1),
+            3 * int(self.friction.beads.natoms),
+        )
 
     def step(self, pdt: float) -> None:
         if self.is_markovian():
@@ -228,6 +256,7 @@ class FrictionGLE(FrictionBath):
 
     def os_step(self, pdt: float) -> None:
         """Auxiliary OU step, Eq. (S38).
+        Updates auxiliary momenta.
 
         Implements:
             s <- T_{dt} s + S_{dt} xi
@@ -236,32 +265,67 @@ class FrictionGLE(FrictionBath):
         remain in `beads.p` / `nm.pnm`.
         """
 
-        raise NotImplementedError(
-            "FrictionGLE.os_step (Eq. S38) is not implemented for the non-markovian bath."
+        if pdt <= 0.0 or self.ns == 0:
+            return
+        self.T_aux, self.S_aux = _compute_aux_ou_matrices(
+            self.A_aux, pdt, self.friction._kbt_rp()
         )
+        et = 0.5 * float(np.sum(self.s * self.s))
+        # s has shape (nmodes, naux, ndof). Apply the same auxiliary OU
+        # embedding independently to each normal mode and Cartesian DOF.
+        self.s[:] = np.einsum("ab,mbd->mad", self.T_aux, self.s)
+        noise = self.friction.prng.gvec(self.s.shape)
+        self.s[:] += np.einsum("ab,mbd->mad", self.S_aux, noise)
+        et -= 0.5 * float(np.sum(self.s * self.s))
+        self.friction.ediss += et
 
     def bp_f_step(self, pdt: float) -> None:
-        """Bath-to-momentum coupling, Eq. (S40).
+        """Bath (aux) -to- physical momentum coupling, Eq. (S40).
 
         Implements the momentum kick generated by the current auxiliary bath
         state through:
             P <- P - dt * dF/dQ * theta^T s
         """
 
-        raise NotImplementedError(
-            "FrictionGLE.bp_f_step (Eq. S40) is not implemented for the non-markovian bath."
-        )
+        if pdt <= 0.0 or self.ns == 0:
+            return
+        if self.friction.variable_friction:
+            raise NotImplementedError(
+                "Non-markovian variable friction is not implemented. "
+                "The current Ap path supports position-independent coupling only."
+            )
+
+        p = self.friction.nm.pnm.copy()
+        m = self.friction.nm.dynm3.copy()
+        sm = np.sqrt(m)
+        sigma = float(self.friction.sigma_static)
+        theta_s = np.einsum("a,mad->md", self.theta, self.s)
+        p_ms = p / sm
+        p_ms -= pdt * (sigma / sm) * theta_s
+        p_new = p_ms * sm
+        self.friction.nm.pnm[:] = p_new
+        self.friction.beads.p = self.friction.nm.transform.nm2b(p_new)
 
     def bs_step(self, pdt: float) -> None:
-        """Momentum-to-bath coupling, Eq. (S42).
+        """Physical momentum-to-bath (aux) coupling, Eq. (S42).
 
         Implements the auxiliary update driven by physical momentum through:
             s <- s + dt * dF/dQ * theta * P
         """
 
-        raise NotImplementedError(
-            "FrictionGLE.bs_step (Eq. S42) is not implemented for the non-markovian bath."
-        )
+        if pdt <= 0.0 or self.ns == 0:
+            return
+        if self.friction.variable_friction:
+            raise NotImplementedError(
+                "Non-markovian variable friction is not implemented. "
+                "The current Ap path supports position-independent coupling only."
+            )
+
+        p = self.friction.nm.pnm.copy()
+        m = self.friction.nm.dynm3.copy()
+        sigma = float(self.friction.sigma_static)
+        drive = sigma * p / m
+        self.s[:] += pdt * self.theta[None, :, None] * drive[:, None, :]
 
 
 class Friction:
@@ -277,6 +341,7 @@ class Friction:
     debug_mf_mode: str         # "none" | "linear"
 
     Lambda: np.ndarray  # [omega, J(omega)] for non-markovian OU fit
+    Ap: np.ndarray  # George-style momentum + auxiliary drift matrix
     debug_alpha_input: np.ndarray      # optional [omega_k, alpha]
 
     sigma_static: float
@@ -307,6 +372,11 @@ class Friction:
         Lambda=np.zeros((0, 2), float),
         #todo: switch back to spectral density.  with some extrapolation to zero. use cubic spline and linear extrapolation to zero. and check
         # rename spectral_density
+        Ap=np.zeros((0, 0), float),
+        # George-style auxiliary drift matrix:
+        #   Ap = [[0, theta^T], [-theta, A]]
+        # The current non-Markovian implementation uses this direct embedding
+        # and does not yet fit Ap from Lambda.
 
         debug_alpha_input=np.zeros((0, 2), float),
 
@@ -338,6 +408,7 @@ class Friction:
 
         # Kernel shape
         self.Lambda = np.asanyarray(Lambda, dtype=float).copy()
+        self.Ap = np.asanyarray(Ap, dtype=float).copy()
         self.debug_alpha_input = np.asanyarray(debug_alpha_input, dtype=float).copy()
 
         self._sigma = depend_value(name="sigma", func=self._get_sigma)
@@ -406,11 +477,17 @@ class Friction:
 
         # Non-Markovian OU fit requires spectral density
         if self.bath_mode == "non-markovian":
-            if self.Lambda.size == 0:
-                raise ValueError(
-                    "non-markovian requires Lambda to fit OU embedding "
-                    "(or provide debug_alpha_input explicitly)."
+            if self.variable_friction:
+                raise NotImplementedError(
+                    "non-markovian variable_friction=True is not implemented. "
+                    "Use variable_friction=False with an explicit Ap matrix."
                 )
+            if self.Ap.size == 0:
+                raise ValueError(
+                    "non-markovian requires an explicit Ap matrix. "
+                    "Fitting Ap from Lambda is not implemented yet."
+                )
+            self._validate_Ap()
 
         # Setup alpha for MF (may be zeros if MF disabled)
         self.alpha = self._setup_alpha()
@@ -421,6 +498,7 @@ class Friction:
             f"  bath_mode           = {self.bath_mode}\n"
             f"  debug_mf_mode       = {self.debug_mf_mode}\n"
             f"  sigma_static     = {self.sigma_static}\n"
+            f"  Ap shape           = {self.Ap.shape}\n"
             f"  sigma_key           = '{self.sigma_key}'\n",
             verbosity.low,
         )
@@ -445,6 +523,18 @@ class Friction:
         if self.bath_mode in ("markovian", "non-markovian"):
             return FrictionGLE()
         raise RuntimeError("bath_mode must be one of none, markovian or non-markovian")
+
+    def _validate_Ap(self) -> None:
+        Ap = np.asarray(self.Ap, dtype=float)
+        if Ap.ndim != 2 or Ap.shape[0] != Ap.shape[1] or Ap.shape[0] < 2:
+            raise ValueError(
+                "Ap must be a square 2D matrix with shape (1+naux, 1+naux)."
+            )
+        A = Ap[1:, 1:]
+        if A.size == 0:
+            raise ValueError("Ap must contain at least one auxiliary variable.")
+        if not np.all(np.isfinite(Ap)):
+            raise ValueError("Ap contains non-finite values.")
 
     def _ensure_bath_bound(self) -> None:
         if self.bath is not None or self.bath_mode == "none":
