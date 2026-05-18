@@ -26,6 +26,8 @@ import threading
 
 from concurrent.futures import ThreadPoolExecutor
 
+from ipi.utils.timing_manager import timers
+
 __all__ = ["Simulation"]
 
 
@@ -358,6 +360,8 @@ class Simulation:
         ttot = 0.0
         # main MD loop
         for self.step in range(self.step, self.tsteps):
+            timers.set_step(self.step)
+            timers.start("Total Step")
             # stores the state before doing a step.
             # this is a bit time-consuming but makes sure that we can honor soft
             # exit requests without screwing the trajectory
@@ -367,15 +371,21 @@ class Simulation:
                 break
 
             # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
+            timers.start("ChkPoint Save Check")
             if self.step % self.safe_stride == 0:
                 self.chk.store()
+            timers.stop("ChkPoint Save Check")
 
+
+            timers.start("MD Step")
             self.run_step(self.step)
+            timers.stop("MD Step")
 
             if softexit.triggered or self.finished:
                 # Don't write if we are about to exit.
                 break
 
+            timers.start("Write Outputs")
             if write_outputs:
                 if self.threading:
                     stepthreads = []
@@ -417,7 +427,9 @@ class Simulation:
                     info(" # DEBUG # Trace of the top memory allocation:")
                     for line in top_stats[0].traceback.format():
                         info(line)
+            timers.stop("Write Outputs")
 
+            timers.start("Exit Checks")
             if os.path.exists("EXIT"):
                 info(" @simulation.run: EXIT file detected! Bye bye!", verbosity.low)
                 break
@@ -427,7 +439,11 @@ class Simulation:
                     " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
                 )
                 break
+            timers.stop("Exit Checks")
 
+            timers.stop("Total Step")
+
+        timers.summary("timing_breakdown")
         self.rollback = False
 
     def run_step(self, step):

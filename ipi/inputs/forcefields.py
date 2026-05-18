@@ -170,7 +170,8 @@ class InputFFSocket(InputForceField):
     Handles generating one instance of a socket interface forcefield class.
 
     Attributes:
-       mode: Describes whether the socket will be a unix or an internet socket.
+       mode: Describes whether the socket will use unix, internet, or shared-memory communication.
+       mpibatch: If True, evaluates all beads in one batched socket request.
 
     Fields:
        address: The server socket binding address.
@@ -246,11 +247,20 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["unix", "inet"],
+                "options": ["unix", "inet", "shm"],
                 "default": "inet",
-                "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
+                "help": "Specifies whether the driver interface will listen onto an internet socket [inet], a unix socket [unix], or a unix socket using shared-memory transfers [shm].",
             },
         ),
+        "mpibatch": (
+            InputAttribute,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Specifies whether all beads should be sent to the driver in one batched request.",
+            },
+        ),
+
         "matching": (
             InputAttribute,
             {
@@ -285,7 +295,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if type(ff) not in [FFSocket, FFCavPhSocket]:
+        if not isinstance(ff, (FFSocket, FFCavPhSocket)):
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -297,6 +307,7 @@ class InputFFSocket(InputForceField):
         self.timeout.store(ff.socket.timeout)
         self.slots.store(ff.socket.slots)
         self.mode.store(ff.socket.mode)
+        self.mpibatch.store(ff.mpibatch)
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
         self.max_workers.store(ff.socket.max_workers)
@@ -330,6 +341,7 @@ class InputFFSocket(InputForceField):
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
+            mpibatch=self.mpibatch.fetch(),
             interface=InterfaceSocket(
                 address=self.address.fetch(),
                 port=self.port.fetch(),
@@ -366,7 +378,6 @@ class InputFFSocket(InputForceField):
         if self.timeout.fetch() < 0.0:
             raise ValueError("Negative timeout parameter specified.")
 
-
 class InputFFDirect(InputForceField):
     fields = {
         "pes": (
@@ -401,7 +412,16 @@ class InputFFDirect(InputForceField):
     }
     fields.update(InputForceField.fields)
 
-    attribs = {}
+    attribs = {
+        "batch_request": (
+            InputAttribute,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Whether the direct forcefield should accept one full bead-batched request from the force layer.",
+            },
+        ),
+    }
     attribs.update(InputForceField.attribs)
 
     default_help = """ Direct potential that evaluates forces through a Python
@@ -417,6 +437,7 @@ class InputFFDirect(InputForceField):
         self.pes.store(ff.pes)
         self.pes_path.store(ff.pes_path)
         self.batch_size.store(ff.batch_size)
+        self.batch_request.store(ff.batch_request)
 
     def fetch(self):
         super().fetch()
@@ -431,6 +452,7 @@ class InputFFDirect(InputForceField):
             pes=self.pes.fetch(),
             pes_path=self.pes_path.fetch(),
             batch_size=self.batch_size.fetch(),
+            batch_request=self.batch_request.fetch(),
         )
 
 
@@ -1219,6 +1241,8 @@ class InputFFCavPhSocket(InputFFSocket):
 
         if self.threaded.fetch() == False:
             raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
+        if self.mpibatch.fetch():
+            raise ValueError("FFCavPhSocket does not support batched socket requests.")
 
         # just use threaded throughout
         return FFCavPhSocket(

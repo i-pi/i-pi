@@ -29,7 +29,7 @@ class Cell:
        V: The volume of the cell.
     """
 
-    def __init__(self, h=None):
+    def __init__(self, h=None, shm_h=False):
         """Initialises base cell class.
 
         Args:
@@ -41,17 +41,51 @@ class Cell:
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
+        self._shm_h_enabled = shm_h
+        self._h = depend_array(
+            name="h",
+            value=None if shm_h else h,
+            storage="shm" if shm_h else None,
+            storage_opts=(
+                {
+                    "shape": (3, 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if shm_h
+                else None
+            ),
+        )
+        if shm_h:
+            self._h[:] = h
         self._ih = depend_array(
             name="ih",
-            value=np.zeros((3, 3), float),
+            value=None if shm_h else np.zeros((3, 3), float),
             func=self.get_ih,
             dependencies=[self._h],
+            storage="shm" if shm_h else None,
+            storage_opts=(
+                {
+                    "shape": (3, 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if shm_h
+                else None
+            ),
         )
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
         return Cell(dstrip(self.h).copy())
+
+    @property
+    def h_shm_name(self):
+        return getattr(self._h, "shm_name", None)
+
+    @property
+    def ih_shm_name(self):
+        return getattr(self._ih, "shm_name", None)
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
@@ -83,25 +117,36 @@ class Cell:
         return np.dot(self.h, s)
 
     def array_pbc(self, pos):
-        """Uses the minimum image convention to return a list of particles to the
-           unit cell.
-
-        Args:
-           atom: An Atom object.
-
-        Returns:
-           An array giving the position of the image that is inside the
-           system box.
         """
+        Apply minimum image convention to positions.
+        
+        Args:
+            pos: numpy array, either shape (nbeads, nat*3) or (nat*3,)
+        
+        Updates:
+            pos in-place (shared memory safe)
+        """
+        # normalize shape to (nbeads, nat*3)
+        squeeze = False
+        if pos.ndim == 1:
+            pos = pos[np.newaxis, :]  # shape becomes (1, nat*3)
+            squeeze = True
 
-        s = dstrip(pos).copy().reshape(-1, 3)
+        nbeads, nflat = pos.shape
+        nat = nflat // 3
 
-        s = np.dot(dstrip(self.ih), s.T)
-        s = s - np.round(s)
+        s = dstrip(pos).reshape(nbeads, nat, 3)
 
-        s = np.dot(dstrip(self.h), s).T
+        s = np.einsum('ij,bnj->bni', dstrip(self.ih), s)
+        s -= np.round(s)
+        s = np.einsum('ij,bnj->bni', dstrip(self.h), s)
+        s = s.reshape(nbeads, nat*3)
 
-        pos[:] = s.reshape(-1)
+        pos[:] = s
+
+        # if original pos was 1D, return flattened 1D view
+        if squeeze:
+            pos.shape = (nat*3,)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two

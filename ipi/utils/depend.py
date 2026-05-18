@@ -21,14 +21,17 @@ taint all downstream dependants eagerly.
 # See the "licenses" directory for full license information.
 
 
+import os
 import weakref
 import threading
 
 from copy import deepcopy
+from multiprocessing import resource_tracker, shared_memory
 
 import operator as _op
 
 import numpy as np
+from ipi.utils.timing_manager import timers
 
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
@@ -48,6 +51,44 @@ __all__ = [
     "ddot",
     "noddot",
 ]
+
+
+_SHM_DEPEND_COUNTER = 0
+
+
+def _next_depend_shm_name():
+    global _SHM_DEPEND_COUNTER
+    _SHM_DEPEND_COUNTER += 1
+    return f"IPD{os.getpid() % 100000:05d}{_SHM_DEPEND_COUNTER % 10000:04d}"
+
+
+def _allocate_depend_storage(value, storage=None, storage_opts=None):
+    storage_opts = {} if storage_opts is None else dict(storage_opts)
+
+    if storage == "shm" and value is None:
+        shape = tuple(storage_opts["shape"])
+        dtype = np.dtype(storage_opts.get("dtype", float))
+        array = np.empty(shape, dtype=dtype)
+    else:
+        array = np.asarray(value)
+
+    if storage != "shm" or array.size == 0:
+        return array, None, None
+
+    initializer = storage_opts.get("initializer")
+    fill_value = storage_opts.get("fill_value", 0.0)
+    shm = shared_memory.SharedMemory(
+        create=True,
+        size=array.nbytes,
+        name=storage_opts.get("name", _next_depend_shm_name()),
+    )
+    resource_tracker.unregister(shm._name, "shared_memory")
+    shm_array = np.ndarray(array.shape, dtype=array.dtype, buffer=shm.buf)
+    if initializer == "zeros":
+        shm_array.fill(fill_value)
+    else:
+        shm_array[...] = array
+    return shm_array, shm, shm.name
 
 
 class synchronizer(object):
@@ -231,7 +272,11 @@ class depend_base(object):
         Double-checks under the lock to make the update thread-safe."""
         with self._threadlock:
             if self._tainted[0]:
-                self.update_auto()
+                timing_token = timers.enter_depend(self)
+                try:
+                    self.update_auto()
+                finally:
+                    timers.exit_depend(timing_token)
                 self.taint(taintme=False)
 
 
@@ -304,17 +349,28 @@ class depend_array(depend_base):
         tainted=None,
         base=None,
         parent=None,
+        storage=None,
+        storage_opts=None,
     ):
         if base is not None:
             # Slice-view: wrap an already-allocated view of the parent.
             self._value = base
+            self._storage = getattr(parent, "_storage", "numpy")
+            self._shm_name = getattr(parent, "_shm_name", None)
+            self._shm_handle = None
+            self._shm_owner = False
         elif value is None:
-            # Sentinel used by __deepcopy__; members will be overwritten.
-            self._value = np.empty(0)
-        elif isinstance(value, np.ndarray):
-            self._value = value
+            self._value, self._shm_handle, self._shm_name = _allocate_depend_storage(
+                value, storage=storage, storage_opts=storage_opts
+            )
+            self._storage = storage or "numpy"
+            self._shm_owner = self._shm_handle is not None
         else:
-            self._value = np.asarray(value)
+            self._value, self._shm_handle, self._shm_name = _allocate_depend_storage(
+                value, storage=storage, storage_opts=storage_opts
+            )
+            self._storage = storage or "numpy"
+            self._shm_owner = self._shm_handle is not None
 
         # Slice-views keep a reference to the parent so that refreshing a
         # stale slice delegates the recompute to the parent (which owns
@@ -324,6 +380,18 @@ class depend_array(depend_base):
         self._parent = parent
 
         super().__init__(name, synchro, func, dependants, dependencies, tainted)
+
+    @property
+    def shm_name(self):
+        return self._shm_name
+
+    def __del__(self):
+        try:
+            if getattr(self, "_shm_owner", False) and self._shm_handle is not None:
+                self._shm_handle.close()
+                self._shm_handle.unlink()
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # numpy interop
@@ -551,12 +619,17 @@ class depend_array(depend_base):
     # ------------------------------------------------------------------
 
     def __getstate__(self):
-        state = {k: v for k, v in self.__dict__.items() if k != "_threadlock"}
+        state = {
+            k: v
+            for k, v in self.__dict__.items()
+            if k not in {"_threadlock", "_shm_handle"}
+        }
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._threadlock = threading.RLock()
+        self._shm_handle = None
 
 
 # ----------------------------------------------------------------------

@@ -107,7 +107,7 @@ class InputBeads(Input):
         self.m.store(dstrip(beads.m))
         self.names.store(dstrip(beads.names))
 
-    def fetch(self):
+    def fetch(self, shm_q=False):
         """Creates a beads object.
 
         Returns:
@@ -116,7 +116,7 @@ class InputBeads(Input):
         """
 
         super(InputBeads, self).fetch()
-        beads = Beads(self.natoms.fetch(), self.nbeads.fetch())
+        beads = Beads(self.natoms.fetch(), self.nbeads.fetch(), shm_q=shm_q)
 
         # tries to fill up with as much data as available and valid
         q = self.q.fetch()

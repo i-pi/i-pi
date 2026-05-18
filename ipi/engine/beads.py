@@ -10,14 +10,12 @@ centroid coordinate is required.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import numpy as np
 
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
 
 __all__ = ["Beads"]
-
 
 class Beads:
     """Storage for the beads positions and velocities.
@@ -57,7 +55,7 @@ class Beads:
        rg: An array giving the radius of gyration of each atom.
     """
 
-    def __init__(self, natoms, nbeads):
+    def __init__(self, natoms, nbeads, shm_q=False):
         """Initialises Beads.
 
         Args:
@@ -65,6 +63,7 @@ class Beads:
            nbeads: Number of beads.
         """
 
+        self._shm_q_enabled = shm_q
         self.resize(natoms, nbeads)
 
     def resize(self, natoms, nbeads):
@@ -113,8 +112,24 @@ class Beads:
         )
 
         # positions and momenta. bead representation, base storage used everywhere
-        self._q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
+        self._q = depend_array(
+            name="q",
+            value=None if self._shm_q_enabled else np.zeros((nbeads, 3 * natoms), float),
+            storage="shm" if self._shm_q_enabled else None,
+            storage_opts=(
+                {
+                    # Batched SHM forcefields reuse Beads.q directly as the POS buffer.
+                    "shape": (nbeads, 3 * natoms),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if self._shm_q_enabled
+                else None
+            ),
+        )
+        self._q._timing_label = "Beads q"
         self._p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
+        self._p._timing_label = "Beads p"
 
         # position and momentum of the centroid
         self._qc = depend_array(
@@ -183,6 +198,10 @@ class Beads:
         newbd.m[:] = self.m
         newbd.names[:] = self.names
         return newbd
+
+    @property
+    def q_shm_name(self):
+        return getattr(self._q, "shm_name", None)
 
     def m3tosm3(self):
         """Takes the mass array and returns the square rooted mass array."""

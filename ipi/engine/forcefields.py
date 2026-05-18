@@ -32,6 +32,7 @@ from ipi.utils.mathtools import (
     get_rotation_quadrature_lebedev,
     random_rotation,
 )
+from ipi.utils.timing_manager import timers
 
 plumed = None
 
@@ -159,7 +160,14 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        timers.start("Atoms q")
+        pbcpos = dstrip(atoms.q)
+        timers.stop("Atoms q")
+        canonical_shm_pos = (
+            pbcpos.ndim == 2 and getattr(atoms, "q_shm_name", None) is not None
+        )
+        if not canonical_shm_pos:
+            pbcpos = pbcpos.copy()
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -184,11 +192,21 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
+        if template is None:
+            template = {}
+
+        if canonical_shm_pos:
+            cell_h = dstrip(cell.h)
+            cell_ih = dstrip(cell.ih)
+        else:
+            cell_h = dstrip(cell.h).copy()
+            cell_ih = dstrip(cell.ih).copy()
+
         fields = {
             "id": reqid,
             "pos": pbcpos,
             "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "cell": (cell_h, cell_ih),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -197,11 +215,20 @@ class ForceField:
             "t_dispatched": 0,
             "t_finished": 0,
         }
-        if template is None:
-            newreq = ForceRequest(fields)
-        else:
-            template.update(fields)
-            newreq = ForceRequest(template)
+        if canonical_shm_pos:
+            # Batched SHM requests export canonical storage so the socket layer
+            # can reuse it directly instead of allocating transport-local buffers.
+            template["pos_shm_name"] = atoms.q_shm_name
+            template["pos_shm_array"] = pbcpos
+            if getattr(cell, "h_shm_name", None) is not None:
+                template["h_shm_name"] = cell.h_shm_name
+                template["h_shm_array"] = dstrip(cell.h)
+            if getattr(cell, "ih_shm_name", None) is not None:
+                template["ih_shm_name"] = cell.ih_shm_name
+                template["ih_shm_array"] = dstrip(cell.ih)
+
+        template.update(fields)
+        newreq = ForceRequest(template)
 
         with self._threadlock:
             self.requests.append(newreq)
@@ -311,11 +338,11 @@ class ForceField:
 
 
 class FFSocket(ForceField):
-    """Interface between the PIMD code and a socket for a single replica.
+    """Interface between i-PI and a socket-based force provider.
 
-    Deals with an individual replica of the system, obtaining the potential
-    force and virial appropriate to this system. Deals with the distribution of
-    jobs to the interface.
+    In the default mode each request corresponds to one structure. When
+    ``mpibatch`` is enabled, all beads for a force component are sent in one
+    batched request to a matching MPI-capable driver.
 
     Attributes:
         socket: The interface object which contains the socket through which
@@ -332,6 +359,7 @@ class FFSocket(ForceField):
         active=np.array([-1]),
         threaded=True,
         interface=None,
+        mpibatch=False,
     ):
         """Initialises FFSocket.
 
@@ -355,6 +383,7 @@ class FFSocket(ForceField):
             self.socket = InterfaceSocket()
         else:
             self.socket = interface
+        self.mpibatch = mpibatch
         self.socket.requests = self.requests
         self.socket.offset = self.offset
 
@@ -366,6 +395,14 @@ class FFSocket(ForceField):
     def start(self):
         """Spawns a new thread."""
 
+        if self.socket.mode == "shm":
+            if not self.mpibatch:
+                raise NotImplementedError(
+                    "Non-batched shm sockets are no longer supported. "
+                    "Use mpibatch='true' with mode='shm'."
+                )
+            # The batched SHM transport uses the classic request/dispatch path.
+            self.socket.consolidate_messages = False
         self.socket.open()
         super(FFSocket, self).start()
 
@@ -435,6 +472,7 @@ class FFDirect(ForceField):
         pes="dummy",
         pes_path="",
         batch_size=1,
+        batch_request=False,
     ):
         """Initialises FFDirect.
 
@@ -466,6 +504,7 @@ class FFDirect(ForceField):
         self.pes = pes
         self.pes_path = pes_path
         self.batch_size = batch_size
+        self.batch_request = batch_request
         self.request_batch = []
         self._batch_idle_cycles = 0
         # wait longer to flush the queue if the batch size is large
@@ -549,6 +588,47 @@ class FFDirect(ForceField):
         request._event_done.set()
         request["t_finished"] = time.time()
 
+    def _process_batched_request_results(self, results_batch, request):
+        nbeads = len(results_batch)
+        pots = np.zeros(nbeads, float)
+        forces = np.zeros((nbeads, request["pos"].shape[1]), float)
+        virs = np.zeros((nbeads, 3, 3), float)
+        extras = []
+
+        for ibead, results in enumerate(results_batch):
+            bead_results = list(results)
+            pots[ibead] = bead_results[0] - self.offset
+            forces[ibead] = bead_results[1].reshape(-1)
+            virs[ibead] = bead_results[2].reshape(3, 3)
+
+            mxtra = bead_results[3]
+            mxtradict = {}
+            if mxtra:
+                try:
+                    mxtradict = json.loads(mxtra)
+                    info(
+                        "@driver.getforce: Extra string JSON has been loaded.",
+                        verbosity.debug,
+                    )
+                except Exception:
+                    info(
+                        "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
+                        + mxtra,
+                        verbosity.debug,
+                    )
+                    mxtradict = {}
+                if "raw" in mxtradict:
+                    raise ValueError(
+                        "'raw' cannot be used as a field in a JSON-formatted extra string"
+                    )
+                mxtradict["raw"] = mxtra
+            extras.append(mxtradict)
+
+        request["result"] = [pots, forces, virs, extras]
+        request["status"] = "Done"
+        request._event_done.set()
+        request["t_finished"] = time.time()
+
     def launch_batch(self):
         """Dispatches the current batch for evaluation."""
 
@@ -566,6 +646,13 @@ class FFDirect(ForceField):
         self._batch_idle_cycles = 0
 
     def evaluate(self, request):
+        if self.batch_request and request["pos"].ndim == 2:
+            cell_batch = [request["cell"][0] for _ in range(request["pos"].shape[0])]
+            pos_batch = [bead_pos.reshape(-1, 3) for bead_pos in request["pos"]]
+            results_batch = self.driver(cell_batch, pos_batch)
+            self._process_batched_request_results(results_batch, request)
+            return
+
         if self.batch_size == 1:
             results = list(
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))

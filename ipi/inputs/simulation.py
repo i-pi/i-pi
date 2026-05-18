@@ -327,16 +327,13 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
         # just one simulation object
         verbosity.level = self.verbosity.fetch()
 
+        sys_entries = []
         syslist = []
         fflist = []
+        batched_shm_forcefields = set()
         for k, v in self.extra:
-            if k == "system":
-                syslist.append(v.fetch())
-            elif k == "system_template":
-                # This will actually generate automatically a bunch
-                # of system objects with the desired properties set
-                # automatically to many values.
-                syslist += v.fetch()
+            if k in ["system", "system_template"]:
+                sys_entries.append((k, v))
             elif k in [
                 "ffsocket",
                 "ffdirect",
@@ -354,7 +351,21 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 if k in ["ffsocket", "ffcavphsocket"]:
                     # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
+                    if (
+                        k == "ffsocket"
+                        and new_ff.socket.mode == "shm"
+                        and getattr(new_ff, "mpibatch", False)
+                    ):
+                        batched_shm_forcefields.add(new_ff.name)
                 fflist.append(new_ff)
+
+        for k, v in sys_entries:
+            if k == "system":
+                syslist.append(v.fetch(batched_shm_forcefields=batched_shm_forcefields))
+            elif k == "system_template":
+                syslist += v.fetch(
+                    batched_shm_forcefields=batched_shm_forcefields
+                )
 
         # this creates a simulation object which gathers all the little bits
         import ipi.engine.simulation as esimulation  # import here as otherwise this is the mother of all circular imports...
