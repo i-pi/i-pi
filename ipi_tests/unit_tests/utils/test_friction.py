@@ -573,3 +573,109 @@ def test_non_markovian_position_independent_coupling_steps_are_deterministic() -
         friction.bath.s,
         expected_s * np.exp(-1.5 * 0.3),
     )
+
+
+def test_non_markovian_variable_friction_gle_tracks_bath_channels() -> None:
+    q = np.array([[0.0, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 2.0, -1.0]], dtype=float)
+    m3 = np.ones_like(p0)
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    nm.omegak = np.array([0.0], dtype=float)
+    sigma = np.array([[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]]], dtype=float)
+    forces = _DummyForces(extras={"sigma": sigma})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=True,
+        bath_mode="non-markovian",
+        debug_mf_mode="none",
+        Ap=np.array([[0.0, 0.5], [-0.5, 1.5]], dtype=float),
+        sigma_key="sigma",
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._ensure_bath_bound()
+
+    assert isinstance(friction.bath, FrictionGLE)
+    assert friction.bath.state_shape() == (1, 1, 2)
+    assert friction.bath.s.shape == (1, 1, 2)
+
+
+def test_non_markovian_variable_coupling_steps_are_deterministic() -> None:
+    q = np.array([[0.0, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 2.0, -1.0]], dtype=float)
+    m3 = np.ones_like(p0)
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    nm.omegak = np.array([0.0], dtype=float)
+    sigma = np.array([[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]]], dtype=float)
+    forces = _DummyForces(extras={"sigma": sigma})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=True,
+        bath_mode="non-markovian",
+        debug_mf_mode="none",
+        Ap=np.array([[0.0, 0.5], [-0.5, 1.5]], dtype=float),
+        sigma_key="sigma",
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._ensure_bath_bound()
+
+    friction.bath.s[:] = np.array([[[0.2, -0.4]]])
+    friction.bath.bp_f_step(0.1)
+    expected_p = p0 - 0.1 * np.array([[0.1, -0.4, 0.0]])
+    np.testing.assert_allclose(friction.nm.pnm, expected_p)
+
+    s_before = friction.bath.s.copy()
+    friction.bath.bs_step(0.2)
+    expected_s = s_before + 0.2 * 0.5 * np.array([[[0.99, 4.08]]])
+    np.testing.assert_allclose(friction.bath.s, expected_s)
+
+    friction.bath.os_step(0.3)
+    np.testing.assert_allclose(
+        friction.bath.s,
+        expected_s * np.exp(-1.5 * 0.3),
+    )
+
+
+def test_non_markovian_variable_step_runs_with_explicit_Ap() -> None:
+    q = np.array([[0.0, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 2.0, -1.0]], dtype=float)
+    m3 = np.ones_like(p0)
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    nm.omegak = np.array([0.0], dtype=float)
+    sigma = np.array([[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]]], dtype=float)
+    forces = _DummyForces(extras={"sigma": sigma})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=True,
+        bath_mode="non-markovian",
+        debug_mf_mode="none",
+        Ap=np.array([[0.0, 0.5], [-0.5, 1.5]], dtype=float),
+        sigma_key="sigma",
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._ensure_bath_bound()
+    friction.bath.s[:] = np.array([[[0.2, -0.1]]])
+
+    friction.step(0.1)
+
+    assert np.all(np.isfinite(friction.bath.s))
+    assert np.all(np.isfinite(friction.nm.pnm))
+    assert np.linalg.norm(friction.bath.s) > 0.0
+    assert np.linalg.norm(friction.nm.pnm - p0) > 0.0
