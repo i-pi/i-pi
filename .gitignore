@@ -18,3 +18,4 @@ regtest-ref
 /dist
 *.egg-info/
 ipi/_version.py
+.fuse*

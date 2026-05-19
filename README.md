@@ -127,6 +127,16 @@ tox -e examples   # smoke-test all input examples
 dependencies, and runs the suite. Run `tox list` to see all available
 environments.
 
+`bin/i-pi-py_mpidriver` depends on `mpi4py`. If your system uses MPI modules,
+load the MPI module first and install `mpi4py` with that same module loaded:
+
+```bash
+module load <your-mpi-module>
+python -m pip install mpi4py
+```
+
+Use the same MPI module when running `bin/i-pi-py_mpidriver`.
+
 See more details in the README file inside the `ipi_tests` folder.
 
 ## Contributing

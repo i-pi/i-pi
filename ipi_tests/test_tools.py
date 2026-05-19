@@ -16,7 +16,7 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 20
+TIMEOUT = 60
 
 fortran_driver_models = [
     "dummy",
@@ -91,6 +91,7 @@ def get_test_settings(
     port_numbers = list()
     address_names = list()
     flaglists = list()
+    driver_commands = list()
     found_nsteps = False
 
     try:
@@ -112,6 +113,7 @@ def get_test_settings(
             port_number = 33333
             socket_mode = "unix"
             flaglist = {}
+            driver_command = None
             for line in block:
                 if "driver_code" in line:
                     driver_code = line.split()[1]
@@ -125,6 +127,8 @@ def get_test_settings(
                     socket_mode = line.split()[1]
                 elif "flags" in line:
                     flaglist = {line.split()[1]: line.split()[2:]}
+                elif "driver_command" in line:
+                    driver_command = " ".join(line.split()[1:])
                 elif "nsteps" in line:
                     nsteps = line.split()[1]
                     found_nsteps = True
@@ -154,6 +158,7 @@ def get_test_settings(
             port_numbers.append(port_number)
             address_names.append(address_name)
             flaglists.append(flaglist)
+            driver_commands.append(driver_command)
 
     except:
         driver_codes.append("fortran")
@@ -162,6 +167,7 @@ def get_test_settings(
         port_numbers.append(33333)
         socket_modes.append("unix")
         flaglists.append({})
+        driver_commands.append(None)
 
     driver_info = {
         "driver_model": driver_models,
@@ -170,6 +176,7 @@ def get_test_settings(
         "address_name": address_names,
         "driver_code": driver_codes,
         "flag": flaglists,
+        "driver_command": driver_commands,
     }
 
     if found_nsteps:
@@ -222,7 +229,7 @@ def modify_xml_4_dummy_test(
 
         model = driver_info["driver_model"][s]
 
-        clients.append([model, "unix", address, port])
+        clients.append([model, driver_info["socket_mode"][s], address, port])
 
         for key in driver_info["flag"][s].keys():
             if "-o" in key:
@@ -236,7 +243,14 @@ def modify_xml_4_dummy_test(
         ):
             for remaining_client_idx in range(s + 1, len(driver_info["driver_model"])):
                 model = driver_info["driver_model"][remaining_client_idx]
-                clients.append([model, "unix", address, port])
+                clients.append(
+                    [
+                        model,
+                        driver_info["socket_mode"][remaining_client_idx],
+                        address,
+                        port,
+                    ]
+                )
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
                     if "-o" in key:
@@ -281,6 +295,7 @@ class Runner(object):
             cwd: folder where all the original regression tests are stored
             nid: identification number to avoid repetitions of addresses"""
 
+        drivers = []
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
@@ -359,11 +374,13 @@ class Runner(object):
                         return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually
-            drivers = list()
-
-            for client in clients:
+            for driver_idx, client in enumerate(clients):
                 if client[1] == "unix":
                     clientcall = call_driver + " -m {} {} {} -u ".format(
+                        client[0], address_key, client[2]
+                    )
+                elif client[1] == "shm":
+                    clientcall = call_driver + " -m {} {} {} -u --shm ".format(
                         client[0], address_key, client[2]
                     )
                 elif client[1] == "inet":
@@ -372,7 +389,12 @@ class Runner(object):
                     )
 
                 else:
-                    raise ValueError("Driver mode has to be either unix or inet")
+                    raise ValueError("Driver mode has to be either unix, shm or inet")
+
+                if driver_info["driver_command"][driver_idx] is not None:
+                    clientcall = (
+                        driver_info["driver_command"][driver_idx] + " " + clientcall
+                    )
 
                 cmd = clientcall
 

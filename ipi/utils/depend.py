@@ -21,14 +21,17 @@ taint all downstream dependants eagerly.
 # See the "licenses" directory for full license information.
 
 
+import os
 import weakref
 import threading
 
 from copy import deepcopy
+from multiprocessing import resource_tracker, shared_memory
 
 import operator as _op
 
 import numpy as np
+from ipi.utils.timing_manager import timers
 
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
@@ -39,6 +42,7 @@ import numpy as np
 __all__ = [
     "depend_value",
     "depend_array",
+    "depend_shm_array",
     "synchronizer",
     "dpipe",
     "dcopy",
@@ -48,6 +52,47 @@ __all__ = [
     "ddot",
     "noddot",
 ]
+
+
+_SHM_DEPEND_COUNTER = 0
+
+
+def _next_depend_shm_name():
+    global _SHM_DEPEND_COUNTER
+    _SHM_DEPEND_COUNTER += 1
+    return f"IPD{os.getpid() % 100000:05d}{_SHM_DEPEND_COUNTER % 10000:04d}"
+
+
+def _allocate_depend_shm(
+    shape=None,
+    dtype=float,
+    initializer="copy",
+    fill_value=0.0,
+    value=None,
+    shm_name=None,
+):
+    if value is None:
+        if shape is None:
+            raise ValueError("depend_shm_array requires either value or shape")
+        array = np.empty(tuple(shape), dtype=np.dtype(dtype))
+    else:
+        array = np.asarray(value, dtype=np.dtype(dtype) if dtype is not None else None)
+
+    if array.size == 0:
+        return array, None, None
+
+    shm = shared_memory.SharedMemory(
+        create=True,
+        size=array.nbytes,
+        name=shm_name or _next_depend_shm_name(),
+    )
+    resource_tracker.unregister(shm._name, "shared_memory")
+    shm_array = np.ndarray(array.shape, dtype=array.dtype, buffer=shm.buf)
+    if initializer == "zeros":
+        shm_array.fill(fill_value)
+    else:
+        shm_array[...] = array
+    return shm_array, shm, shm.name
 
 
 class synchronizer(object):
@@ -231,7 +276,11 @@ class depend_base(object):
         Double-checks under the lock to make the update thread-safe."""
         with self._threadlock:
             if self._tainted[0]:
-                self.update_auto()
+                timing_token = timers.enter_depend(self)
+                try:
+                    self.update_auto()
+                finally:
+                    timers.exit_depend(timing_token)
                 self.taint(taintme=False)
 
 
@@ -306,13 +355,7 @@ class depend_array(depend_base):
         parent=None,
     ):
         if base is not None:
-            # Slice-view: wrap an already-allocated view of the parent.
             self._value = base
-        elif value is None:
-            # Sentinel used by __deepcopy__; members will be overwritten.
-            self._value = np.empty(0)
-        elif isinstance(value, np.ndarray):
-            self._value = value
         else:
             self._value = np.asarray(value)
 
@@ -523,6 +566,10 @@ class depend_array(depend_base):
         """
         if self._parent is not None:
             self._parent._refresh()
+            # Read-only alias views may keep an independent taint flag so
+            # parent taint propagation reaches their own dependants. Clear the
+            # child flag here after delegating the actual refresh upstream.
+            self._tainted[0] = False
         else:
             super()._refresh()
 
@@ -551,12 +598,176 @@ class depend_array(depend_base):
     # ------------------------------------------------------------------
 
     def __getstate__(self):
-        state = {k: v for k, v in self.__dict__.items() if k != "_threadlock"}
-        return state
+        return {k: v for k, v in self.__dict__.items() if k != "_threadlock"}
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._threadlock = threading.RLock()
+
+
+class depend_shm_array(depend_array):
+    """Depend array backed by an owning shared-memory buffer."""
+
+    def __init__(
+        self,
+        name,
+        shape=None,
+        dtype=float,
+        initializer="copy",
+        fill_value=0.0,
+        value=None,
+        synchro=None,
+        func=None,
+        dependants=None,
+        dependencies=None,
+        tainted=None,
+        base=None,
+        parent=None,
+        shm_name=None,
+        readonly=False,
+    ):
+        if base is not None:
+            self._value = base
+            self._shm_handle = None
+            self._shm_name = getattr(parent, "_shm_name", None)
+            self._shm_owner = False
+        else:
+            self._value, self._shm_handle, self._shm_name = _allocate_depend_shm(
+                shape=shape,
+                dtype=dtype,
+                initializer=initializer,
+                fill_value=fill_value,
+                value=value,
+                shm_name=shm_name,
+            )
+            self._shm_owner = self._shm_handle is not None
+
+        self._readonly = readonly
+        self._parent = parent
+        depend_base.__init__(
+            self, name, synchro, func, dependants, dependencies, tainted
+        )
+
+    @property
+    def shm_name(self):
+        return self._shm_name
+
+    def __del__(self):
+        try:
+            if getattr(self, "_shm_owner", False) and self._shm_handle is not None:
+                self._shm_handle.close()
+                self._shm_handle.unlink()
+        except Exception:
+            pass
+
+    def reshape(self, *shape):
+        if len(shape) == 1:
+            shape = shape[0]
+        return depend_shm_array(
+            name=self._name,
+            base=self._value.reshape(shape),
+            synchro=self._synchro,
+            dependants=self._dependants,
+            tainted=self._tainted,
+            parent=self,
+            readonly=self._readonly,
+        )
+
+    def __getitem__(self, index):
+        if self._tainted[0]:
+            self._refresh()
+        if _is_scalar_index(index, self._value.ndim):
+            return self._value[index]
+        return depend_shm_array(
+            name=self._name,
+            base=self._value[index],
+            synchro=self._synchro,
+            dependants=self._dependants,
+            tainted=self._tainted,
+            parent=self,
+            readonly=self._readonly,
+        )
+
+    def set(self, value, manual=True):
+        with self._threadlock:
+            if manual and self._readonly:
+                raise ValueError(
+                    "Cannot modify readonly shared-memory depend array <"
+                    + self._name
+                    + ">"
+                )
+            same_storage = value is self._value
+            if not same_storage:
+                try:
+                    same_storage = np.shares_memory(self._value, np.asarray(value))
+                except Exception:
+                    same_storage = False
+            if not same_storage:
+                self._value[...] = value
+            if manual and (self._synchro is not None or self._func is not None):
+                self.update_man()
+            self.taint(taintme=False)
+
+    def __setitem__(self, index, value):
+        with self._threadlock:
+            if self._readonly:
+                raise ValueError(
+                    "Cannot modify readonly shared-memory depend array <"
+                    + self._name
+                    + ">"
+                )
+            self._value[index] = value
+            if self._synchro is not None or self._func is not None:
+                self.update_man()
+            self.taint(taintme=False)
+
+    def update_auto(self):
+        if self._synchro is not None:
+            if self._name != self._synchro.manual:
+                self.set(self._func[self._synchro.manual](), manual=False)
+            else:
+                pass
+        elif self._func is not None:
+            self._func()
+
+    def update_man(self):
+        if self._synchro is not None:
+            self._taint_synchro()
+        elif self._func is not None:
+            raise NameError(
+                "Cannot set manually the value of the automatically-computed property <"
+                + self._name
+                + ">"
+            )
+
+    def __getstate__(self):
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if k not in {"_threadlock", "_shm_handle"}
+        }
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._threadlock = threading.RLock()
+        self._shm_handle = None
+
+    def readonly_view(self, name=None):
+        # Expose the same SHM-backed storage through a non-owning child depend.
+        # The child keeps its own taint flag so parent taint propagation still
+        # reaches the child's dependants, but `_refresh` delegates to the
+        # parent, which owns the actual recompute/update logic for the buffer.
+        view = self._value.view()
+        view.setflags(write=False)
+        child = depend_shm_array(
+            name=self._name if name is None else name,
+            base=view,
+            tainted=np.array([self._tainted[0]], bool),
+            parent=self,
+            readonly=True,
+        )
+        self.add_dependant(child, tainted=False)
+        return child
 
 
 # ----------------------------------------------------------------------
