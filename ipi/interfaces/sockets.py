@@ -477,11 +477,11 @@ class Driver(DriverSocket):
         if self.status & Status.Ready:
             try:
                 if self.shm:
-                    if self.external_pos_shm:
-                        if not (self.external_h_shm and self.external_ih_shm):
-                            self.cell_to_shm(h_ih)
-                    else:
-                        self.np_to_shm({"pos": pos, "cell": h_ih})
+                    # `np_to_shm` encapsulates the two SHM modes:
+                    # transport-local buffers are updated here, whereas
+                    # canonical externally-exported buffers are left in place
+                    # and only any non-external cell buffers are refreshed.
+                    self.np_to_shm({"pos": pos, "cell": h_ih})
                     self.sendall(MESSAGE["posdata"])
                 else:
                     if pos.ndim == 2:
@@ -751,12 +751,24 @@ class Driver(DriverSocket):
             )
 
     def np_to_shm(self, r):
-        self.pos_snp[:] = r["pos"]
+        # SHM requests can either use transport-local buffers owned by this
+        # DriverSocket or canonical engine-side buffers exported directly in the
+        # request. For exported canonical position storage there is nothing to
+        # copy here: the driver already sees the up-to-date positions through
+        # the shared buffer name sent at INIT time. Only transport-local
+        # buffers need an explicit assignment on each POSDATA.
+        if not self.external_pos_shm:
+            self.pos_snp[...] = r["pos"]
         self.cell_to_shm(r["cell"])
 
     def cell_to_shm(self, h_ih):
-        self.h_snp[:] = h_ih[0]
-        self.ih_snp[:] = h_ih[1]
+        # Cell storage is handled per-buffer because h/ih may be canonical SHM
+        # buffers independently of positions. We only copy into buffers that are
+        # transport-local to this DriverSocket.
+        if not self.external_h_shm:
+            self.h_snp[...] = h_ih[0]
+        if not self.external_ih_shm:
+            self.ih_snp[...] = h_ih[1]
 
     def shm_to_np(self):
         return [self.pot_snp, self.f_snp, self.vir_snp, {}]

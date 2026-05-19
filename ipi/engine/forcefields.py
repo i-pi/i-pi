@@ -163,10 +163,10 @@ class ForceField:
         timers.start("Atoms q")
         pbcpos = dstrip(atoms.q)
         timers.stop("Atoms q")
-        canonical_shm_pos = (
+        export_shm_pos = (
             pbcpos.ndim == 2 and getattr(atoms, "q_shm_name", None) is not None
         )
-        if not canonical_shm_pos:
+        if not export_shm_pos:
             pbcpos = pbcpos.copy()
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
@@ -190,12 +190,15 @@ class ForceField:
             self.iactive = activehere
 
         if self.dopbc:
+            if export_shm_pos and not pbcpos.flags.writeable:
+                pbcpos = pbcpos.copy()
+                export_shm_pos = False
             cell.array_pbc(pbcpos)
 
         if template is None:
             template = {}
 
-        if canonical_shm_pos:
+        if export_shm_pos:
             cell_h = dstrip(cell.h)
             cell_ih = dstrip(cell.ih)
         else:
@@ -215,7 +218,7 @@ class ForceField:
             "t_dispatched": 0,
             "t_finished": 0,
         }
-        if canonical_shm_pos:
+        if export_shm_pos:
             # Batched SHM requests export canonical storage so the socket layer
             # can reuse it directly instead of allocating transport-local buffers.
             template["pos_shm_name"] = atoms.q_shm_name

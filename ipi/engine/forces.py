@@ -296,64 +296,56 @@ class ForceBatchBead:
         self._ufvx.add_dependency(beads._q)
         self._ufvx.add_dependency(self.cell._h)
 
-        self._pot = depend_array(
-            name="pot",
-            value=None if self._shm_force_enabled else np.zeros(self.nbeads, float),
-            func=self.get_pot,
-            dependencies=[self._ufvx],
-            storage="shm" if self._shm_force_enabled else None,
-            storage_opts=(
-                {
-                    "shape": (self.nbeads,),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if self._shm_force_enabled
-                else None
-            ),
-        )
+        if self._shm_force_enabled:
+            self._pot = depend_shm_array(
+                name="pot",
+                shape=(self.nbeads,),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_pot_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._pot = depend_array(
+                name="pot",
+                value=np.zeros(self.nbeads, float),
+                func=self.get_pot,
+                dependencies=[self._ufvx],
+            )
         self._pot._timing_label = "ForceBatchBead pot"
-        self._vir = depend_array(
-            name="vir",
-            value=(
-                None
-                if self._shm_force_enabled
-                else np.zeros((self.nbeads, 3, 3), float)
-            ),
-            func=self.get_vir,
-            dependencies=[self._ufvx],
-            storage="shm" if self._shm_force_enabled else None,
-            storage_opts=(
-                {
-                    "shape": (self.nbeads, 3, 3),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if self._shm_force_enabled
-                else None
-            ),
-        )
+        if self._shm_force_enabled:
+            self._vir = depend_shm_array(
+                name="vir",
+                shape=(self.nbeads, 3, 3),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_vir_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._vir = depend_array(
+                name="vir",
+                value=np.zeros((self.nbeads, 3, 3), float),
+                func=self.get_vir,
+                dependencies=[self._ufvx],
+            )
         self._vir._timing_label = "ForceBatchBead vir"
-        self._f = depend_array(
-            name="f",
-            value=(
-                None
-                if self._shm_force_enabled
-                else np.zeros((self.nbeads, 3 * self.natoms), float)
-            ),
-            func=self.get_f,
-            dependencies=[self._ufvx],
-            storage="shm" if self._shm_force_enabled else None,
-            storage_opts=(
-                {
-                    "shape": (self.nbeads, 3 * self.natoms),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if self._shm_force_enabled
-                else None
-            ),
-        )
+        if self._shm_force_enabled:
+            self._f = depend_shm_array(
+                name="f",
+                shape=(self.nbeads, 3 * self.natoms),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_f_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._f = depend_array(
+                name="f",
+                value=np.zeros((self.nbeads, 3 * self.natoms), float),
+                func=self.get_f,
+                dependencies=[self._ufvx],
+            )
         self._f._timing_marker = f"WD{self.uid}"
         self._f._timing_label = "ForceBatchBead f"
         self._extra = depend_value(
@@ -421,11 +413,22 @@ class ForceBatchBead:
     def get_f(self):
         return self.ufvx[1]
 
+    def refresh_pot_inplace(self):
+        self.ufvx
+
+    def refresh_f_inplace(self):
+        self.ufvx
+
     def get_vir(self):
         vir = self.ufvx[2]
         vir[:, 1, 0] = 0.0
         vir[:, 2, 0:2] = 0.0
         return vir
+
+    def refresh_vir_inplace(self):
+        vir = self.ufvx[2]
+        vir[:, 1, 0] = 0.0
+        vir[:, 2, 0:2] = 0.0
 
     def get_extra(self):
         fc_extra = {}
@@ -897,9 +900,9 @@ class MTSForces:
         level = self.level
         self.queue_mts()
 
-        timers.start("Init zeros")
+        timers.start("Init Forces Array")
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        timers.stop("Init zeros")
+        timers.stop("Init Forces Array")
 
         mforces = self.mforces
         mrpc = self.mrpc
@@ -911,9 +914,9 @@ class MTSForces:
                 len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
                 f = dstrip(mforces[index].f)
-                timers.start("B2B1")
+                timers.start("Collect Force Component")
                 fk += weight * mts_weights[level] * mrpc[index].b2tob1(f)
-                timers.stop("B2B1")
+                timers.stop("Collect Force Component")
         timers.stop("Get Forces MTS")
         return fk
 
@@ -1047,18 +1050,34 @@ class Forces:
                 interpolate_extras=fc.interpolate_extras,
                 epsilon=fc.epsilon,
             )
-            newbeads = Beads(beads.natoms, newb)
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
+            if (
+                newb == beads.nbeads
+                and isinstance(beads._q, depend_shm_array)
+                and not fflist[fc.ffield].dopbc
+            ):
+                # Full-bead SHM components do not need a contracted copy of q.
+                # Reuse the canonical SHM buffer through a readonly depend view
+                # so the driver path can export the original storage directly.
+                # The view has its own taint flag, therefore force dependants
+                # are still invalidated when canonical beads.q changes.
+                newbeads = Beads(
+                    beads.natoms,
+                    newb,
+                    q_dep=beads._q.readonly_view(name="q"),
+                )
+            else:
+                newbeads = Beads(beads.natoms, newb)
 
-            # the beads positions for this force components are obtained
-            # automatically, when needed, as a contraction of the full beads.
-            # Per-bead slices (b._q for b in newbeads) delegate their
-            # `_refresh` to the parent via `depend_array._parent`, so we
-            # only need to install `_func` on the parent.
-            newbeads._q._func = make_rpc(newrpc, beads)
+                # the beads positions for this force components are obtained
+                # automatically, when needed, as a contraction of the full beads.
+                # Per-bead slices (b._q for b in newbeads) delegate their
+                # `_refresh` to the parent via `depend_array._parent`, so we
+                # only need to install `_func` on the parent.
+                newbeads._q._func = make_rpc(newrpc, beads)
 
-            # makes newbeads.q depend from beads.q
-            beads._q.add_dependant(newbeads._q)
+                # makes newbeads.q depend from beads.q
+                beads._q.add_dependant(newbeads._q)
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)

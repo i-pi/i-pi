@@ -42,38 +42,33 @@ class Cell:
             h = np.zeros((3, 3), float)
 
         self._shm_h_enabled = shm_h
-        self._h = depend_array(
-            name="h",
-            value=None if shm_h else h,
-            storage="shm" if shm_h else None,
-            storage_opts=(
-                {
-                    "shape": (3, 3),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if shm_h
-                else None
-            ),
-        )
+        if shm_h:
+            self._h = depend_shm_array(
+                name="h",
+                shape=(3, 3),
+                dtype=float,
+                initializer="zeros",
+            )
+        else:
+            self._h = depend_array(name="h", value=h)
         if shm_h:
             self._h[:] = h
-        self._ih = depend_array(
-            name="ih",
-            value=None if shm_h else np.zeros((3, 3), float),
-            func=self.get_ih,
-            dependencies=[self._h],
-            storage="shm" if shm_h else None,
-            storage_opts=(
-                {
-                    "shape": (3, 3),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if shm_h
-                else None
-            ),
-        )
+        if shm_h:
+            self._ih = depend_shm_array(
+                name="ih",
+                shape=(3, 3),
+                dtype=float,
+                initializer="zeros",
+                func=self.update_ih_inplace,
+                dependencies=[self._h],
+            )
+        else:
+            self._ih = depend_array(
+                name="ih",
+                value=np.zeros((3, 3), float),
+                func=self.get_ih,
+                dependencies=[self._h],
+            )
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
@@ -91,6 +86,9 @@ class Cell:
         """Inverts the lattice vector matrix."""
 
         return invert_ut3x3(self.h)
+
+    def update_ih_inplace(self):
+        dstrip(self._ih)[...] = invert_ut3x3(self.h)
 
     def get_volume(self):
         """Calculates the volume of the system box."""
