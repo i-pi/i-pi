@@ -644,7 +644,9 @@ class depend_shm_array(depend_array):
 
         self._readonly = readonly
         self._parent = parent
-        depend_base.__init__(self, name, synchro, func, dependants, dependencies, tainted)
+        depend_base.__init__(
+            self, name, synchro, func, dependants, dependencies, tainted
+        )
 
     @property
     def shm_name(self):
