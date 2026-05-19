@@ -56,7 +56,7 @@ class Beads:
        rg: An array giving the radius of gyration of each atom.
     """
 
-    def __init__(self, natoms, nbeads, shm_q=False):
+    def __init__(self, natoms, nbeads, shm_q=False, q_dep=None):
         """Initialises Beads.
 
         Args:
@@ -65,6 +65,7 @@ class Beads:
         """
 
         self._shm_q_enabled = shm_q
+        self._q_dep = q_dep
         self.resize(natoms, nbeads)
 
     def resize(self, natoms, nbeads):
@@ -113,23 +114,19 @@ class Beads:
         )
 
         # positions and momenta. bead representation, base storage used everywhere
-        self._q = depend_array(
-            name="q",
-            value=(
-                None if self._shm_q_enabled else np.zeros((nbeads, 3 * natoms), float)
-            ),
-            storage="shm" if self._shm_q_enabled else None,
-            storage_opts=(
-                {
-                    # Batched SHM forcefields reuse Beads.q directly as the POS buffer.
-                    "shape": (nbeads, 3 * natoms),
-                    "dtype": float,
-                    "initializer": "zeros",
-                }
-                if self._shm_q_enabled
-                else None
-            ),
-        )
+        if self._q_dep is not None:
+            if self._q_dep.shape != (nbeads, 3 * natoms):
+                raise ValueError("Provided q_dep shape does not match Beads size")
+            self._q = self._q_dep
+        elif self._shm_q_enabled:
+            self._q = depend_shm_array(
+                name="q",
+                shape=(nbeads, 3 * natoms),
+                dtype=float,
+                initializer="zeros",
+            )
+        else:
+            self._q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
         self._q._timing_label = "Beads q"
         self._p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
         self._p._timing_label = "Beads p"
