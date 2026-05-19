@@ -126,7 +126,9 @@ class Beads:
                 initializer="zeros",
             )
         else:
-            self._q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
+            self._q = depend_array(
+                name="q", value=np.zeros((nbeads, 3 * natoms), float)
+            )
         self._q._timing_label = "Beads q"
         self._p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
         self._p._timing_label = "Beads p"
