@@ -209,7 +209,6 @@ class BEC:
         self._bec = depend_array(name="bec", value=bec)
         self.mode = mode
         self._asr_threshold = depend_value(name="asr_threshold", value=asr_threshold)
-        pass
 
     def bind(self, ensemble, enstype, asr_threshold):
         self.enstype = enstype
@@ -232,8 +231,6 @@ class BEC:
             self._bec = depend_array(
                 name="bec", value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
             )
-
-        pass
 
     def store(self, bec):
         super(BEC, self).store(bec)
@@ -282,13 +279,13 @@ class BEC:
             sum_rule: np.ndarray = (
                 np.asarray(bec.reshape((self.natoms, 3, 3)).sum(axis=0)) / self.natoms
             )
-            threshold = BEC.asr_threshold * self.natoms
+            threshold = self.asr_threshold * self.natoms
             if not np.allclose(sum_rule, 0, atol=threshold):
                 raise ValueError(
                     f"{msg}: BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
                     f"The sum over all the atoms should be zero, but it has exceeded the threshold of {threshold:.2e} per atom.\n"
                     f"The mean over all the atoms is {sum_rule.flatten().tolist()}.\n"
-                    "Check your driver or modify `BEC.asr_threshold` in `ipi/engine/motion/driven_dynamics.py`."
+                    "Check your model or increase `asr_threshold` in the driven_dynamics section i-PI input XML."
                 )
 
             Z[n, :, :] = np.copy(bec)
