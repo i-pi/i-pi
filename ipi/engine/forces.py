@@ -25,6 +25,7 @@ from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
+from ipi.engine.forcefields import FFSocket
 
 __all__ = ["Forces", "ForceComponent"]
 
@@ -253,6 +254,195 @@ class ForceBead:
 dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra"])
 
 
+class ForceBatchBead:
+    """Force helper that evaluates all beads in a single request."""
+
+    def __init__(self):
+        self._ufvx = depend_value(name="ufvx", func=self.get_all)
+        self._threadlock = threading.Lock()
+        self.request = None
+        self._getallcount = 0
+
+    def bind(self, beads, cell, ff, output_maker):
+        global fbuid
+        with self._threadlock:
+            self.uid = fbuid
+            fbuid += 1
+
+        self.beads = beads
+        self.nbeads = beads.nbeads
+        self.natoms = beads.natoms
+        self.cell = cell
+        self.ff = ff
+        self.interpolate_extras = []
+        self._shm_force_enabled = (
+            isinstance(self.ff, FFSocket)
+            and getattr(self.ff, "mpibatch", False)
+            and getattr(self.ff.socket, "mode", None) == "shm"
+        )
+
+        self._ufvx.add_dependency(beads._q)
+        self._ufvx.add_dependency(self.cell._h)
+
+        if self._shm_force_enabled:
+            self._pot = depend_shm_array(
+                name="pot",
+                shape=(self.nbeads,),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_pot_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._pot = depend_array(
+                name="pot",
+                value=np.zeros(self.nbeads, float),
+                func=self.get_pot,
+                dependencies=[self._ufvx],
+            )
+        if self._shm_force_enabled:
+            self._vir = depend_shm_array(
+                name="vir",
+                shape=(self.nbeads, 3, 3),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_vir_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._vir = depend_array(
+                name="vir",
+                value=np.zeros((self.nbeads, 3, 3), float),
+                func=self.get_vir,
+                dependencies=[self._ufvx],
+            )
+        if self._shm_force_enabled:
+            self._f = depend_shm_array(
+                name="f",
+                shape=(self.nbeads, 3 * self.natoms),
+                dtype=float,
+                initializer="zeros",
+                func=self.refresh_f_inplace,
+                dependencies=[self._ufvx],
+            )
+        else:
+            self._f = depend_array(
+                name="f",
+                value=np.zeros((self.nbeads, 3 * self.natoms), float),
+                func=self.get_f,
+                dependencies=[self._ufvx],
+            )
+        self._extra = depend_value(
+            name="extra", func=self.get_extra, dependencies=[self._ufvx]
+        )
+
+    def queue(self):
+        with self._threadlock:
+            is_tainted = self._ufvx.tainted()
+            if self.request is None and is_tainted:
+                template = {}
+                if self._shm_force_enabled and getattr(self._f, "shm_name", None):
+                    template["force_shm_name"] = self._f.shm_name
+                    template["force_shm_array"] = dstrip(self._f)
+                    template["pot_shm_name"] = self._pot.shm_name
+                    template["pot_shm_array"] = dstrip(self._pot)
+                    template["vir_shm_name"] = self._vir.shm_name
+                    template["vir_shm_array"] = dstrip(self._vir)
+                self.request = self.ff.queue(
+                    self.beads, self.cell, reqid=self.uid, template=template
+                )
+        return is_tainted
+
+    def get_all(self):
+        with self._threadlock:
+            self._getallcount += 1
+
+        if self.request is None:
+            self.queue()
+
+        request = self.request
+        latency = self.ff.latency
+        while request["status"] != "Done":
+            if request["status"] == "Exit" or softexit.triggered:
+                softexit.trigger(
+                    message=" @ FORCES : cannot return so will die off here"
+                )
+                while softexit.exiting:
+                    time.sleep(latency)
+                sys.exit()
+            request._event_done.wait(timeout=1.0)
+
+        result = request["result"]
+
+        with self._threadlock:
+            self._getallcount -= 1
+
+        if self._getallcount == 0:
+            self.ff.release(request)
+            self.request = None
+        else:
+            while self._getallcount > 0:
+                time.sleep(latency)
+
+        return result
+
+    def get_pot(self):
+        return self.ufvx[0]
+
+    def get_f(self):
+        return self.ufvx[1]
+
+    def refresh_pot_inplace(self):
+        self.ufvx
+
+    def refresh_f_inplace(self):
+        self.ufvx
+
+    def get_vir(self):
+        vir = self.ufvx[2]
+        vir[:, 1, 0] = 0.0
+        vir[:, 2, 0:2] = 0.0
+        return vir
+
+    def refresh_vir_inplace(self):
+        vir = self.ufvx[2]
+        vir[:, 1, 0] = 0.0
+        vir[:, 2, 0:2] = 0.0
+
+    def get_extra(self):
+        fc_extra = {}
+        for e in self.ufvx[3][0]:
+            fc_extra[e] = []
+
+        for bead_extra in self.ufvx[3]:
+            for e in bead_extra:
+                if e not in fc_extra:
+                    raise KeyError(
+                        "Extras mismatch between beads in the same force component, key: "
+                        + e
+                    )
+                fc_extra[e].append(bead_extra[e])
+
+        for e in self.interpolate_extras:
+            try:
+                fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
+            except KeyError:
+                raise KeyError(
+                    "interpolate_extras required "
+                    + e
+                    + " to promote, but was not found among extras "
+                    + str(list(fc_extra.keys()))
+                )
+            except Exception:
+                raise Exception(
+                    "interpolate_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
+                )
+        return fc_extra
+
+
+dproperties(ForceBatchBead, ["ufvx", "pot", "vir", "f", "extra"])
+
+
 class ForceComponent:
     """Computes one component (e.g. bonded interactions) of the force.
 
@@ -362,49 +552,70 @@ class ForceComponent:
 
         self._forces = []
         self.beads = beads
-        for b in range(self.nbeads):
-            new_force = ForceBead()
-            new_force.bind(beads[b], cell, self.ff, output_maker=output_maker)
-            self._forces.append(new_force)
+        self.batch_mode = (
+            isinstance(self.ff, FFSocket) and getattr(self.ff, "mpibatch", False)
+        ) or getattr(self.ff, "batch_request", False)
 
-        # f is a big array which assembles the forces on individual beads
-        self._f = depend_array(
-            name="f",
-            value=np.zeros((self.nbeads, 3 * self.natoms)),
-            func=self.f_gather,
-            dependencies=[self._forces[b]._f for b in range(self.nbeads)],
-        )
+        if self.batch_mode:
+            self.batch_force = ForceBatchBead()
+            self.batch_force.interpolate_extras = self.interpolate_extras
+            self.batch_force.bind(beads, cell, self.ff, output_maker=output_maker)
+            self._f = self.batch_force._f
+            self._pots = self.batch_force._pot
+            self._virs = self.batch_force._vir
+            self._extras = self.batch_force._extra
+            self._pot = depend_value(
+                name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
+            )
+            self._vir = depend_array(
+                name="vir",
+                func=self.get_vir,
+                value=np.zeros((3, 3)),
+                dependencies=[self._virs],
+            )
+        else:
+            for b in range(self.nbeads):
+                new_force = ForceBead()
+                new_force.bind(beads[b], cell, self.ff, output_maker=output_maker)
+                self._forces.append(new_force)
 
-        # collection of pots, virs and extras from individual beads
-        self._pots = depend_array(
-            name="pots",
-            value=np.zeros(self.nbeads, float),
-            func=self.pot_gather,
-            dependencies=[self._forces[b]._pot for b in range(self.nbeads)],
-        )
-        self._virs = depend_array(
-            name="virs",
-            value=np.zeros((self.nbeads, 3, 3), float),
-            func=self.vir_gather,
-            dependencies=[self._forces[b]._vir for b in range(self.nbeads)],
-        )
-        self._extras = depend_value(
-            name="extras",
-            value={},
-            func=self.extra_gather,
-            dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
-        )
+            # f is a big array which assembles the forces on individual beads
+            self._f = depend_array(
+                name="f",
+                value=np.zeros((self.nbeads, 3 * self.natoms)),
+                func=self.f_gather,
+                dependencies=[self._forces[b]._f for b in range(self.nbeads)],
+            )
 
-        # total potential and total virial
-        self._pot = depend_value(
-            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
-        )
-        self._vir = depend_array(
-            name="vir",
-            func=self.get_vir,
-            value=np.zeros((3, 3)),
-            dependencies=[self._virs],
-        )
+            # collection of pots, virs and extras from individual beads
+            self._pots = depend_array(
+                name="pots",
+                value=np.zeros(self.nbeads, float),
+                func=self.pot_gather,
+                dependencies=[self._forces[b]._pot for b in range(self.nbeads)],
+            )
+            self._virs = depend_array(
+                name="virs",
+                value=np.zeros((self.nbeads, 3, 3), float),
+                func=self.vir_gather,
+                dependencies=[self._forces[b]._vir for b in range(self.nbeads)],
+            )
+            self._extras = depend_value(
+                name="extras",
+                value={},
+                func=self.extra_gather,
+                dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
+            )
+
+            self._pot = depend_value(
+                name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
+            )
+            self._vir = depend_array(
+                name="vir",
+                func=self.get_vir,
+                value=np.zeros((3, 3)),
+                dependencies=[self._virs],
+            )
 
     def queue(self):
         """Submits all the required force calculations to the interface.
@@ -417,8 +628,11 @@ class ForceComponent:
         # distributed-computing magic can work
 
         is_tainted = False
-        for b in range(self.nbeads):
-            is_tainted = self._forces[b].queue() or is_tainted
+        if self.batch_mode:
+            is_tainted = self.batch_force.queue() or is_tainted
+        else:
+            for b in range(self.nbeads):
+                is_tainted = self._forces[b].queue() or is_tainted
         return is_tainted
 
     def pot_gather(self):
@@ -669,11 +883,8 @@ class MTSForces:
             if (len(mts_weights) == 0 and level == 0) or (
                 len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
-                fk += (
-                    weight
-                    * mts_weights[level]
-                    * mrpc[index].b2tob1(dstrip(mforces[index].f))
-                )
+                f = dstrip(mforces[index].f)
+                fk += weight * mts_weights[level] * mrpc[index].b2tob1(f)
         return fk
 
     def get_vir_mts(self):
@@ -806,18 +1017,34 @@ class Forces:
                 interpolate_extras=fc.interpolate_extras,
                 epsilon=fc.epsilon,
             )
-            newbeads = Beads(beads.natoms, newb)
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
+            if (
+                newb == beads.nbeads
+                and isinstance(beads._q, depend_shm_array)
+                and not fflist[fc.ffield].dopbc
+            ):
+                # Full-bead SHM components do not need a contracted copy of q.
+                # Reuse the canonical SHM buffer through a readonly depend view
+                # so the driver path can export the original storage directly.
+                # The view has its own taint flag, therefore force dependants
+                # are still invalidated when canonical beads.q changes.
+                newbeads = Beads(
+                    beads.natoms,
+                    newb,
+                    q_dep=beads._q.readonly_view(name="q"),
+                )
+            else:
+                newbeads = Beads(beads.natoms, newb)
 
-            # the beads positions for this force components are obtained
-            # automatically, when needed, as a contraction of the full beads.
-            # Per-bead slices (b._q for b in newbeads) delegate their
-            # `_refresh` to the parent via `depend_array._parent`, so we
-            # only need to install `_func` on the parent.
-            newbeads._q._func = make_rpc(newrpc, beads)
+                # the beads positions for this force components are obtained
+                # automatically, when needed, as a contraction of the full beads.
+                # Per-bead slices (b._q for b in newbeads) delegate their
+                # `_refresh` to the parent via `depend_array._parent`, so we
+                # only need to install `_func` on the parent.
+                newbeads._q._func = make_rpc(newrpc, beads)
 
-            # makes newbeads.q depend from beads.q
-            beads._q.add_dependant(newbeads._q)
+                # makes newbeads.q depend from beads.q
+                beads._q.add_dependant(newbeads._q)
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)

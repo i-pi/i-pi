@@ -434,7 +434,8 @@ class NVEIntegrator(DummyIntegrator):
                     dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
                 )
         else:
-            self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+            f = dstrip(self.forces.mts_forces[level].f)
+            self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
                 self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
@@ -541,6 +542,7 @@ class NVTIntegrator(NVEIntegrator):
         if self.splitting == "obabo":
             # thermostat is applied for dt/2
             self.tstep()
+
             self.pconstraints()
 
             # forces are integerated for dt with MTS.
@@ -548,13 +550,17 @@ class NVTIntegrator(NVEIntegrator):
 
             # thermostat is applied for dt/2
             self.tstep()
+
             self.pconstraints()
 
         elif self.splitting == "baoab":
             self.mtsprop_ba(0)
+
             # thermostat is applied for dt
             self.tstep()
+
             self.pconstraints()
+
             self.mtsprop_ab(0)
 
 
@@ -748,11 +754,16 @@ class SCIntegrator(NVTIntegrator):
 
         elif self.splitting == "baoab":
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
             self.mtsprop_ba(0)
+
             # thermostat is applied for dt
             self.tstep()
+
             self.pconstraints()
+
             self.mtsprop_ab(0)
+
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
 
@@ -820,10 +831,15 @@ class SCNPTIntegrator(SCIntegrator):
         elif self.splitting == "baoab":
             self.barostat.pscstep()
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
             self.mtsprop_ba(0)
+
             # thermostat is applied for dt
             self.tstep()
+
             self.pconstraints()
+
             self.mtsprop_ab(0)
+
             self.barostat.pscstep()
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
