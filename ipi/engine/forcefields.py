@@ -32,7 +32,6 @@ from ipi.utils.mathtools import (
     get_rotation_quadrature_lebedev,
     random_rotation,
 )
-from ipi.utils.timing_manager import timers
 
 plumed = None
 
@@ -160,9 +159,7 @@ class ForceField:
         else:
             par_str = " "
 
-        timers.start("Atoms q")
         pbcpos = dstrip(atoms.q)
-        timers.stop("Atoms q")
         export_shm_pos = (
             pbcpos.ndim == 2 and getattr(atoms, "q_shm_name", None) is not None
         )

@@ -31,7 +31,6 @@ from multiprocessing import resource_tracker, shared_memory
 import operator as _op
 
 import numpy as np
-from ipi.utils.timing_manager import timers
 
 # NOTE: the info()/warning() calls below are disabled because they
 # add measurable cost in the hot path. Re-enable
@@ -276,11 +275,7 @@ class depend_base(object):
         Double-checks under the lock to make the update thread-safe."""
         with self._threadlock:
             if self._tainted[0]:
-                timing_token = timers.enter_depend(self)
-                try:
-                    self.update_auto()
-                finally:
-                    timers.exit_depend(timing_token)
+                self.update_auto()
                 self.taint(taintme=False)
 
 

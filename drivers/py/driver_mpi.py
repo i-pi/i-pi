@@ -23,7 +23,6 @@ from ipi.pes import load_pes, __drivers__
 
 from ipi.utils.io.inputs import read_args_kwargs
 from mpi4py import MPI
-from ipi.utils.timing_manager import timers
 from multiprocessing import resource_tracker, shared_memory
 
 description = """
@@ -167,13 +166,10 @@ def run_driver(
     vir_snp = None
 
     while True:
-        timers.set_step(request_count)
         if rank == 0:
-            timers.start("Recv Header")
             header = sock.recv(HDRLEN)
             if f_verbose:
                 print(f"Rank {rank} received ", header)
-            timers.stop("Recv Header")
         else:
             header = None
 
@@ -282,9 +278,7 @@ def run_driver(
 
         elif header == Message("POSDATA"):
             request_count += 1
-            timers.set_step(request_count)
             if rank == 0:
-                timers.start("Read Posdata")
                 if shm:
                     pos = pos_snp
                     cell = cell_snp
@@ -300,8 +294,6 @@ def run_driver(
                     nat = -nat_token
                     nbeads = int(recv_data(sock, np.int32()))
                     pos = recv_data(sock, np.zeros((nbeads, nat * 3), dtype=np.float64))
-
-                timers.stop("Read Posdata")
             else:
                 if not (shm and shm_local_slices):
                     nbeads = None
@@ -312,9 +304,7 @@ def run_driver(
                 cell = cell_snp
                 icell = icell_snp
 
-                timers.start("Run Driver")
                 results = driver(cell, pos_local)
-                timers.stop("Run Driver")
 
                 pot_snp[rank] = results[0]
                 f_snp[rank, :] = np.asarray(results[1], dtype=np.float64).reshape(
@@ -331,8 +321,6 @@ def run_driver(
                     force = f_snp
                     vir = vir_snp
             else:
-                timers.start("MPI Bcast Metadata")
-
                 # fist, broadcast nat, nbeads, and cell data to other ranks
                 if rank == 0:
                     buf = np.concatenate(
@@ -354,8 +342,6 @@ def run_driver(
                 cell = buf[2:11].reshape(3, 3)
                 icell = buf[11:].reshape(3, 3)
 
-                timers.stop("MPI Bcast Metadata")
-
                 if rank == 0:
                     # pos is shape (nbeads, nat, 3)
                     sendbuf = pos
@@ -365,15 +351,10 @@ def run_driver(
                 # Allocate local slice on each worker
                 recvbuf = np.empty((nat, 3), dtype=np.float64)
 
-                timers.start("MPI Scatter Pos")
                 comm.Scatter(sendbuf, recvbuf, root=0)
                 pos_local = recvbuf
-                timers.stop("MPI Scatter Pos")
 
-                timers.start("Run Driver")
                 results = driver(cell, pos_local)
-
-                timers.stop("Run Driver")
 
                 local_pot = np.asarray([results[0]], dtype=np.float64)
                 local_force = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
@@ -395,11 +376,9 @@ def run_driver(
                     force = None
                     vir = None
 
-                timers.start("MPI Gather Results")
                 comm.Gather([local_pot, MPI.DOUBLE], [pot, MPI.DOUBLE], root=0)
                 comm.Gather([local_force, MPI.DOUBLE], [force, MPI.DOUBLE], root=0)
                 comm.Gather([local_vir, MPI.DOUBLE], [vir, MPI.DOUBLE], root=0)
-                timers.stop("MPI Gather Results")
 
                 if rank == 0:
                     pot = np.asarray(pot, dtype=np.float64)
@@ -424,18 +403,14 @@ def run_driver(
                     raise ValueError("Virial shape mismatch")
                 """
                 if shm:
-                    timers.start("Notify Force Ready")
                     sock.sendall(Message("FORCEREADY"))
-                    timers.stop("Notify Force Ready")
                 else:
-                    timers.start("Write Force Results")
                     sock.sendall(Message("FORCEREADY"))
                     send_data(sock, pot)
                     send_data(sock, np.int32(nat))
                     send_data(sock, force)
                     send_data(sock, vir)
                     send_data(sock, np.int32(0))
-                    timers.stop("Write Force Results")
 
                 f_data = False
 
@@ -449,7 +424,6 @@ def run_driver(
                     pos_shm.close()
                     f_shm.close()
                     vir_shm.close()
-                timers.summary("driver_timing_breakdown")
             elif shm and shm_local_slices and cell_shm is not None:
                 cell_shm.close()
                 icell_shm.close()

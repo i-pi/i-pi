@@ -17,7 +17,6 @@ from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
-from ipi.utils.timing_manager import timers
 
 
 class Dynamics(Motion):
@@ -435,22 +434,15 @@ class NVEIntegrator(DummyIntegrator):
                     dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
                 )
         else:
-            timers.start("F")
             f = dstrip(self.forces.mts_forces[level].f)
-            timers.stop("F")
-
-            timers.start("Verlet")
             self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
                 self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
-            timers.stop("Verlet")
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        timers.start("Centr. Verlet")
         self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
-        timers.stop("Centr. Verlet")
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -483,9 +475,7 @@ class NVEIntegrator(DummyIntegrator):
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.qcstep()
-                timers.start("Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("Free RingPol. Verlet")
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -496,9 +486,7 @@ class NVEIntegrator(DummyIntegrator):
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.qcstep()
-                timers.start("Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("Free RingPol. Verlet")
             else:
                 self.mtsprop_ab(index + 1)
 
@@ -552,40 +540,28 @@ class NVTIntegrator(NVEIntegrator):
         """Does one simulation time step."""
 
         if self.splitting == "obabo":
-            timers.start("Thermostat Step")
             # thermostat is applied for dt/2
             self.tstep()
-            timers.stop("Thermostat Step")
 
             self.pconstraints()
 
-            timers.start("MTS propagation")
             # forces are integerated for dt with MTS.
             self.mtsprop(0)
-            timers.stop("MTS propagation")
 
-            timers.start("Thermostat Step")
             # thermostat is applied for dt/2
             self.tstep()
-            timers.stop("Thermostat Step")
 
             self.pconstraints()
 
         elif self.splitting == "baoab":
-            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
-            timers.stop("MTS propagation BA")
 
-            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
-            timers.stop("Thermostat Step")
 
             self.pconstraints()
 
-            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
-            timers.stop("MTS propagation AB")
 
 
 class NVTCCIntegrator(NVTIntegrator):
@@ -668,26 +644,20 @@ class NPTIntegrator(NVTIntegrator):
 
         self._stresscheck = False
 
-        timers.start("Barostat pstep")
         self.barostat.pstep(level)
-        timers.stop("Barostat pstep")
         super(NPTIntegrator, self).pstep(level)
         # self.pconstraints()
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
 
-        timers.start("Barostat qcstep")
         self.barostat.qcstep()
-        timers.stop("Barostat qcstep")
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
 
         self.thermostat.step()
-        timers.start("Barostat Thermostat Step")
         self.barostat.thermostat.step()
-        timers.stop("Barostat Thermostat Step")
         # self.pconstraints()
 
 
@@ -785,20 +755,14 @@ class SCIntegrator(NVTIntegrator):
         elif self.splitting == "baoab":
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
-            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
-            timers.stop("MTS propagation BA")
 
-            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
-            timers.stop("Thermostat Step")
 
             self.pconstraints()
 
-            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
-            timers.stop("MTS propagation AB")
 
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
@@ -830,25 +794,19 @@ class SCNPTIntegrator(SCIntegrator):
 
         self._stresscheck = False
 
-        timers.start("Barostat pstep")
         self.barostat.pstep(level)
-        timers.stop("Barostat pstep")
         super(SCNPTIntegrator, self).pstep(level)
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
 
-        timers.start("Barostat qcstep")
         self.barostat.qcstep()
-        timers.stop("Barostat qcstep")
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
 
         self.thermostat.step()
-        timers.start("Barostat Thermostat Step")
         self.barostat.thermostat.step()
-        timers.stop("Barostat Thermostat Step")
 
     def step(self, step=None):
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
@@ -871,27 +829,17 @@ class SCNPTIntegrator(SCIntegrator):
             self.pconstraints()
 
         elif self.splitting == "baoab":
-            timers.start("Barostat SC Step")
             self.barostat.pscstep()
-            timers.stop("Barostat SC Step")
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
-            timers.start("MTS propagation BA")
             self.mtsprop_ba(0)
-            timers.stop("MTS propagation BA")
 
-            timers.start("Thermostat Step")
             # thermostat is applied for dt
             self.tstep()
-            timers.stop("Thermostat Step")
 
             self.pconstraints()
 
-            timers.start("MTS propagation AB")
             self.mtsprop_ab(0)
-            timers.stop("MTS propagation AB")
 
-            timers.start("Barostat SC Step")
             self.barostat.pscstep()
-            timers.stop("Barostat SC Step")
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5

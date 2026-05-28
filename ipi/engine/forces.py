@@ -26,7 +26,6 @@ from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFSocket
-from ipi.utils.timing_manager import timers
 
 __all__ = ["Forces", "ForceComponent"]
 
@@ -73,7 +72,6 @@ class ForceBead:
 
         # ufvx is a list [ u, f, vir, extra ]  which stores the results of the force calculation
         self._ufvx = depend_value(name="ufvx", func=self.get_all)
-        self._ufvx._timing_label = "ForceBead ufvx"
         self._threadlock = threading.Lock()
         self.request = None
         self._getallcount = 0
@@ -104,10 +102,7 @@ class ForceBead:
         self._ufvx.add_dependency(self.cell._h)
 
         # potential and virial are to be extracted very simply from ufvx
-        self._pot = depend_value(
-            name="pot", func=self.get_pot, dependencies=[self._ufvx]
-        )
-        self._pot._timing_label = "ForceBead pot"
+        self._pot = depend_value(name="pot", func=self.get_pot, dependencies=[self._ufvx])
 
         self._vir = depend_array(
             name="vir",
@@ -115,7 +110,6 @@ class ForceBead:
             func=self.get_vir,
             dependencies=[self._ufvx],
         )
-        self._vir._timing_label = "ForceBead vir"
 
         self._f = depend_array(
             name="f",
@@ -123,13 +117,8 @@ class ForceBead:
             func=self.get_f,
             dependencies=[self._ufvx],
         )
-        self._f._timing_marker = f"WD{self.uid}"
-        self._f._timing_label = "ForceBead f"
 
-        self._extra = depend_value(
-            name="extra", func=self.get_extra, dependencies=[self._ufvx]
-        )
-        self._extra._timing_label = "ForceBead extra"
+        self._extra = depend_value(name="extra", func=self.get_extra, dependencies=[self._ufvx])
 
     def queue(self):
         """Sends the job to the interface queue directly.
@@ -159,9 +148,6 @@ class ForceBead:
         Returns:
            A list of the form [potential, force, virial, extra].
         """
-
-        wd_timer = f"Waiting Driver{self.uid}"
-        timers.start(wd_timer)
 
         # because we thread over many systems and outputs, we might get called
         # more than once. keep track of how many times we are called so we
@@ -217,7 +203,6 @@ class ForceBead:
             while self._getallcount > 0:
                 time.sleep(latency)
 
-        timers.stop(wd_timer)
         return result
 
     def get_pot(self):
@@ -270,7 +255,6 @@ class ForceBatchBead:
 
     def __init__(self):
         self._ufvx = depend_value(name="ufvx", func=self.get_all)
-        self._ufvx._timing_label = "ForceBatchBead ufvx"
         self._threadlock = threading.Lock()
         self.request = None
         self._getallcount = 0
@@ -312,7 +296,6 @@ class ForceBatchBead:
                 func=self.get_pot,
                 dependencies=[self._ufvx],
             )
-        self._pot._timing_label = "ForceBatchBead pot"
         if self._shm_force_enabled:
             self._vir = depend_shm_array(
                 name="vir",
@@ -329,7 +312,6 @@ class ForceBatchBead:
                 func=self.get_vir,
                 dependencies=[self._ufvx],
             )
-        self._vir._timing_label = "ForceBatchBead vir"
         if self._shm_force_enabled:
             self._f = depend_shm_array(
                 name="f",
@@ -346,12 +328,9 @@ class ForceBatchBead:
                 func=self.get_f,
                 dependencies=[self._ufvx],
             )
-        self._f._timing_marker = f"WD{self.uid}"
-        self._f._timing_label = "ForceBatchBead f"
         self._extra = depend_value(
             name="extra", func=self.get_extra, dependencies=[self._ufvx]
         )
-        self._extra._timing_label = "ForceBatchBead extra"
 
     def queue(self):
         with self._threadlock:
@@ -371,9 +350,6 @@ class ForceBatchBead:
         return is_tainted
 
     def get_all(self):
-        wd_timer = f"Waiting Driver{self.uid}"
-        timers.start(wd_timer)
-
         with self._threadlock:
             self._getallcount += 1
 
@@ -404,7 +380,6 @@ class ForceBatchBead:
             while self._getallcount > 0:
                 time.sleep(latency)
 
-        timers.stop(wd_timer)
         return result
 
     def get_pot(self):
@@ -607,7 +582,6 @@ class ForceComponent:
                 func=self.f_gather,
                 dependencies=[self._forces[b]._f for b in range(self.nbeads)],
             )
-            self._f._timing_label = "ForceComponent f"
 
             # collection of pots, virs and extras from individual beads
             self._pots = depend_array(
@@ -616,33 +590,26 @@ class ForceComponent:
                 func=self.pot_gather,
                 dependencies=[self._forces[b]._pot for b in range(self.nbeads)],
             )
-            self._pots._timing_label = "ForceComponent pots"
             self._virs = depend_array(
                 name="virs",
                 value=np.zeros((self.nbeads, 3, 3), float),
                 func=self.vir_gather,
                 dependencies=[self._forces[b]._vir for b in range(self.nbeads)],
             )
-            self._virs._timing_label = "ForceComponent virs"
             self._extras = depend_value(
                 name="extras",
                 value={},
                 func=self.extra_gather,
                 dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
             )
-            self._extras._timing_label = "ForceComponent extras"
 
-            self._pot = depend_value(
-                name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
-            )
-            self._pot._timing_label = "ForceComponent pot"
+            self._pot = depend_value(name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots])
             self._vir = depend_array(
                 name="vir",
                 func=self.get_vir,
                 value=np.zeros((3, 3)),
                 dependencies=[self._virs],
             )
-            self._vir._timing_label = "ForceComponent vir"
 
     def queue(self):
         """Submits all the required force calculations to the interface.
@@ -896,13 +863,10 @@ class MTSForces:
     def get_forces_mts(self):
         """Fetches ONLY the forces associated with a given MTS level."""
 
-        timers.start("Get Forces MTS")
         level = self.level
         self.queue_mts()
 
-        timers.start("Init Forces Array")
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        timers.stop("Init Forces Array")
 
         mforces = self.mforces
         mrpc = self.mrpc
@@ -914,10 +878,7 @@ class MTSForces:
                 len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
                 f = dstrip(mforces[index].f)
-                timers.start("Collect Force Component")
                 fk += weight * mts_weights[level] * mrpc[index].b2tob1(f)
-                timers.stop("Collect Force Component")
-        timers.stop("Get Forces MTS")
         return fk
 
     def get_vir_mts(self):
@@ -1094,11 +1055,6 @@ class Forces:
             func=self.f_combine,
             dependencies=[ff._f for ff in self.mforces],
         )
-        if len(self.mforces) == 1 and hasattr(self.mforces[0]._f, "_timing_marker"):
-            self._f._timing_marker = self.mforces[0]._f._timing_marker
-            self._f._timing_label = "Forces total f"
-        elif not hasattr(self._f, "_timing_label"):
-            self._f._timing_label = "Forces total f"
 
         # collection of pots and virs from individual ff objects
         self._pots = depend_array(
@@ -1107,7 +1063,6 @@ class Forces:
             func=self.pot_combine,
             dependencies=[ff._pots for ff in self.mforces],
         )
-        self._pots._timing_label = "Forces total pots"
 
         # must take care of the virials!
         self._virs = depend_array(
@@ -1116,7 +1071,6 @@ class Forces:
             func=self.vir_combine,
             dependencies=[ff._virs for ff in self.mforces],
         )
-        self._virs._timing_label = "Forces total virs"
 
         self._extras = depend_value(
             name="extras",
@@ -1124,13 +1078,9 @@ class Forces:
             func=self.extra_combine,
             dependencies=[ff._extras for ff in self.mforces],
         )
-        self._extras._timing_label = "Forces total extras"
 
         # total potential and total virial
-        self._pot = depend_value(
-            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
-        )
-        self._pot._timing_label = "Forces total pot"
+        self._pot = depend_value(name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots])
 
         self._vir = depend_array(
             name="vir",
@@ -1138,7 +1088,6 @@ class Forces:
             value=np.zeros((3, 3)),
             dependencies=[self._virs],
         )
-        self._vir._timing_label = "Forces total vir"
 
         # SC forces and potential
         self._alpha = depend_value(name="alpha", value=0.0)
