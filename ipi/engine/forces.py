@@ -102,7 +102,9 @@ class ForceBead:
         self._ufvx.add_dependency(self.cell._h)
 
         # potential and virial are to be extracted very simply from ufvx
-        self._pot = depend_value(name="pot", func=self.get_pot, dependencies=[self._ufvx])
+        self._pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[self._ufvx]
+        )
 
         self._vir = depend_array(
             name="vir",
@@ -118,7 +120,9 @@ class ForceBead:
             dependencies=[self._ufvx],
         )
 
-        self._extra = depend_value(name="extra", func=self.get_extra, dependencies=[self._ufvx])
+        self._extra = depend_value(
+            name="extra", func=self.get_extra, dependencies=[self._ufvx]
+        )
 
     def queue(self):
         """Sends the job to the interface queue directly.
@@ -603,7 +607,9 @@ class ForceComponent:
                 dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
             )
 
-            self._pot = depend_value(name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots])
+            self._pot = depend_value(
+                name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
+            )
             self._vir = depend_array(
                 name="vir",
                 func=self.get_vir,
@@ -1080,7 +1086,9 @@ class Forces:
         )
 
         # total potential and total virial
-        self._pot = depend_value(name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots])
+        self._pot = depend_value(
+            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
+        )
 
         self._vir = depend_array(
             name="vir",
