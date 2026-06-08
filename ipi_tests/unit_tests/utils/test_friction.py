@@ -601,6 +601,7 @@ def test_non_markovian_variable_friction_gle_tracks_bath_channels() -> None:
     friction._ensure_bath_bound()
 
     assert isinstance(friction.bath, FrictionGLE)
+    friction.bath._get_non_markovian_sigma()
     assert friction.bath.state_shape() == (1, 1, 2)
     assert friction.bath.s.shape == (1, 1, 2)
 
@@ -629,6 +630,7 @@ def test_non_markovian_variable_coupling_steps_are_deterministic() -> None:
     friction.forces = forces
     friction.prng = _DummyPRNG()
     friction._ensure_bath_bound()
+    friction.bath._get_non_markovian_sigma()
 
     friction.bath.s[:] = np.array([[[0.2, -0.4]]])
     friction.bath.bp_f_step(0.1)
@@ -671,6 +673,7 @@ def test_non_markovian_variable_step_runs_with_explicit_Ap() -> None:
     friction.forces = forces
     friction.prng = _DummyPRNG()
     friction._ensure_bath_bound()
+    friction.bath._get_non_markovian_sigma()
     friction.bath.s[:] = np.array([[[0.2, -0.1]]])
 
     friction.step(0.1)

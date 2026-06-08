@@ -54,26 +54,20 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     ):
 
         try:
-            w_b = w_b * invcm2au
-            v0 = v0 * invcm2au
-            self.delta = delta * A2au
-            self.eta0 = eta0
-            self.root_eta0 = np.sqrt(eta0)
-            self.eps1 = eps1
-            self.eps2 = eps2
-            self.deltaQ = deltaQ
-            self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
-            self.A = -0.5 * m * (w_b) ** 2
-            self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+            self.eta0 = float(eta0)
+            self.root_eta0 = np.sqrt(self.eta0)
+            self.eps1 = float(eps1)
+            self.eps2 = float(eps2)
+            self.deltaQ = float(deltaQ)
 
         except:
             sys.exit(self.__doc__)
 
-        super().__init__(*args, **kwargs)
+        super().__init__(w_b=w_b, v0=v0, m=m, delta=delta, *args, **kwargs)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""
-        assert pos.shape == (1, 3), "We expect pos.shape (1,3), but we have {}".format(
+        assert pos.ndim == 2 and pos.shape[1] == 3, "We expect pos.shape (natoms,3), but we have {}".format(
             pos.shape
         )
 
@@ -95,20 +89,32 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def get_diffusion_coefficient(self, pos):
         """Function that computes the array of diffusion coefficients."""
         self.check_dimensions(pos)
-        q = pos[0, 0]
-        diffusion_coefficient = np.zeros(3)
-        dSD_dq = self.dSD_dq(q)
-        diffusion_coefficient[0] = self.root_eta0 * dSD_dq
+        natoms = pos.shape[0]
+        diffusion_coefficient = np.zeros((natoms, 3 * natoms))
+        for iatom, q in enumerate(pos[:, 0]):
+            #diffusion_coefficient[iatom, 3 * iatom] = self.root_eta0 * self.dSD_dq(q)
+            
+            #If using A matrix style implementation, sigma should not contain friction strength
+            diffusion_coefficient[iatom, 3 * iatom] =  self.dSD_dq(q)  
         return diffusion_coefficient
+
+    def get_friction_coupling(self, pos):
+        """Returns the separable coupling g(q)=q*SD(q) for each bath channel."""
+        self.check_dimensions(pos)
+        return np.asarray([q * self.SD(q) for q in pos[:, 0]], dtype=float)
+
+    def get_scaled_friction_coupling(self, pos):
+        """Returns sqrt(eta0) * g(q), consistent with diffusion_coefficient."""
+        return self.root_eta0 * self.get_friction_coupling(pos)
 
     def get_friction_tensor(self, pos):
         """Function that computes spatially dependent friction tensor"""
 
         self.check_dimensions(pos)
-        x = pos[0, 0]
-        friction_tensor = np.zeros((3, 3))
-
-        friction_tensor[0, 0] = self.eta0 * self.dSD_dq(x) ** 2
+        natoms = pos.shape[0]
+        friction_tensor = np.zeros((3 * natoms, 3 * natoms))
+        for iatom, q in enumerate(pos[:, 0]):
+            friction_tensor[3 * iatom, 3 * iatom] = self.eta0 * self.dSD_dq(q) ** 2
         return friction_tensor
 
     def get_diffusion_and_friction(self, pos):
@@ -116,12 +122,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         and its outer product with itself, i.e., the static friction tensor.
         """
         diffusion_coefficient = self.get_diffusion_coefficient(pos)
-        friction_tensor = (
-            diffusion_coefficient[:, None] * diffusion_coefficient[None, :]
-        )
-
-        # Friction will expect diffusion coefficient in shape nbdeads, nbath, ndof
-        diffusion_coefficient = diffusion_coefficient[None, :]        
+        friction_tensor = diffusion_coefficient.T @ diffusion_coefficient
 
         return diffusion_coefficient, friction_tensor
 
@@ -133,11 +134,15 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         ).compute_structure(cell, pos)
 
         diffusion_coefficient, friction_tensor = self.get_diffusion_and_friction(pos)
+        friction_coupling = self.get_friction_coupling(pos)
+        scaled_friction_coupling = self.get_scaled_friction_coupling(pos)
 
         extras = json.dumps(
             {
                 "friction": friction_tensor.tolist(),
                 "diffusion_coefficient": diffusion_coefficient.tolist(),
+                "friction_coupling": friction_coupling.tolist(),
+                "scaled_friction_coupling": scaled_friction_coupling.tolist(),
             }
         )
         return pot, force, vir, extras

@@ -64,6 +64,14 @@ class InputFriction(Input):
                 "help": "Force-extras key for variable friction payload. Expected shape is (nbeads, nbath, 3*natoms).",
             },
         ),
+        "coupling_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "friction_coupling",
+                "help": "Force-extras key for bead-resolved coupling values F(q), expected shape (nbeads, nbath).",
+            },
+        ),
     }
 
     default_help = "Friction operator configuration (MF + markovian/non-markovian bath). For variable friction, sigma must be provided in force extras."
@@ -85,6 +93,7 @@ class InputFriction(Input):
         self.sigma_static.store(friction.sigma_static)
 
         self.sigma_key.store(friction.sigma_key)
+        self.coupling_key.store(friction.coupling_key)
 
     def fetch(self) -> Friction:
         return Friction(
@@ -98,4 +107,5 @@ class InputFriction(Input):
             sigma_static=self.sigma_static.fetch(),
 
             sigma_key=self.sigma_key.fetch(),
+            coupling_key=self.coupling_key.fetch(),
         )

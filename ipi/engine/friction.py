@@ -27,6 +27,13 @@ current substep. When the driver only returns friction-active atoms,
 full Cartesian system (n_atoms).
 """
 
+# TODO: Decide on representation (normal mode etc) for all branches
+# TODO: debug_mf_mode has outdated options (e.g linear),  for now we assume the driver will provide friction coupling
+# so that debug_mf_mode will just be on or off (default on)
+
+
+
+
 import json
 import numpy as np
 from scipy.linalg import expm, cholesky
@@ -35,6 +42,7 @@ from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
 
+from ipi.utils import nmtransform
 from ipi.utils.depend import depend_value,  dproperties
 from ipi.utils.messages import info, verbosity, warning
 
@@ -73,7 +81,7 @@ def _compute_aux_ou_matrices(A, dt, kbt):
     """Build exact OU drift/noise matrices for auxiliary variables. i.e builds T and S.
 
     The auxiliary covariance is canonical with variance kBT in each auxiliary
-    coordinate, so S S^T = kBT * (I - T T^ßT).
+    coordinate, so S S^T = kBT * (I - T T^T).
     """
 
     A = np.asarray(A, dtype=float)
@@ -157,6 +165,11 @@ class FrictionGLE(FrictionBath):
         self.ns = int(self.theta.size)
         self.T_aux = None
         self.S_aux = None
+        self._nm_transform_matrix = None
+        if self.friction.variable_friction:
+            self.s = None
+            return
+
         self.s = np.zeros(self.state_shape(), dtype=float)
         if self.friction.prng is not None and self.ns > 0:
             self.s[:] = np.sqrt(self.friction._kbt_rp()) * self.friction.prng.gvec(
@@ -170,12 +183,7 @@ class FrictionGLE(FrictionBath):
         if self.is_markovian():
             return (0,)
         if self.friction.variable_friction:
-            sigma = np.asarray(self.friction._get_sigma(), dtype=float)
-            return (
-                int(self.friction.beads.nbeads),
-                int(self.friction.Ap.shape[0] - 1),
-                int(sigma.shape[1]),
-            )
+            return None if self.s is None else self.s.shape
         return (
             int(self.friction.beads.nbeads),
             int(self.friction.Ap.shape[0] - 1),
@@ -194,12 +202,33 @@ class FrictionGLE(FrictionBath):
             int(self.friction.Ap.shape[0] - 1),
             int(sigma.shape[1]),
         )
+        if self.s is None:
+            self.s = np.zeros(expected_shape, dtype=float)
+            if self.friction.prng is not None and self.ns > 0:
+                self.s[:] = np.sqrt(self.friction._kbt_rp()) * self.friction.prng.gvec(
+                    self.s.shape
+                )
         if self.s.shape != expected_shape:
             raise ValueError(
                 "Non-markovian auxiliary state shape is inconsistent with the "
                 f"current sigma payload. Expected {expected_shape}, got {self.s.shape}."
             )
         return sigma
+
+    def _get_nm_transform_matrix(self) -> np.ndarray:
+        nbeads = int(self.friction.beads.nbeads)
+        if self._nm_transform_matrix is None or self._nm_transform_matrix.shape != (
+            nbeads,
+            nbeads,
+        ):
+            self._nm_transform_matrix = np.asarray(nmtransform.mk_nm_matrix(nbeads), dtype=float)
+        return self._nm_transform_matrix
+
+    def _get_non_markovian_nmdsigma(self) -> np.ndarray:
+        """Returns dF_nm[n'] / dQ_nm[n] from bead-space sigma=dF/dq."""
+        sigma = self._get_non_markovian_sigma()
+        cmat = self._get_nm_transform_matrix()
+        return np.einsum("rb,nb,bci->rnci", cmat, cmat, sigma)
 
     def step(self, pdt: float) -> None:
         if self.is_markovian():
@@ -294,6 +323,8 @@ class FrictionGLE(FrictionBath):
 
         if pdt <= 0.0 or self.ns == 0:
             return
+        if self.s is None:
+            self._get_non_markovian_sigma()
         self.T_aux, self.S_aux = _compute_aux_ou_matrices(
             self.A_aux, pdt, self.friction._kbt_rp()
         )
@@ -319,9 +350,9 @@ class FrictionGLE(FrictionBath):
             return
         p = self.friction.nm.pnm.copy()
         if self.friction.variable_friction:
-            sigma = self._get_non_markovian_sigma()
-            theta_s = np.einsum("a,mac->mc", self.theta, self.s)
-            p_new = p - pdt * np.einsum("mc,mci->mi", theta_s, sigma)
+            nmdsigma = self._get_non_markovian_nmdsigma()
+            theta_s = np.einsum("a,rac->rc", self.theta, self.s)
+            p_new = p - pdt * np.einsum("rc,rnci->ni", theta_s, nmdsigma)
         else:
             m = self.friction.nm.dynm3.copy()
             sm = np.sqrt(m)
@@ -347,8 +378,8 @@ class FrictionGLE(FrictionBath):
         p = self.friction.nm.pnm.copy()
         m = self.friction.nm.dynm3.copy()
         if self.friction.variable_friction:
-            sigma = self._get_non_markovian_sigma()
-            drive = np.einsum("mci,mi->mc", sigma, p / m)
+            nmdsigma = self._get_non_markovian_nmdsigma()
+            drive = np.einsum("rnci,ni->rc", nmdsigma, p / m)
             self.s[:] += pdt * self.theta[None, :, None] * drive[:, None, :]
         else:
             sigma = float(self.friction.sigma_static)
@@ -411,7 +442,8 @@ class Friction:
         sigma_static: float = 1.0,
         # if vartiable_friction is false.. then gamma = s * s   (s is a float)
 
-        sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored. 
+        sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored.
+        coupling_key: str = "friction_coupling",
     ):
         """Initialises the friction object.
         Args:
@@ -468,11 +500,13 @@ class Friction:
         self.sigma_static = float(sigma_static)
 
         self.sigma_key = str(sigma_key)
+        self.coupling_key = str(coupling_key)
         self.sigma_meta_key = "sigma_meta"
         self._sigma_meta = {}
         self._sigma_blocks = None
         self._friction_atoms_idx: np.ndarray | None = None
         self._friction_dof_idx: np.ndarray | None = None
+        self._nm_transform_matrix = None
         self.bath: FrictionBath | None = None
 
         # runtime handles
@@ -525,10 +559,6 @@ class Friction:
             f"  sigma_key           = '{self.sigma_key}'\n",
             verbosity.low,
         )
-
-        if (self.variable_friction) and self.debug_mf_mode == "linear":
-            raise ValueError(
-                "debug_mf_mode='linear' is only meaningful with variable_friction=False.")
 
         self.bath = self._build_bath()
         if self.bath is not None:
@@ -924,12 +954,50 @@ class Friction:
     # Friction forces and coupling
     # ==========================================================================
 
+    def _get_nm_transform_matrix(self) -> np.ndarray:
+        nbeads = int(self.beads.nbeads)
+        if self._nm_transform_matrix is None or self._nm_transform_matrix.shape != (
+            nbeads,
+            nbeads,
+        ):
+            self._nm_transform_matrix = np.asarray(nmtransform.mk_nm_matrix(nbeads), dtype=float)
+        return self._nm_transform_matrix
+
+    def _get_friction_coupling(self) -> np.ndarray:
+        coupling = self.forces.extras.get(self.coupling_key)
+        if coupling is None:
+            raise KeyError(
+                f"Did not find '{self.coupling_key}' among the force extras = {self.forces.extras}"
+            )
+        if isinstance(coupling, str):
+            try:
+                coupling = json.loads(coupling)
+            except json.JSONDecodeError:
+                pass
+        coupling = np.asarray(coupling, dtype=float)
+        if coupling.ndim == 1:
+            coupling = coupling[:, np.newaxis]
+        if coupling.ndim != 2:
+            raise ValueError(
+                f"{self.coupling_key} must have shape (nbeads, nbath). Got {coupling.shape}."
+            )
+        if coupling.shape[0] != int(self.beads.nbeads):
+            raise ValueError(
+                f"{self.coupling_key} shape {coupling.shape} incompatible with nbeads={self.beads.nbeads}."
+            )
+        return coupling
+
+    def _get_nmdsigma(self) -> np.ndarray:
+        sigma = np.asarray(self.sigma, dtype=float)
+        cmat = self._get_nm_transform_matrix()
+        return np.einsum("rb,nb,bci->rnci", cmat, cmat, sigma)
+
     def get_friction_coupling_nm(self):
         """Compute the friction coupling for each normal-mode index"""
         if self.variable_friction:
-            raise NotImplementedError(
-                "The calculation of friction coupling for position-dependent diffusion coefficients is not implemented."
-            )
+            # In the variable friction case, we must get the coupling F(Q) from the driver. A future example of this could be 
+            # an ML model that diretly provides the coupling for atomistic systems.
+            return self._get_nm_transform_matrix() @ self._get_friction_coupling()
         else:
             # Here we assume that the interaction potential, F(Q) in https://doi.org/10.1103/PhysRevLett.134.226201,
             # is of the form F(q) = SUM[ c{i,α} q{i,α}, {{i,0,n_atom-1}, {α,0,2}} ] where α indexes Cartesian components
@@ -944,17 +1012,27 @@ class Friction:
             return 0.0
 
         # debug
+        coupling_nm = np.asarray(self.friction_coupling_nm, dtype=float)
+        if coupling_nm.ndim == 1:
+            weighted_coupling2 = self.alpha * coupling_nm**2
+        else:
+            weighted_coupling2 = self.alpha[:, np.newaxis] * coupling_nm**2
         info("alpha "+str(self.alpha), verbosity.low)
-        info("coupling "+str(self.friction_coupling_nm**2))
-        info("EMF "+str(np.sum(self.alpha * self.friction_coupling_nm**2)), verbosity.low) 
+        info("coupling "+str(coupling_nm**2))
+        info("EMF "+str(np.sum(weighted_coupling2)), verbosity.low) 
 
 
-        return np.sum(self.alpha * self.friction_coupling_nm**2) / 2
+        return np.sum(weighted_coupling2) / 2
         
     def get_force_mf_nm(self):
         """Negative derivative of the frictional potential of mean field with respect to normal modes"""
         if self.variable_friction:
-            return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
+            return -np.einsum(
+                "r,rc,rnci->ni",
+                self.alpha,
+                np.asarray(self.friction_coupling_nm, dtype=float),
+                self._get_nmdsigma(),
+            )
 
         return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
 
