@@ -927,9 +927,9 @@ class Driver(DriverSocket):
             # extras for every structure must be drained, even padded ones
             elen = int(self.recvall(np.int32()))
             if elen > 0:
-                mxtra = bytearray(
-                    self.recvall(np.zeros(elen, np.dtype("S1")))
-                ).decode("utf-8")
+                mxtra = bytearray(self.recvall(np.zeros(elen, np.dtype("S1")))).decode(
+                    "utf-8"
+                )
             else:
                 mxtra = ""
             if i < n_real:
@@ -1378,7 +1378,11 @@ class InterfaceSocket(object):
                 for ijob, [r, c, _] in enumerate(self.jobs):
                     if id(c) not in readable_ids:
                         continue
-                    recv = c.dispatch_recv_batch if isinstance(r, list) else c.dispatch_recv
+                    recv = (
+                        c.dispatch_recv_batch
+                        if isinstance(r, list)
+                        else c.dispatch_recv
+                    )
                     if recv(r):
                         drop_ids.append(ijob)
                     else:

@@ -74,6 +74,4 @@ class Harmonic_driver(Dummy_driver):
         else:
             pots = 0.5 * (self.k * pos_arr**2).sum(axis=(1, 2))
         vir = np.zeros((3, 3))
-        return [
-            (float(pots[i]), forces[i], vir, "nada") for i in range(len(pos))
-        ]
+        return [(float(pots[i]), forces[i], vir, "nada") for i in range(len(pos))]
