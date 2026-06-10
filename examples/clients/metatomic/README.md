@@ -88,6 +88,18 @@ and, for ensembles
 i-pi input-batched-ensemble.xml
 ```
 
+The examples above batch the structures inside i-PI through a `<ffdirect>`
+clause. The same batching is also available over a socket, using the
+`i-pi-py_driver` path: set `<batch_size>` on the `<ffsocket>` clause and i-PI
+will send a batch of structures (e.g. all beads of the ring polymer) to the
+client in a single request. The driver command is unchanged — batching is
+announced to it through the INIT string:
+
+```bash
+i-pi input-batched-socket.xml & sleep 1
+i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
+```
+
 ## Model variants
 
 Metatomic allows specifying different versions of the energy output, e.g. pbe0 or r2scan 

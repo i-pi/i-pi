@@ -46,6 +46,7 @@ fortran_driver_models = [
 # We should do this automatically but for now we do it explicitly here
 python_driver_models = [
     "dummy",
+    "gas",
     "harmonic",
     "DW_friction",
     "DW_explicit",
