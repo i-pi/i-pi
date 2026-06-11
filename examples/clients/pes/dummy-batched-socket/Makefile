@@ -4,16 +4,16 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-.PHONY: all clean gas
-all: gas
+.PHONY: all clean dummy
+all: dummy
 
 driver:=i-pi-py_driver
 IPI:=i-pi
 
 
-gas:
+dummy:
 	$(IPI) input.xml & sleep 5; \
-        $(driver) -u -a localhost -m gas & \
+        $(driver) -u -a localhost -m dummy & \
 	wait
 
 clean:
