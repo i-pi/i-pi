@@ -43,6 +43,10 @@ The options (after `-o`) are as follow:
 - `force_virial_ensemble` is a bool specifying whether to also compute
   an ensemble of force predictions
 
+NB: the model nickel-lj.pt pre-build model should be compatible with modern torch and 
+metatomic APIs. If it is not, you can try to build a version based on your 
+environment running `python create-model.py`.
+
 ## Running with FFDirect
 
 It is also possible to use the metatomic PES directly, without the need for an
