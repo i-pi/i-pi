@@ -388,7 +388,9 @@ class Driver(DriverSocket):
                 if self.batch_size > 1:
                     # announce batching to the driver via the INIT string; a
                     # batch-aware driver switches to the batched protocol
-                    pars = pars + "batch_size : %d , " % self.batch_size
+                    # it checks if there are several parameters just in case
+                    sep = "," if pars.strip() else ""
+                    pars = pars + "%s batch_size:%d" % (sep, self.batch_size)
                 # combines all messages in one to reduce latency
                 self.sendall(
                     MESSAGE["init"]
@@ -803,6 +805,9 @@ class Driver(DriverSocket):
         are sized once, from the batch level announced at INIT). Only a single
         atom count travels on the wire; all structures share it.
         """
+        if len(reqs) == 0:
+            raise ValueError("dispatch_send_batch called with an empty request list")
+
         global TIMEOUT
 
         if not (self.status & Status.Up):
@@ -837,6 +842,7 @@ class Driver(DriverSocket):
         padded = list(reqs)
         if len(padded) < self.batch_size:
             padded += [padded[-1]] * (self.batch_size - len(padded))
+        # Note that the line below assumes all requests have the same number of active atoms; if this is not the case, the driver will likely crash.
         nat = len(padded[0]["pos"][padded[0]["active"]]) // 3
         try:
             payload = MESSAGE["posdata"] + np.int32(nat).tobytes()
