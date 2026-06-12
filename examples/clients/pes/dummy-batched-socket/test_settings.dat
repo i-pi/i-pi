@@ -1,4 +1,4 @@
-driver_model gas
+driver_model dummy 
   driver_code python
 
 nsteps 10
