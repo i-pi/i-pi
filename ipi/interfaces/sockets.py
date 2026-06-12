@@ -65,15 +65,17 @@ class Disconnected(Exception):
 
 
 def _parse_extra(mxtra):
-    """Decodes the optional 'extra' JSON string returned by a force
-    calculation, returning a dict (empty if the payload is empty/whitespace
-    or fails to parse). The raw string is stashed under "raw"."""
+    """Decodes the optional 'extra' string returned by a force calculation into
+    a dict. Empty/whitespace payloads give an empty dict; otherwise the JSON
+    fields (if any) are returned and the literal string is stashed under "raw",
+    matching how <ffdirect> processes extras."""
     if not mxtra or mxtra.isspace():
         return {}
     try:
         mxtradict = json.loads(mxtra)
     except Exception:
-        return {}
+        # not JSON: still expose the literal string under "raw", as <ffdirect> does
+        mxtradict = {}
     if "raw" in mxtradict:
         raise ValueError(
             "'raw' cannot be used as a field in a JSON-formatted extra string"
