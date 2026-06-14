@@ -258,9 +258,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["unix", "inet"],
+                "options": ["unix", "inet", "shm"],
                 "default": "inet",
-                "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
+                "help": "Specifies whether the driver interface will listen onto a internet socket [inet], a unix socket [unix], or a unix socket whose bulk position/force payload is exchanged through shared memory [shm].",
             },
         ),
         "matching": (

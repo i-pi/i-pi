@@ -34,13 +34,21 @@ PES=pes/zundel.f pes/morse.f pes/qtip4pf.f pes/utility.f pes/ch52008.f pes/h2o_d
 OBJECTS=$(MODULES:%.f90=%.o) $(PES:%.f=%.o)
 FC=gfortran
 CC=gcc
+
+# shm_open lives in libc on glibc>=2.34 and on macOS, but in librt on older
+# glibc; link librt on Linux (always present, harmless otherwise).
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+  LDLIBS += -lrt
+endif
+
 all: install
 
 sockets.o: sockets.c
 	$(CC) $(CFLAGS) -c -o sockets.o sockets.c
 
 driver.x: $(OBJECTS) sockets.o fsockets.o driver.o | $(OBJECTS)
-	$(FC) $(FFLAGS) -o driver.x $^
+	$(FC) $(FFLAGS) -o driver.x $^ $(LDLIBS)
 
 install: driver.x
 	ln -fs ../drivers/f90/driver.x ../../bin/i-pi-driver

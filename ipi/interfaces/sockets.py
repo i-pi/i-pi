@@ -19,6 +19,8 @@ import threading
 import numpy as np
 import json
 
+from multiprocessing import shared_memory
+
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
@@ -952,6 +954,272 @@ class Driver(DriverSocket):
         return results
 
 
+class SHMDriver(Driver):
+    """Driver that exchanges the bulk numeric payload through shared memory.
+
+    The unix socket carries only the control handshake (which also serializes
+    the producer/consumer timing, so no extra locks are needed) and the
+    variable-length 'extra' strings. Positions, cell, potential, force and
+    virial travel through per-client shared-memory segments owned by this
+    process, sized once for a full batch of ``batch_size`` structures
+    (batch_size == 1 for the non-batched paths). The same segments and trigger
+    serve both the single-request and the batched dispatch.
+    """
+
+    _SHM_KINDS = ("pos", "h", "ih", "pot", "force", "vir")
+
+    def __init__(self, sock):
+        super(SHMDriver, self).__init__(sock)
+        self._shm_allocated = False
+        self._first_posdata = True
+        self._shm = {}  # kind -> SharedMemory handle (owned)
+        self._view = {}  # kind -> numpy view, shape (batch_size, ...)
+        self._shm_prefix = f"ipi_shm_{os.getpid()}_{sock.fileno()}_"
+
+    # -- segment lifecycle ---------------------------------------------------
+    def _create_segment(self, kind, nbytes):
+        name = self._shm_prefix + kind
+        try:
+            shm = shared_memory.SharedMemory(create=True, size=nbytes, name=name)
+        except FileExistsError:
+            # leftover from a crashed run with the same pid/fileno: reclaim it
+            shared_memory.SharedMemory(name=name).unlink()
+            shm = shared_memory.SharedMemory(create=True, size=nbytes, name=name)
+        # this process owns the segment; close()+unlink() in _free_shm also
+        # deregisters it from the resource_tracker, so don't unregister here.
+        self._shm[kind] = shm
+        return shm
+
+    def _alloc_shm(self, natoms):
+        n = self.batch_size
+        itemsize = np.dtype(np.float64).itemsize
+        shapes = {
+            "pos": (n, 3 * natoms),
+            "h": (n, 3, 3),
+            "ih": (n, 3, 3),
+            "pot": (n,),
+            "force": (n, 3 * natoms),
+            "vir": (n, 3, 3),
+        }
+        for kind in self._SHM_KINDS:
+            shape = shapes[kind]
+            nbytes = int(np.prod(shape)) * itemsize
+            shm = self._create_segment(kind, nbytes)
+            self._view[kind] = np.ndarray(shape, dtype=np.float64, buffer=shm.buf)
+        self._shm_allocated = True
+
+    def _free_shm(self):
+        for shm in self._shm.values():
+            try:
+                shm.close()
+                shm.unlink()
+            except Exception:
+                pass
+        self._shm.clear()
+        self._view.clear()
+
+    # -- shared fill / read --------------------------------------------------
+    def _fill_shm(self, structs):
+        """Stages a list of (pos, (h, ih)) structures into the shared segments
+        (slots 0..len-1) and returns the POSDATA trigger: header + atom count +
+        (first exchange only) the names of the segments the driver attaches to."""
+        natoms = len(structs[0][0]) // 3
+        if not self._shm_allocated:
+            self._alloc_shm(natoms)
+        for i, (pos, h_ih) in enumerate(structs):
+            self._view["pos"][i] = pos
+            self._view["h"][i] = h_ih[0]
+            self._view["ih"][i] = h_ih[1]
+
+        payload = MESSAGE["posdata"] + np.int32(natoms).tobytes()
+        if self._first_posdata:
+            for kind in self._SHM_KINDS:
+                name = self._shm[kind].name.encode("utf-8")
+                payload += np.int32(len(name)).tobytes() + name
+            self._first_posdata = False
+        return payload
+
+    def _read_shm_results(self, count):
+        """Copies the first ``count`` results (pot/force/vir) out of the shared
+        segments; the 'extra' strings are read separately from the socket."""
+        return [
+            [
+                float(self._view["pot"][i]),
+                self._view["force"][i].copy(),
+                self._view["vir"][i].copy(),
+            ]
+            for i in range(count)
+        ]
+
+    def _recv_extra(self):
+        """Reads one length-prefixed extra string off the socket."""
+        elen = int(self.recvall(np.int32()))
+        if elen > 0:
+            return bytearray(self.recvall(np.zeros(elen, np.dtype("S1")))).decode(
+                "utf-8"
+            )
+        return ""
+
+    # -- single-request path -------------------------------------------------
+    def sendpos(self, pos, h_ih):
+        global TIMEOUT
+        if not (self.status & Status.Ready):
+            raise InvalidStatus("Status in sendpos was " + self.status)
+        try:
+            self.sendall(self._fill_shm([(pos, h_ih)]))
+            self.status = Status.Up | Status.Busy
+        except socket.timeout:
+            warning(
+                f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                verbosity.quiet,
+            )
+            self.status = Status.Timeout
+            TIMEOUT *= 2
+            return
+        except Exception as exc:
+            warning(f"Other exception during posdata send: {exc}", verbosity.quiet)
+            raise exc
+
+    def dispatch_send(self, r):
+        global TIMEOUT
+        if not (self.status & Status.Up):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (I)",
+                verbosity.low,
+            )
+            return False
+        r["t_dispatched"] = time.time()
+        if not (self.status & Status.Ready):
+            self.get_status()
+        if self.status & Status.NeedsInit:
+            self.initialize(r["id"], r["pars"])
+            self.status = self.get_status()
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (II)",
+                verbosity.low,
+            )
+            return False
+        r["start"] = time.time()
+        try:
+            self.sendall(
+                self._fill_shm([(r["pos"][r["active"]], r["cell"])])
+                + MESSAGE["getforce"]
+            )
+        except socket.timeout:
+            warning(
+                f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                verbosity.quiet,
+            )
+            self.status = Status.Timeout
+            TIMEOUT *= 2
+            return False
+        except Exception as e:
+            warning(
+                " @SOCKET:   Error during dispatch_send: %s" % str(e), verbosity.low
+            )
+            self.status = Status.Disconnected
+            return False
+        self.status = Status.Up | Status.HasData
+        return True
+
+    def _recv_force_data(self):
+        # threaded path: getforce() has already consumed FORCEREADY, so only the
+        # extra string remains on the socket; pot/force/vir come from SHM.
+        mu, mf, mvir = self._read_shm_results(1)[0]
+        return [mu, mf, mvir, _parse_extra(self._recv_extra())]
+
+    def _recv_forces_bulk(self, natoms):
+        # consolidated path: read the FORCEREADY ack and the extra here.
+        hdr = bytes(self.recvall(np.zeros(HDRLEN, np.dtype("S1"))))
+        if hdr != MESSAGE["forceready"]:
+            warning(
+                " @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low
+            )
+            raise Disconnected()
+        mu, mf, mvir = self._read_shm_results(1)[0]
+        return [mu, mf, mvir, _parse_extra(self._recv_extra())]
+
+    # -- batched path --------------------------------------------------------
+    def dispatch_send_batch(self, reqs):
+        if len(reqs) == 0:
+            raise ValueError("dispatch_send_batch called with an empty request list")
+        global TIMEOUT
+        if not (self.status & Status.Up):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send_batch! (I)",
+                verbosity.low,
+            )
+            return False
+        now = time.time()
+        for r in reqs:
+            r["t_dispatched"] = now
+        if not (self.status & Status.Ready):
+            self.get_status()
+        if self.status & Status.NeedsInit:
+            self.initialize(reqs[0]["id"], reqs[0]["pars"])
+            self.status = self.get_status()
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send_batch! (II)",
+                verbosity.low,
+            )
+            return False
+        now = time.time()
+        for r in reqs:
+            r["start"] = now
+        # pad to a full batch by replicating the last request (results discarded)
+        padded = list(reqs)
+        if len(padded) < self.batch_size:
+            padded += [padded[-1]] * (self.batch_size - len(padded))
+        structs = [(r["pos"][r["active"]], r["cell"]) for r in padded]
+        try:
+            self.sendall(self._fill_shm(structs) + MESSAGE["getforce"])
+        except socket.timeout:
+            warning(
+                f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                verbosity.quiet,
+            )
+            self.status = Status.Timeout
+            TIMEOUT *= 2
+            return False
+        except Exception as e:
+            warning(
+                " @SOCKET:   Error during dispatch_send_batch: %s" % str(e),
+                verbosity.low,
+            )
+            self.status = Status.Disconnected
+            return False
+        self.status = Status.Up | Status.HasData
+        return True
+
+    def _recv_forces_bulk_batch(self, natoms, n_real):
+        hdr = bytes(self.recvall(np.zeros(HDRLEN, np.dtype("S1"))))
+        if hdr != MESSAGE["forceready"]:
+            warning(
+                " @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low
+            )
+            raise Disconnected()
+        results = self._read_shm_results(n_real)
+        out = []
+        for i in range(self.batch_size):
+            # every structure's extra must be drained, even padded ones
+            extra = self._recv_extra()
+            if i < n_real:
+                out.append(results[i] + [_parse_extra(extra)])
+        return out
+
+    # -- cleanup -------------------------------------------------------------
+    def shutdown(self, how=socket.SHUT_RDWR):
+        try:
+            super(SHMDriver, self).shutdown(how)
+        finally:
+            self._free_shm()
+
+    def __del__(self):
+        self._free_shm()
+
+
 class InterfaceSocket(object):
     """Host server class.
 
@@ -1044,7 +1312,9 @@ class InterfaceSocket(object):
         create the associated socket object.
         """
 
-        if self.mode == "unix":
+        # "shm" uses a unix socket for the control handshake; only the bulk
+        # numeric payload is moved into shared memory by SHMDriver.
+        if self.mode in ("unix", "shm"):
             self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
                 self.server.bind(self.sockets_prefix + self.address)
@@ -1083,7 +1353,7 @@ class InterfaceSocket(object):
             raise NameError(
                 "InterfaceSocket mode "
                 + self.mode
-                + " is not implemented (should be unix/inet)"
+                + " is not implemented (should be unix/inet/shm)"
             )
 
         self.server.listen(self.slots)
@@ -1193,7 +1463,7 @@ class InterfaceSocket(object):
             if self.server in readable:
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
-                driver = Driver(client)
+                driver = SHMDriver(client) if self.mode == "shm" else Driver(client)
                 driver.batch_size = self.batch_size
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "

@@ -31,14 +31,31 @@
          USE LJPolymer
          USE SG
          USE PSWATER
-         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
+         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep, &
+                                shm_attach, shm_detach
          USE DISTANCE, only: CELL_VOLUME
+         USE ISO_C_BINDING
       IMPLICIT NONE
 
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
       CHARACTER(LEN=1024) :: host, sockets_prefix="/tmp/ipi_"
+
+      ! SHARED-MEMORY TRANSPORT (mode='shm'): the bulk numeric payload is
+      ! exchanged through POSIX shared-memory segments owned by i-PI; only the
+      ! control handshake and the 'extra' string travel on the unix socket.
+      LOGICAL :: shm = .false.
+      REAL(C_DOUBLE), POINTER :: pos_shm(:), h_shm(:), ih_shm(:)
+      REAL(C_DOUBLE), POINTER :: pot_shm(:), force_shm(:), vir_shm(:)
+
+      ! BATCHED EVALUATION (batch-dummy mode): the wrapper sends all structures of
+      ! a force component in one request; this mode reads the batch level from the
+      ! INIT string and returns (dummy) zeros for the whole batch.
+      LOGICAL :: batched = .false.
+      INTEGER :: batch_n = 1, bidx
+      DOUBLE PRECISION, ALLOCATABLE :: bd_cells(:), bd_pos(:)
+      DOUBLE PRECISION, ALLOCATABLE :: bd_pot(:), bd_force(:), bd_vir(:)
 
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
@@ -100,6 +117,10 @@
       DO i = 1, COMMAND_ARGUMENT_COUNT()
          CALL GET_COMMAND_ARGUMENT(i, cmdbuffer)
          IF (cmdbuffer == "-u") THEN ! flag for unix socket
+            inet = 0
+            ccmd = 0
+         ELSEIF (cmdbuffer == "-s") THEN ! shared-memory transport (implies a unix control socket)
+            shm = .true.
             inet = 0
             ccmd = 0
          ELSEIF (cmdbuffer == "-h") THEN ! read the hostname (deprecated)
@@ -198,9 +219,11 @@
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
+               ELSEIF (trim(cmdbuffer) == "batch-dummy") THEN
+                  vstyle = 100 ! batched ideal-gas: requests an INIT string to learn batch_size
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o] "
+                  WRITE(*,*) " Use -m [dummy|batch-dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -247,6 +270,18 @@
          seed = 12345
          CALL RANDOM_SEED(put=seed)
          isinit = .true.
+      ELSEIF (100 == vstyle) THEN ! batch-dummy: like the ideal gas, but batched
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameter is needed for batch-dummy."
+            STOP "ENDED"
+         ENDIF
+         batched = .true.
+         ! NB: isinit is left .false. on purpose, so the driver asks the wrapper
+         ! for an INIT string and learns the batch size from it.
       ELSEIF (6 == vstyle .OR. 27 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error:  no initialization string needed for qtip4pf or qtip4p-sr."
@@ -506,9 +541,62 @@
             CALL readbuffer(socket, initbuffer, cbuf)
             IF (verbose > 1) WRITE(*,*) "    !read!=> init_string: ", cbuf
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
+            ! In batched mode the wrapper announces the batch size in the INIT
+            ! string as a "batch_size:N" token; learn it here.
+            IF (batched) THEN
+               bidx = INDEX(initbuffer(1:cbuf), "batch_size:")
+               IF (bidx > 0) READ(initbuffer(bidx+11:cbuf), *) batch_n
+               IF (verbose > 0) WRITE(*,*) " Batched evaluation, batch_size = ", batch_n
+            ENDIF
+            ! NOTE: the shared-memory path handles one structure per request
+            ! (i-PI mode='shm' with batch_size=1). Running it against a batched
+            ! ffsocket (batch_size>1) is unsupported and will fail in i-PI.
             isinit=.true. ! We actually do nothing with this string, thanks anyway. Could be used to pass some information (e.g. the input parameters, or the index of the replica, from the driver
+         ELSEIF (trim(header) == "POSDATA" .and. batched) THEN  ! batched request: nat, then batch_n cell blocks and a (batch_n, 3*nat) position array
+            CALL readbuffer(socket, cbuf)       ! number of atoms
+            IF (nat < 0) THEN
+               nat = cbuf
+               IF (verbose > 0) WRITE(*,*) " Batched buffers for ", nat, " atoms x ", batch_n, " structures"
+               ALLOCATE(bd_cells(batch_n*18), bd_pos(batch_n*nat*3))
+               ALLOCATE(bd_pot(batch_n), bd_force(batch_n*nat*3), bd_vir(batch_n*9))
+               bd_pot = 0.0d0; bd_force = 0.0d0; bd_vir = 0.0d0  ! ideal gas: zeros
+            ENDIF
+            CALL readbuffer(socket, bd_cells, batch_n*18)        ! h, ih for each structure (ignored)
+            CALL readbuffer(socket, bd_pos, batch_n*nat*3)       ! positions (ignored by the dummy)
+            IF (sleep_seconds > 0) CALL f_sleep(sleep_seconds)
+            hasdata = .true.
          ELSEIF (trim(header) == "POSDATA") THEN  ! The driver is sending the positions of the atoms. Here is where we do the calculation!
-            
+
+          IF (shm) THEN  ! Shared-memory transport: positions/cell are in SHM, only a trigger arrives on the socket
+            CALL readbuffer(socket, cbuf)       ! number of atoms (sent on every shm POSDATA)
+            IF (nat < 0) THEN  ! first exchange: allocate, then attach the segments named in the trigger
+               nat = cbuf
+               IF (verbose > 0) WRITE(*,*) " Allocating buffer and data arrays, with ", nat, " atoms"
+               ALLOCATE(msgbuffer(3*nat))
+               ALLOCATE(atoms(nat,3), datoms(nat,3))
+               ALLOCATE(forces(nat,3))
+               IF (vstyle==24 .or. vstyle==25) THEN
+                  ALLOCATE(friction(3*nat,3*nat))
+                  friction = 0.0d0
+               ENDIF
+               atoms = 0.0d0; datoms = 0.0d0; forces = 0.0d0; msgbuffer = 0.0d0
+               ! the 6 segment names arrive in this order: pos, h, ih, pot, force, vir
+               CALL shm_map_named(socket, 3*nat, pos_shm)
+               CALL shm_map_named(socket, 9, h_shm)
+               CALL shm_map_named(socket, 9, ih_shm)
+               CALL shm_map_named(socket, 1, pot_shm)
+               CALL shm_map_named(socket, 3*nat, force_shm)
+               CALL shm_map_named(socket, 9, vir_shm)
+            ENDIF
+            ! cells follow the same row-major->transpose convention as the socket path
+            cell_h = transpose(RESHAPE(h_shm(1:9), (/3,3/)))
+            cell_ih = transpose(RESHAPE(ih_shm(1:9), (/3,3/)))
+            volume = CELL_VOLUME(cell_h)
+            DO i = 1, nat
+               atoms(i,:) = pos_shm(3*(i-1)+1:3*i)
+            ENDDO
+          ELSE
+
             ! Parses the flow of data from the socket
             CALL readbuffer(socket, mtxbuf, 9)  ! Cell matrix
             IF (verbose > 1) WRITE(*,*) "    !read!=> cell: ", mtxbuf
@@ -550,6 +638,7 @@
             DO i = 1, nat
                atoms(i,:) = msgbuffer(3*(i-1)+1:3*i)
             ENDDO
+          ENDIF  ! shm vs socket read; the force calculation below is shared
 
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
                IF (sleep_seconds > 0) THEN
@@ -950,6 +1039,17 @@
                IF (verbose > 0) WRITE(*,*) " Calculated energy is ", pot
             ENDIF
             hasdata = .true. ! Signal that we have data ready to be passed back to the wrapper
+         ELSEIF (trim(header) == "GETFORCE" .and. batched) THEN  ! batched reply: pots, nat, forces, virials, then one extra per structure
+            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+            CALL writebuffer(socket,bd_pot,batch_n)            ! batch_n potentials (zeros)
+            CALL writebuffer(socket,nat)                       ! number of atoms
+            CALL writebuffer(socket,bd_force,batch_n*nat*3)    ! batch_n force blocks (zeros)
+            CALL writebuffer(socket,bd_vir,batch_n*9)          ! batch_n virials (zeros)
+            DO bidx = 1, batch_n
+               cbuf = 0
+               CALL writebuffer(socket,cbuf)                   ! zero-length extra string per structure
+            ENDDO
+            hasdata = .false.
          ELSEIF (trim(header) == "GETFORCE") THEN  ! The driver calculation is finished, it's time to send the results back to the wrapper
 
             ! Data must be re-formatted (and units converted) in the units and shapes used in the wrapper
@@ -958,16 +1058,26 @@
             ENDDO
             virial = transpose(virial)
 
-            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
-            IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY  "
-            CALL writebuffer(socket,pot)  ! Writing the potential
-            IF (verbose > 1) WRITE(*,*) "    !write!=> pot: ", pot
-            CALL writebuffer(socket,nat)  ! Writing the number of atoms
-            IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
-            CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
-            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
-            CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
-            IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
+            IF (shm) THEN
+               ! Stage the results in shared memory BEFORE acking, so i-PI never
+               ! reads a stale buffer. Same byte layout as the socket path below.
+               pot_shm(1) = pot
+               force_shm(1:3*nat) = msgbuffer(1:3*nat)
+               vir_shm(1:9) = reshape(virial,(/9/))
+               CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+               IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY   (shm)"
+            ELSE
+               CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+               IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY  "
+               CALL writebuffer(socket,pot)  ! Writing the potential
+               IF (verbose > 1) WRITE(*,*) "    !write!=> pot: ", pot
+               CALL writebuffer(socket,nat)  ! Writing the number of atoms
+               IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
+               CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
+               IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
+               CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
+               IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
+            ENDIF
 
  125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
  126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
@@ -1083,26 +1193,64 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
-      IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
-         DEALLOCATE(friction)
+      IF (shm .and. nat > 0) THEN  ! release the shared-memory mappings (i-PI unlinks the segments)
+         CALL shm_detach(C_LOC(pos_shm(1)),   INT(8*3*nat, C_LONG))
+         CALL shm_detach(C_LOC(h_shm(1)),     INT(8*9, C_LONG))
+         CALL shm_detach(C_LOC(ih_shm(1)),    INT(8*9, C_LONG))
+         CALL shm_detach(C_LOC(pot_shm(1)),   INT(8*1, C_LONG))
+         CALL shm_detach(C_LOC(force_shm(1)), INT(8*3*nat, C_LONG))
+         CALL shm_detach(C_LOC(vir_shm(1)),   INT(8*9, C_LONG))
+      ENDIF
+      IF (batched) THEN
+         IF (ALLOCATED(bd_cells)) DEALLOCATE(bd_cells, bd_pos, bd_pot, bd_force, bd_vir)
+      ELSE
+         IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+         IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
+            DEALLOCATE(friction)
+         ENDIF
       ENDIF
       STOP
 
     CONTAINS
+
+      SUBROUTINE shm_map_named(sock, ndoubles, fptr)
+         ! Reads the next segment name from the control socket (int32 length +
+         ! characters), maps the named POSIX segment, and returns a Fortran
+         ! pointer aliasing it.
+         IMPLICIT NONE
+         INTEGER, INTENT(IN) :: sock, ndoubles
+         REAL(C_DOUBLE), POINTER, INTENT(OUT) :: fptr(:)
+         INTEGER :: nmlen
+         CHARACTER(LEN=256) :: name
+         CHARACTER(LEN=1, KIND=C_CHAR) :: cname(257)
+         TYPE(C_PTR) :: cptr
+         INTEGER :: k
+
+         CALL readbuffer(sock, nmlen)            ! length of the segment name
+         CALL readbuffer(sock, name, nmlen)      ! the name itself (no NUL)
+         DO k = 1, nmlen
+            cname(k) = name(k:k)
+         ENDDO
+         cname(nmlen+1) = C_NULL_CHAR
+         cptr = shm_attach(cname, INT(8_C_LONG*ndoubles, C_LONG))
+         CALL C_F_POINTER(cptr, fptr, (/ndoubles/))
+      END SUBROUTINE shm_map_named
+
       SUBROUTINE helpmessage
          ! Help banner
 
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
-         WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|batch-dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
+         WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] [--shm]"
          WRITE(*,*) ""
+         WRITE(*,*) " Use --shm for the shared-memory transport (same node, i-PI mode='shm', batch_size=1)."
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer or lkmix use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " For gas, dummy, batch-dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " batch-dummy is an ideal gas evaluated in batched mode; use it with an ffsocket batch_size>1"
          WRITE(*,*) " For the ideal, qtip4pf*, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 

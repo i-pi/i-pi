@@ -2,6 +2,7 @@
 import socket
 import argparse
 import numpy as np
+from multiprocessing import shared_memory, resource_tracker
 from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
 
@@ -60,11 +61,13 @@ def run_driver(
     driver=Dummy_driver(),
     f_verbose=False,
     sockets_prefix="/tmp/ipi_",
+    shm=False,
 ):
     """Minimal socket client for i-PI."""
 
-    # Opens a socket to i-PI
-    if unix:
+    # Opens a socket to i-PI. shm uses a unix socket for the control handshake;
+    # only the bulk payload travels through shared memory (same node only).
+    if unix or shm:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.connect(sockets_prefix + address)
     else:
@@ -79,6 +82,11 @@ def run_driver(
     # batched evaluation: batch_n>1 is announced by i-PI in the INIT string
     batch_n = 1
     results_batch = None
+
+    # shared-memory transport: segments are attached lazily on the first POSDATA
+    shm_kinds = ("pos", "h", "ih", "pot", "force", "vir")
+    shm_handles = {}
+    shm_views = {}
 
     # initializes structure arrays
     cell = np.zeros((3, 3), float)
@@ -118,6 +126,48 @@ def run_driver(
             if f_verbose:
                 print(rid, initstr, "batch_size:", batch_n)
             f_init = True  # we are initialized now
+        elif header == Message("POSDATA") and shm:
+            # shared-memory transport: only natoms (and, on the first call, the
+            # segment names) arrive on the socket; the batch_n structures are
+            # read straight from shared memory. Handles single (batch_n=1) and
+            # batched runs with one code path.
+            nat = recv_data(sock, np.int32())
+            if not shm_views:
+                for kind in shm_kinds:
+                    nmlen = recv_data(sock, np.int32())
+                    name = (
+                        recv_data(sock, np.empty(nmlen, dtype="S1"))
+                        .tobytes()
+                        .decode("utf-8")
+                    )
+                    handle = shared_memory.SharedMemory(name=name)
+                    # only attaching: let i-PI own the segment lifetime
+                    resource_tracker.unregister(handle._name, "shared_memory")
+                    shm_handles[kind] = handle
+                shm_views["pos"] = np.ndarray(
+                    (batch_n, nat, 3), np.float64, buffer=shm_handles["pos"].buf
+                )
+                shm_views["h"] = np.ndarray(
+                    (batch_n, 3, 3), np.float64, buffer=shm_handles["h"].buf
+                )
+                shm_views["ih"] = np.ndarray(
+                    (batch_n, 3, 3), np.float64, buffer=shm_handles["ih"].buf
+                )
+                shm_views["pot"] = np.ndarray(
+                    (batch_n,), np.float64, buffer=shm_handles["pot"].buf
+                )
+                shm_views["force"] = np.ndarray(
+                    (batch_n, nat, 3), np.float64, buffer=shm_handles["force"].buf
+                )
+                shm_views["vir"] = np.ndarray(
+                    (batch_n, 3, 3), np.float64, buffer=shm_handles["vir"].buf
+                )
+            cell_list = [shm_views["h"][i] for i in range(batch_n)]
+            pos_list = [shm_views["pos"][i] for i in range(batch_n)]
+
+            ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
+            results_batch = driver(cell_list, pos_list)
+            f_data = True
         elif header == Message("POSDATA") and batch_n > 1:
             # batched structural information: a single atom count, then batch_n
             # cell blocks (h, ih) followed by a (batch_n, 3*nat) position array.
@@ -152,6 +202,21 @@ def run_driver(
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
+        elif header == Message("GETFORCE") and shm:
+            # write the batch_n results into shared memory BEFORE the FORCEREADY
+            # ack, so i-PI never reads a stale buffer; only the per-structure
+            # extra strings travel on the socket.
+            for i in range(batch_n):
+                res = results_batch[i]
+                shm_views["pot"][i] = res[0]
+                shm_views["force"][i] = np.asarray(res[1]).reshape(nat, 3)
+                shm_views["vir"][i] = np.asarray(res[2]).reshape(3, 3)
+            sock.sendall(Message("FORCEREADY"))
+            for res in results_batch:
+                extra = res[3]
+                send_data(sock, np.int32(len(extra)))
+                sock.sendall(extra.encode("utf-8"))
+            f_data = False
         elif header == Message("GETFORCE") and batch_n > 1:
             sock.sendall(Message("FORCEREADY"))
             # batched reply: potentials, atom count, forces, virials, then one
@@ -211,6 +276,12 @@ def run_driver(
             f_data = False
         elif header == Message("EXIT"):
             print("Received exit message from i-PI. Bye bye!")
+            if shm:
+                for handle in shm_handles.values():
+                    try:
+                        handle.close()
+                    except Exception:
+                        pass
             return
 
 
@@ -277,6 +348,14 @@ if __name__ == "__main__":
         default=False,
         help="Verbose output.",
     )
+    parser.add_argument(
+        "--shm",
+        action="store_true",
+        default=False,
+        help="Exchange the bulk position/force payload through shared memory "
+        "(implies a UNIX domain control socket; same-node only). The batch size, "
+        "if any, is taken from the INIT string.",
+    )
 
     args = parser.parse_args()
 
@@ -294,4 +373,5 @@ if __name__ == "__main__":
         driver=d_f,
         f_verbose=args.verbose,
         sockets_prefix=args.sockets_prefix,
+        shm=args.shm,
     )

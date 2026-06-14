@@ -79,7 +79,23 @@
     TYPE(C_PTR), VALUE                       :: pdata
     INTEGER(KIND=C_INT)                      :: plen
 
-    END SUBROUTINE readbuffer_csocket   
+    END SUBROUTINE readbuffer_csocket
+
+    ! C helpers for the shared-memory transport mode. Wrapped by the
+    ! shm_attach/shm_detach module procedures below so the pure-Fortran build
+    ! (fsockets_pure.f90) can provide erroring stubs with the same interface.
+    FUNCTION c_shm_map(name, nbytes) BIND(C, name="shm_map") RESULT(ptr)
+      USE ISO_C_BINDING
+    CHARACTER(KIND=C_CHAR), DIMENSION(*)     :: name
+    INTEGER(KIND=C_LONG), VALUE              :: nbytes
+    TYPE(C_PTR)                              :: ptr
+    END FUNCTION c_shm_map
+
+    SUBROUTINE c_shm_unmap(ptr, nbytes) BIND(C, name="shm_unmap")
+      USE ISO_C_BINDING
+    TYPE(C_PTR), VALUE                       :: ptr
+    INTEGER(KIND=C_LONG), VALUE              :: nbytes
+    END SUBROUTINE c_shm_unmap
 
   END INTERFACE
 
@@ -88,7 +104,25 @@
       IMPLICIT NONE
       DOUBLE PRECISION :: sleep_seconds
       CALL c_sleep(sleep_seconds)
-   END SUBROUTINE 
+   END SUBROUTINE
+
+   FUNCTION shm_attach(name, nbytes) RESULT(ptr)
+      ! Maps the named POSIX shared-memory segment (owned by i-PI).
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      CHARACTER(KIND=C_CHAR), DIMENSION(*) :: name
+      INTEGER(KIND=C_LONG) :: nbytes
+      TYPE(C_PTR) :: ptr
+      ptr = c_shm_map(name, nbytes)
+   END FUNCTION
+
+   SUBROUTINE shm_detach(ptr, nbytes)
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      TYPE(C_PTR), VALUE :: ptr
+      INTEGER(KIND=C_LONG) :: nbytes
+      CALL c_shm_unmap(ptr, nbytes)
+   END SUBROUTINE
 
    SUBROUTINE open_socket(psockfd, inet, port, host, sockets_prefix)      
       IMPLICIT NONE
