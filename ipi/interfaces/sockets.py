@@ -1133,9 +1133,7 @@ class SHMDriver(Driver):
         # consolidated path: read the FORCEREADY ack and the extra here.
         hdr = bytes(self.recvall(np.zeros(HDRLEN, np.dtype("S1"))))
         if hdr != MESSAGE["forceready"]:
-            warning(
-                " @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low
-            )
+            warning(" @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low)
             raise Disconnected()
         mu, mf, mvir = self._read_shm_results(1)[0]
         return [mu, mf, mvir, _parse_extra(self._recv_extra())]
@@ -1196,9 +1194,7 @@ class SHMDriver(Driver):
     def _recv_forces_bulk_batch(self, natoms, n_real):
         hdr = bytes(self.recvall(np.zeros(HDRLEN, np.dtype("S1"))))
         if hdr != MESSAGE["forceready"]:
-            warning(
-                " @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low
-            )
+            warning(" @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low)
             raise Disconnected()
         results = self._read_shm_results(n_real)
         out = []
