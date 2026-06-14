@@ -183,18 +183,22 @@ class MetatomicDriver(Dummy_driver):
             self.devices = [self.device]
 
         self.models = []
+        self.nl_calculators = []
         for device in self.devices:
             model = mta.load_atomistic_model(
                 model_path, extensions_directory=self.extensions
             )
             model = model.to(device)
             self.models.append(model)
+            self.nl_calculators.append(
+                vesin_metatomic.neighbor_lists_for_model("A", model)
+            )
 
         # ensure self.device and self.modelare initialized (to the first device)
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
-        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model("A", self.model)
+        self._nl_calculators = self.nl_calculators[0]
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
@@ -271,12 +275,14 @@ class MetatomicDriver(Dummy_driver):
             outputs=outputs,
         )
 
-    def _prepare_system(self, cell, pos, model=None, device=None):
+    def _prepare_system(self, cell, pos, model=None, device=None, nl_calculators=None):
         """Prepares a metatomic System object from cell and positions."""
         if model is None:
             model = self.model
         if device is None:
             device = self.device
+        if nl_calculators is None:
+            nl_calculators = self._nl_calculators
 
         # Convert units to Angstrom
         positions = unit_to_user("length", "angstrom", pos)
@@ -298,7 +304,7 @@ class MetatomicDriver(Dummy_driver):
         system = system.to(device)
 
         # Compute neighbor lists using vesin
-        for calculator in self._nl_calculators:
+        for calculator in nl_calculators:
             calculator.add_neighbor_list(system)
 
         return system, strain
@@ -571,13 +577,20 @@ class MetatomicDriver(Dummy_driver):
         """Helper to compute a batch chunk on a specific device."""
         model = self.models[device_idx]
         device = self.devices[device_idx]
+        nl_calculators = self.nl_calculators[device_idx]
 
         sys_batch = []
         strain_batch = []
 
         # Prepare systems on the target device
         for c, p in zip(cell_chunk, pos_chunk):
-            sy, st = self._prepare_system(c, p, model=model, device=device)
+            sy, st = self._prepare_system(
+                c,
+                p,
+                model=model,
+                device=device,
+                nl_calculators=nl_calculators,
+            )
             sys_batch.append(sy)
             strain_batch.append(st)
 
