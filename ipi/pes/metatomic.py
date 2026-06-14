@@ -579,6 +579,9 @@ class MetatomicDriver(Dummy_driver):
         device = self.devices[device_idx]
         nl_calculators = self.nl_calculators[device_idx]
 
+        if torch.cuda.is_available() and "cuda" in str(device):
+            torch.cuda.set_device(device)
+
         sys_batch = []
         strain_batch = []
 
