@@ -366,6 +366,11 @@ class FFSocket(ForceField):
     def start(self):
         """Spawns a new thread."""
 
+        if self.socket.batch_size > 1 and not self.socket.consolidate_messages:
+            raise ValueError(
+                "Batched socket evaluation (batch_size > 1) requires "
+                "consolidate_messages to be enabled."
+            )
         self.socket.open()
         super(FFSocket, self).start()
 

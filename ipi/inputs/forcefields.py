@@ -235,9 +235,21 @@ class InputFFSocket(InputForceField):
             {
                 "dtype": bool,
                 "default": True,
-                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
-                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
+                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses
+                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients
                 strictly follow the base protocol.""",
+            },
+        ),
+        "batch_size": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """If greater than 1, each client evaluates up to this many queued structures in a
+                single batched request, reusing the driver(cell_list, pos_list) calculator interface. The
+                batch size is announced to the driver in the INIT string. Batches are padded to batch_size by
+                replicating the last structure when fewer requests are queued. Requires consolidate_messages
+                and drops per-replica client matching (do not combine with stateful/matching='lock' drivers).""",
             },
         ),
     }
@@ -301,6 +313,7 @@ class InputFFSocket(InputForceField):
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
         self.max_workers.store(ff.socket.max_workers)
         self.consolidate_messages.store(ff.socket.consolidate_messages)
+        self.batch_size.store(ff.socket.batch_size)
         self.threaded.store(True)  # hard-coded
 
     def fetch(self):
@@ -340,6 +353,7 @@ class InputFFSocket(InputForceField):
                 max_workers=self.max_workers.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
                 consolidate_messages=self.consolidate_messages.fetch(),
+                batch_size=self.batch_size.fetch(),
             ),
         )
 
