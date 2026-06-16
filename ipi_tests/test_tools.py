@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 import shutil
 import signal
-import threading
 import traceback
 import xml.etree.ElementTree as ET
 import tempfile
@@ -13,7 +12,7 @@ import time
 import glob
 
 from ipi.scripting import InteractiveSimulation
-from ipi.utils.softexit import SOFTEXITLATENCY, softexit
+from ipi.utils.softexit import softexit
 
 
 def copy_tree(src, dst):  # emulates distutils copy_tree
@@ -97,8 +96,6 @@ class InProcessIPI:
         self.simulation = None
         self._cleanup_done = False
         self._ran = False
-        self._softexit_trigger = softexit.trigger
-        softexit.trigger = self._trigger_softexit
         old_cwd = os.getcwd()
         try:
             os.chdir(self.cwd)
@@ -113,28 +110,6 @@ class InProcessIPI:
             self.kill()
         finally:
             os.chdir(old_cwd)
-
-    def _run_softexit_cleanup(self):
-        if self._cleanup_done or softexit.triggered:
-            return
-
-        softexit.exiting = True
-        softexit.triggered = True
-        for func, args, kwargs in list(softexit.flist):
-            try:
-                func(*args, **kwargs)
-            except RuntimeError as err:
-                print("Error running in-process cleanup, ", err)
-        softexit.exiting = False
-
-    def _trigger_softexit(self, status="restartable", message=""):
-        if self._cleanup_done:
-            return
-
-        self._run_softexit_cleanup()
-        for _thread, loop_control in softexit.tlist:
-            if loop_control is not None:
-                loop_control[0] = False
 
     def poll(self):
         return self.returncode
@@ -199,22 +174,13 @@ class InProcessIPI:
             with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
                 self.stderr
             ):
-                self._run_softexit_cleanup()
+                softexit.cleanup()
         finally:
             os.chdir(old_cwd)
             self.simulation = None
 
-        for _thread, loop_control in softexit.tlist:
-            if loop_control is not None:
-                loop_control[0] = False
-        for thread, _loop_control in softexit.tlist:
-            if thread is not threading.current_thread() and thread.is_alive():
-                thread.join(timeout=SOFTEXITLATENCY + 0.1)
-        for signum, handler in softexit._kill.items():
-            signal.signal(signum, handler)
         self._cleanup_done = True
-        softexit.__init__()
-        softexit.trigger = self._softexit_trigger
+        softexit.reset()
 
 
 def get_test_settings(
