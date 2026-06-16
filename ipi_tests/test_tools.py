@@ -97,6 +97,8 @@ class InProcessIPI:
         self.simulation = None
         self._cleanup_done = False
         self._ran = False
+        self._softexit_trigger = softexit.trigger
+        softexit.trigger = self._trigger_softexit
         old_cwd = os.getcwd()
         try:
             os.chdir(self.cwd)
@@ -111,6 +113,28 @@ class InProcessIPI:
             self.kill()
         finally:
             os.chdir(old_cwd)
+
+    def _run_softexit_cleanup(self):
+        if self._cleanup_done or softexit.triggered:
+            return
+
+        softexit.exiting = True
+        softexit.triggered = True
+        for func, args, kwargs in list(softexit.flist):
+            try:
+                func(*args, **kwargs)
+            except RuntimeError as err:
+                print("Error running in-process cleanup, ", err)
+        softexit.exiting = False
+
+    def _trigger_softexit(self, status="restartable", message=""):
+        if self._cleanup_done:
+            return
+
+        self._run_softexit_cleanup()
+        for _thread, loop_control in softexit.tlist:
+            if loop_control is not None:
+                loop_control[0] = False
 
     def poll(self):
         return self.returncode
@@ -175,11 +199,7 @@ class InProcessIPI:
             with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
                 self.stderr
             ):
-                for func, args, kwargs in list(softexit.flist):
-                    try:
-                        func(*args, **kwargs)
-                    except RuntimeError as err:
-                        print("Error running in-process cleanup, ", err)
+                self._run_softexit_cleanup()
         finally:
             os.chdir(old_cwd)
             self.simulation = None
@@ -192,8 +212,9 @@ class InProcessIPI:
                 thread.join(timeout=SOFTEXITLATENCY + 0.1)
         for signum, handler in softexit._kill.items():
             signal.signal(signum, handler)
-        softexit.__init__()
         self._cleanup_done = True
+        softexit.__init__()
+        softexit.trigger = self._softexit_trigger
 
 
 def get_test_settings(
