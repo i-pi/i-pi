@@ -76,6 +76,10 @@ def run_driver(
     f_init = False
     f_data = False
 
+    # batched evaluation: batch_n>1 is announced by i-PI in the INIT string
+    batch_n = 1
+    results_batch = None
+
     # initializes structure arrays
     cell = np.zeros((3, 3), float)
     icell = np.zeros((3, 3), float)
@@ -102,9 +106,33 @@ def run_driver(
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
             initstr = recv_data(sock, np.empty(initlen, dtype="S1"))
+            # i-PI announces request batching via a reserved 'batch_size' token
+            init_text = initstr.tobytes().decode("utf-8", errors="replace")
+            for token in init_text.split(","):
+                k, sep, v = token.partition(":")
+                if sep and k.strip() == "batch_size":
+                    try:
+                        batch_n = int(v.strip())
+                    except ValueError:
+                        pass
             if f_verbose:
-                print(rid, initstr)
+                print(rid, initstr, "batch_size:", batch_n)
             f_init = True  # we are initialized now
+        elif header == Message("POSDATA") and batch_n > 1:
+            # batched structural information: a single atom count, then batch_n
+            # cell blocks (h, ih) followed by a (batch_n, 3*nat) position array.
+            nat = recv_data(sock, np.int32())
+            cellbuf = recv_data(sock, np.zeros(batch_n * 18, np.float64))
+            posbuf = recv_data(sock, np.zeros((batch_n, nat * 3), np.float64))
+            cell_list = []
+            pos_list = []
+            for i in range(batch_n):
+                cell_list.append(cellbuf[i * 18 : i * 18 + 9].reshape(3, 3))
+                pos_list.append(posbuf[i].reshape(nat, 3))
+
+            ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
+            results_batch = driver(cell_list, pos_list)
+            f_data = True
         elif header == Message("POSDATA"):
             # receives structural information
             cell = recv_data(sock, cell)
@@ -124,6 +152,28 @@ def run_driver(
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
+        elif header == Message("GETFORCE") and batch_n > 1:
+            sock.sendall(Message("FORCEREADY"))
+            # batched reply: potentials, atom count, forces, virials, then one
+            # length-prefixed extra string per structure.
+            pots = np.array([res[0] for res in results_batch], np.float64)
+            send_data(sock, pots)
+            send_data(sock, np.int32(nat))
+            forces = np.array(
+                [np.asarray(res[1]).reshape(nat * 3) for res in results_batch],
+                np.float64,
+            )
+            send_data(sock, forces)
+            virs = np.array(
+                [np.asarray(res[2]).reshape(3, 3) for res in results_batch],
+                np.float64,
+            )
+            send_data(sock, virs)
+            for res in results_batch:
+                extra = res[3]
+                send_data(sock, np.int32(len(extra)))
+                sock.sendall(extra.encode("utf-8"))
+            f_data = False
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
 

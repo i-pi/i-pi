@@ -366,6 +366,11 @@ class FFSocket(ForceField):
     def start(self):
         """Spawns a new thread."""
 
+        if self.socket.batch_size > 1 and not self.socket.consolidate_messages:
+            raise ValueError(
+                "Batched socket evaluation (batch_size > 1) requires "
+                "consolidate_messages to be enabled."
+            )
         self.socket.open()
         super(FFSocket, self).start()
 
@@ -895,13 +900,19 @@ class FFPlumed(FFEval):
         self.compute_work = compute_work
         self.init_file = init_file
 
-        if self.init_file.mode == "xyz":
+        if self.init_file.mode in ["xyz", "pdb", "ase"]:
             infile = open(self.init_file.value, "r")
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
             myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+        else:
+            raise ValueError(
+                "Unsupported init file format for FFPlumed: "
+                + self.init_file.mode
+                + ". Supported formats are xyz, pdb and ase."
+            )
 
         self.natoms = myatoms.natoms
         self.plumed.cmd("setRealPrecision", 8)  # i-PI uses double precision

@@ -53,3 +53,25 @@ class Harmonic_driver(Dummy_driver):
             extras = "nada"
             force = force3.reshape(pos.shape)
         return pot, force, vir, extras
+
+    def compute(self, cell, pos):
+        """Vectorized evaluation: a list of structures is handled with a single
+        batched numpy expression instead of a per-structure Python loop. Falls
+        back to the single-structure path otherwise."""
+
+        if not isinstance(cell, list):
+            return self.compute_structure(cell, pos)
+        if not isinstance(pos, list) or len(cell) != len(pos):
+            raise ValueError(
+                "Both position and cell should be given as lists to run in batched mode"
+            )
+
+        # all structures in a batch share the atom count, so we can stack them
+        pos_arr = np.stack([np.asarray(p) for p in pos])  # (nbatch, nat, 3)
+        forces = -self.k * pos_arr  # k is a scalar or broadcasts over xyz
+        if self.type == "isotropic":
+            pots = 0.5 * self.k * (pos_arr**2).sum(axis=(1, 2))
+        else:
+            pots = 0.5 * (self.k * pos_arr**2).sum(axis=(1, 2))
+        vir = np.zeros((3, 3))
+        return [(float(pots[i]), forces[i], vir, "nada") for i in range(len(pos))]
