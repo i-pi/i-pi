@@ -1,11 +1,19 @@
 import subprocess as sp
+import contextlib
+import io
 import os
 from pathlib import Path
 import shutil
+import signal
+import threading
+import traceback
 import xml.etree.ElementTree as ET
 import tempfile
 import time
 import glob
+
+from ipi.scripting import InteractiveSimulation
+from ipi.utils.softexit import SOFTEXITLATENCY, softexit
 
 
 def copy_tree(src, dst):  # emulates distutils copy_tree
@@ -75,6 +83,113 @@ def clean_tmp_dir():
                 os.remove(filename)
         except:
             pass
+
+
+class InProcessIPI:
+    """Small Popen-like wrapper that runs i-PI through InteractiveSimulation."""
+
+    def __init__(self, command, cwd):
+        self.command = command
+        self.cwd = cwd
+        self.stdout = io.StringIO()
+        self.stderr = io.StringIO()
+        self.returncode = None
+        self.simulation = None
+        self._cleanup_done = False
+        self._ran = False
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.cwd)
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                with open(self.command.split()[-1]) as input_file:
+                    self.simulation = InteractiveSimulation(input_file)
+        except BaseException:
+            self.returncode = 1
+            self.stderr.write(traceback.format_exc())
+        finally:
+            os.chdir(old_cwd)
+
+    def poll(self):
+        return self.returncode
+
+    def communicate(self, timeout=None):
+        if self._ran or self.returncode is not None:
+            self.kill()
+            return (
+                self.stdout.getvalue().encode("ascii", errors="replace"),
+                self.stderr.getvalue().encode("ascii", errors="replace"),
+            )
+
+        old_cwd = os.getcwd()
+        old_alarm = signal.getsignal(signal.SIGALRM)
+
+        def timeout_handler(signum, frame):
+            raise sp.TimeoutExpired(self.command, timeout)
+
+        try:
+            os.chdir(self.cwd)
+            if timeout is not None:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.setitimer(signal.ITIMER_REAL, timeout)
+
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                try:
+                    self.simulation.run(
+                        steps=max(self.simulation.tsteps - self.simulation.step, 0)
+                    )
+                    self.returncode = 0
+                except sp.TimeoutExpired:
+                    raise
+                except SystemExit as exc:
+                    self.returncode = exc.code or 0
+                except BaseException:
+                    self.returncode = 1
+                    self.stderr.write(traceback.format_exc())
+                finally:
+                    self._ran = True
+                    self.kill()
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, old_alarm)
+            os.chdir(old_cwd)
+
+        return (
+            self.stdout.getvalue().encode("ascii", errors="replace"),
+            self.stderr.getvalue().encode("ascii", errors="replace"),
+        )
+
+    def kill(self):
+        if self.simulation is not None:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(self.cwd)
+                with contextlib.redirect_stdout(
+                    self.stdout
+                ), contextlib.redirect_stderr(self.stderr):
+                    self.simulation.stop()
+                self.simulation = None
+            finally:
+                os.chdir(old_cwd)
+        if self.returncode is None:
+            self.returncode = -9
+        if self._cleanup_done:
+            return
+        # InteractiveSimulation still registers the global softexit monitor;
+        # reset it here so one in-process regtest cannot affect the next one.
+        for _thread, loop_control in softexit.tlist:
+            if loop_control is not None:
+                loop_control[0] = False
+        for thread, _loop_control in softexit.tlist:
+            if thread is not threading.current_thread() and thread.is_alive():
+                thread.join(timeout=SOFTEXITLATENCY + 0.1)
+        for signum, handler in softexit._kill.items():
+            signal.signal(signum, handler)
+        softexit.__init__()
+        self._cleanup_done = True
 
 
 def get_test_settings(
@@ -266,6 +381,7 @@ class Runner(object):
         self,
         parent,
         call_ipi="i-pi input.xml",
+        run_ipi_in_process=False,
     ):
         """Store parent directory and commands to call i-pi and driver
         call_ipi: command to call i-pi
@@ -273,6 +389,7 @@ class Runner(object):
 
         self.parent = parent
         self.call_ipi = call_ipi
+        self.run_ipi_in_process = run_ipi_in_process
 
     def run(self, cwd, nid):
         """This function tries to run the test in a tmp folder and
@@ -309,14 +426,17 @@ class Runner(object):
         try:
             # Run i-pi
 
-            ipi = sp.Popen(
-                self.call_ipi,
-                cwd=(self.tmp_dir),
-                shell=True,
-                stdin=sp.DEVNULL,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-            )
+            if self.run_ipi_in_process:
+                ipi = InProcessIPI(self.call_ipi, self.tmp_dir)
+            else:
+                ipi = sp.Popen(
+                    self.call_ipi,
+                    cwd=(self.tmp_dir),
+                    shell=True,
+                    stdin=sp.DEVNULL,
+                    stdout=sp.PIPE,
+                    stderr=sp.PIPE,
+                )
 
             if len(clients) > 0:
                 f_connected = False
