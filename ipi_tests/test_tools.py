@@ -108,6 +108,7 @@ class InProcessIPI:
         except BaseException:
             self.returncode = 1
             self.stderr.write(traceback.format_exc())
+            self.kill()
         finally:
             os.chdir(old_cwd)
 
@@ -163,23 +164,26 @@ class InProcessIPI:
         )
 
     def kill(self):
-        if self.simulation is not None:
-            old_cwd = os.getcwd()
-            try:
-                os.chdir(self.cwd)
-                with contextlib.redirect_stdout(
-                    self.stdout
-                ), contextlib.redirect_stderr(self.stderr):
-                    self.simulation.stop()
-                self.simulation = None
-            finally:
-                os.chdir(old_cwd)
         if self.returncode is None:
             self.returncode = -9
         if self._cleanup_done:
             return
-        # InteractiveSimulation still registers the global softexit monitor;
-        # reset it here so one in-process regtest cannot affect the next one.
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.cwd)
+            # Run softexit cleanup callbacks without calling sys.exit().
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                for func, args, kwargs in list(softexit.flist):
+                    try:
+                        func(*args, **kwargs)
+                    except RuntimeError as err:
+                        print("Error running in-process cleanup, ", err)
+        finally:
+            os.chdir(old_cwd)
+            self.simulation = None
+
         for _thread, loop_control in softexit.tlist:
             if loop_control is not None:
                 loop_control[0] = False
