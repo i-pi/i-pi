@@ -426,7 +426,7 @@ class Runner(object):
         try:
             # Run i-pi
 
-            if self.run_ipi_in_process:
+            if getattr(self, "run_ipi_in_process", False):
                 ipi = InProcessIPI(self.call_ipi, self.tmp_dir)
             else:
                 ipi = sp.Popen(
