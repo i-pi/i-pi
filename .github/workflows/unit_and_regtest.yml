@@ -51,4 +51,4 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage-unit.xml,coverage-regtests.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
