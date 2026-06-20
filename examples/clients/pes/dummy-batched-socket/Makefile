@@ -13,7 +13,7 @@ IPI:=i-pi
 
 dummy:
 	$(IPI) input.xml & sleep 5; \
-        $(driver) -u -a localhost -m batch-dummy -s & \
+        $(driver) -u -a localhost -m batch-dummy --shm & \
 	wait
 
 clean:

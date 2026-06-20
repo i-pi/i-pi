@@ -22,6 +22,8 @@ from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.interfaces.mpi import InterfaceMPI
+from ipi.interfaces.utils import parse_extra
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
@@ -427,6 +429,64 @@ class FFEval(ForceField):
         request._event_done.set()
 
 
+class FFMPI(ForceField):
+    """Forcefield that exchanges positions and forces with driver ranks over MPI.
+
+    i-PI runs as rank 0 of MPI_COMM_WORLD; each driver it talks to is the root
+    of a (possibly multi-rank) sub-communicator, so a single driver can wrap an
+    MPI-parallel code. The actual communication is delegated to an InterfaceMPI
+    (mirroring how FFSocket delegates to InterfaceSocket). Several FFMPI
+    forcefields can coexist; each claims the driver ranks launched with its own
+    `--mpi-name` (see ipi.interfaces.mpi.MPIWorldManager).
+    """
+
+    def __init__(
+        self,
+        latency=1e-4,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=False,
+        active=np.array([-1]),
+        threaded=True,
+        mode="mpi",
+        batch_size=1,
+        interface=None,
+    ):
+        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
+        if not threaded:
+            raise ValueError("FFMPI requires threaded=True to poll the driver ranks.")
+        if mode != "mpi":
+            raise ValueError("Unknown ffmpi mode '%s'." % mode)
+        self.mode = mode
+        if interface is None:
+            self.interface = InterfaceMPI(name=name, batch_size=batch_size)
+        else:
+            self.interface = interface
+        self.interface.requests = self.requests
+        self.interface.offset = self.offset
+
+    def poll(self):
+        """Function to check the status of the driver calculations."""
+
+        self.interface.poll()
+
+    def start(self):
+        """Joins the shared MPI world and spawns the polling thread."""
+
+        self.interface.open()
+        super().start()
+
+    def stop(self):
+        """Stops the poll thread and tells every driver root to exit."""
+
+        super().stop()
+        if self._thread is not None:
+            # must wait until the poll loop has ended before signalling exit
+            self._thread.join()
+        self.interface.close()
+
+
 class FFDirect(ForceField):
     def __init__(
         self,
@@ -517,37 +577,11 @@ class FFDirect(ForceField):
                     self.launch_batch()
 
     def _process_results(self, results, request):
-        # ensure forces and virial have the correct shape to fit the results
+        # ensure shapes, apply the offset and parse the extra string
         results[0] -= self.offset
-        results[1] = results[1].reshape(-1)
-        results[2] = results[2].reshape(3, 3)
-
-        # converts the extra fields, if there are any
-        mxtra = results[3]
-        mxtradict = {}
-        if mxtra:
-            try:
-                mxtradict = json.loads(mxtra)
-                info(
-                    "@driver.getforce: Extra string JSON has been loaded.",
-                    verbosity.debug,
-                )
-            except:
-                # if we can't parse it as a dict, issue a warning and carry on
-                info(
-                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
-                    + mxtra,
-                    verbosity.debug,
-                )
-                mxtradict = {}
-                pass
-            if "raw" in mxtradict:
-                raise ValueError(
-                    "'raw' cannot be used as a field in a JSON-formatted extra string"
-                )
-
-            mxtradict["raw"] = mxtra
-        results[3] = mxtradict
+        results[1] = np.asarray(results[1]).reshape(-1)
+        results[2] = np.asarray(results[2]).reshape(3, 3)
+        results[3] = parse_extra(results[3])
 
         request["result"] = results
         request["status"] = "Done"

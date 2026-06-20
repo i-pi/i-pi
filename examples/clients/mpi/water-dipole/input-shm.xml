@@ -1,0 +1,31 @@
+<simulation verbosity='medium'>
+  <!-- Same run as input.xml but using a shared-memory socket instead of MPI
+       (used by run.sh as a fallback when MPI is not available). The dipole
+       extras and batching work identically over this transport. -->
+  <output prefix='simulation'>
+    <properties stride='2' filename='out'> [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin} ] </properties>
+    <trajectory filename='pos' stride='4' format='xyz' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <trajectory filename='dipole' stride='2' extra_type='dipole'> extras </trajectory>
+  </output>
+  <total_steps>20</total_steps>
+  <prng><seed>32415</seed></prng>
+  <ffsocket name='qtip4pf' mode='shm' pbc='false'>
+    <address>qtip4pf-water</address>
+    <batch_size>8</batch_size>
+  </ffsocket>
+  <system>
+    <initialize nbeads='8'>
+      <cell mode='abc'> [ 15.0, 15.0, 15.0 ] </cell>
+      <file mode='xyz'> water.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces> <force forcefield='qtip4pf'/> </forces>
+    <ensemble> <temperature units='kelvin'> 300 </temperature> </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_g'> <tau units='femtosecond'> 100 </tau> </thermostat>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

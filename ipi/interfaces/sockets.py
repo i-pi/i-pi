@@ -17,12 +17,12 @@ import time
 import threading
 
 import numpy as np
-import json
 
 from multiprocessing import shared_memory
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
+from ipi.interfaces.utils import parse_extra
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -64,26 +64,6 @@ class Disconnected(Exception):
     """Disconnected: Raised if client has been disconnected."""
 
     pass
-
-
-def _parse_extra(mxtra):
-    """Decodes the optional 'extra' string returned by a force calculation into
-    a dict. Empty/whitespace payloads give an empty dict; otherwise the JSON
-    fields (if any) are returned and the literal string is stashed under "raw",
-    matching how <ffdirect> processes extras."""
-    if not mxtra or mxtra.isspace():
-        return {}
-    try:
-        mxtradict = json.loads(mxtra)
-    except Exception:
-        # not JSON: still expose the literal string under "raw", as <ffdirect> does
-        mxtradict = {}
-    if "raw" in mxtradict:
-        raise ValueError(
-            "'raw' cannot be used as a field in a JSON-formatted extra string"
-        )
-    mxtradict["raw"] = mxtra
-    return mxtradict
 
 
 class InvalidSize(Exception):
@@ -503,30 +483,7 @@ class Driver(DriverSocket):
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
             mxtra = ""
-        mxtradict = {}
-        if mxtra:
-            try:
-                mxtradict = json.loads(mxtra)
-                info(
-                    "@driver.getforce: Extra string JSON has been loaded.",
-                    verbosity.debug,
-                )
-            except:
-                # if we can't parse it as a dict, issue a warning and carry on
-                info(
-                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
-                    + mxtra,
-                    verbosity.debug,
-                )
-                mxtradict = {}
-                pass
-            if "raw" in mxtradict:
-                raise ValueError(
-                    "'raw' cannot be used as a field in a JSON-formatted extra string"
-                )
-
-            mxtradict["raw"] = mxtra
-        return [mu, mf, mvir, mxtradict]
+        return [mu, mf, mvir, parse_extra(mxtra)]
 
     def getforce(self):
         """Gets the potential energy, force and virial from the driver.
@@ -799,7 +756,7 @@ class Driver(DriverSocket):
         else:
             mxtra = ""
 
-        return [mu, mf, mvir, _parse_extra(mxtra)]
+        return [mu, mf, mvir, parse_extra(mxtra)]
 
     def dispatch_send_batch(self, reqs):
         """Sends a list of requests as one batched POSDATA + GETFORCE.
@@ -948,7 +905,7 @@ class Driver(DriverSocket):
                         float(pots[i]),
                         forces[i].copy(),
                         virs[i].copy(),
-                        _parse_extra(mxtra),
+                        parse_extra(mxtra),
                     ]
                 )
         return results
@@ -1127,7 +1084,7 @@ class SHMDriver(Driver):
         # threaded path: getforce() has already consumed FORCEREADY, so only the
         # extra string remains on the socket; pot/force/vir come from SHM.
         mu, mf, mvir = self._read_shm_results(1)[0]
-        return [mu, mf, mvir, _parse_extra(self._recv_extra())]
+        return [mu, mf, mvir, parse_extra(self._recv_extra())]
 
     def _recv_forces_bulk(self, natoms):
         # consolidated path: read the FORCEREADY ack and the extra here.
@@ -1136,7 +1093,7 @@ class SHMDriver(Driver):
             warning(" @SOCKET:   Unexpected getforce reply: %s" % hdr, verbosity.low)
             raise Disconnected()
         mu, mf, mvir = self._read_shm_results(1)[0]
-        return [mu, mf, mvir, _parse_extra(self._recv_extra())]
+        return [mu, mf, mvir, parse_extra(self._recv_extra())]
 
     # -- batched path --------------------------------------------------------
     def dispatch_send_batch(self, reqs):
@@ -1202,7 +1159,7 @@ class SHMDriver(Driver):
             # every structure's extra must be drained, even padded ones
             extra = self._recv_extra()
             if i < n_real:
-                out.append(results[i] + [_parse_extra(extra)])
+                out.append(results[i] + [parse_extra(extra)])
         return out
 
     # -- cleanup -------------------------------------------------------------
@@ -1387,8 +1344,12 @@ class InterfaceSocket(object):
                 " @interfacesocket.close: Problem shutting down the server socket. Will just continue and hope for the best.",
                 verbosity.low,
             )
-        if self.mode == "unix":
-            os.unlink(self.sockets_prefix + self.address)
+        if self.mode in ("unix", "shm"):
+            # both modes bind a unix-domain socket file that must be removed
+            try:
+                os.unlink(self.sockets_prefix + self.address)
+            except OSError:
+                pass
 
     def poll(self):
         """Called in the main thread loop.

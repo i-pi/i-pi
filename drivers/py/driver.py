@@ -285,6 +285,152 @@ def run_driver(
             return
 
 
+# MPI message tags for the ffmpi protocol (must match ipi/engine/forcefields.py
+# and drivers/f90/fmpi.f90)
+MPI_TAG_HELLO = 1
+MPI_TAG_INIT = 2
+MPI_TAG_WORK = 3
+MPI_TAG_RESULT = 4
+MPI_TAG_EXTRA = 5
+MPI_TAG_EXIT = 6
+# intra-group broadcast control flags (driver-internal)
+GROUP_WORK = 0
+GROUP_EXIT = 1
+
+
+def _mpi_eval_batch(driver, body, nat, batch):
+    """Unpacks a packed (cells, positions) buffer and evaluates the PES."""
+
+    cell_list, pos_list = [], []
+    stride = 18 + 3 * nat
+    for i in range(batch):
+        off = i * stride
+        cell_list.append(body[off : off + 9].reshape(3, 3))
+        pos_list.append(body[off + 18 : off + stride].reshape(nat, 3))
+    return driver(cell_list, pos_list)
+
+
+def _mpi_send_results(comm, server_rank, results, nat, MPI):
+    """Packs and sends the batch results (numbers, then extra strings)."""
+
+    batch = len(results)
+    stride = 1 + 3 * nat + 9
+    numeric = np.empty(batch * stride, dtype=np.float64)
+    eparts = []
+    for i, res in enumerate(results):
+        pot, force, vir, extra = res
+        base = i * stride
+        numeric[base] = pot
+        numeric[base + 1 : base + 1 + 3 * nat] = np.asarray(force).reshape(-1)
+        numeric[base + 1 + 3 * nat : base + stride] = np.asarray(vir).reshape(-1)
+        b = extra.encode("utf-8") if isinstance(extra, str) else b""
+        eparts.append(np.array([len(b)], dtype=np.int32).view(np.uint8))
+        eparts.append(np.frombuffer(b, dtype=np.uint8))
+    comm.Send([numeric, MPI.DOUBLE], dest=server_rank, tag=MPI_TAG_RESULT)
+    ebuf = np.concatenate(eparts) if eparts else np.zeros(0, np.uint8)
+    comm.Send([ebuf, MPI.BYTE], dest=server_rank, tag=MPI_TAG_EXTRA)
+
+
+def run_driver_mpi(
+    driver=Dummy_driver(),
+    group_size=1,
+    server_rank=0,
+    comm=None,
+    f_verbose=False,
+    mpi_name="",
+    mpi_id=0,
+):
+    """Minimal MPI client for i-PI (the ffmpi forcefield).
+
+    Splits `comm` (MPI_COMM_WORLD under MPMD) into contiguous groups of
+    `group_size` driver ranks; each group's root exchanges positions and forces
+    with i-PI (rank `server_rank`) and broadcasts the work to its group, so a
+    group can wrap an MPI-parallel code. With group_size=1 the group is a single
+    rank. An MPI-parallel PES can receive the group communicator (e.g. via a
+    `comm=` constructor argument); stock Python PESes ignore it.
+
+    `mpi_name` tags this driver with the i-PI `<ffmpi name>` it serves (empty for
+    a single, unnamed ffmpi). `mpi_id` colours the driver pool so that, with
+    several forcefields, a multi-rank group never crosses a forcefield boundary.
+    """
+
+    import mpi4py
+
+    mpi4py.rc.thread_level = "multiple"
+    from mpi4py import MPI
+
+    world = MPI.COMM_WORLD if comm is None else comm
+    world_rank = world.Get_rank()
+
+    # i-PI (rank server_rank) does the matching split alone (colour 0); the
+    # drivers of each forcefield form their own pool (colour 1+mpi_id), then
+    # split it into groups without involving i-PI.
+    drivers = world.Split(color=1 + mpi_id, key=world_rank)
+    color = drivers.Get_rank() // group_size
+    group = drivers.Split(color=color, key=drivers.Get_rank())
+    is_root = group.Get_rank() == 0
+
+    # every group root tells i-PI its group's world ranks and the forcefield name
+    members = group.allgather(world_rank)
+    if is_root:
+        hello = np.array([world_rank, group.Get_size()] + members, dtype=np.int32)
+        world.Send([hello, MPI.INT], dest=server_rank, tag=MPI_TAG_HELLO)
+        name_bytes = np.frombuffer(mpi_name.encode("utf-8"), dtype=np.uint8)
+        world.Send([name_bytes, MPI.BYTE], dest=server_rank, tag=MPI_TAG_HELLO)
+
+    status = MPI.Status()
+    while True:
+        if is_root:
+            world.Probe(source=server_rank, tag=MPI.ANY_TAG, status=status)
+            tag = status.Get_tag()
+            if tag == MPI_TAG_INIT:
+                # socket-style INIT: [rid, len] then the parameter string. The
+                # batch is taken from each WORK header, so the string is only
+                # logged here, but is available to a custom PES if needed.
+                hdr = np.empty(2, dtype=np.int32)
+                world.Recv([hdr, MPI.INT], source=server_rank, tag=MPI_TAG_INIT)
+                pbuf = np.empty(int(hdr[1]), dtype=np.uint8)
+                world.Recv([pbuf, MPI.BYTE], source=server_rank, tag=MPI_TAG_INIT)
+                if f_verbose:
+                    print(
+                        "INIT rid=%d, init string: %r"
+                        % (int(hdr[0]), pbuf.tobytes().decode("utf-8", "replace"))
+                    )
+                continue
+            if tag == MPI_TAG_EXIT:
+                ibuf = np.empty(1, dtype=np.int32)
+                world.Recv([ibuf, MPI.INT], source=server_rank, tag=MPI_TAG_EXIT)
+                if group.Get_size() > 1:
+                    group.Bcast(
+                        [np.array([GROUP_EXIT, 0, 0], np.int32), MPI.INT], root=0
+                    )
+                if f_verbose:
+                    print("Received exit message from i-PI. Bye bye!")
+                return
+            # TAG_WORK: header [natoms, batch] then the packed double buffer
+            hdr = np.empty(2, dtype=np.int32)
+            world.Recv([hdr, MPI.INT], source=server_rank, tag=MPI_TAG_WORK)
+            nat, batch = int(hdr[0]), int(hdr[1])
+            body = np.empty(batch * (18 + 3 * nat), dtype=np.float64)
+            world.Recv([body, MPI.DOUBLE], source=server_rank, tag=MPI_TAG_WORK)
+            if group.Get_size() > 1:
+                group.Bcast(
+                    [np.array([GROUP_WORK, nat, batch], np.int32), MPI.INT], root=0
+                )
+                group.Bcast([body, MPI.DOUBLE], root=0)
+            results = _mpi_eval_batch(driver, body, nat, batch)
+            _mpi_send_results(world, server_rank, results, nat, MPI)
+        else:
+            ctrl = np.empty(3, dtype=np.int32)
+            group.Bcast([ctrl, MPI.INT], root=0)
+            if ctrl[0] == GROUP_EXIT:
+                return
+            nat, batch = int(ctrl[1]), int(ctrl[2])
+            body = np.empty(batch * (18 + 3 * nat), dtype=np.float64)
+            group.Bcast([body, MPI.DOUBLE], root=0)
+            _mpi_eval_batch(driver, body, nat, batch)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
 
@@ -356,6 +502,42 @@ if __name__ == "__main__":
         "(implies a UNIX domain control socket; same-node only). The batch size, "
         "if any, is taken from the INIT string.",
     )
+    parser.add_argument(
+        "--mpi",
+        action="store_true",
+        default=False,
+        help="Communicate with i-PI (the ffmpi forcefield) over MPI instead of a "
+        "socket. Launch together with i-PI in a single MPMD job, e.g. "
+        "`mpirun -n 1 i-pi input.xml : -n 4 i-pi-py_driver --mpi -m harmonic -o 1`.",
+    )
+    parser.add_argument(
+        "-g",
+        "--group-size",
+        type=int,
+        default=1,
+        help="MPI mode only: number of ranks per driver group (>1 wraps an "
+        "MPI-parallel code).",
+    )
+    parser.add_argument(
+        "--server-rank",
+        type=int,
+        default=0,
+        help="MPI mode only: world rank of the i-PI server (default 0).",
+    )
+    parser.add_argument(
+        "--mpi-name",
+        type=str,
+        default="",
+        help="MPI mode only: name of the <ffmpi> forcefield this driver serves "
+        "(required only when the input has more than one ffmpi).",
+    )
+    parser.add_argument(
+        "--mpi-id",
+        type=int,
+        default=0,
+        help="MPI mode only: integer that keeps this forcefield's driver pool "
+        "separate from others' (only needed with group-size>1 and several ffmpi).",
+    )
 
     args = parser.parse_args()
 
@@ -366,12 +548,22 @@ if __name__ == "__main__":
 
     d_f = cls(*driver_args, **driver_kwargs)
 
-    run_driver(
-        unix=args.unix,
-        address=args.address,
-        port=args.port,
-        driver=d_f,
-        f_verbose=args.verbose,
-        sockets_prefix=args.sockets_prefix,
-        shm=args.shm,
-    )
+    if args.mpi:
+        run_driver_mpi(
+            driver=d_f,
+            group_size=args.group_size,
+            server_rank=args.server_rank,
+            f_verbose=args.verbose,
+            mpi_name=args.mpi_name,
+            mpi_id=args.mpi_id,
+        )
+    else:
+        run_driver(
+            unix=args.unix,
+            address=args.address,
+            port=args.port,
+            driver=d_f,
+            f_verbose=args.verbose,
+            sockets_prefix=args.sockets_prefix,
+            shm=args.shm,
+        )

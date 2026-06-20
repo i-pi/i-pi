@@ -90,6 +90,7 @@ objects = {
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),
     "ffdirect": forcefields.InputFFDirect(),
+    "ffmpi": forcefields.InputFFMPI(),
     "ffrotations": forcefields.InputFFRotations(),
     "fflj": forcefields.InputFFLennardJones(),
     "ffdebye": forcefields.InputFFDebye(),
@@ -170,7 +171,7 @@ parser.add_option(
     help="add cross-references to a latex help file. Ignored if -l is not present",
 )
 
-(options, args) = parser.parse_args()
+options, args = parser.parse_args()
 
 if options.opt not in objects:
     raise ValueError("Option " + options.opt + " is not a viable tag name")

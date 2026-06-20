@@ -9,6 +9,9 @@ temp/ph2/rpmd   # long and complicated
 # Needs infrastructure fixing
 
 # Need of external dependency
+clients/mpi/harmonic                                                               # needs mpi4py + mpirun (MPMD launch); see run.sh
+clients/mpi/two-drivers                                                            # needs mpi4py + mpirun (two tagged ffmpi drivers); see run.sh
+clients/mpi/water-dipole                                                            # needs compiled f90 driver (q-TIP4P/f); MPI optional, see run.sh
 clients/yaff/mil53_ffyaff
 clients/yaff/mil53_ffsocket
 clients/ffsgdml/benzene_pimd.10

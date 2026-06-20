@@ -162,6 +162,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             iforcefields.InputFFDirect,
             {"help": iforcefields.InputFFDirect.default_help},
         ),
+        "ffmpi": (
+            iforcefields.InputFFMPI,
+            {"help": iforcefields.InputFFMPI.default_help},
+        ),
         "fflj": (
             iforcefields.InputFFLennardJones,
             {"help": iforcefields.InputFFLennardJones.default_help},
@@ -257,6 +261,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFDirect()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffdirect", _iobj)
+                elif isinstance(_obj, eforcefields.FFMPI):
+                    _iobj = iforcefields.InputFFMPI()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffmpi", _iobj)
                 elif isinstance(_obj, eforcefields.FFLennardJones):
                     _iobj = iforcefields.InputFFLennardJones()
                     _iobj.store(_obj)
@@ -340,6 +348,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             elif k in [
                 "ffsocket",
                 "ffdirect",
+                "ffmpi",
                 "fflj",
                 "ffdebye",
                 "ffdmd",
