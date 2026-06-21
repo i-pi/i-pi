@@ -2,10 +2,23 @@ import subprocess as sp
 import os
 from pathlib import Path
 import shutil
+import socket
 import xml.etree.ElementTree as ET
 import tempfile
 import time
 import glob
+
+
+def _socket_ready(client):
+    """True once i-PI is listening for this client's transport: a UNIX
+    rendezvous file for unix/shm, or an open TCP port for inet."""
+    if client[1] == "inet":
+        try:
+            with socket.create_connection((client[2], int(client[3])), timeout=0.2):
+                return True
+        except OSError:
+            return False
+    return os.path.exists("/tmp/ipi_" + client[2])
 
 
 def copy_tree(src, dst):  # emulates distutils copy_tree
@@ -110,7 +123,8 @@ def get_test_settings(
             driver_model = "dummy"
             address_name = "localhost"
             port_number = 33333
-            socket_mode = "unix"
+            # None means "use the transport declared in the example's input.xml"
+            socket_mode = None
             flaglist = {}
             for line in block:
                 if "driver_code" in line:
@@ -160,7 +174,7 @@ def get_test_settings(
         driver_models.append("dummy")
         address_names.append("localhost")
         port_numbers.append(33333)
-        socket_modes.append("unix")
+        socket_modes.append(None)
         flaglists.append({})
 
     driver_info = {
@@ -209,20 +223,28 @@ def modify_xml_4_dummy_test(
             ff_sockets.append(ff_socket)
 
     for s, ffsocket in enumerate(ff_sockets):
-        ffsocket.attrib["mode"] = driver_info["socket_mode"][s]
+        # honor the transport requested in test_settings.dat, otherwise keep the
+        # one declared in the example so each example is tested as written
+        mode = driver_info["socket_mode"][s] or ffsocket.attrib.get("mode", "unix")
+        ffsocket.attrib["mode"] = mode
 
         for element in ffsocket:
             port = driver_info["port_number"][s]
             if element.tag == "port":
                 element.text = str(port)
             elif element.tag == "address":
-                dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
+                # inet binds to a real host, so keep the address resolvable;
+                # unix/shm rendezvous files get a unique name to avoid clashes
+                if mode == "inet":
+                    dd = driver_info["address_name"][s]
+                else:
+                    dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
 
         model = driver_info["driver_model"][s]
 
-        clients.append([model, "unix", address, port])
+        clients.append([model, mode, address, port])
 
         for key in driver_info["flag"][s].keys():
             if "-o" in key:
@@ -236,7 +258,7 @@ def modify_xml_4_dummy_test(
         ):
             for remaining_client_idx in range(s + 1, len(driver_info["driver_model"])):
                 model = driver_info["driver_model"][remaining_client_idx]
-                clients.append([model, "unix", address, port])
+                clients.append([model, mode, address, port])
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
                     if "-o" in key:
@@ -322,7 +344,7 @@ class Runner(object):
                 f_connected = False
                 for client in clients:
                     for i in range(100):
-                        if os.path.exists("/tmp/ipi_" + client[2]):
+                        if _socket_ready(client):
                             f_connected = True
                             break
                         else:
@@ -366,13 +388,18 @@ class Runner(object):
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]
                     )
+                elif client[1] == "shm":
+                    # shared-memory transport: UNIX control socket plus --shm
+                    clientcall = call_driver + " -m {} {} {} -u --shm ".format(
+                        client[0], address_key, client[2]
+                    )
                 elif client[1] == "inet":
                     clientcall = call_driver + " -m {} {} {} -p {}".format(
-                        client[0], client[2], address_key, client[3]
+                        client[0], address_key, client[2], client[3]
                     )
 
                 else:
-                    raise ValueError("Driver mode has to be either unix or inet")
+                    raise ValueError("Driver mode has to be unix, shm or inet")
 
                 cmd = clientcall
 

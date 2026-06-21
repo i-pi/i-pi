@@ -409,8 +409,9 @@ class InputFFDirect(InputForceField):
                 "default": 1,
                 "help": (
                     "The number of structures that should be batched in a single evaluation."
-                    + " The total number of structures computed at each step should be a multiple "
-                    + "of `batch_size` or the calculation will hang forever."
+                    + " With `threaded='True'` an incomplete final batch is flushed once the poll "
+                    + "loop goes idle; without threading the total number of structures computed at "
+                    + "each step must be a multiple of `batch_size` or the calculation will hang forever."
                 ),
             },
         ),

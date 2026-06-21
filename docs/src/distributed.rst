@@ -309,7 +309,12 @@ and the bundled drivers pass the structures to the potential through the
 per-message and per-request overhead, which is the dominant cost when the potential
 is inexpensive; for expensive potentials it makes little difference. If fewer than
 ``batch_size`` structures are queued, the socket transport pads the batch by
-replicating the last structure, so the run never stalls.
+replicating the last structure, so the run never stalls. The in-process
+``ffdirect`` backend does not pad; instead, when run with ``threaded='True'`` it
+flushes an incomplete final batch (evaluating fewer than ``batch_size`` structures)
+once its poll loop goes idle. Without threading there is no idle flush, so the
+number of structures evaluated must be a multiple of ``batch_size`` or the run
+hangs.
 
 Batching requires ``consolidate_messages`` (the default) and is incompatible with
 ``matching="lock"`` and with stateful clients that rely on receiving a continuous

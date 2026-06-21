@@ -7,7 +7,7 @@
 # beads are bundled into one batched request, and the dipole is written to
 # simulation.dipole_* identically for both transports.
 
-DRIVER=../../../../drivers/f90/driver.x   # the compiled Fortran driver (q-TIP4P/f lives here)
+DRIVER=${DRIVER:-../../../../drivers/f90/driver.x}   # compiled Fortran driver (q-TIP4P/f lives here)
 ADDR=qtip4pf-water
 
 if [ ! -x "$DRIVER" ]; then
@@ -21,5 +21,9 @@ if command -v mpirun >/dev/null 2>&1 && nm "$DRIVER" 2>/dev/null | grep -qi mpi_
     echo "# driver built with MPI -> running over MPI (1 batched rank)"
     mpirun -n 1 i-pi input.xml : -n 1 "$DRIVER" --mpi -m qtip4pf
 else
-    echo "# MPI unavailable, cannot run example"
+    echo "# MPI unavailable -> falling back to a shared-memory socket"
+    i-pi input-shm.xml &
+    sleep 3
+    "$DRIVER" -u -a "$ADDR" -m qtip4pf --shm
+    wait
 fi
