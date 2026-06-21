@@ -54,6 +54,8 @@ def test_ffmpi_water_mpirun(tmp_path):
 
     cmd = [
         mpirun,
+        # CI runners expose few MPI slots; allow more ranks than cores
+        "--oversubscribe",
         "-n",
         "1",
         "i-pi",
