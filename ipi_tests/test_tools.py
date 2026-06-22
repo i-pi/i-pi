@@ -28,6 +28,26 @@ def _socket_ready(client):
     return os.path.exists("/tmp/ipi_" + client[2])
 
 
+def _terminate(proc):
+    """Tears down a launched i-PI/driver and anything it spawned.
+
+    Subprocess clients are started in their own session (``start_new_session``),
+    so killing the whole process group reaps the shell *and* the real i-PI/driver
+    underneath it -- otherwise ``Popen.kill()`` only kills the ``shell=True`` shell
+    and leaves an orphan holding the stdout/stderr pipes (which then deadlocks any
+    later ``communicate()``). The in-process client just runs its own cleanup."""
+    if isinstance(proc, sp.Popen):
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                proc.kill()
+            except OSError:
+                pass
+    else:
+        proc.kill()
+
+
 def copy_tree(src, dst):  # emulates distutils copy_tree
     if os.path.exists(dst):
         shutil.rmtree(dst)
@@ -449,6 +469,7 @@ class Runner(object):
                     stdin=sp.DEVNULL,
                     stdout=sp.PIPE,
                     stderr=sp.PIPE,
+                    start_new_session=True,
                 )
 
             if len(clients) > 0:
@@ -540,6 +561,7 @@ class Runner(object):
                     stdin=sp.DEVNULL,
                     stdout=sp.PIPE,
                     stderr=sp.PIPE,
+                    start_new_session=True,
                 )
 
                 drivers.append(driver)
@@ -553,8 +575,11 @@ class Runner(object):
                 # if i-PI has ended, we can wait for the driver to quit
                 driver_out, driver_err = driver.communicate(timeout=TIMEOUT)
                 if driver.returncode != 0:
-                    ipi.kill()
-                    ipi_out, ipi_error = ipi.communicate()
+                    _terminate(ipi)
+                    try:
+                        ipi_out, ipi_error = ipi.communicate(timeout=2)
+                    except sp.TimeoutExpired:
+                        ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
                     assert (
                         driver.returncode == 0
                     ), "Driver error occurred: {}\n Driver Output: {}\n i-PI Output: {}\n i-PI Error: {}".format(
@@ -562,33 +587,23 @@ class Runner(object):
                     )
 
         except sp.TimeoutExpired:
-            ipi.kill()
+            # kill the whole i-PI and driver process groups so no orphan keeps a
+            # pipe open (which would otherwise hang the next communicate())
+            _terminate(ipi)
             try:
                 ipi_out, ipi_error = ipi.communicate(timeout=2)
-            except:
-                ipi_out, ipi_error = "", "Could not get outputs from ipi"
-                pass
-
-            drivers[0].kill()
-            try:
-                driver_out, driver_err = drivers[0].communicate(timeout=2)
-            except:
-                driver_out, driver_err = "", "Could not get outputs from drivers"
-                pass
-
-            print("Timeout during {} test \
-              **** i-PI output **** \
-              stdout {} \
-              stderr {} \
-              **** driver output **** \
-              stdout {} \
-              stderr {} \
-              ".format(str(cwd), ipi_out, ipi_error, driver_out, driver_err))
-            raise
-
+            except Exception:
+                ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
+            for driver in drivers:
+                _terminate(driver)
+                try:
+                    driver.communicate(timeout=2)
+                except Exception:
+                    pass
             raise RuntimeError(
-                "Time is out. Aborted during {} test.".format(
-                    str(cwd),
+                "Timeout ({}s) during {} test.\n"
+                " **** i-PI stdout ****\n{}\n **** i-PI stderr ****\n{}".format(
+                    TIMEOUT, str(cwd), ipi_out, ipi_error
                 )
             )
 
