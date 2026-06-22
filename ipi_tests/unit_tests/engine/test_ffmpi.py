@@ -9,10 +9,15 @@ import sys
 import types
 
 import numpy as np
+import pytest
 
+import ipi.interfaces.mpi as mpi_mod
 from ipi.engine.forcefields import FFMPI, ForceRequest
 from ipi.interfaces.utils import parse_extra
 from ipi.interfaces.mpi import (
+    MPIWorldManager,
+    InterfaceMPI,
+    get_mpi_world_manager,
     MPI_TAG_INIT,
     MPI_TAG_WORK,
     MPI_TAG_RESULT,
@@ -179,6 +184,235 @@ def test_ffmpi_offset_applied(monkeypatch):
 
 
 def test_parse_extra():
+    # valid JSON: fields returned plus the literal under 'raw'
     extra = parse_extra('{"a": 1}')
     assert extra["a"] == 1
     assert extra["raw"] == '{"a": 1}'
+
+    # empty / whitespace -> empty dict
+    assert parse_extra("") == {}
+    assert parse_extra("   ") == {}
+
+    # non-JSON string -> empty dict that still exposes the literal under 'raw'
+    extra = parse_extra("not json")
+    assert extra == {"raw": "not json"}
+
+    # a JSON object that itself carries a 'raw' key is rejected
+    with pytest.raises(ValueError):
+        parse_extra('{"raw": 1}')
+
+
+# --- MPIWorldManager: rank partitioning logic (no MPI runtime needed) ---
+
+
+def test_assign_lone_ff_claims_all_drivers():
+    """A single ffmpi claims every driver root, tagged or not."""
+    mgr = MPIWorldManager()
+    mgr.register("solo")
+    assigned = mgr._assign({"": [3, 1], "ignored-tag": [2]})
+    assert assigned == {"solo": [1, 2, 3]}
+
+
+def test_assign_multiple_ff_tagged():
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffB")
+    assigned = mgr._assign({"ffA": [1], "ffB": [3, 2]})
+    assert assigned == {"ffA": [1], "ffB": [2, 3]}
+
+
+def test_assign_multiple_ff_untagged_raises():
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffB")
+    with pytest.raises(ValueError, match="every driver must pass --mpi-name"):
+        mgr._assign({"ffA": [1], "": [2]})
+
+
+def test_assign_unknown_name_raises():
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffB")
+    with pytest.raises(ValueError, match="not an"):
+        mgr._assign({"ffA": [1], "ffC": [2]})
+
+
+def test_assign_missing_driver_raises():
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffB")
+    with pytest.raises(ValueError, match="no driver ranks"):
+        mgr._assign({"ffA": [1]})
+
+
+def test_register_idempotent_and_roots_for():
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffA")
+    assert mgr.registered_names == {"ffA"}
+    mgr.roots_by_name = {"ffA": [1, 2]}
+    assert mgr.roots_for("ffA") == [1, 2]
+    # an unknown name yields an empty (fresh) list
+    assert mgr.roots_for("ffZ") == []
+    mgr.roots_for("ffA").append(99)
+    assert mgr.roots_for("ffA") == [1, 2]  # returns a copy, not the internal list
+
+
+def test_get_mpi_world_manager_singleton(monkeypatch):
+    monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
+    mgr1 = get_mpi_world_manager()
+    mgr2 = get_mpi_world_manager()
+    assert mgr1 is mgr2
+
+
+# --- MPIWorldManager.setup / _handshake driven by a fake communicator ---
+
+
+class _HandshakeStatus:
+    def __init__(self):
+        self.src = 0
+        self.n_int = 0
+        self.n_byte = 0
+
+    def Get_source(self):
+        return self.src
+
+    def Get_count(self, dtype):
+        return self.n_int if dtype == "int" else self.n_byte
+
+
+class _HandshakeComm:
+    """Replays one HELLO (int payload + name bytes) per driver root."""
+
+    def __init__(self, size, drivers):
+        self._size = size
+        self._drivers = drivers  # list of (src, [root, gsize, *members], name)
+        self._i = 0
+        self._stage = "int"
+        self.split_called = False
+
+    def Get_rank(self):
+        return 0
+
+    def Get_size(self):
+        return self._size
+
+    def Split(self, color=0, key=0):
+        self.split_called = True
+
+    def Probe(self, source=None, tag=None, status=None):
+        src, ints, name = self._drivers[self._i]
+        status.src = src
+        status.n_int = len(ints)
+        status.n_byte = len(name.encode("utf-8"))
+
+    def Recv(self, buf, source=None, tag=None):
+        arr = buf[0] if isinstance(buf, list) else buf
+        _, ints, name = self._drivers[self._i]
+        if self._stage == "int":
+            arr[:] = np.array(ints, dtype=np.int32)
+            self._stage = "byte"
+        else:
+            arr[:] = np.frombuffer(name.encode("utf-8"), dtype=np.uint8)
+            self._stage = "int"
+            self._i += 1
+
+
+def _fake_mpi(comm):
+    return types.SimpleNamespace(
+        INT="int",
+        DOUBLE="double",
+        BYTE="byte",
+        ANY_SOURCE=-1,
+        COMM_WORLD=comm,
+        Status=_HandshakeStatus,
+    )
+
+
+def test_setup_handshake_partitions_drivers():
+    comm = _HandshakeComm(
+        size=3, drivers=[(1, [1, 1, 1], "ffA"), (2, [2, 1, 2], "ffB")]
+    )
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    mgr.register("ffB")
+    mgr.setup(_fake_mpi(comm))
+    assert comm.split_called
+    assert mgr.roots_for("ffA") == [1]
+    assert mgr.roots_for("ffB") == [2]
+    # a second setup() is a no-op (the collective split must happen only once)
+    comm.split_called = False
+    mgr.setup(_fake_mpi(comm))
+    assert not comm.split_called
+
+
+def test_setup_requires_rank_zero():
+    comm = _HandshakeComm(size=2, drivers=[])
+    comm.Get_rank = lambda: 1
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    with pytest.raises(ValueError, match="rank 0"):
+        mgr.setup(_fake_mpi(comm))
+
+
+def test_setup_requires_driver_ranks():
+    comm = _HandshakeComm(size=1, drivers=[])
+    mgr = MPIWorldManager()
+    mgr.register("ffA")
+    with pytest.raises(ValueError, match="no driver ranks"):
+        mgr.setup(_fake_mpi(comm))
+
+
+# --- InterfaceMPI / FFMPI construction and shutdown ---
+
+
+def test_interface_registers_name(monkeypatch):
+    monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
+    iface = InterfaceMPI(name="ffX", batch_size=2)
+    assert "ffX" in get_mpi_world_manager().registered_names
+    assert iface._mpi_lock is get_mpi_world_manager().mpi_lock
+
+
+class _ExitComm:
+    def __init__(self):
+        self.exits = []
+
+    def Send(self, buf, dest=None, tag=None):
+        if tag == MPI_TAG_EXIT:
+            self.exits.append(dest)
+
+
+def test_interface_close_sends_exit(monkeypatch):
+    monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
+    monkeypatch.setitem(sys.modules, "mpi4py", types.SimpleNamespace(MPI=_FakeMPI))
+    iface = InterfaceMPI(name="ffX")
+    comm = _ExitComm()
+    iface.comm = comm
+    iface.driver_ranks = [1, 2]
+    iface.close()
+    assert comm.exits == [1, 2]
+
+
+def test_interface_close_without_comm_is_noop(monkeypatch):
+    monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
+    iface = InterfaceMPI(name="ffX")
+    iface.comm = None
+    iface.close()  # must not raise
+
+
+def test_ffmpi_requires_threaded():
+    with pytest.raises(ValueError, match="threaded=True"):
+        FFMPI(name="mpi", threaded=False)
+
+
+def test_ffmpi_rejects_unknown_mode():
+    with pytest.raises(ValueError, match="Unknown ffmpi mode"):
+        FFMPI(name="mpi", mode="bogus")
+
+
+def test_ffmpi_uses_injected_interface():
+    iface = types.SimpleNamespace(requests=None, offset=None)
+    obj = FFMPI(name="mpi", offset=3.0, interface=iface)
+    assert obj.interface is iface
+    assert iface.requests is obj.requests
+    assert iface.offset == obj.offset
