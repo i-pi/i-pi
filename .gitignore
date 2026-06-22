@@ -13,6 +13,8 @@ doc/latex/input_ref_idx.tex
 *~
 \#*
 *.orig
+.coverage
+coverage*.xml
 regtest-ref
 /build
 /dist
