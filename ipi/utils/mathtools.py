@@ -594,7 +594,8 @@ def roots_legendre(L):
     """Replicates scipy.special.roots_legendre using only numpy"""
 
     legendre_poly = np.polynomial.legendre.Legendre.basis(L)
-    roots = np.polynomial.legendre.legroots(legendre_poly.coef)
+    # legroots returns complex on numpy>=2.5; Legendre roots are real
+    roots = np.polynomial.legendre.legroots(legendre_poly.coef).real
     legendre_poly_deriv = legendre_poly.deriv()
 
     # Calculate weights using the formula
