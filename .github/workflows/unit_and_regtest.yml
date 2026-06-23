@@ -41,14 +41,7 @@ jobs:
         run: python -m pip install --upgrade pip 'tox>=4'
 
       - name: unit tests
-        run: tox -e unit -- --cov=ipi --cov-report=xml:coverage-unit.xml --cov-report=term ipi_tests/unit_tests
+        run: tox -e unit
 
       - name: regression tests
-        run: tox -e regtests -- --cov=ipi --cov-report=xml:coverage-regtests.xml --cov-report=term ipi_tests/regression_tests
-
-      - name: upload coverage
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-unit.xml,coverage-regtests.xml
-          fail_ci_if_error: true
+        run: tox -e regtests
