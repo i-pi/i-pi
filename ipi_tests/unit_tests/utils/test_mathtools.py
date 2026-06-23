@@ -7,23 +7,20 @@ from ipi.utils.mathtools import sinch
 
 
 def test_sinch_accepts_small_complex_values():
-    values = np.array([1.0 + 0.0j, 1.0e-8 + 1.0e-8j])
+    value = 1.0e-8 + 1.0e-8j
 
-    expected = np.array(
-        [
-            np.sinh(values[0]) / values[0],
-            1
-            + (values[1] ** 2 / 6.0)
-            * (1 + (values[1] ** 2 / 20.0) * (1 + (values[1] ** 2 / 42.0))),
-        ]
+    expected = (
+        1
+        + (value**2 / 6.0)
+        * (1 + (value**2 / 20.0) * (1 + (value**2 / 42.0)))
     )
 
-    npt.assert_allclose(sinch(values), expected)
+    npt.assert_allclose(sinch(value), expected)
 
 
 def test_sinch_reconstruction_of_real_matrix_stays_real():
-    v = np.array([[0.0, -1.0], [1.0, 0.0]])
-    eigvals, eigvecs = np.linalg.eig(v)
+    rotation_matrix = np.array([[0.0, -1.0], [1.0, 0.0]])
+    eigvals, eigvecs = np.linalg.eig(rotation_matrix)
     ieigvecs = np.linalg.inv(eigvecs)
 
     reconstructed = np.real_if_close(
