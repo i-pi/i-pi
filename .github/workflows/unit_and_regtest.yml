@@ -15,6 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Regtests on ${{ matrix.os }} / Python ${{ matrix.python-version }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
