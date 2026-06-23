@@ -2,6 +2,8 @@ from pathlib import Path
 import pytest
 import argparse
 from argparse import RawTextHelpFormatter
+import faulthandler
+import sys
 import time
 
 try:
@@ -10,6 +12,12 @@ except:
     from exampletools import find_examples, Runner_examples
 
 """ Test that examples are not broken. Doesn't not check that output is correct."""
+
+# Hard wall-clock limit per example. No example should take anywhere near this;
+# if one hangs, faulthandler dumps the stack of every thread (so the cause is
+# visible in the CI log) and aborts, instead of the run hanging until the CI job
+# is killed with an uninformative SIGTERM.
+EXAMPLE_HANG_TIMEOUT = 120
 
 examples_folder = Path(__file__).resolve().parents[2] / "examples"
 excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
@@ -28,7 +36,11 @@ def test_example(ex, verbose=False):
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    error_msg = runner.run(ex, nid)
+    faulthandler.dump_traceback_later(EXAMPLE_HANG_TIMEOUT, exit=True, file=sys.stderr)
+    try:
+        error_msg = runner.run(ex, nid)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
 
     if verbose:

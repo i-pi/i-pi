@@ -473,8 +473,11 @@ class Runner(object):
                 )
 
             if len(clients) > 0:
-                f_connected = False
                 for client in clients:
+                    # reset per client: every socket must come up on its own,
+                    # otherwise a multi-socket example proceeds (and launches the
+                    # next driver) before i-PI has created the matching socket
+                    f_connected = False
                     for i in range(100):
                         if _socket_ready(client):
                             f_connected = True
