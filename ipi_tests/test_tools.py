@@ -48,6 +48,25 @@ def _terminate(proc):
         proc.kill()
 
 
+def _dump_hung_ipi(proc):
+    """Asks a hung i-PI subprocess to print a Python traceback before it dies.
+
+    The subprocess is launched with PYTHONFAULTHANDLER=1, so SIGABRT makes it
+    dump the stack of every thread to stderr (showing exactly where it is stuck)
+    and then abort. Returns (stdout, stderr) including that dump; falls back to a
+    hard group kill if the dump does not come through."""
+    if not isinstance(proc, sp.Popen):
+        return None
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGABRT)
+    except OSError:
+        return None
+    try:
+        return proc.communicate(timeout=10)
+    except Exception:
+        return None
+
+
 def copy_tree(src, dst):  # emulates distutils copy_tree
     if os.path.exists(dst):
         shutil.rmtree(dst)
@@ -470,6 +489,8 @@ class Runner(object):
                     stdout=sp.PIPE,
                     stderr=sp.PIPE,
                     start_new_session=True,
+                    # so a SIGABRT on timeout makes i-PI dump where it is stuck
+                    env={**os.environ, "PYTHONFAULTHANDLER": "1"},
                 )
 
             if len(clients) > 0:
@@ -590,13 +611,19 @@ class Runner(object):
                     )
 
         except sp.TimeoutExpired:
-            # kill the whole i-PI and driver process groups so no orphan keeps a
-            # pipe open (which would otherwise hang the next communicate())
+            # first try to get a Python traceback out of the hung i-PI (it shows
+            # where it is stuck), then kill the whole i-PI and driver process
+            # groups so no orphan keeps a pipe open and deadlocks the next call
+            dumped = _dump_hung_ipi(ipi)
+            if dumped is not None:
+                ipi_out, ipi_error = dumped
+            else:
+                _terminate(ipi)
+                try:
+                    ipi_out, ipi_error = ipi.communicate(timeout=2)
+                except Exception:
+                    ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
             _terminate(ipi)
-            try:
-                ipi_out, ipi_error = ipi.communicate(timeout=2)
-            except Exception:
-                ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
             for driver in drivers:
                 _terminate(driver)
                 try:
