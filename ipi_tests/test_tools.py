@@ -568,6 +568,10 @@ class Runner(object):
                 if driver.returncode != 0:
                     ipi.kill()
                     ipi_out, ipi_error = ipi.communicate()
+                    print("Driver Output:", driver_out.decode("ascii"))
+                    print("Driver Error:", driver_err.decode("ascii"))
+                    print("i-PI Output:", ipi_out.decode("ascii"))
+                    print("i-PI Error:", ipi_error.decode("ascii"))
                     assert (
                         driver.returncode == 0
                     ), "Driver error occurred: {}\n Driver Output: {}\n i-PI Output: {}\n i-PI Error: {}".format(
