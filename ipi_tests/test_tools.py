@@ -85,9 +85,23 @@ def clean_tmp_dir():
 
 
 class InProcessIPI:
-    """Small Popen-like wrapper that runs i-PI through InteractiveSimulation."""
+    """Popen-like wrapper that runs i-PI through InteractiveSimulation.
+
+    The regression-test runner uses a subprocess-like interface to start i-PI,
+    wait for driver sockets and collect output. This wrapper keeps that
+    interface while running i-PI in the pytest process, so coverage can observe
+    the simulation code.
+    """
 
     def __init__(self, command, cwd):
+        """Initializes an interactive simulation from a command.
+
+        Args:
+            command: i-PI command line. The last token is interpreted as the
+                input file name, matching the current regression-test calls.
+            cwd: Directory in which the simulation should be initialized.
+        """
+
         self.command = command
         self.cwd = cwd
         self.stdout = io.StringIO()
@@ -112,9 +126,22 @@ class InProcessIPI:
             os.chdir(old_cwd)
 
     def poll(self):
+        """Returns the current process-style return code."""
+
         return self.returncode
 
     def communicate(self, timeout=None):
+        """Runs the simulation and returns captured output.
+
+        Args:
+            timeout: Maximum number of seconds to wait before raising
+                :class:`subprocess.TimeoutExpired`.
+
+        Returns:
+            A tuple ``(stdout, stderr)`` encoded as bytes, matching
+            :meth:`subprocess.Popen.communicate`.
+        """
+
         if self._ran or self.returncode is not None:
             self.kill()
             return (
@@ -126,6 +153,8 @@ class InProcessIPI:
         old_alarm = signal.getsignal(signal.SIGALRM)
 
         def timeout_handler(signum, frame):
+            """Raises the subprocess timeout exception when SIGALRM fires."""
+
             raise sp.TimeoutExpired(self.command, timeout)
 
         try:
@@ -163,6 +192,14 @@ class InProcessIPI:
         )
 
     def kill(self):
+        """Runs i-PI cleanup and resets soft-exit state.
+
+        This mirrors the part of :meth:`subprocess.Popen.kill` that the
+        regression-test runner needs: after it returns, sockets and callbacks
+        are cleaned up and the wrapper has a non-zero return code unless the
+        simulation had already set one.
+        """
+
         if self.returncode is None:
             self.returncode = -9
         if self._cleanup_done:

@@ -82,7 +82,17 @@ class Softexit(object):
         self.kill()
 
     def cleanup(self, status="restartable", message=""):
-        """Runs registered cleanup functions without exiting the process."""
+        """Runs registered cleanup functions without exiting the process.
+
+        This performs the cleanup part of :meth:`trigger`, but leaves the
+        interpreter alive so embedded callers can recover control after i-PI
+        has written restart files and shut down its threads.
+
+        Args:
+           status: which kind of stop it is: simulation restartable as is,
+                   successful finish or aborted because of some problem.
+           message: The message to output to standard output.
+        """
 
         print(
             " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
@@ -131,12 +141,21 @@ class Softexit(object):
                 t.join()
 
     def kill(self):
-        """Terminates the current thread/process."""
+        """Terminates the current thread/process.
+
+        This is separated from :meth:`cleanup` so command-line i-PI can still
+        exit normally, while embedded callers can run cleanup without calling
+        ``sys.exit``.
+        """
 
         sys.exit()
 
     def reset(self):
-        """Resets the soft-exit state and restores intercepted signals."""
+        """Resets the soft-exit state and restores intercepted signals.
+
+        This is used by embedded callers after cleanup, so the next simulation
+        starts with a fresh callback list, thread list and signal handlers.
+        """
 
         for signum, handler in self._kill.items():
             signal.signal(signum, handler)
