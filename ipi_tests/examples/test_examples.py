@@ -61,7 +61,7 @@ def test_example(ex, verbose=False):
         return error_msg
 
     if error_msg != None:
-        raise RuntimeError
+        raise RuntimeError(error_msg)
 
 
 if __name__ == "__main__":
