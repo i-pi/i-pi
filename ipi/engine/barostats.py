@@ -1116,8 +1116,9 @@ class BaroRGB(Barostat):
         else:
             eigvals, eigvecs = np.linalg.eig(v)
             ieigvecs = np.linalg.inv(eigvecs)
-            sinh = halfdt * np.dot(
-                eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs)
+            sinh = np.real_if_close(
+                halfdt
+                * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs))
             )
 
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
@@ -1404,8 +1405,9 @@ class BaroMTK(Barostat):
         else:
             eigvals, eigvecs = np.linalg.eig(v)
             ieigvecs = np.linalg.inv(eigvecs)
-            sinh = halfdt * np.dot(
-                eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs)
+            sinh = np.real_if_close(
+                halfdt
+                * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs))
             )
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 

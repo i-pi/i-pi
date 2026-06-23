@@ -416,7 +416,7 @@ def _sinch(x):
     """Computes sinh(x)/x in a way that is stable for x->0"""
 
     x2 = x * x
-    if x2 < 1e-12:
+    if abs(x2) < 1e-12:
         return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
     else:
         return np.sinh(x) / x
