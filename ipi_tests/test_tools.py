@@ -28,6 +28,20 @@ def _socket_ready(client):
     return os.path.exists("/tmp/ipi_" + client[2])
 
 
+def _cleanup_unix_sockets(clients):
+    """Remove the UNIX rendezvous files this run created, so a crashed/timed-out
+    example does not leave a stale /tmp/ipi_<addr> that makes a rerun fail with
+    'Address already in use'. Only the uniquely-named sockets of this run's own
+    clients (address = <name>_<nid>_<s>) are touched, never unrelated ones that
+    another process may be using."""
+    for client in clients or []:
+        if client[1] in ("unix", "shm"):
+            try:
+                os.remove("/tmp/ipi_" + client[2])
+            except OSError:
+                pass  # already gone (i-PI removed it on a clean exit), or never created
+
+
 def _terminate(proc):
     """Tears down a launched i-PI/driver and anything it spawned.
 
@@ -642,3 +656,8 @@ class Runner(object):
 
         except ValueError:
             return "Value Error\n{}".format(str(cwd))
+
+        finally:
+            # always clear this run's own rendezvous sockets, including when the
+            # example failed or timed out and i-PI was killed before cleaning up
+            _cleanup_unix_sockets(clients)
