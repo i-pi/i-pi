@@ -197,6 +197,35 @@ class FrictionGLE(FrictionBath):
                 "Variable non-markovian friction requires sigma with shape "
                 "(nbeads, nbath, ndof)."
             )
+        sigma_mode = str(self.friction._sigma_meta.get("sigma_mode", "column")).lower()
+        if sigma_mode == "row":
+            if self.friction._sigma_blocks is None:
+                raise ValueError(
+                    "Variable non-markovian row-mode friction requires a dict "
+                    "sigma payload so row-packed blocks are available."
+                )
+            sigma = np.asarray(
+                [
+                    np.concatenate(
+                        [np.asarray(m, dtype=float).T for m in mats], axis=0
+                    )
+                    for mats in self.friction._sigma_blocks
+                ],
+                dtype=float,
+            )
+            sigma = self.friction._embed_if_needed(
+                sigma, ndof=3 * int(self.friction.beads.natoms)
+            )
+        elif sigma_mode == "pairwise":
+            raise ValueError(
+                "Variable non-markovian pairwise sigma_mode is not implemented. "
+                "Use markovian friction or provide a column/row-packed Sigma."
+            )
+        elif sigma_mode != "column":
+            raise ValueError(
+                f"Unsupported {self.friction.sigma_meta_key}.sigma_mode='{sigma_mode}'. "
+                "Supported non-markovian values are 'column' and 'row'."
+            )
         expected_shape = (
             int(self.friction.beads.nbeads),
             int(self.friction.Ap.shape[0] - 1),
