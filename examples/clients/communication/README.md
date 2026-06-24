@@ -7,15 +7,19 @@ provide identical information and differ only in *how* it is moved. These
 examples are organised by transport so each one is easy to find. See the
 `_transports` section of `docs/src/distributed.rst` for the full description.
 
-| Subdir  | `<forcefield>` block        | Where the driver runs        | Typical use |
-|---------|-----------------------------|------------------------------|-------------|
-| `unix/` | `<ffsocket mode='unix'>`    | same machine                 | fast/empirical potentials run locally; low-latency UNIX-domain socket |
-| `inet/` | `<ffsocket mode='inet'>`    | any machine on the network   | *ab initio* clients, possibly on another host or HPC cluster |
-| `shm/`  | `<ffsocket mode='shm'>`     | same machine                 | as `unix`, but the bulk payload travels through shared memory — preferable for large systems |
-| `mpi/`  | `<ffmpi>`                   | co-launched MPI ranks        | HPC runs that launch i-PI and the drivers in one MPI job |
+| Subdir    | `<forcefield>` block        | Where the driver runs        | Typical use |
+|-----------|-----------------------------|------------------------------|-------------|
+| `direct/` | `<ffdirect>`                | in-process (same interpreter)| Python PES from `ipi.pes`; no inter-process communication, lowest overhead |
+| `unix/`   | `<ffsocket mode='unix'>`    | same machine                 | fast/empirical potentials run locally; low-latency UNIX-domain socket |
+| `inet/`   | `<ffsocket mode='inet'>`    | any machine on the network   | *ab initio* clients, possibly on another host or HPC cluster |
+| `shm/`    | `<ffsocket mode='shm'>`     | same machine                 | as `unix`, but the bulk payload travels through shared memory — preferable for large systems |
+| `mpi/`    | `<ffmpi>`                   | co-launched MPI ranks        | HPC runs that launch i-PI and the drivers in one MPI job |
 
-For in-process evaluation without any socket (`<ffdirect>`, Python potentials
-from `ipi.pes`) and for writing a custom PES, see `../pes/`.
+`direct/` is special: the potential runs inside i-PI's own Python process, so
+there is no driver process and no wire protocol. It is therefore **limited to the
+PES modules shipped in `ipi.pes`** (and custom PES files loaded the same way) —
+external or compiled codes must use one of the socket/MPI transports. More
+in-process / custom-PES examples live in `../pes/`.
 
 Both drivers, one protocol
 --------------------------
@@ -36,6 +40,8 @@ exact launch command; the Fortran alternative is noted in the Makefile comments.
 Examples
 --------
 
+- `direct/harmonic/`        — harmonic PES evaluated in-process via `<ffdirect>`
+  (no driver process; PES modules only)
 - `unix/harmonic/`          — harmonic PES over a UNIX socket (the minimal case)
 - `unix/harmonic-batched/`  — same, with `<batch_size>` so one request carries
   several queued structures (here the whole ring polymer)
