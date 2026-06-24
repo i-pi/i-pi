@@ -2,6 +2,9 @@ from pathlib import Path
 import pytest
 import argparse
 from argparse import RawTextHelpFormatter
+import faulthandler
+import signal
+import sys
 import time
 
 try:
@@ -10,6 +13,25 @@ except:
     from exampletools import find_examples, Runner_examples
 
 """ Test that examples are not broken. Doesn't not check that output is correct."""
+
+# Last-resort wall-clock limit per example. The harness itself already bounds
+# every stage (socket wait, i-PI run, driver wait) and fails a stuck example
+# individually, so this only matters if that machinery is itself wedged. We dump
+# the stack of every thread for diagnosis but do NOT abort: the suite must keep
+# going and report each example's result separately.
+EXAMPLE_HANG_TIMEOUT = 120
+
+# If the process is killed by a signal (e.g. a CI runner terminating the step,
+# which surfaces as a bare "exit code 143"), dump every thread's stack first so
+# the cause and location are visible in the log instead of nothing. enable()
+# already covers the fatal signals (SIGSEGV/SIGABRT/...); register the termination
+# signals it does not.
+faulthandler.enable()
+for _sig in (signal.SIGTERM, signal.SIGINT):
+    try:
+        faulthandler.register(_sig, file=sys.stderr, all_threads=True, chain=True)
+    except (AttributeError, ValueError, OSError, RuntimeError):
+        pass
 
 examples_folder = Path(__file__).resolve().parents[2] / "examples"
 excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
@@ -28,14 +50,18 @@ def test_example(ex, verbose=False):
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    error_msg = runner.run(ex, nid)
+    faulthandler.dump_traceback_later(EXAMPLE_HANG_TIMEOUT, exit=False, file=sys.stderr)
+    try:
+        error_msg = runner.run(ex, nid)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
 
     if verbose:
         return error_msg
 
     if error_msg != None:
-        raise RuntimeError
+        raise RuntimeError(error_msg)
 
 
 if __name__ == "__main__":

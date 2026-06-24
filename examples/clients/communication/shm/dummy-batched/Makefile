@@ -7,13 +7,13 @@
 .PHONY: all clean dummy
 all: dummy
 
-driver:=i-pi-py_driver
+driver:=i-pi-driver
 IPI:=i-pi
 
 
 dummy:
 	$(IPI) input.xml & sleep 5; \
-        $(driver) -u -a localhost -m dummy & \
+        $(driver) -u -a localhost -m batch-dummy --shm & \
 	wait
 
 clean:

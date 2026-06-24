@@ -413,10 +413,13 @@ def root_herm(A):
 
 
 def _sinch(x):
-    """Computes sinh(x)/x in a way that is stable for x->0"""
+    """Computes sinh(x)/x in a way that is stable for x->0.
+
+    Works for complex x too (e.g. complex eigenvalues from a non-symmetric
+    barostat momentum tensor), so the small-argument test uses abs()."""
 
     x2 = x * x
-    if x2 < 1e-12:
+    if abs(x2) < 1e-12:
         return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
     else:
         return np.sinh(x) / x
@@ -591,7 +594,8 @@ def roots_legendre(L):
     """Replicates scipy.special.roots_legendre using only numpy"""
 
     legendre_poly = np.polynomial.legendre.Legendre.basis(L)
-    roots = np.polynomial.legendre.legroots(legendre_poly.coef)
+    # legroots returns complex on numpy>=2.5; Legendre roots are real
+    roots = np.polynomial.legendre.legroots(legendre_poly.coef).real
     legendre_poly_deriv = legendre_poly.deriv()
 
     # Calculate weights using the formula
