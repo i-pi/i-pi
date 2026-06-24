@@ -14,6 +14,7 @@ import pytest
 import ipi.interfaces.mpi as mpi_mod
 from ipi.engine.forcefields import FFMPI, ForceRequest
 from ipi.inputs.forcefields import InputFFMPI
+from ipi.inputs.simulation import InputSimulation
 from ipi.interfaces.utils import parse_extra
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 from ipi.interfaces.mpi import (
@@ -440,3 +441,23 @@ def test_input_ffmpi_parses_xml_parameters():
     assert fetched.latency == 0.2
     assert fetched.offset == 1.5
     assert fetched.threaded
+
+
+def test_simulation_input_routes_ffmpi_xml():
+    root = xml_parse_string("""
+        <simulation>
+          <ffmpi name='mpi_xml' mode='mpi'>
+            <batch_size>3</batch_size>
+          </ffmpi>
+        </simulation>
+        """)
+    node = root.fields[0][1]
+    parsed = InputSimulation()
+
+    parsed.parse(node)
+
+    tag, forcefield = parsed.extra[0]
+    assert tag == "ffmpi"
+    assert isinstance(forcefield, InputFFMPI)
+    assert forcefield.name.fetch() == "mpi_xml"
+    assert forcefield.batch_size.fetch() == 3
