@@ -122,6 +122,13 @@ def test_unix_batched():
 
 
 @fork_only
+def test_shm_batched():
+    # batch_size>1 over shared memory exercises the SHM batched payload path
+    pot, force, q = _exchange_one_force("shm", batch_size=4)
+    assert np.allclose(force, -K * q)
+
+
+@fork_only
 def test_unix_threaded_dispatch():
     # consolidate_messages=False exercises the per-request worker-thread path
     pot, force, q = _exchange_one_force("unix", consolidate=False)
