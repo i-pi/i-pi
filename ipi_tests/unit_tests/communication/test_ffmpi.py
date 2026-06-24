@@ -13,7 +13,9 @@ import pytest
 
 import ipi.interfaces.mpi as mpi_mod
 from ipi.engine.forcefields import FFMPI, ForceRequest
+from ipi.inputs.forcefields import InputFFMPI
 from ipi.interfaces.utils import parse_extra
+from ipi.utils.io.inputs.io_xml import xml_parse_string
 from ipi.interfaces.mpi import (
     MPIWorldManager,
     InterfaceMPI,
@@ -416,3 +418,25 @@ def test_ffmpi_uses_injected_interface():
     assert obj.interface is iface
     assert iface.requests is obj.requests
     assert iface.offset == obj.offset
+
+
+def test_input_ffmpi_parses_xml_parameters():
+    root = xml_parse_string("""
+        <ffmpi name='mpi_xml' mode='mpi' threaded='true'>
+          <latency>0.2</latency>
+          <offset>1.5</offset>
+          <batch_size>3</batch_size>
+        </ffmpi>
+        """)
+    node = root.fields[0][1]
+    parsed = InputFFMPI()
+
+    parsed.parse(node)
+    fetched = parsed.fetch()
+
+    assert fetched.name == "mpi_xml"
+    assert fetched.mode == "mpi"
+    assert fetched.interface.batch_size == 3
+    assert fetched.latency == 0.2
+    assert fetched.offset == 1.5
+    assert fetched.threaded
