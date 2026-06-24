@@ -1,7 +1,7 @@
 """End-to-end FFMPI test for the q-TIP4P/f water example.
 
 Complements test_ffmpi_mpirun.py (harmonic) and test_ffmpi_multi_mpirun.py
-(two tagged drivers) by covering the remaining clients/mpi case: the compiled
+(two tagged drivers) by covering the remaining communication/mpi case: the compiled
 Fortran driver returning forces AND a dipole `extras` string over MPI, with the
 ring-polymer beads sent as one batched request. Needs mpi4py, a working MPI
 runtime (IPI_TEST_MPI=1) and the Fortran driver built with `make MPI=1`.
@@ -24,6 +24,7 @@ EXAMPLE = (
     Path(__file__).resolve().parents[3]
     / "examples"
     / "clients"
+    / "communication"
     / "mpi"
     / "water-dipole"
 )

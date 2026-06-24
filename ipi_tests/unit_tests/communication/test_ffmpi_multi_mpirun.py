@@ -21,7 +21,12 @@ pytestmark = pytest.mark.skipif(
 )
 
 EXAMPLE = (
-    Path(__file__).resolve().parents[3] / "examples" / "clients" / "mpi" / "two-drivers"
+    Path(__file__).resolve().parents[3]
+    / "examples"
+    / "clients"
+    / "communication"
+    / "mpi"
+    / "two-drivers"
 )
 
 # the two ffdirect blocks equivalent to the tagged harmonic drivers (k=1 and k=2)

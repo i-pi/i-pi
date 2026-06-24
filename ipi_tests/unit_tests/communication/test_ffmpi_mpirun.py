@@ -21,7 +21,12 @@ pytestmark = pytest.mark.skipif(
 )
 
 EXAMPLE = (
-    Path(__file__).resolve().parents[3] / "examples" / "clients" / "mpi" / "harmonic"
+    Path(__file__).resolve().parents[3]
+    / "examples"
+    / "clients"
+    / "communication"
+    / "mpi"
+    / "harmonic"
 )
 
 

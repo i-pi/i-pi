@@ -11,6 +11,8 @@ driver:=i-pi-py_driver
 IPI:=i-pi
 
 
+# unix sockets use a filesystem rendezvous name (-u -a <name>); the Fortran
+# driver i-pi-driver -u -a localhost -m harmonic -o 1 talks the same protocol.
 harmonic:
 	$(IPI) input.xml & sleep 5; \
         $(driver) -u -a localhost -m harmonic -o 1 & \

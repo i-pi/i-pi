@@ -366,8 +366,9 @@ group.
 
 The Python driver supports MPI out of the box (``i-pi-py_driver --mpi``); the
 Fortran driver must be built with MPI support (``make -C drivers/f90 MPI=1``) and
-then accepts ``--mpi``. Worked examples are in ``examples/clients/mpi/harmonic``
-and ``examples/clients/mpi/water-dipole``.
+then accepts ``--mpi``. Worked examples are in
+``examples/clients/communication/mpi/harmonic`` and
+``examples/clients/communication/mpi/water-dipole``.
 
 Several ``<ffmpi>`` forcefields can run in the same MPMD job. Give each one a
 distinct ``name`` and launch its drivers with the matching ``--mpi-name``; i-PI
@@ -381,7 +382,7 @@ A single, unnamed ``<ffmpi>`` still works with untagged drivers (no
 ``--mpi-name``). When several forcefields each wrap an *MPI-parallel* driver
 (``--group-size>1``), also pass a distinct ``--mpi-id`` per forcefield so a
 multi-rank group never crosses a forcefield boundary. See
-``examples/clients/mpi/two-drivers``. As with sockets, i-PI sends an INIT string
+``examples/clients/communication/mpi/two-drivers``. As with sockets, i-PI sends an INIT string
 (the ``<parameters>`` plus the batch size) to each driver, so a custom MPI client
 can receive initialization data the same way a socket client does.
 
