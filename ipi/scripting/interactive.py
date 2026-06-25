@@ -57,6 +57,8 @@ class InteractiveSimulation(Simulation):
         self.__dict__.update(sim.__dict__)
 
     def _add_custom_properties(self, simulation):
+        simulation.tsteps = max(simulation.tsteps, simulation.step + 1)
+
         for name, property in self._custom_properties.items():
             # checks if properties have the right format
             if callable(property):
