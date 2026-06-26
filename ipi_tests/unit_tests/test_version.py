@@ -17,7 +17,7 @@ def test_version_from_package():
 
 def test_version_fallback_when_not_installed(monkeypatch):
     """Test fallback to hardcoded version when PackageNotFoundError is raised.
-    
+
     This test verifies that when importlib.metadata.version() fails,
     the module still has a valid version (not "unknown").
     """
