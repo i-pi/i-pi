@@ -2,6 +2,8 @@
 The i-PI module.
 """
 
+__version__ = "3.2.0"
+
 # Python 3.8+:
 from importlib.metadata import version, PackageNotFoundError
 
