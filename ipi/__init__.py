@@ -2,7 +2,7 @@
 The i-PI module.
 """
 
-__version__ = "3.2.0"
+__version__ = "unknown"
 
 # Python 3.8+:
 from importlib.metadata import version, PackageNotFoundError
@@ -10,7 +10,7 @@ from importlib.metadata import version, PackageNotFoundError
 try:
     __version__ = version("ipi")
 except PackageNotFoundError:
-    __version__ = "unknown"
+    __version__ = "3.2.0"
 
 ipi_global_settings = {"floatformat": "%16.8e"}
 
