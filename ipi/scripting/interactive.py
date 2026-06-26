@@ -57,6 +57,8 @@ class InteractiveSimulation(Simulation):
         self.__dict__.update(sim.__dict__)
 
     def _add_custom_properties(self, simulation):
+        # ensures that restarts for a finished simulation can be used
+        # without triggering immediate softexit
         simulation.tsteps = max(simulation.tsteps, simulation.step + 1)
 
         for name, property in self._custom_properties.items():
