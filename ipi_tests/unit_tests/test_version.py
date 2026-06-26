@@ -1,6 +1,5 @@
 """Tests for ipi version handling."""
 
-import pytest
 import sys
 from importlib.metadata import PackageNotFoundError
 
