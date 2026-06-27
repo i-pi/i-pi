@@ -2,13 +2,8 @@
 The i-PI module.
 """
 
-# Python 3.8+:
-from importlib.metadata import version, PackageNotFoundError
-
-try:
-    __version__ = version("ipi")
-except PackageNotFoundError:
-    __version__ = "unknown"
+# single source of truth for the version, also read by the build (setup.cfg)
+from ipi._version import __version__
 
 ipi_global_settings = {"floatformat": "%16.8e"}
 
