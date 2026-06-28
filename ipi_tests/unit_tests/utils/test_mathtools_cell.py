@@ -7,7 +7,6 @@ import pytest
 
 from ipi.utils.mathtools import abc2h, h2abc, det_ut3x3, invert_ut3x3
 
-
 # (a, b, c, alpha, beta, gamma) in radians
 CELLS = [
     (1.0, 1.0, 1.0, math.pi / 2, math.pi / 2, math.pi / 2),  # cubic
