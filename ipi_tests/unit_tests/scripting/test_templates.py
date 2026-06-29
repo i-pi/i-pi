@@ -1,14 +1,26 @@
 """Tests for XML template builders in ipi.scripting.templates."""
 
+import numpy as np
 import pytest
 
-from ipi.scripting import forcefield_xml, motion_nvt_xml
+from ipi.scripting import forcefield_xml, motion_nvt_xml, simulation_xml
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 
 
 def _parse(xml_fragment):
     """Wrap a bare XML fragment in a root so xml_parse_string accepts it."""
     return xml_parse_string(f"<root>{xml_fragment}</root>")
+
+
+def _atoms(symbols="H2"):
+    """A minimal ASE structure in a cubic 5 Ang cell."""
+    ase = pytest.importorskip("ase")
+    return ase.Atoms(
+        symbols,
+        positions=[[0.0, 0.0, 0.0], [0.74, 0.0, 0.0]],
+        cell=5.0 * np.eye(3),
+        pbc=True,
+    )
 
 
 def test_forcefield_xml_direct_happy_path():
@@ -76,3 +88,66 @@ def test_motion_nvt_xml_path_integrals_uses_pile_g():
     assert "mode='pile_g'" in xml
     assert "pile_lambda" in xml
     _parse(xml)
+
+
+def _basic_blocks():
+    """A valid forcefield and motion block to feed simulation_xml."""
+    return (
+        forcefield_xml(name="myff", mode="direct", pes="dummy"),
+        motion_nvt_xml(timestep=0.5),
+    )
+
+
+def test_simulation_xml_happy_path():
+    ff, motion = _basic_blocks()
+    xml = simulation_xml(_atoms(), ff, motion)
+
+    parsed = xml_parse_string(xml)  # must be a valid, single <simulation> block
+    assert parsed.fields[0][0] == "simulation"
+    # verbosity / safe_stride attributes and the forcefield reference are wired in
+    assert "verbosity='quiet'" in xml
+    assert "safe_stride='20'" in xml
+    assert "<ffdirect" in xml
+    assert "forcefield='myff'" in xml
+    assert "<beads" in xml and "<cell" in xml
+
+
+def test_simulation_xml_without_temperature_has_no_ensemble():
+    ff, motion = _basic_blocks()
+    xml = simulation_xml(_atoms(), ff, motion)
+    # NVE: no thermal initialization nor ensemble temperature
+    assert "initialize" not in xml
+    assert "ensemble" not in xml
+    xml_parse_string(xml)
+
+
+def test_simulation_xml_with_temperature_sets_ensemble():
+    ff, motion = _basic_blocks()
+    xml = simulation_xml(_atoms(), ff, motion, temperature=300.0)
+    assert "<initialize" in xml
+    assert "mode='thermal'" in xml
+    assert "<ensemble>" in xml
+    assert "<temperature units='ase'> 300.0 </temperature>" in xml
+    xml_parse_string(xml)
+
+
+def test_simulation_xml_overrides_output_prefix():
+    ff, motion = _basic_blocks()
+    xml = simulation_xml(_atoms(), ff, motion, prefix="run1")
+    assert "prefix='run1'" in xml
+    xml_parse_string(xml)
+
+
+def test_simulation_xml_rejects_invalid_output_block_with_prefix():
+    ff, motion = _basic_blocks()
+    with pytest.raises(ValueError, match="valid 'output' block"):
+        simulation_xml(_atoms(), ff, motion, output="<notoutput/>", prefix="x")
+
+
+def test_simulation_xml_list_of_structures_sets_nbeads():
+    ff, motion = _basic_blocks()
+    structures = [_atoms(), _atoms(), _atoms()]
+    xml = simulation_xml(structures, ff, motion, temperature=300.0)
+    # path integral: nbeads propagates to the beads block and the initializer
+    assert "nbeads='3'" in xml
+    xml_parse_string(xml)

@@ -41,6 +41,23 @@ H 0.0 0.0 0.0 0.1 0.2 0.3 1.0 2.0 3.0
 H 1.0 0.0 0.0 -0.1 -0.2 -0.3 -1.0 -2.0 -3.0
 """
 
+# `extras` files hold extra data returned by the calculator, one block per step
+# tagged with `#EXTRAS(name)# Step: N`. Numeric blocks are stacked into an array.
+EXTRAS_FILE = """\
+ #EXTRAS(dipole)# Step:           0
+  1.0  2.0  3.0
+ #EXTRAS(dipole)# Step:           2
+  4.0  5.0  6.0
+"""
+
+# when a block is not numeric, the reader falls back to raw per-step strings
+EXTRAS_RAW_FILE = """\
+ #EXTRAS(info)# Step:           0
+ {"a": 1}
+ #EXTRAS(info)# Step:           4
+ {"a": 2}
+"""
+
 
 def test_read_output_values_and_info(tmp_path):
     f = tmp_path / "sim.out"
@@ -115,3 +132,29 @@ def test_read_trajectory_extended_xyz_multiple_properties(tmp_path):
     assert np.allclose(atoms.positions, [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
     assert np.allclose(atoms.arrays["myvec"], [[0.1, 0.2, 0.3], [-0.1, -0.2, -0.3]])
     assert np.allclose(atoms.get_forces(), [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+
+
+def test_read_trajectory_extras_numeric(tmp_path):
+    """An `extras` file with numeric blocks returns the steps and the data
+    stacked into a single array, keyed by the property name."""
+    f = tmp_path / "sim.dipole"
+    f.write_text(EXTRAS_FILE)
+    data = read_trajectory(str(f), format="extras")
+
+    assert set(data) == {"step", "dipole"}
+    assert np.array_equal(data["step"], [0, 2])
+    assert data["step"].dtype.kind == "i"
+    assert np.allclose(data["dipole"], [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+
+def test_read_trajectory_extras_raw_strings(tmp_path):
+    """A non-numeric `extras` block falls back to one raw string per step."""
+    f = tmp_path / "sim.info"
+    f.write_text(EXTRAS_RAW_FILE)
+    data = read_trajectory(str(f), format="extras")
+
+    assert set(data) == {"step", "info"}
+    assert np.array_equal(data["step"], [0, 4])
+    assert len(data["info"]) == 2
+    assert '{"a": 1}' in data["info"][0]
+    assert '{"a": 2}' in data["info"][1]
