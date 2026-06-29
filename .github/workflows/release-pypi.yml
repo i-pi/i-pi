@@ -17,6 +17,17 @@ jobs:
       with:
         python-version: "3.8"
 
+    - name: Verify tag matches ipi/_version.py
+      if: github.event_name == 'release'
+      run: |
+        FILE_VERSION=$(python3 -c "v={}; exec(open('ipi/_version.py').read(), v); print(v['__version__'])")
+        TAG=${GITHUB_REF_NAME#v}
+        echo "tag=$TAG file=$FILE_VERSION"
+        if [ "$TAG" != "$FILE_VERSION" ]; then
+          echo "::error::Release tag '$GITHUB_REF_NAME' does not match ipi/_version.py ($FILE_VERSION)"
+          exit 1
+        fi
+
     - name: Install pypa/build
       run: >-
         python3 -m
