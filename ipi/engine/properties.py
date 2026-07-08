@@ -1469,6 +1469,7 @@ class Properties:
            skip_atom_indices:
                 atoms not to be considered in the distinguishable estimator (e.g. bosons)
         """
+        q = dstrip(self.beads.q)
         qnm = dstrip(self.nm.qnm)
         m = dstrip(self.beads.m)
         omegak2 = dstrip(self.nm.omegak2)
@@ -1483,14 +1484,22 @@ class Properties:
             if i in skip_atom_indices:
                 continue
 
-            # spring energy of atom i, computed in the normal-mode representation
-            # so that it is valid for any circulant spring matrix (Trotter or eco)
-            ktd = (
-                -0.5
-                * m[i]
-                * (omegak2 @ (qnm[:, 3 * i : 3 * (i + 1)] ** 2).sum(axis=1))
-                / self.beads.nbeads
-            )
+            if i in self.nm.open_paths:
+                # open paths are not described by the ring-polymer normal modes;
+                # falls back to the historical bead-difference formula
+                dq = q[:, 3 * i : 3 * (i + 1)] - np.roll(
+                    q[:, 3 * i : 3 * (i + 1)], 1, axis=0
+                )
+                ktd = -0.5 * m[i] * self.nm.omegan2 * (dq**2).sum() / self.beads.nbeads
+            else:
+                # spring energy of atom i, computed in the normal-mode representation
+                # so that it is valid for any circulant spring matrix (Trotter or eco)
+                ktd = (
+                    -0.5
+                    * m[i]
+                    * (omegak2 @ (qnm[:, 3 * i : 3 * (i + 1)] ** 2).sum(axis=1))
+                    / self.beads.nbeads
+                )
             ktd += PkT32
             atd += ktd
             ncount += 1
