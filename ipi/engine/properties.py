@@ -1469,8 +1469,9 @@ class Properties:
            skip_atom_indices:
                 atoms not to be considered in the distinguishable estimator (e.g. bosons)
         """
-        q = dstrip(self.beads.q)
+        qnm = dstrip(self.nm.qnm)
         m = dstrip(self.beads.m)
+        omegak2 = dstrip(self.nm.omegak2)
         PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
 
         atd = 0.0
@@ -1482,14 +1483,14 @@ class Properties:
             if i in skip_atom_indices:
                 continue
 
-            ktd = 0.0
-            for b in range(1, self.beads.nbeads):
-                for j in range(3 * i, 3 * (i + 1)):
-                    ktd += (q[b, j] - q[b - 1, j]) ** 2
-            for j in range(3 * i, 3 * (i + 1)):
-                ktd += (q[self.beads.nbeads - 1, j] - q[0, j]) ** 2
-
-            ktd *= -0.5 * m[i] * self.nm.omegan2 / self.beads.nbeads
+            # spring energy of atom i, computed in the normal-mode representation
+            # so that it is valid for any circulant spring matrix (Trotter or eco)
+            ktd = (
+                -0.5
+                * m[i]
+                * (omegak2 @ (qnm[:, 3 * i : 3 * (i + 1)] ** 2).sum(axis=1))
+                / self.beads.nbeads
+            )
             ktd += PkT32
             atd += ktd
             ncount += 1

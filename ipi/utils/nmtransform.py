@@ -5,6 +5,8 @@
 # See the "licenses" directory for full license information.
 
 
+from functools import lru_cache
+
 import numpy as np
 
 from ipi.utils.depend import dstrip
@@ -19,6 +21,7 @@ __all__ = [
     "mk_o_nm_matrix",
     "nm_eva",
     "o_nm_eva",
+    "eco_eva",
 ]
 
 
@@ -53,6 +56,115 @@ def nm_eva(nbeads):
 
 def o_nm_eva(nbeads):
     return 2 * np.array([np.sin(k * np.pi / (2 * nbeads)) for k in range(nbeads)])
+
+
+def _eco_f(x):
+    """Kernel f(x) = x^2 / ((x/2) coth(x/2) - 1) of the Eco objective function.
+
+    Uses a Taylor expansion for small x to avoid numerical cancellation.
+    """
+
+    x = np.asarray(x, float)
+    z = 0.5 * x
+    small = z < 0.25
+    z2 = np.where(small, z, 0.0) ** 2
+    f_series = 4.0 / (1.0 / 3.0 - z2 / 45.0 + 2.0 * z2**2 / 945.0 - z2**3 / 4725.0)
+    zb = np.where(small, 1.0, z)
+    f_direct = np.where(small, 1.0, x) ** 2 / (zb / np.tanh(zb) - 1.0)
+    return np.where(small, f_series, f_direct)
+
+
+@lru_cache(maxsize=32)
+def _eco_fit(nbeads, xmax):
+    """Fits the dimensionless internal-mode parameters y_k = beta*hbar*omega_k
+    of the Eco path integral, minimizing the rms fractional error in the
+    radius of gyration of harmonic oscillators with 0 <= beta*hbar*omega <= xmax.
+    [Zeng & Manolopoulos, "Economised path integrals"]
+
+    Returns an array of nbeads//2 optimized y_k, sorted in ascending order.
+    """
+
+    nfree = nbeads // 2
+    # each internal mode is doubly degenerate (y_k = y_{nbeads-k}) except
+    # for the middle one when nbeads is even
+    mult = np.full(nfree, 2.0)
+    if nbeads % 2 == 0:
+        mult[-1] = 1.0
+
+    # Gauss-Legendre quadrature of the objective over (0, xmax]
+    npts = max(128, 4 * nbeads)
+    t, w = np.polynomial.legendre.leggauss(npts)
+    x = 0.5 * xmax * (t + 1.0)
+    sqw = np.sqrt(0.5 * w)  # 0.5*sum(w)=1, so s = r@r is the mean square error
+    f = _eco_f(x)
+    x2 = x[:, np.newaxis] ** 2
+
+    def residual(y):
+        return sqw * (f * (mult / (x2 + y**2)).sum(axis=1) - 1.0)
+
+    def jacobian(y):
+        return (sqw * f)[:, np.newaxis] * mult * (-2.0 * y) / (x2 + y**2) ** 2
+
+    # Matsubara initial guess, then Levenberg-Marquardt iterations,
+    # capping each step to the Matsubara spacing to avoid wild extrapolation
+    y = 2.0 * np.pi * np.arange(1, nfree + 1, dtype=float)
+    r = residual(y)
+    s = r @ r
+    lam = 1e-3
+    for _ in range(1000):
+        jac = jacobian(y)
+        grad = jac.T @ r
+        hess = jac.T @ jac
+        dscale = np.diag(np.diag(hess))
+        while lam < 1e12:
+            try:
+                dy = np.linalg.solve(hess + lam * dscale, -grad)
+            except np.linalg.LinAlgError:
+                lam *= 10.0
+                continue
+            dy = np.clip(dy, -2.0 * np.pi, 2.0 * np.pi)
+            rn = residual(y + dy)
+            sn = rn @ rn
+            if np.isfinite(sn) and sn <= s:
+                y = y + dy
+                r, s = rn, sn
+                lam = max(lam * 0.3, 1e-14)
+                break
+            lam *= 10.0
+        else:
+            break
+        if np.max(np.abs(dy)) < 1e-12 * np.max(np.abs(y)):
+            break
+
+    info(
+        " @nmtransform: Eco fit for nbeads=%d, xmax=%g: rms fractional error in R^2 = %g"
+        % (nbeads, xmax, np.sqrt(s)),
+        verbosity.low,
+    )
+    # sorts the paired modes, keeping the unpaired one (if present) at the
+    # end so that it is assigned to k=nbeads/2 when assembling the spectrum
+    y = np.abs(y)
+    if nbeads % 2 == 0:
+        return np.concatenate([np.sort(y[:-1]), y[-1:]])
+    return np.sort(y)
+
+
+def eco_eva(nbeads, xmax):
+    """Computes dimensionless eigenvalues of the Eco ring-polymer springs,
+    optimized to reproduce the radii of gyration of harmonic oscillators
+    with frequencies 0 <= beta*hbar*omega <= xmax. Defined so that
+    omega_k = omegan * eco_eva(nbeads, xmax)_k, in analogy with nm_eva.
+    """
+
+    if xmax <= 0:
+        raise ValueError("Eco path integrals require a positive maximum frequency.")
+    if nbeads == 1:
+        return np.zeros(1)
+    y = _eco_fit(nbeads, round(float(xmax), 8))
+    eva = np.zeros(nbeads)
+    for k in range(1, nbeads):
+        eva[k] = y[min(k, nbeads - k) - 1]
+    return eva / nbeads
 
 
 def mk_o_nm_matrix(nbeads):
