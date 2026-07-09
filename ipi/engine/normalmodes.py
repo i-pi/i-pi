@@ -476,7 +476,16 @@ class NormalModes:
                 )
             # xmax = beta*hbar*omega_max, given that omegan = nbeads/(beta*hbar)
             xmax = self.nm_freqs[0] * self.nbeads / self.omegan
-            return self.omegan * nmtransform.eco_eva(self.nbeads, xmax)
+            # seeds the fit with the previous solution (the stale value held in
+            # the depend array), which speeds up re-fits when temperature changes
+            y0 = (
+                dstrip(self._omegak)[1 : self.nbeads // 2 + 1]
+                * self.nbeads
+                / self.omegan
+            )
+            if not np.all(y0 > 0):  # zeros before the first evaluation
+                y0 = None
+            return self.omegan * nmtransform.eco_eva(self.nbeads, xmax, y0)
         return self.omegan * nmtransform.nm_eva(self.nbeads)
 
     def get_o_omegak(self):

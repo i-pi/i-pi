@@ -5,8 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-from functools import lru_cache
-
 import numpy as np
 
 from ipi.utils.depend import dstrip
@@ -74,15 +72,15 @@ def _eco_f(x):
     return np.where(small, f_series, f_direct)
 
 
-@lru_cache(maxsize=32)
-def _eco_fit(nbeads, xmax):
+def _eco_fit(nbeads, xmax, y0=None):
     """Fits the dimensionless internal-mode parameters y_k = beta*hbar*omega_k
     of the Eco path integral, minimizing the rms fractional error in the
     radius of gyration of harmonic oscillators with 0 <= beta*hbar*omega <= xmax.
     Follows the reference implementation in the supplementary material of
     Zeng & Manolopoulos, "Economised path integrals": safe Newton iterations
-    from the Matsubara initial guess, with an eigenvalue-shifted Hessian and
-    a line search that keeps the y_k positive and in ascending order.
+    with an eigenvalue-shifted Hessian and a line search that keeps the y_k
+    positive and in ascending order. Starts from the Matsubara frequencies,
+    or from the initial guess y0 (e.g. a previous solution) if given.
 
     Returns an array of nbeads//2 optimized y_k, in ascending order.
     """
@@ -112,7 +110,10 @@ def _eco_fit(nbeads, xmax):
         h = (dg.T @ dg + np.diag(r @ d2)) / m
         return s, g, h
 
-    y = 2.0 * np.pi * np.arange(1, nfree + 1, dtype=float)  # Matsubara guess
+    if y0 is not None:
+        y = np.array(y0, float)
+    else:
+        y = 2.0 * np.pi * np.arange(1, nfree + 1, dtype=float)  # Matsubara guess
     s, g, h = objfun(y)
     for _ in range(500):
         # Newton shift, offsetting the Hessian eigenvalues to get a descent direction
@@ -138,25 +139,30 @@ def _eco_fit(nbeads, xmax):
     info(
         " @nmtransform: Eco fit for nbeads=%d, xmax=%g: rms fractional error in R^2 = %g"
         % (nbeads, xmax, np.sqrt(2.0 * s)),
-        verbosity.low,
+        verbosity.medium,
     )
     return y
 
 
-def eco_eva(nbeads, xmax):
+def eco_eva(nbeads, xmax, y0=None):
     """Computes dimensionless eigenvalues of the Eco ring-polymer springs,
     optimized to reproduce the radii of gyration of harmonic oscillators
     with frequencies 0 <= beta*hbar*omega <= xmax. Defined so that
     omega_k = omegan * eco_eva(nbeads, xmax)_k, in analogy with nm_eva.
+    An initial guess y0 for the nbeads//2 free parameters (e.g. the solution
+    at a nearby temperature) can be given to speed up the fit.
     """
 
     if xmax <= 0:
         raise ValueError("Eco path integrals require a positive maximum frequency.")
     if nbeads == 1:
         return np.zeros(1)
-    # rounds to 3 significant digits so that slow temperature drifts
-    # (ramps, REMD swaps) hit the fit cache rather than refitting each step
-    y = _eco_fit(nbeads, float("%.3g" % float(xmax)))
+    # the guess must satisfy the line-search invariants, else start from scratch
+    if y0 is not None and not (
+        len(y0) == nbeads // 2 and np.all(y0 > 0) and np.all(np.diff(y0) >= 0)
+    ):
+        y0 = None
+    y = _eco_fit(nbeads, float(xmax), y0)
     eva = np.zeros(nbeads)
     for k in range(1, nbeads):
         eva[k] = y[min(k, nbeads - k) - 1]
