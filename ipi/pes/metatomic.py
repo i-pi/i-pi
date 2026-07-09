@@ -196,7 +196,9 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
-        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model("A", self.model, skin=self.skin)
+        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model(
+            "A", self.model, skin=self.skin
+        )
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
