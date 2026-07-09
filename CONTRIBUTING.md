@@ -52,3 +52,15 @@ which instructions can be obtained by typing
 ```
 $ i-pi-style -h
 ```
+
+Making a release
+----------------
+
+The package version lives in `ipi/_version.py`, read both at runtime
+(`ipi.__version__`) and by the build (`setup.cfg`). To cut a release:
+
+1. Bump `__version__` in `ipi/_version.py` and merge to the main branch.
+2. Create a GitHub Release tagged `vX.Y.Z` matching that version.
+
+Publishing the release triggers the `release-pypi` workflow, which builds and
+uploads to PyPI. It fails if the tag does not match `ipi/_version.py`.
