@@ -1,0 +1,12 @@
+# Coverage is uploaded by 4 CI jobs (2 unit-test + 2 regression-test matrix
+# entries); waits for all of them before computing statuses and commenting,
+# so that partial uploads don't trigger spurious low-coverage reports.
+# NB: after_n_builds must be kept in sync with the number of matrix jobs
+# that upload coverage in .github/workflows/{unit_tests,regression_tests}.yml
+codecov:
+  notify:
+    after_n_builds: 4
+    wait_for_ci: true
+
+comment:
+  after_n_builds: 4
