@@ -341,6 +341,10 @@ class DummyIntegrator:
         dpipe(self._tdt, self.thermostat._dt)
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
+            if self.nm.mode == "eco":
+                raise ValueError(
+                    "Suzuki-Chin propagation assumes Trotter springs and cannot be used with mode='eco'."
+                )
             # coefficients to get the (baseline) trotter to sc conversion
             self.coeffsc = np.ones((self.beads.nbeads, 3 * self.beads.natoms), float)
             self.coeffsc[::2] /= -3.0

@@ -39,8 +39,9 @@ optimized to reproduce the exact radii of gyration of harmonic oscillators up to
 frequency, accelerating convergence with the number of beads
 [Zeng and Manolopoulos, "Economised path integrals"]. The bead masses are the
 physical ones, and the standard (Trotter) estimators for observables remain valid.
-Cannot be combined with bosons, open paths, or estimators that assume Trotter
-springs (e.g. Suzuki-Chin or scaled-coordinate isotope estimators).
+Combinations that assume Trotter springs raise an error: bosons, open paths,
+Suzuki-Chin dynamics, the planetary model, and the isotope-fractionation and
+Suzuki-Chin estimators.
 """,
             "options": ["pa-cmd", "wmax-cmd", "manual", "rpmd", "eco"],
         },

@@ -12,7 +12,7 @@
     <address> h2o-pimd.4 </address>
   </ffsocket>
   <system>
-    <initialize nbeads='4'>
+    <initialize nbeads='8'>
       <file mode='xyz'> water_216.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>

@@ -173,8 +173,13 @@ class NormalModes:
         self.bosons = self.resolve_bosons()
 
         # eco springs are only defined for closed, distinguishable paths
-        if self.mode == "eco" and (len(self.bosons) > 0 or len(self.open_paths) > 0):
-            raise ValueError("ECO mode cannot be used with bosons or open paths.")
+        if self.mode == "eco":
+            if len(self.bosons) > 0 or len(self.open_paths) > 0:
+                raise ValueError("ECO mode cannot be used with bosons or open paths.")
+            if len(self.nm_freqs) != 1:
+                raise ValueError(
+                    "ECO mode requires one frequency, the maximum physical frequency to be reproduced."
+                )
 
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
@@ -678,8 +683,6 @@ class NormalModes:
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
                 warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
-        elif self.mode == "eco":
-            raise ValueError("ECO mode cannot be used with open paths.")
         elif self.mode == "manual":
             if len(self.nm_freqs) != self.nbeads - 1:
                 raise ValueError(
