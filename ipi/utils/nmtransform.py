@@ -79,9 +79,12 @@ def _eco_fit(nbeads, xmax):
     """Fits the dimensionless internal-mode parameters y_k = beta*hbar*omega_k
     of the Eco path integral, minimizing the rms fractional error in the
     radius of gyration of harmonic oscillators with 0 <= beta*hbar*omega <= xmax.
-    [Zeng & Manolopoulos, "Economised path integrals"]
+    Follows the reference implementation in the supplementary material of
+    Zeng & Manolopoulos, "Economised path integrals": safe Newton iterations
+    from the Matsubara initial guess, with an eigenvalue-shifted Hessian and
+    a line search that keeps the y_k positive and in ascending order.
 
-    Returns an array of nbeads//2 optimized y_k, sorted in ascending order.
+    Returns an array of nbeads//2 optimized y_k, in ascending order.
     """
 
     nfree = nbeads // 2
@@ -91,62 +94,53 @@ def _eco_fit(nbeads, xmax):
     if nbeads % 2 == 0:
         mult[-1] = 1.0
 
-    # Gauss-Legendre quadrature of the objective over (0, xmax]
-    npts = max(128, 4 * nbeads)
-    t, w = np.polynomial.legendre.leggauss(npts)
-    x = 0.5 * xmax * (t + 1.0)
-    sqw = np.sqrt(0.5 * w)  # 0.5*sum(w)=1, so s = r@r is the mean square error
+    # midpoint grid of oscillator frequencies in (0, xmax), 10 per unit x
+    m = max(round(10 * xmax), 100)
+    x = (np.arange(m) + 0.5) * (xmax / m)
     f = _eco_f(x)
     x2 = x[:, np.newaxis] ** 2
 
-    def residual(y):
-        return sqw * (f * (mult / (x2 + y**2)).sum(axis=1) - 1.0)
+    def objfun(y):
+        """s(y) = (1/2m) sum_j r_j^2, with its gradient and Hessian."""
+        d = 1.0 / (y**2 + x2)
+        e = f[:, np.newaxis] * mult * d
+        r = e.sum(axis=1) - 1.0
+        dg = -2.0 * d * e * y
+        d2 = 2.0 * d * d * e * (3.0 * y**2 - x2)
+        s = 0.5 * (r**2).mean()
+        g = (r[:, np.newaxis] * dg).mean(axis=0)
+        h = (dg.T @ dg + np.diag(r @ d2)) / m
+        return s, g, h
 
-    def jacobian(y):
-        return (sqw * f)[:, np.newaxis] * mult * (-2.0 * y) / (x2 + y**2) ** 2
-
-    # Matsubara initial guess, then Levenberg-Marquardt iterations,
-    # capping each step to the Matsubara spacing to avoid wild extrapolation
-    y = 2.0 * np.pi * np.arange(1, nfree + 1, dtype=float)
-    r = residual(y)
-    s = r @ r
-    lam = 1e-3
-    for _ in range(1000):
-        jac = jacobian(y)
-        grad = jac.T @ r
-        hess = jac.T @ jac
-        dscale = np.diag(np.diag(hess))
-        while lam < 1e12:
-            try:
-                dy = np.linalg.solve(hess + lam * dscale, -grad)
-            except np.linalg.LinAlgError:
-                lam *= 10.0
-                continue
-            dy = np.clip(dy, -2.0 * np.pi, 2.0 * np.pi)
-            rn = residual(y + dy)
-            sn = rn @ rn
-            if np.isfinite(sn) and sn <= s:
-                y = y + dy
-                r, s = rn, sn
-                lam = max(lam * 0.3, 1e-14)
-                break
-            lam *= 10.0
+    y = 2.0 * np.pi * np.arange(1, nfree + 1, dtype=float)  # Matsubara guess
+    s, g, h = objfun(y)
+    for _ in range(500):
+        # Newton shift, offsetting the Hessian eigenvalues to get a descent direction
+        eva, vec = np.linalg.eigh(h)
+        delta = max(1e-16 * eva[-1], -2.0 * eva[0])
+        dy = vec @ (-(vec.T @ g) / (eva + delta))
+        # backtracking line search that preserves ordering and positivity
+        sp = s
+        c = 1.0
+        for _ in range(60):
+            z = y + c * dy
+            if z[0] >= 0.0 and np.all(np.diff(z) >= 0.0):
+                sn, gn, hn = objfun(z)
+                if sn <= s:
+                    y, s, g, h = z, sn, gn, hn
+                    break
+            c *= 0.5
         else:
             break
-        if np.max(np.abs(dy)) < 1e-12 * np.max(np.abs(y)):
+        if s >= sp:
             break
 
     info(
         " @nmtransform: Eco fit for nbeads=%d, xmax=%g: rms fractional error in R^2 = %g"
-        % (nbeads, xmax, np.sqrt(s)),
+        % (nbeads, xmax, np.sqrt(2.0 * s)),
         verbosity.low,
     )
-    # sorts the paired modes, keeping the unpaired one (if present) at the
-    # end so that it is assigned to k=nbeads/2 when assembling the spectrum
-    y = np.abs(y)
-    if nbeads % 2 == 0:
-        return np.concatenate([np.sort(y[:-1]), y[-1:]])
-    return np.sort(y)
+    return y
 
 
 def eco_eva(nbeads, xmax):
@@ -160,7 +154,9 @@ def eco_eva(nbeads, xmax):
         raise ValueError("Eco path integrals require a positive maximum frequency.")
     if nbeads == 1:
         return np.zeros(1)
-    y = _eco_fit(nbeads, round(float(xmax), 8))
+    # rounds to 3 significant digits so that slow temperature drifts
+    # (ramps, REMD swaps) hit the fit cache rather than refitting each step
+    y = _eco_fit(nbeads, float("%.3g" % float(xmax)))
     eva = np.zeros(nbeads)
     for k in range(1, nbeads):
         eva[k] = y[min(k, nbeads - k) - 1]
