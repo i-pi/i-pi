@@ -62,6 +62,47 @@ def test_eco_f_small_x():
     assert abs(f[2] - f[3]) < 1e-4
 
 
+def test_eco_eva_invalid_xmax():
+    """Checks that non-positive maximum frequencies are rejected."""
+
+    with pytest.raises(ValueError):
+        nmtransform.eco_eva(8, 0.0)
+    with pytest.raises(ValueError):
+        nmtransform.eco_eva(8, -1.0)
+
+
+def test_eco_eva_classical_limit():
+    """A single bead has no springs regardless of the fit."""
+
+    assert np.all(nmtransform.eco_eva(1, 10.0) == 0.0)
+
+
+def test_eco_eva_warm_start():
+    """A fit warm-started from a nearby solution must match a cold fit."""
+
+    nbeads = 16
+    cold = nmtransform.eco_eva(nbeads, 20.0)
+    y0 = cold[1 : nbeads // 2 + 1] * nbeads  # previous dimensionless solution
+    warm = nmtransform.eco_eva(nbeads, 20.5, y0)
+    ref = nmtransform.eco_eva(nbeads, 20.5)
+    np.testing.assert_allclose(warm, ref, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "y0",
+    [
+        np.array([1.0, 2.0, 3.0]),  # wrong length
+        np.zeros(8),  # not strictly positive
+        np.linspace(50.0, 1.0, 8),  # descending
+    ],
+)
+def test_eco_eva_bad_guess_falls_back(y0):
+    """Invalid initial guesses are ignored, falling back to the Matsubara start."""
+
+    ref = nmtransform.eco_eva(16, 20.0)
+    np.testing.assert_allclose(nmtransform.eco_eva(16, 20.0, y0), ref, rtol=1e-8)
+
+
 @pytest.mark.parametrize("nbeads", [2, 3, 8, 16, 33])
 def test_spring_energy_parseval(nbeads):
     """Checks that the normal-mode spring energy with Trotter eigenvalues
