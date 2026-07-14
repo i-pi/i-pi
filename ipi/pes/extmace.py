@@ -50,8 +50,9 @@ ase_like_properties = {
 
 to_ignore_properties = ["interaction_energy", "node_feats"]
 
-def add_bec_inplace(data: Dict[str,torch.Tensor],bec:torch.Tensor):
-    """Add the Born Effective Charges to the output data dictionary in-place, 
+
+def add_bec_inplace(data: Dict[str, torch.Tensor], bec: torch.Tensor):
+    """Add the Born Effective Charges to the output data dictionary in-place,
     splitting the 3x3 tensor into three separate arrays for ASE compatibility."""
     data["BECx"] = bec[0, :, :]
     data["BECy"] = bec[1, :, :]
@@ -417,7 +418,7 @@ class ExtendedMACECalculator(MACECalculator):
                 # data["BEC"] = bec.moveaxis(
                 #     0, 2
                 # )  # (mu_xyz,node,R_xyz) --> (node,R_xyz,mu_xyz)
-                add_bec_inplace(data,bec)
+                add_bec_inplace(data, bec)
 
                 if dmu_deta is not None:
                     cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
@@ -480,7 +481,7 @@ class ExtendedMACECalculator(MACECalculator):
             # store to output results
             # (mu_xyz,node,R_xyz) --> (node,R_xyz,mu_xyz)
             # data["BEC"] = bec.moveaxis(0, 2)
-            add_bec_inplace(data,bec)
+            add_bec_inplace(data, bec)
             if dmu_deta is not None:
                 dmu_deta = dmu_deta.moveaxis(0, 1)
                 cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
