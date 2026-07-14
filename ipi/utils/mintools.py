@@ -394,8 +394,7 @@ def min_brent(fdf, fdf0, x0, tol, itmax, init_step):
     # Exit if maximum number of iterations exceeded
     info(
         " @MINIMIZE: Error -- maximum iterations for minimization (%d) exceeded, \
-        exiting minimization"
-        % itmax,
+        exiting minimization" % itmax,
         verbosity.low,
     )
     info(" @MINIMIZE: Finished minimization, energy = %f" % fx, verbosity.debug)
@@ -531,8 +530,7 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
 
     info(
         " @MINIMIZE: Error - maximum iterations for line search (%d) exceeded, \
-        exiting search"
-        % itmax,
+        exiting search" % itmax,
         verbosity.low,
     )
     info(" @MINIMIZE: Finished minimization, energy = %f" % fx, verbosity.debug)

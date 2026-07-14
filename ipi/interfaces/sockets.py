@@ -24,7 +24,6 @@ from ipi.utils.softexit import softexit
 
 from concurrent.futures import ThreadPoolExecutor
 
-
 __all__ = ["InterfaceSocket"]
 
 

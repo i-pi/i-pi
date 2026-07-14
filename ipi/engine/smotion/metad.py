@@ -43,11 +43,8 @@ class MetaDyn(Smotion):
                 if not hasattr(
                     f, "mtd_update"
                 ):  # forcefield does not expose mtd_update interface
-                    raise ValueError(
-                        "The forcefield '%s' associated with metadynamics \
-                                      does not have a mtd_update interface"
-                        % (k)
-                    )
+                    raise ValueError("The forcefield '%s' associated with metadynamics \
+                                      does not have a mtd_update interface" % (k))
 
                 if self.use_energy and s.ensemble.bweights[ik] > 0:
                     if s.beads.nbeads > 1:
@@ -75,11 +72,8 @@ class MetaDyn(Smotion):
                 if not hasattr(
                     f, "mtd_update"
                 ):  # forcefield does not expose mtd_update interface
-                    raise ValueError(
-                        "The forcefield '%s' associated with metadynamics \
-                                      does not have a mtd_update interface"
-                        % (k)
-                    )
+                    raise ValueError("The forcefield '%s' associated with metadynamics \
+                                      does not have a mtd_update interface" % (k))
                 if s.ensemble.bweights[ik] == 0:
                     continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
 

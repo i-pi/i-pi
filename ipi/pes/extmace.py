@@ -22,7 +22,6 @@ from ipi.pes.tools import JSONLogger, ModelResults
 from ipi.utils.messages import warning, verbosity
 from ipi.utils.units import unit_to_user
 
-
 # --------------------------------------- #
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
