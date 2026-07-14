@@ -19,7 +19,6 @@ from ipi.engine.cell import Cell
 
 from ..common import xyz_generator as xyz_gen
 
-
 # default_cell_mat = mt.abc2h(-1.0, -1.0, -1.0, np.pi/2.0, np.pi/2.0, np.pi/2.0) # After changing the input standard
 default_cell_mat = np.eye(3) * -1
 deg2rad = np.pi / 180.0

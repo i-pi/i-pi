@@ -7,10 +7,16 @@ This folder contains the files needed to locally build the documentation for i-P
 * `src/` contains RST files that are compiled by sphynx into the HTML documentation.
 
 
-To make the docs, make sure you have all the needed packages in `requirements.txt` installed, which can be achieved with `pip install -r requirements.txt`, and type `make html`. The local documentation will be generated in `_build/html`. 
+To build the docs locally, install [`tox`](https://tox.wiki/) (`pip install tox`) 
+and run `tox -e docs` from the repository root. The HTML output will be generated 
+in `docs/_build/html`.
+
+The PDF manual (`ipi-manual.pdf`, shipped alongside the HTML on the public docs site) is built by CI and does not need to be built locally. If you do want to reproduce it, install a LaTeX toolchain first (`sudo apt install texlive-latex-extra texlive-lang-greek latexmk`) and run `tox -e docs-pdf`, from the repository root.
+The document will be generated in `docs/_build/latex`.
 
 The input documentation is automatically generated based on the helpstrings in the input folder.
 When you add a new tag, you should also add an entry into `scripts/help.py` to have it added 
 to the documentation.
 
-To make the TeX docs follow the instructions in `latex`.
+Further details on how to setup the TeX build can be obtained follow the instructions in
+`latex/`, where you can also generate the PDF without running through `tox`.

@@ -95,9 +95,43 @@ These classes are particularly suitable to perform inference with machine-learni
 potentials implemented in Python, and it is reasonably simple to add your own,
 if you need to (see also the :ref:`contributing` section).
 
-These PES files can also be used directly, without the need to go through a 
+The Python driver is started much like the Fortran one (see
+:ref:`below <driver.x>`), choosing the potential with ``-m`` and connecting to a
+running i-PI server::
+
+   i-pi-py_driver -m harmonic -o 1.0 -u -a driver
+
+The available potentials are the modules in ``ipi/pes`` (run ``i-pi-py_driver -h``
+for the current list); ``-m custom -P mypes.py`` loads a potential from your own
+file. The most important flags are:
+
+-m, -P, -o:
+   potential name, path to a ``custom`` potential file, and a comma-separated list
+   of its parameters.
+
+-u, -a, -p, -S:
+   connect over a UNIX-domain socket (``-u``) or, otherwise, an internet socket;
+   ``-a`` is the address (host name, or UNIX socket name), ``-p`` the port, and
+   ``-S`` the UNIX-socket prefix (default ``/tmp/ipi_``).
+
+--shm:
+   use the shared-memory transport on the same node (matches
+   ``<ffsocket mode="shm">``; see :ref:`shm-sockets`).
+
+--mpi, -g, --server-rank, --mpi-name, --mpi-id:
+   communicate over MPI instead of a socket (matches :ref:`ffmpi`), launched in the
+   same MPI job as i-PI; ``-g`` sets the number of ranks per driver group and
+   ``--server-rank`` the rank of the i-PI server (default 0). With several
+   ``<ffmpi>`` forcefields, ``--mpi-name`` tags this driver with the forcefield it
+   serves (and ``--mpi-id`` keeps its rank pool separate when ``-g``>1). See
+   :ref:`ffmpi-transport`.
+
+-v:
+   verbose output.
+
+These PES files can also be used directly, without the need to go through a
 client-server interface, using a :ref:`ffdirect` forcefield, including in the
-XML input a block similar to 
+XML input a block similar to
 
 .. code-block::
    
@@ -234,7 +268,9 @@ client code to do simple calculations and to run the examples.
 
 The source code for this is included in the directory “drivers/f90”, and can
 be compiled into an executable “i-pi-driver” using the UNIX utility
-make.
+make. Building with ``make MPI=1`` instead produces a driver that additionally
+supports the MPI transport (the ``--mpi`` flag below); it requires an MPI Fortran
+compiler.
 
 This code currently has several empirical potentials hardcoded into it, including
 a Lennard-Jones potential, the Silvera-Goldman potential
@@ -249,7 +285,7 @@ to it. The command line syntax is:
 
 .. code-block::
 
-   > i-pi-driver [-u] -a address [-p port] -m [model-name] -o [parameters] [-S sockets_prefix] [-v] 
+   > i-pi-driver [-u] [--shm] -a address [-p port] -m [model-name] -o [parameters] [-S sockets_prefix] [-v] [--mpi [-g group_size]]
 
 
 The flags do the following:
@@ -270,8 +306,10 @@ The flags do the following:
    Is followed in the command line argument list by a string specifying
    the type of potential to be used. “gas” gives no potential, “lj”
    gives a Lennard-Jones potential, “sg” gives a Silvera-Goldman
-   potential and “harm” gives a 1D harmonic oscillator potential. Other
-   options should be clear from their description.
+   potential and “harm” gives a 1D harmonic oscillator potential. Many
+   more are available (including ``qtip4pf`` water, which also returns the
+   molecular dipole as an ``extras`` string); run ``i-pi-driver -h`` for the
+   full list.
 
 -o:
    Is followed in the command line argument list by a string of comma-separated values needed to initialize the potential parameters. “gas”
@@ -287,6 +325,18 @@ The flags do the following:
 -S:
    Optional parameter. If given, overwrite the default socket prefix used in the creation of files for the socket communication.
    (default "/tmp/ipi\_")
+
+--shm:
+   Optional parameter. Exchange the bulk position/force payload through shared
+   memory instead of the socket (same node only; matches ``<ffsocket mode="shm">``,
+   see :ref:`shm-sockets`).
+
+--mpi, -g, --mpi-name, --mpi-id:
+   Optional parameters. Communicate over MPI instead of a socket, launched in the
+   same MPI job as i-PI (see :ref:`ffmpi-transport`). ``-g`` sets the number of MPI
+   ranks per driver group; ``--mpi-name`` tags the driver with the ``<ffmpi>``
+   forcefield it serves when there is more than one (``--mpi-id`` separates rank
+   pools when ``-g``>1). Requires a driver built with ``make MPI=1``.
 
 This code should be fairly simple to extend to other pair-wise
 interaction potentials, and examples of its use can be seen in the

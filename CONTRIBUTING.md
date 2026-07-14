@@ -27,17 +27,24 @@ i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
 Currently, we require the use of `black` as formatter and linter.
 We also ask for the usage of `flake8` for syntactic checks, which is also
 part of linting.
-In most systems, both packages can be easily installed using `pip`.
-BEFORE proceeding to a pull request, the minimal requirement is that you run
+
+We use [`tox`](https://tox.wiki/) to drive linting, testing, and the docs build.
+`tox` is a Python automation tool that creates clean, isolated environments from
+scratch and runs predefined commands in them. 
+Install it once with `pip install tox`. BEFORE proceeding to a pull request, the
+minimal requirement is that you run
 
 ```
-$ make lint
-$ make pretty
+$ tox -e lint     # check formatting and run flake8
+$ tox -e format   # auto-format the codebase with black
 ```
 
 This will ensure the formatting and linting requirement are applied in the whole
 directory tree. Please resolve any warnings or errors that may appear. Your
 commit will not pass the CI tests otherwise.
+
+Other useful environments: `tox -e unit`, `tox -e regtests`, `tox -e examples`,
+`tox -e docs`. Run `tox list` to see them all.
 
 For a more flexible setup, we also provide the script `i-pi-style`, for
 which instructions can be obtained by typing
@@ -45,3 +52,15 @@ which instructions can be obtained by typing
 ```
 $ i-pi-style -h
 ```
+
+Making a release
+----------------
+
+The package version lives in `ipi/_version.py`, read both at runtime
+(`ipi.__version__`) and by the build (`setup.cfg`). To cut a release:
+
+1. Bump `__version__` in `ipi/_version.py` and merge to the main branch.
+2. Create a GitHub Release tagged `vX.Y.Z` matching that version.
+
+Publishing the release triggers the `release-pypi` workflow, which builds and
+uploads to PyPI. It fails if the tag does not match `ipi/_version.py`.

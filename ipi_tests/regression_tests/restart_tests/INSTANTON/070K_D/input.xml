@@ -1,0 +1,42 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='simulation'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+   </output>
+   <prng>
+      <seed> 123456 </seed>
+   </prng>
+   <total_steps>1000       </total_steps>
+   <ffsocket name="doublewell" mode="unix" >
+       <address> localhost </address> 
+       <port>33330</port> 
+   </ffsocket>
+   <system >
+       <initialize nbeads='10'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="doublewell"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">70</temperature>
+       </ensemble>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <alt_out>1</alt_out>
+               <tolerances>
+                   <energy> 5e-6 </energy>
+	           <force> 1e-8 </force>
+	           <position> 1e-3 </position>
+               </tolerances>
+               <delta> 0.1 </delta> 
+               <opt>nichols</opt>
+               <hessian_update>recompute</hessian_update>
+               <hessian_asr>none</hessian_asr>
+               <hessian_init>true</hessian_init>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.05</biggest_step>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

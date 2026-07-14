@@ -49,6 +49,8 @@ Functions:
     #include <windows.h>
 #else
     #include <time.h>
+    #include <sys/mman.h>
+    #include <fcntl.h>
 #endif
 
 void open_socket(int *psockfd, int* inet, int* port, const char* host, const char* sockets_prefix)
@@ -164,6 +166,48 @@ Args:
    if (n == 0) { perror("Error reading from socket: server has quit or connection broke"); exit(-1); }
 }
 
+
+void* shm_map(const char* name, long nbytes)
+/* Attaches to a POSIX shared-memory segment created by i-PI and maps it.
+
+i-PI sends the bare segment name (e.g. "ipi_shm_<pid>_<fid>_pos"); the POSIX
+object name needs a leading slash. i-PI owns the segment's lifetime (it creates
+and unlinks it), so here we only open + map.
+
+Args:
+   name: The bare segment name (NUL-terminated).
+   nbytes: The size of the segment, in bytes.
+Returns:
+   A pointer to the mapped region.
+*/
+{
+#ifdef _WIN32
+   perror("Shared-memory transport is not supported on Windows");
+   exit(-1);
+   return NULL;
+#else
+   char shmname[256];
+   int fd;
+   void* ptr;
+
+   snprintf(shmname, sizeof(shmname), "/%s", name);
+   fd = shm_open(shmname, O_RDWR, 0666);
+   if (fd < 0) { perror("Error opening shared-memory segment"); exit(-1); }
+
+   ptr = mmap(NULL, (size_t) nbytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+   if (ptr == MAP_FAILED) { perror("Error mapping shared-memory segment"); exit(-1); }
+   close(fd);  // the mapping survives closing the descriptor
+   return ptr;
+#endif
+}
+
+void shm_unmap(void* ptr, long nbytes)
+/* Unmaps a shared-memory segment previously attached with shm_map. */
+{
+#ifndef _WIN32
+   munmap(ptr, (size_t) nbytes);
+#endif
+}
 
 void c_sleep(double seconds) {
     #ifdef _WIN32

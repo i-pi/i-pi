@@ -43,7 +43,7 @@ SUBROUTINE h2o_dipole(box, nat, atoms, compute_der, dip, dip_der, pol)
   DOUBLE PRECISION, INTENT(IN) :: atoms(nat, 3)       !Atom coordinates.
   LOGICAL, INTENT(IN) :: compute_der                  !Switch for computing dipole gradients.
   DOUBLE PRECISION, INTENT(INOUT) :: dip(3)           !Output dipole.
-  DOUBLE PRECISION, INTENT(INOUT) :: dip_der(nat, 3)  !Output dipole gradient.
+  DOUBLE PRECISION, INTENT(INOUT) :: dip_der(nat, 9)  !Output dipole gradient.
   DOUBLE PRECISION, INTENT(INOUT) :: pol(3, 3)        !Output polarizability.
   !====================================================
 
@@ -220,7 +220,9 @@ SUBROUTINE h2o_dipole(box, nat, atoms, compute_der, dip, dip_der, pol)
      dip_der_full(:, :, :) = 0.0d0
   ENDIF
   ! Only z-component of the dipole gradient is used (arbitrary choice).
-  dip_der = dip_der_full(:, 3, :)
+  dip_der(:, 1:3) = dip_der_full(:, 1, :)
+  dip_der(:, 4:6) = dip_der_full(:, 2, :)
+  dip_der(:, 7:9) = dip_der_full(:, 3, :)
   !------------------------------------------------------------------------------------------------------
 
   !--------------------------------------

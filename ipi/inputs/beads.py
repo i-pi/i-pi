@@ -13,7 +13,6 @@ from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.inputs.atoms import *
 
-
 __all__ = ["InputBeads"]
 
 

@@ -1,0 +1,54 @@
+<simulation verbosity='high'>
+
+  <total_steps>10</total_steps>
+
+  <ffsocket mode='unix' name='driver' pbc='False'> 
+    <address>driver</address>
+  </ffsocket>
+
+
+  <output prefix='simulation'>
+    <trajectory filename='forces'>forces</trajectory>               <!--      total forces (a.u.): nuclear + q_e Z @ E(t) -->
+    <trajectory filename='Eforces'>Eforces</trajectory>             <!--     driven forces (a.u.): q_e Z @ E(t) -->
+    <trajectory filename='velocities'>velocities</trajectory>       <!--   nuclear momenta (a.u.): v -->
+    <trajectory filename='positions'>positions</trajectory>         <!-- nuclear positions (a.u.): R -->
+    <trajectory filename='becx'>becx</trajectory> 
+    <trajectory filename='becy'>becy</trajectory> 
+    <trajectory filename='becz'>becz</trajectory> 
+    <trajectory filename='dip' extra_type='dipole'> extras </trajectory>
+    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope ] </properties>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <forces>
+      <force forcefield='driver' />
+    </forces>
+
+    <initialize nbeads='1'>
+      <file mode='xyz' units='atomic_unit' > start.xyz </file>                     <!-- ground state -->
+      <velocities mode='thermal' units='kelvin'> 0 </velocities>                   <!-- no initial velocities: the system get excitated by the Efield only -->
+      <cell mode="manual" units="atomic_unit">[ 7,0,0, 0,7,0, 0,0,7 ]</cell>    <!-- big cell: isolated system -->
+    </initialize>
+
+    <ensemble>
+      <temperature units='kelvin'>0</temperature>
+    </ensemble>
+
+    <motion mode='driven_dynamics'> 
+      <driven_dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
+        <timestep units='femtosecond'> 1 </timestep>
+        <efield>
+          <amp> [ 0 , 5e-2 , 0 ] </amp>             <!-- amplitude of the electric field pulse in a.u. -->
+          <freq units="thz"> 115 </freq>            <!-- frequency of the electric field pulse in THz -->
+        </efield>
+        <bec mode="file"> bec.txt  </bec>
+      </driven_dynamics>
+    </motion>
+
+  </system>
+</simulation>
+

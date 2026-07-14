@@ -20,7 +20,7 @@
     <frequencies style='pa-cmd' units="inversecm"> [13000]   </frequencies>
   </normal_modes>
     <forces>
-	<force forcefield='driver' weight='0'> </force>
+	<force forcefield='driver' weight='1'> </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='nvt'>

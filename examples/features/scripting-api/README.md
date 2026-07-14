@@ -2,7 +2,7 @@ Scripting interface
 ===================
 
 This is a simple demonstration of using i-PI within a Python script.
-The `utils.scripting` module contain some helper functions to construct
+The `ipi.scripting` module contain some helper functions to construct
 an XML input file, and a `InteractiveSimulation` object that provides
 an interface to run, and access the properties, of an i-PI simulation.
 Any valid XML input file can also be used.

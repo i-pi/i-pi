@@ -38,8 +38,10 @@ def main(inputfile, prefix="SRT_"):
     xmlrestart = io_xml.xml_parse_file(ifile)  # Parses the file.
     ifile.close()
 
-    # ugly hack to remove ffplumed objects to avoid messing up with plumed output files
-    newfields = [f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed"]
+    # ugly hack to remove all forcefield objects, so that we don't have side-effects
+    # from the initialization of the forcefields (e.g. plumed writing outputs,
+    # mlips searching for CUDA devices)
+    newfields = [f for f in xmlrestart.fields[0][1].fields if not f[0].startswith("ff")]
     xmlrestart.fields[0][1].fields = newfields
 
     isimul = InputSimulation()
@@ -109,6 +111,7 @@ def main(inputfile, prefix="SRT_"):
                 "velocities",
                 "forces",
                 "extras",
+                "extras_bias",
             ]:  # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for b in range(nbeads):
@@ -125,7 +128,7 @@ def main(inputfile, prefix="SRT_"):
                             filename = o.filename
                         ofilename = prefix + filename
                         if o.ibead < 0 or o.ibead == b:
-                            if getkey(o.what) == "extras":
+                            if getkey(o.what) in ["extras", "extras_bias"]:
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
                                 # Sets format of extras as None

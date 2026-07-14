@@ -1,0 +1,51 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='4' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}] </properties>
+    <trajectory filename='xc' stride='4' format='xyz'> x_centroid{angstrom} </trajectory>
+    <trajectory filename='dip' stride='4' extra_type='dipole'> extras </trajectory>
+    <checkpoint filename='checkpoint' stride='4' overwrite='True'/>
+  </output>
+  <total_steps>4000</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffcavphsocket name='qtip4pf' mode='unix' pbc='False'>
+    <address>h2o-cl-cavmd</address>
+    <latency> 1e-3 </latency>
+    <apply_photon> True </apply_photon>
+    <evaluate_photon> False </evaluate_photon>
+    <dipole_surface> False </dipole_surface>
+    <E0> 4e-4 </E0>
+    <omega_c units='inversecm'> 3550.0 </omega_c>
+  </ffcavphsocket>
+  <ffcavphsocket name='dipole' mode='unix' pbc="false">
+    <address> h2o-dipole-cl-cavmd </address>
+    <latency> 1e-3 </latency>
+    <apply_photon> True </apply_photon>
+    <evaluate_photon> True </evaluate_photon>
+    <dipole_surface> True </dipole_surface>
+    <E0> 4e-4 </E0>
+    <omega_c units='inversecm'> 3550.0 </omega_c>
+  </ffcavphsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> water_64_photons.xyz </file>
+      <cell mode='manual' units='angstrom'>
+	    [12.417, 0.0, 0.0, 0.0, 12.417, 0.0, 0.0, 0.0, 12.417]
+      </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+      <force forcefield='dipole'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

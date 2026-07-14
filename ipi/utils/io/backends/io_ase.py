@@ -12,7 +12,6 @@ import re
 import numpy as np
 from ipi.utils.units import Constants
 
-
 try:
     import ase
 except ImportError:

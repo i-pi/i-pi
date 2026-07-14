@@ -21,7 +21,6 @@ from ipi.engine.barostats import *
 from ipi.engine.motion.alchemy import *
 from ipi.engine.forces import Forces, ScaledForceComponent
 
-
 __all__ = ["Ensemble", "ensemble_swap"]
 
 # IMPORTANT - THIS MUST BE KEPT UP-TO-DATE WHEN THE ENSEMBLE CLASS IS CHANGED

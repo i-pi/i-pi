@@ -1,0 +1,31 @@
+<simulation verbosity='medium'>
+  <!-- q-TIP4P/f water PIMD. Forces AND the molecular dipole (an 'extras' JSON
+       string) are exchanged with the driver over MPI. The 8 ring-polymer beads
+       are bundled into a single batched request (batch_size=8). -->
+  <output prefix='simulation'>
+    <properties stride='2' filename='out'> [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin} ] </properties>
+    <trajectory filename='pos' stride='4' format='xyz' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <!-- pull the 'dipole' field out of the extras string returned by the driver -->
+    <trajectory filename='dipole' stride='2' extra_type='dipole'> extras </trajectory>
+  </output>
+  <total_steps>20</total_steps>
+  <prng><seed>32415</seed></prng>
+  <ffmpi name='qtip4pf' mode='mpi' pbc='false'>
+    <batch_size>8</batch_size>
+  </ffmpi>
+  <system>
+    <initialize nbeads='8'>
+      <cell mode='abc'> [ 15.0, 15.0, 15.0 ] </cell>
+      <file mode='xyz'> water.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces> <force forcefield='qtip4pf'/> </forces>
+    <ensemble> <temperature units='kelvin'> 300 </temperature> </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_g'> <tau units='femtosecond'> 100 </tau> </thermostat>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,29 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='vib'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+        <trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+   </output>
+    <prng>
+      <seed> 123456 </seed>
+   </prng>
+   <total_steps>400       </total_steps>
+   <ffsocket name="ch4cbe" mode="unix" >
+       <address> localhost </address>
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="ch4cbe"> </force>
+       </forces>
+      <motion mode="vibrations">
+        <vibrations mode="fd">
+            <pos_shift> 0.01  </pos_shift>
+            <prefix> phonons </prefix>
+            <asr> poly </asr>
+         </vibrations>
+      </motion>
+   </system>
+</simulation>

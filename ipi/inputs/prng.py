@@ -15,7 +15,6 @@ from ipi.utils.prng import *
 from ipi.utils.inputvalue import *
 from ipi.utils.io import NumpyEncoder
 
-
 __all__ = ["InputRandom"]
 
 

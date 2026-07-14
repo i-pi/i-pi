@@ -28,7 +28,6 @@ from ipi.utils.mathtools import (
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
-
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
@@ -1117,8 +1116,10 @@ class BaroRGB(Barostat):
         else:
             eigvals, eigvecs = np.linalg.eig(v)
             ieigvecs = np.linalg.inv(eigvecs)
-            sinh = halfdt * np.dot(
-                eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs)
+            # v is real, so the matrix function is real; eig may return complex
+            # conjugate pairs, leaving only numerical-noise imaginary parts
+            sinh = halfdt * np.real(
+                np.dot(eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs))
             )
 
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
@@ -1405,8 +1406,10 @@ class BaroMTK(Barostat):
         else:
             eigvals, eigvecs = np.linalg.eig(v)
             ieigvecs = np.linalg.inv(eigvecs)
-            sinh = halfdt * np.dot(
-                eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs)
+            # v is real, so the matrix function is real; eig may return complex
+            # conjugate pairs, leaving only numerical-noise imaginary parts
+            sinh = halfdt * np.real(
+                np.dot(eigvecs, np.dot(np.diag(sinch(halfdt * eigvals)), ieigvecs))
             )
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 

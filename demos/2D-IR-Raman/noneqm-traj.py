@@ -128,7 +128,7 @@ class NonEqmTraj(object):
         fmt_bead = (
             "{0:0" + str(int(1 + np.floor(np.log(self.nbeads) / np.log(10)))) + "d}"
         )
-        self.der = np.transpose(
+        der = np.transpose(
             np.array(
                 [
                     np.loadtxt(self.der_fn + "_" + fmt_bead.format(b))
@@ -137,6 +137,12 @@ class NonEqmTraj(object):
             ),
             [1, 0, 2],
         )
+        dera, derb, derc = np.shape(der)
+        der = der.reshape(dera, derb, -1, 9)[
+            :, :, :, 6:9
+        ]  # Keep only the z-component of dipole derivatives.
+        self.der = der.reshape(dera, derb, -1)
+
         for step in range(t_first, t_last + 1):
             for kick in [-1, 1]:
                 self.prepare_for_run(sim, step, kick)

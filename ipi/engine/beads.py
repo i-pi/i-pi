@@ -16,7 +16,6 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
 
-
 __all__ = ["Beads"]
 
 

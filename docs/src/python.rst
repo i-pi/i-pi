@@ -34,7 +34,7 @@ Scripting i-PI
 ~~~~~~~~~~~~~~
 
 If one wants to run an i-PI simulation within a Python script, it is also possible
-to use a (somewhat primitive) scripting API, defined in the ``ipi.utils.scripting``
+to use a scripting API, defined in the ``ipi.scripting``
 module. The core component is the ``InteractiveSimulation`` class, that can be
 initialized from an *XML* input, advanced for a given number of steps using the
 ``run`` method. The calculation requires also the use of a driver, that can
@@ -54,7 +54,7 @@ An example of usage of this interface goes as follows:
 
 .. code-block:: python 
 
-    from ipi.utils.scripting import InteractiveSimulation, simulation_xml, motion_nvt_xml, forcefield_xml
+    from ipi.scripting import InteractiveSimulation, simulation_xml, motion_nvt_xml, forcefield_xml
 
     data = ase.io.read("init.xyz")
     input_xml = simulation_xml(

@@ -10,7 +10,6 @@ from copy import copy
 from ipi.engine.cell import *
 from ipi.utils.inputvalue import *
 
-
 __all__ = ["InputCell"]
 
 

@@ -15,7 +15,6 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import dproperties, depend_value, dstrip
 from ipi.utils.units import Constants
 
-
 # __all__ = ['AlchemyMC']
 
 

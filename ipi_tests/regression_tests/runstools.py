@@ -22,6 +22,7 @@ class Runner_regression(Runner):
         call_ipi="i-pi input.xml",
         check_numpy_output=True,
         check_xyz_output=True,
+        run_ipi_in_process=False,
     ):
         """Store parent directory and commands to call i-pi and driver
         call_ipi: command to call i-pi
@@ -30,6 +31,7 @@ class Runner_regression(Runner):
 
         self.parent = parent
         self.call_ipi = call_ipi
+        self.run_ipi_in_process = run_ipi_in_process
         self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
 

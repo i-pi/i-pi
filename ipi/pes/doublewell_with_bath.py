@@ -12,7 +12,6 @@ except:
 import numpy as np
 from ipi.utils import units
 
-
 __DRIVER_NAME__ = "DW_bath"
 __DRIVER_CLASS__ = "DoubleWell_with_explicit_bath_driver"
 

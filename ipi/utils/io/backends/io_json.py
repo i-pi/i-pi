@@ -15,7 +15,6 @@ import numpy as np
 import ipi.utils.mathtools as mt
 from ipi.utils.depend import dstrip
 
-
 __all__ = ["print_json_path", "print_json", "read_json", "iter_json"]
 
 

@@ -31,14 +31,38 @@
          USE LJPolymer
          USE SG
          USE PSWATER
-         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
+         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep, &
+                                shm_attach, shm_detach
          USE DISTANCE, only: CELL_VOLUME
+         USE ISO_C_BINDING
+#ifdef __MPI
+         USE MPI
+         USE FMPI
+#endif
       IMPLICIT NONE
 
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
       CHARACTER(LEN=1024) :: host, sockets_prefix="/tmp/ipi_"
+
+      ! SHARED-MEMORY TRANSPORT (mode='shm'): the bulk numeric payload is
+      ! exchanged through POSIX shared-memory segments owned by i-PI; only the
+      ! control handshake and the 'extra' string travel on the unix socket.
+      LOGICAL :: shm = .false.
+      REAL(C_DOUBLE), POINTER :: pos_shm(:), h_shm(:), ih_shm(:)
+      REAL(C_DOUBLE), POINTER :: pot_shm(:), force_shm(:), vir_shm(:)
+
+      ! BATCHED EVALUATION (batch-dummy mode): the wrapper sends all structures of
+      ! a force component in one request; this mode reads the batch level from the
+      ! INIT string and returns (dummy) zeros for the whole batch.
+      LOGICAL :: batched = .false.
+      INTEGER :: batch_n = 1, bidx
+      DOUBLE PRECISION, ALLOCATABLE :: bd_cells(:), bd_pos(:)
+      DOUBLE PRECISION, ALLOCATABLE :: bd_pot(:), bd_force(:), bd_vir(:)
+      ! shm batched: per-structure 'extras' strings staged for GETFORCE
+      CHARACTER(LEN=90000), ALLOCATABLE :: bd_extras(:)
+      INTEGER, ALLOCATABLE :: bd_extras_len(:)
 
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
@@ -54,7 +78,7 @@
       INTEGER cbuf, rid, length
       CHARACTER(LEN=65536) :: initbuffer      ! it's unlikely a string this large will ever be passed...      
       CHARACTER(LEN=65536) :: string,string1,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=30000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability
+      CHARACTER(LEN=90000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
 
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -70,7 +94,7 @@
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
 
-      DOUBLE PRECISION, ALLOCATABLE :: dipz_der(:, :) ! Dipole (z-component) derivative (water_dip_pol model)
+      DOUBLE PRECISION, ALLOCATABLE :: dip_der(:, :) ! Dipole derivative (water_dip_pol model)
       DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
 
       ! NEIGHBOUR LIST ARRAYS
@@ -82,6 +106,16 @@
       ! DMW
       DOUBLE PRECISION efield(3)
       INTEGER i, j
+
+      ! MPI mode (ffmpi forcefield); the transport is only compiled with -D__MPI
+      LOGICAL :: do_mpi = .false.
+      INTEGER :: groupsize = 1
+      INTEGER :: ff_id = 0                 ! ffmpi pool id (keeps groups within a forcefield)
+      CHARACTER(LEN=1024) :: ff_name = ""  ! ffmpi forcefield name this driver serves
+
+      ! extras (dipole/friction/...) JSON string, shared by all transports
+      CHARACTER(LEN=90000) :: extras_buf
+      INTEGER :: extras_len
       
       ! parse the command line parameters
       ! intialize defaults
@@ -102,6 +136,10 @@
          IF (cmdbuffer == "-u") THEN ! flag for unix socket
             inet = 0
             ccmd = 0
+         ELSEIF (cmdbuffer == "--shm") THEN ! shared-memory transport (implies a unix control socket)
+            shm = .true.
+            inet = 0
+            ccmd = 0
          ELSEIF (cmdbuffer == "-h") THEN ! read the hostname (deprecated)
             ccmd = 1
          ELSEIF (cmdbuffer == "-a") THEN ! read the hostname (address)
@@ -118,6 +156,15 @@
             verbose = 1
          ELSEIF (cmdbuffer == "-vv") THEN ! flag for verbose standard output
             verbose = 2
+         ELSEIF (cmdbuffer == "--mpi") THEN ! communicate over MPI instead of a socket
+            do_mpi = .true.
+            ccmd = 0
+         ELSEIF (cmdbuffer == "-g") THEN ! number of MPI ranks per driver group
+            ccmd = 6
+         ELSEIF (cmdbuffer == "--mpi-name") THEN ! ffmpi forcefield name to serve
+            ccmd = 7
+         ELSEIF (cmdbuffer == "--mpi-id") THEN ! ffmpi driver-pool id
+            ccmd = 8
          ELSE
             IF (ccmd == 0) THEN
                WRITE(*,*) " Unrecognized command line argument", ccmd
@@ -198,9 +245,11 @@
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
+               ELSEIF (trim(cmdbuffer) == "batch-dummy") THEN
+                  vstyle = 100 ! batched ideal-gas: requests an INIT string to learn batch_size
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o] "
+                  WRITE(*,*) " Use -m [dummy|batch-dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -214,6 +263,12 @@
                READ(cmdbuffer(commas(par_count)+1:),*) vpars(par_count)
             ELSEIF (ccmd == 5) THEN
                sockets_prefix = trim(cmdbuffer)//achar(0)
+            ELSEIF (ccmd == 6) THEN
+               READ(cmdbuffer,*) groupsize
+            ELSEIF (ccmd == 7) THEN
+               ff_name = trim(cmdbuffer)
+            ELSEIF (ccmd == 8) THEN
+               READ(cmdbuffer,*) ff_id
             ENDIF
             ccmd = 0
          ENDIF
@@ -247,6 +302,18 @@
          seed = 12345
          CALL RANDOM_SEED(put=seed)
          isinit = .true.
+      ELSEIF (100 == vstyle) THEN ! batch-dummy: like the ideal gas, but batched
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameter is needed for batch-dummy."
+            STOP "ENDED"
+         ENDIF
+         batched = .true.
+         ! NB: isinit is left .false. on purpose, so the driver asks the wrapper
+         ! for an INIT string and learns the batch size from it.
       ELSEIF (6 == vstyle .OR. 27 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error:  no initialization string needed for qtip4pf or qtip4p-sr."
@@ -468,6 +535,18 @@
       ENDIF
 
 
+#ifdef __MPI
+      IF (do_mpi) THEN
+         CALL run_mpi_loop()
+         STOP
+      ENDIF
+#else
+      IF (do_mpi) THEN
+         WRITE(*,*) " This i-pi-driver was built without MPI support. Rebuild with 'make MPI=1'."
+         STOP 1
+      ENDIF
+#endif
+
       IF (verbose > 0) THEN
          WRITE(*,*) " DRIVER - Connecting to host ", trim(host)
          IF (inet > 0) THEN
@@ -476,6 +555,11 @@
             WRITE(*,*) " using an UNIX socket."
          ENDIF
       ENDIF
+
+      ! In shared-memory mode the driver must know the batch size to map the
+      ! segments, so it always asks the wrapper for the INIT string (which
+      ! carries 'batch_size:N'); batch_n stays 1 if no batching is requested.
+      IF (shm) isinit = .false.
 
       ! Calls the interface to the POSIX sockets library to open a communication channel
       CALL open_socket(socket, inet, port, host, sockets_prefix)
@@ -506,9 +590,72 @@
             CALL readbuffer(socket, initbuffer, cbuf)
             IF (verbose > 1) WRITE(*,*) "    !read!=> init_string: ", cbuf
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
+            ! The wrapper announces the batch size in the INIT string as a
+            ! "batch_size:N" token whenever batch_size>1 (any mode); learn it here
+            ! so the shared-memory path can map and evaluate the whole batch.
+            bidx = INDEX(initbuffer(1:cbuf), "batch_size:")
+            IF (bidx > 0) READ(initbuffer(bidx+11:cbuf), *) batch_n
+            IF (verbose > 0 .and. batch_n > 1) WRITE(*,*) " Batched evaluation, batch_size = ", batch_n
             isinit=.true. ! We actually do nothing with this string, thanks anyway. Could be used to pass some information (e.g. the input parameters, or the index of the replica, from the driver
-         ELSEIF (trim(header) == "POSDATA") THEN  ! The driver is sending the positions of the atoms. Here is where we do the calculation!
-            
+         ELSEIF (trim(header) == "POSDATA" .and. shm) THEN
+            ! shared-memory transport: only natoms (and, on the first exchange,
+            ! the segment names) arrive on the socket; the batch_n structures are
+            ! read straight from shared memory. Handles batch_n=1 and batched runs.
+            CALL readbuffer(socket, cbuf)       ! number of atoms
+            IF (nat < 0) THEN
+               nat = cbuf
+               IF (verbose > 0) WRITE(*,*) " SHM buffers for ", nat, " atoms x ", batch_n, " structures"
+               ALLOCATE(msgbuffer(3*nat))
+               ALLOCATE(atoms(nat,3), datoms(nat,3), forces(nat,3))
+               IF (vstyle==24 .or. vstyle==25) THEN
+                  ALLOCATE(friction(3*nat,3*nat)); friction = 0.0d0
+               ENDIF
+               ALLOCATE(bd_extras(batch_n), bd_extras_len(batch_n))
+               atoms = 0.0d0; datoms = 0.0d0; forces = 0.0d0; msgbuffer = 0.0d0
+               ! the 6 segment names arrive in this order: pos, h, ih, pot, force, vir
+               CALL shm_map_named(socket, batch_n*3*nat, pos_shm)
+               CALL shm_map_named(socket, batch_n*9,     h_shm)
+               CALL shm_map_named(socket, batch_n*9,     ih_shm)
+               CALL shm_map_named(socket, batch_n*1,     pot_shm)
+               CALL shm_map_named(socket, batch_n*3*nat, force_shm)
+               CALL shm_map_named(socket, batch_n*9,     vir_shm)
+            ENDIF
+            ! evaluate each structure of the batch and stage the results back into
+            ! shared memory (slot bidx), keeping its extras string for GETFORCE
+            DO bidx = 1, batch_n
+               cell_h  = transpose(RESHAPE(h_shm((bidx-1)*9+1:bidx*9),  (/3,3/)))
+               cell_ih = transpose(RESHAPE(ih_shm((bidx-1)*9+1:bidx*9), (/3,3/)))
+               volume = CELL_VOLUME(cell_h)
+               DO i = 1, nat
+                  atoms(i,:) = pos_shm((bidx-1)*3*nat+3*(i-1)+1 : (bidx-1)*3*nat+3*i)
+               ENDDO
+               CALL compute_potential()
+               virial = transpose(virial)
+               pot_shm(bidx) = pot
+               DO i = 1, nat
+                  force_shm((bidx-1)*3*nat+3*(i-1)+1 : (bidx-1)*3*nat+3*i) = forces(i,:)
+               ENDDO
+               vir_shm((bidx-1)*9+1:bidx*9) = reshape(virial,(/9/))
+               CALL build_extras()
+               bd_extras(bidx) = extras_buf
+               bd_extras_len(bidx) = extras_len
+            ENDDO
+            hasdata = .true.
+         ELSEIF (trim(header) == "POSDATA" .and. batched) THEN  ! batched socket request: nat, then batch_n cell blocks and a (batch_n, 3*nat) position array
+            CALL readbuffer(socket, cbuf)       ! number of atoms
+            IF (nat < 0) THEN
+               nat = cbuf
+               IF (verbose > 0) WRITE(*,*) " Batched buffers for ", nat, " atoms x ", batch_n, " structures"
+               ALLOCATE(bd_cells(batch_n*18), bd_pos(batch_n*nat*3))
+               ALLOCATE(bd_pot(batch_n), bd_force(batch_n*nat*3), bd_vir(batch_n*9))
+               bd_pot = 0.0d0; bd_force = 0.0d0; bd_vir = 0.0d0  ! ideal gas: zeros
+            ENDIF
+            CALL readbuffer(socket, bd_cells, batch_n*18)        ! h, ih for each structure (ignored)
+            CALL readbuffer(socket, bd_pos, batch_n*nat*3)       ! positions (ignored by the dummy)
+            IF (sleep_seconds > 0) CALL f_sleep(sleep_seconds)
+            hasdata = .true.
+         ELSEIF (trim(header) == "POSDATA") THEN  ! socket transport, single structure
+
             ! Parses the flow of data from the socket
             CALL readbuffer(socket, mtxbuf, 9)  ! Cell matrix
             IF (verbose > 1) WRITE(*,*) "    !read!=> cell: ", mtxbuf
@@ -543,7 +690,7 @@
                forces = 0.0d0
                msgbuffer = 0.0d0
                IF (verbose > 1) WRITE(*,*) " Allocation successful "
-            ENDIF            
+            ENDIF
 
             CALL readbuffer(socket, msgbuffer, nat*3)
             IF (verbose > 1) WRITE(*,*) "    !read!=> positions: ", msgbuffer(0:2), " ..."
@@ -551,7 +698,86 @@
                atoms(i,:) = msgbuffer(3*(i-1)+1:3*i)
             ENDDO
 
-            IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
+            CALL compute_potential()
+            hasdata = .true. ! Signal that we have data ready to be passed back to the wrapper
+         ELSEIF (trim(header) == "GETFORCE" .and. shm) THEN  ! shm: results already staged at POSDATA; just ack and send the per-structure extras
+            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+            IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY   (shm)"
+            DO bidx = 1, batch_n
+               CALL writebuffer(socket, bd_extras_len(bidx))
+               CALL writebuffer(socket, bd_extras(bidx), bd_extras_len(bidx))
+            ENDDO
+            hasdata = .false.
+         ELSEIF (trim(header) == "GETFORCE" .and. batched) THEN  ! batched socket reply: pots, nat, forces, virials, then one extra per structure
+            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+            CALL writebuffer(socket,bd_pot,batch_n)            ! batch_n potentials (zeros)
+            CALL writebuffer(socket,nat)                       ! number of atoms
+            CALL writebuffer(socket,bd_force,batch_n*nat*3)    ! batch_n force blocks (zeros)
+            CALL writebuffer(socket,bd_vir,batch_n*9)          ! batch_n virials (zeros)
+            DO bidx = 1, batch_n
+               cbuf = 0
+               CALL writebuffer(socket,cbuf)                   ! zero-length extra string per structure
+            ENDDO
+            hasdata = .false.
+         ELSEIF (trim(header) == "GETFORCE") THEN  ! socket transport, single structure
+
+            ! Data must be re-formatted (and units converted) in the units and shapes used in the wrapper
+            DO i = 1, nat
+               msgbuffer(3*(i-1)+1:3*i) = forces(i,:)
+            ENDDO
+            virial = transpose(virial)
+
+            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
+            IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY  "
+            CALL writebuffer(socket,pot)  ! Writing the potential
+            IF (verbose > 1) WRITE(*,*) "    !write!=> pot: ", pot
+            CALL writebuffer(socket,nat)  ! Writing the number of atoms
+            IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
+            CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
+            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
+            CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
+            IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
+
+ 125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+ 126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+
+            CALL build_extras()
+            CALL writebuffer(socket,extras_len)
+            CALL writebuffer(socket,extras_buf,extras_len)
+            IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", extras_buf(1:extras_len)
+            hasdata = .false.
+         ELSEIF (trim(header) == "EXIT") THEN
+            EXIT
+         ELSE
+            WRITE(*,*) " Unexpected header ", header
+            STOP "ENDED"
+         ENDIF
+      ENDDO
+      IF (shm .and. nat > 0) THEN  ! release the shared-memory mappings (i-PI unlinks the segments)
+         CALL shm_detach(C_LOC(pos_shm(1)),   INT(8*batch_n*3*nat, C_LONG))
+         CALL shm_detach(C_LOC(h_shm(1)),     INT(8*batch_n*9, C_LONG))
+         CALL shm_detach(C_LOC(ih_shm(1)),    INT(8*batch_n*9, C_LONG))
+         CALL shm_detach(C_LOC(pot_shm(1)),   INT(8*batch_n*1, C_LONG))
+         CALL shm_detach(C_LOC(force_shm(1)), INT(8*batch_n*3*nat, C_LONG))
+         CALL shm_detach(C_LOC(vir_shm(1)),   INT(8*batch_n*9, C_LONG))
+      ENDIF
+      IF (batched) THEN
+         IF (ALLOCATED(bd_cells)) DEALLOCATE(bd_cells, bd_pos, bd_pot, bd_force, bd_vir)
+      ELSE
+         IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+         IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
+            DEALLOCATE(friction)
+         ENDIF
+      ENDIF
+      STOP
+
+    CONTAINS
+
+      SUBROUTINE compute_potential()
+         ! Shared force evaluation: fills pot, forces and virial for the current
+         ! atoms/cell/nat by dispatching on the selected potential. Used by both
+         ! the socket loop and the MPI loop.
+            IF (vstyle == 0 .or. vstyle == 100) THEN   ! ideal gas / batch-dummy: no calculation
                IF (sleep_seconds > 0) THEN
                   ! artificial delay
                   CALL f_sleep(sleep_seconds)
@@ -905,8 +1131,8 @@
                DO i = 1, 3
                   vpars(i+1) = cell_h(i, i)
                ENDDO
-               IF (.NOT. ALLOCATED(dipz_der)) ALLOCATE (dipz_der(nat, 3))
-               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dipz_der, pol)
+               IF (.NOT. ALLOCATED(dip_der)) ALLOCATE (dip_der(nat, 9))
+               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dip_der, pol)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -949,160 +1175,247 @@
                ENDIF
                IF (verbose > 0) WRITE(*,*) " Calculated energy is ", pot
             ENDIF
-            hasdata = .true. ! Signal that we have data ready to be passed back to the wrapper
-         ELSEIF (trim(header) == "GETFORCE") THEN  ! The driver calculation is finished, it's time to send the results back to the wrapper
+      END SUBROUTINE compute_potential
 
-            ! Data must be re-formatted (and units converted) in the units and shapes used in the wrapper
-            DO i = 1, nat
-               msgbuffer(3*(i-1)+1:3*i) = forces(i,:)
-            ENDDO
-            virial = transpose(virial)
-
-            CALL writebuffer(socket,"FORCEREADY  ",MSGLEN)
-            IF (verbose > 1) WRITE(*,*) "    !write!=> ", "FORCEREADY  "
-            CALL writebuffer(socket,pot)  ! Writing the potential
-            IF (verbose > 1) WRITE(*,*) "    !write!=> pot: ", pot
-            CALL writebuffer(socket,nat)  ! Writing the number of atoms
-            IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
-            CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
-            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
-            CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
-            IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
-
- 125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
- 126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
-
-            IF (vstyle == 29) THEN ! returns meanfield friction
-                WRITE(initbuffer,'(a)') "{"
-                WRITE(32,'(a)') '{'
-                WRITE(string,'(a)') '"friction": ['
-                WRITE(32,'(a)') '"friction": ['
-
-                string2 = TRIM(initbuffer) // TRIM(string)
-                initbuffer = TRIM(string2)
-                DO i=1,3*nat
-                    IF(i/=3*nat) THEN
-                        WRITE(string,125) ( friction(i,j), "," , j=1,3*nat)
-                        WRITE(32,125) ( friction(i,j), "," , j=1,3*nat)
-                    ELSE
-                        WRITE(string,126) ( friction(i,j), "," , j=1,3*nat-1)
-                        WRITE(string2,'(es21.14)') friction(i,3*nat)
-                        string3 = TRIM(string) // TRIM(string2)
-                        string = string3
-                        WRITE(32,126) ( friction(i,j), "," , j=1,3*nat-1)
-                        WRITE(32,'(es21.14)') friction(i,3*nat)
-                    ENDIF
-                    string2 = TRIM(initbuffer) // TRIM(string)
-                    initbuffer = TRIM(string2)
-                END DO
-                string =  TRIM(initbuffer) // ']}'
-                initbuffer = TRIM(string)
-                WRITE(32,'(a)') "]"
-                WRITE(32,'(a)') "}"
-
-                cbuf = LEN_TRIM(initbuffer)
-                CALL writebuffer(socket,cbuf)
-
-                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", cbuf
-                CALL writebuffer(socket,initbuffer,cbuf)
-                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  initbuffer
-
-            ELSEIF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
-                WRITE(initbuffer,'(a)') "{"
-                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8,&
-     &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
-                string2 = TRIM(initbuffer) // TRIM(string)
-                initbuffer = TRIM(string2)
-
-                WRITE(string,'(a)') '"friction": ['
-                string2 = TRIM(initbuffer) // TRIM(string)
-                initbuffer = TRIM(string2)
-                DO i=1,3*nat
-                    WRITE(string,'("[ ",*(f15.8,","))') friction(i,:)
-                    length = LEN_TRIM(string)
-                    trimmed = TRIM(string)
-                    IF(i==3*nat) THEN
-                        string = TRIM(trimmed(:length-1)) // "]"
-                    ELSE
-                        string = TRIM(trimmed(:length-1)) // "],"
-                    ENDIF
-                    string2 = TRIM(initbuffer) // TRIM(string)
-                    initbuffer = TRIM(string2)
-                END DO
-                string =  TRIM(initbuffer) // ']}'
-                initbuffer = TRIM(string)
-                cbuf = LEN_TRIM(initbuffer)
-                CALL writebuffer(socket,cbuf) ! Writes back the fantasy friction
-                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", &
-     &          cbuf
-                CALL writebuffer(socket,initbuffer,cbuf)
-                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
-     &          initbuffer(1:cbuf)
-            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8 .or. vstyle==99) THEN ! returns the  dipole through initbuffer
-               WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
-     &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
-               cbuf = LEN_TRIM(initbuffer)
-               CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
-               IF (verbose > 1) WRITE(*,*)  &
-     &         "    !write!=> extra_length: ", cbuf
-               CALL writebuffer(socket,initbuffer,cbuf)
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
-     &         initbuffer(1:cbuf)               
-               
-            ELSEIF (vstyle==31) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
-               WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
-               longbuffer = TRIM(string)
-               WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
-               WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dipz_der),"],"
-               longbuffer = TRIM(longbuffer)//TRIM(longstring)
-               WRITE(string, '(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
-               longbuffer = TRIM(longbuffer)//TRIM(string)
-               cbuf = LEN_TRIM(longbuffer)
-               CALL writebuffer(socket,cbuf)
-               CALL writebuffer(socket,TRIM(longbuffer),cbuf)
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &               
-     &         initbuffer
-            ELSEIF (vstyle==62 .or. vstyle==65) THEN ! returns committee data
-               cbuf = LEN_TRIM(initbuffer)
-               CALL writebuffer(socket,cbuf)
-               CALL writebuffer(socket,initbuffer,cbuf)
-            ELSE
-               cbuf = 1 ! Size of the "extras" string
-               CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
-               IF (verbose > 1) WRITE(*,*)  &
-     &         "    !write!=> extra_length: ", cbuf
-               CALL writebuffer(socket,' ',1)
-               IF (verbose > 1) WRITE(*,*)  &
-     &         "    !write!=> extra: empty"
-            ENDIF
-            hasdata = .false.
-         ELSEIF (trim(header) == "EXIT") THEN
-            EXIT
+      SUBROUTINE build_extras()
+         ! Builds the JSON 'extras' string (dipole / friction / committee data)
+         ! into extras_buf/extras_len, so the socket and MPI paths return
+         ! identical extras for every PES.
+         IF (vstyle == 29) THEN ! meanfield friction
+            WRITE(extras_buf,'(a)') "{"
+            WRITE(string,'(a)') '"friction": ['
+            extras_buf = TRIM(extras_buf) // TRIM(string)
+            DO i=1,3*nat
+               IF(i/=3*nat) THEN
+                  WRITE(string,125) ( friction(i,j), "," , j=1,3*nat)
+               ELSE
+                  WRITE(string,126) ( friction(i,j), "," , j=1,3*nat-1)
+                  WRITE(string2,'(es21.14)') friction(i,3*nat)
+                  string = TRIM(string) // TRIM(string2)
+               ENDIF
+               extras_buf = TRIM(extras_buf) // TRIM(string)
+            END DO
+            extras_buf = TRIM(extras_buf) // ']}'
+         ELSEIF (vstyle==24 .or. vstyle==25) THEN ! fantasy friction (+ dipole)
+            WRITE(extras_buf,'(a)') "{"
+            WRITE(string,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+            extras_buf = TRIM(extras_buf) // TRIM(string)
+            WRITE(string,'(a)') '"friction": ['
+            extras_buf = TRIM(extras_buf) // TRIM(string)
+            DO i=1,3*nat
+               WRITE(string,'("[ ",*(f15.8,","))') friction(i,:)
+               length = LEN_TRIM(string); trimmed = TRIM(string)
+               IF(i==3*nat) THEN
+                  string = TRIM(trimmed(:length-1)) // "]"
+               ELSE
+                  string = TRIM(trimmed(:length-1)) // "],"
+               ENDIF
+               extras_buf = TRIM(extras_buf) // TRIM(string)
+            END DO
+            extras_buf = TRIM(extras_buf) // ']}'
+         ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8 .or. vstyle==99) THEN ! dipole
+            WRITE(extras_buf,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
+         ELSEIF (vstyle==31) THEN ! dipole + derivative + polarizability
+            WRITE(string,'(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+            extras_buf = TRIM(string)
+            WRITE(string2, *) "(a,3x,", 9*nat - 1, '(f15.8, ","),f15.8,3x,a)'
+            WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dip_der),"],"
+            extras_buf = TRIM(extras_buf)//TRIM(longstring)
+            WRITE(string,'(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
+            extras_buf = TRIM(extras_buf)//TRIM(string)
+         ELSEIF (vstyle==62 .or. vstyle==65) THEN ! committee data (already in initbuffer)
+            extras_buf = initbuffer
          ELSE
-            WRITE(*,*) " Unexpected header ", header
-            STOP "ENDED"
+            extras_buf = ' '   ! no extras: a single blank, as i-PI expects a string
          ENDIF
-      ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
-      IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
-         DEALLOCATE(friction)
-      ENDIF
-      STOP
+         extras_len = LEN_TRIM(extras_buf)
+         IF (extras_len == 0) extras_len = 1
+ 125     format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+ 126     format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+      END SUBROUTINE build_extras
 
-    CONTAINS
+
+#ifdef __MPI
+      SUBROUTINE mpi_allocate(natoms)
+         ! Allocates the work arrays on the first request (mirrors the socket path).
+         INTEGER, INTENT(IN) :: natoms
+         nat = natoms
+         ALLOCATE(msgbuffer(3*nat))
+         ALLOCATE(atoms(nat,3), datoms(nat,3))
+         ALLOCATE(forces(nat,3))
+         IF (vstyle==24 .or. vstyle==25) THEN
+            ALLOCATE(friction(3*nat,3*nat))
+            friction = 0.0d0
+         ENDIF
+         atoms = 0.0d0; datoms = 0.0d0; forces = 0.0d0; msgbuffer = 0.0d0
+      END SUBROUTINE mpi_allocate
+
+      SUBROUTINE run_mpi_loop()
+         ! MPI client loop for the ffmpi forcefield. Speaks the same typed-buffer
+         ! protocol as drivers/py/driver.py and reuses compute_potential(), so
+         ! every PES compiled into this driver is available over MPI. Driver ranks
+         ! are split into groups of groupsize; each group's root talks to i-PI
+         ! and broadcasts the work to its group (so a group can wrap a parallel code).
+         INTEGER :: ierr, world, world_rank
+         INTEGER :: drivers, drank, color, group, grank, gsize, server_rank
+         INTEGER :: status(MPI_STATUS_SIZE), tag, batch, b, off, sin, sout
+         INTEGER :: hdr(2), ctrl(3), ibuf(1)
+         DOUBLE PRECISION, ALLOCATABLE :: body(:), numeric(:)
+         DOUBLE PRECISION :: vir9(9)
+         INTEGER :: epos
+         CHARACTER(LEN=:), ALLOCATABLE :: extra_msg
+         LOGICAL :: is_root
+
+         CALL MPI_Init(ierr)
+         world = MPI_COMM_WORLD
+         CALL MPI_Comm_rank(world, world_rank, ierr)
+         server_rank = 0
+
+         ! i-PI (rank 0) splits off alone (color 0); each forcefield's drivers form
+         ! their own pool (color 1+ff_id), then split that into groups.
+         CALL MPI_Comm_split(world, 1 + ff_id, world_rank, drivers, ierr)
+         CALL MPI_Comm_rank(drivers, drank, ierr)
+         color = drank / groupsize
+         CALL MPI_Comm_split(drivers, color, drank, group, ierr)
+         CALL MPI_Comm_rank(group, grank, ierr)
+         CALL MPI_Comm_size(group, gsize, ierr)
+         is_root = (grank == 0)
+
+         CALL mpi_send_hello(world, server_rank, world_rank, group, ff_name)
+
+         nat = -1
+         DO
+            IF (is_root) THEN
+               CALL MPI_Probe(server_rank, MPI_ANY_TAG, world, status, ierr)
+               tag = status(MPI_TAG)
+               IF (tag == TAG_INIT) THEN
+                  ! socket-style INIT: [rid, len] then the parameter string
+                  CALL MPI_Recv(hdr, 2, MPI_INTEGER, server_rank, TAG_INIT, &
+                                world, status, ierr)
+                  CALL MPI_Recv(initbuffer, hdr(2), MPI_BYTE, server_rank, &
+                                TAG_INIT, world, status, ierr)
+                  IF (verbose > 0 .and. hdr(2) > 0) &
+                     WRITE(*,*) " INIT rid=", hdr(1), " string: ", initbuffer(1:hdr(2))
+                  CYCLE
+               ELSE IF (tag == TAG_EXIT) THEN
+                  CALL MPI_Recv(ibuf, 1, MPI_INTEGER, server_rank, TAG_EXIT, &
+                                world, status, ierr)
+                  IF (gsize > 1) THEN
+                     ctrl(1) = GROUP_EXIT; ctrl(2) = 0; ctrl(3) = 0
+                     CALL MPI_Bcast(ctrl, 3, MPI_INTEGER, 0, group, ierr)
+                  ENDIF
+                  EXIT
+               ENDIF
+               ! TAG_WORK: header [nat, batch] then the packed double buffer
+               CALL MPI_Recv(hdr, 2, MPI_INTEGER, server_rank, TAG_WORK, &
+                             world, status, ierr)
+               IF (nat < 0) CALL mpi_allocate(hdr(1))
+               batch = hdr(2)
+               sin = 18 + 3*nat
+               ALLOCATE(body(batch*sin))
+               CALL MPI_Recv(body, batch*sin, MPI_DOUBLE_PRECISION, server_rank, &
+                             TAG_WORK, world, status, ierr)
+               IF (gsize > 1) THEN
+                  ctrl(1) = GROUP_WORK; ctrl(2) = nat; ctrl(3) = batch
+                  CALL MPI_Bcast(ctrl, 3, MPI_INTEGER, 0, group, ierr)
+                  CALL MPI_Bcast(body, batch*sin, MPI_DOUBLE_PRECISION, 0, group, ierr)
+               ENDIF
+               sout = 1 + 3*nat + 9
+               ALLOCATE(numeric(batch*sout))
+               IF (.not. allocated(extra_msg)) &
+                  ALLOCATE(CHARACTER(LEN=batch*(LEN(extras_buf)+4)) :: extra_msg)
+               epos = 0
+               DO b = 1, batch
+                  off = (b-1)*sin
+                  CALL mpi_fill_structure(body, off)
+                  CALL compute_potential()
+                  vir9 = reshape(transpose(virial), (/9/))
+                  numeric((b-1)*sout+1) = pot
+                  DO i = 1, nat
+                     numeric((b-1)*sout+1+3*(i-1)+1 : (b-1)*sout+1+3*i) = forces(i,:)
+                  ENDDO
+                  numeric((b-1)*sout+1+3*nat+1 : (b-1)*sout+sout) = vir9
+                  ! append [int32 length][string] for this structure's extras
+                  CALL build_extras()
+                  extra_msg(epos+1:epos+4) = TRANSFER(INT(extras_len,4), "    ")
+                  extra_msg(epos+5:epos+4+extras_len) = extras_buf(1:extras_len)
+                  epos = epos + 4 + extras_len
+               ENDDO
+               CALL mpi_send_results(world, server_rank, nat, batch, numeric, &
+                                     extra_msg, epos)
+               DEALLOCATE(body); DEALLOCATE(numeric)
+            ELSE
+               CALL MPI_Bcast(ctrl, 3, MPI_INTEGER, 0, group, ierr)
+               IF (ctrl(1) == GROUP_EXIT) EXIT
+               nat = ctrl(2); batch = ctrl(3)
+               IF (.not. allocated(atoms)) CALL mpi_allocate(nat)
+               sin = 18 + 3*nat
+               ALLOCATE(body(batch*sin))
+               CALL MPI_Bcast(body, batch*sin, MPI_DOUBLE_PRECISION, 0, group, ierr)
+               DO b = 1, batch
+                  off = (b-1)*sin
+                  CALL mpi_fill_structure(body, off)
+                  CALL compute_potential()   ! collective PES participation
+               ENDDO
+               DEALLOCATE(body)
+            ENDIF
+         ENDDO
+         CALL MPI_Finalize(ierr)
+      END SUBROUTINE run_mpi_loop
+
+      SUBROUTINE mpi_fill_structure(body, off)
+         ! Unpacks one structure (cell + positions) from the MPI buffer into the
+         ! host atoms/cell arrays, using the same transpose convention as sockets.
+         DOUBLE PRECISION, INTENT(IN) :: body(:)
+         INTEGER, INTENT(IN) :: off
+         cell_h = transpose(RESHAPE(body(off+1:off+9), (/3,3/)))
+         cell_ih = transpose(RESHAPE(body(off+10:off+18), (/3,3/)))
+         volume = CELL_VOLUME(cell_h)
+         DO i = 1, nat
+            atoms(i,:) = body(off+18+3*(i-1)+1 : off+18+3*i)
+         ENDDO
+      END SUBROUTINE mpi_fill_structure
+#endif
+
+
+      SUBROUTINE shm_map_named(sock, ndoubles, fptr)
+         ! Reads the next segment name from the control socket (int32 length +
+         ! characters), maps the named POSIX segment, and returns a Fortran
+         ! pointer aliasing it.
+         IMPLICIT NONE
+         INTEGER, INTENT(IN) :: sock, ndoubles
+         REAL(C_DOUBLE), POINTER, INTENT(OUT) :: fptr(:)
+         INTEGER :: nmlen
+         CHARACTER(LEN=256) :: name
+         CHARACTER(LEN=1, KIND=C_CHAR) :: cname(257)
+         TYPE(C_PTR) :: cptr
+         INTEGER :: k
+
+         CALL readbuffer(sock, nmlen)            ! length of the segment name
+         CALL readbuffer(sock, name, nmlen)      ! the name itself (no NUL)
+         DO k = 1, nmlen
+            cname(k) = name(k:k)
+         ENDDO
+         cname(nmlen+1) = C_NULL_CHAR
+         cptr = shm_attach(cname, INT(8_C_LONG*ndoubles, C_LONG))
+         CALL C_F_POINTER(cptr, fptr, (/ndoubles/))
+      END SUBROUTINE shm_map_named
+
       SUBROUTINE helpmessage
          ! Help banner
 
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
-         WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|batch-dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
+         WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] [--shm]"
          WRITE(*,*) ""
+         WRITE(*,*) " Use --shm for the shared-memory transport (same node, i-PI mode='shm', batch_size=1)."
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer or lkmix use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " For gas, dummy, batch-dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " batch-dummy is an ideal gas evaluated in batched mode; use it with an ffsocket batch_size>1"
          WRITE(*,*) " For the ideal, qtip4pf*, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 

@@ -22,7 +22,6 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
-
 __all__ = ["InputSimulation"]
 
 
@@ -163,6 +162,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             iforcefields.InputFFDirect,
             {"help": iforcefields.InputFFDirect.default_help},
         ),
+        "ffmpi": (
+            iforcefields.InputFFMPI,
+            {"help": iforcefields.InputFFMPI.default_help},
+        ),
         "fflj": (
             iforcefields.InputFFLennardJones,
             {"help": iforcefields.InputFFLennardJones.default_help},
@@ -262,6 +265,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFDirect()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffdirect", _iobj)
+                elif isinstance(_obj, eforcefields.FFMPI):
+                    _iobj = iforcefields.InputFFMPI()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffmpi", _iobj)
                 elif isinstance(_obj, eforcefields.FFLennardJones):
                     _iobj = iforcefields.InputFFLennardJones()
                     _iobj.store(_obj)
@@ -349,6 +356,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             elif k in [
                 "ffsocket",
                 "ffdirect",
+                "ffmpi",
                 "fflj",
                 "ffdebye",
                 "ffdmd",
@@ -361,8 +369,8 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffdielectric",
             ]:
                 new_ff = v.fetch()
-                if k == "ffsocket":
-                    # overrides ffsocket prefix
+                if k in ["ffsocket", "ffcavphsocket"]:
+                    # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
                 fflist.append(new_ff)
 

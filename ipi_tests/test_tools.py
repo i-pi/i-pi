@@ -1,11 +1,84 @@
 import subprocess as sp
+import contextlib
+import io
 import os
 from pathlib import Path
 import shutil
+import socket
+import signal
+import traceback
 import xml.etree.ElementTree as ET
 import tempfile
 import time
 import glob
+
+from ipi.scripting import InteractiveSimulation
+from ipi.utils.softexit import softexit
+
+
+def _socket_ready(client):
+    """True once i-PI is listening for this client's transport: a UNIX
+    rendezvous file for unix/shm, or an open TCP port for inet."""
+    if client[1] == "inet":
+        try:
+            with socket.create_connection((client[2], int(client[3])), timeout=0.2):
+                return True
+        except OSError:
+            return False
+    return os.path.exists("/tmp/ipi_" + client[2])
+
+
+def _cleanup_unix_sockets(clients):
+    """Remove the UNIX rendezvous files this run created, so a crashed/timed-out
+    example does not leave a stale /tmp/ipi_<addr> that makes a rerun fail with
+    'Address already in use'. Only the uniquely-named sockets of this run's own
+    clients (address = <name>_<nid>_<s>) are touched, never unrelated ones that
+    another process may be using."""
+    for client in clients or []:
+        if client[1] in ("unix", "shm"):
+            try:
+                os.remove("/tmp/ipi_" + client[2])
+            except OSError:
+                pass  # already gone (i-PI removed it on a clean exit), or never created
+
+
+def _terminate(proc):
+    """Tears down a launched i-PI/driver and anything it spawned.
+
+    Subprocess clients are started in their own session (``start_new_session``),
+    so killing the whole process group reaps the shell *and* the real i-PI/driver
+    underneath it -- otherwise ``Popen.kill()`` only kills the ``shell=True`` shell
+    and leaves an orphan holding the stdout/stderr pipes (which then deadlocks any
+    later ``communicate()``). The in-process client just runs its own cleanup."""
+    if isinstance(proc, sp.Popen):
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                proc.kill()
+            except OSError:
+                pass
+    else:
+        proc.kill()
+
+
+def _dump_hung_ipi(proc):
+    """Asks a hung i-PI subprocess to print a Python traceback before it dies.
+
+    The subprocess is launched with PYTHONFAULTHANDLER=1, so SIGABRT makes it
+    dump the stack of every thread to stderr (showing exactly where it is stuck)
+    and then abort. Returns (stdout, stderr) including that dump; falls back to a
+    hard group kill if the dump does not come through."""
+    if not isinstance(proc, sp.Popen):
+        return None
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGABRT)
+    except OSError:
+        return None
+    try:
+        return proc.communicate(timeout=10)
+    except Exception:
+        return None
 
 
 def copy_tree(src, dst):  # emulates distutils copy_tree
@@ -40,6 +113,7 @@ fortran_driver_models = [
     "doublewell",
     "gas",
     "noo3-h2o",
+    "water_dip_pol",
 ]
 
 # We should do this automatically but for now we do it explicitly here
@@ -76,6 +150,105 @@ def clean_tmp_dir():
             pass
 
 
+class InProcessIPI:
+    """Small Popen-like wrapper that runs i-PI through InteractiveSimulation."""
+
+    def __init__(self, command, cwd):
+        self.command = command
+        self.cwd = cwd
+        self.stdout = io.StringIO()
+        self.stderr = io.StringIO()
+        self.returncode = None
+        self.simulation = None
+        self._cleanup_done = False
+        self._ran = False
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.cwd)
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                with open(self.command.split()[-1]) as input_file:
+                    self.simulation = InteractiveSimulation(input_file)
+        except BaseException:
+            self.returncode = 1
+            self.stderr.write(traceback.format_exc())
+            self.kill()
+        finally:
+            os.chdir(old_cwd)
+
+    def poll(self):
+        return self.returncode
+
+    def communicate(self, timeout=None):
+        if self._ran or self.returncode is not None:
+            self.kill()
+            return (
+                self.stdout.getvalue().encode("ascii", errors="replace"),
+                self.stderr.getvalue().encode("ascii", errors="replace"),
+            )
+
+        old_cwd = os.getcwd()
+        old_alarm = signal.getsignal(signal.SIGALRM)
+
+        def timeout_handler(signum, frame):
+            raise sp.TimeoutExpired(self.command, timeout)
+
+        try:
+            os.chdir(self.cwd)
+            if timeout is not None:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.setitimer(signal.ITIMER_REAL, timeout)
+
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                try:
+                    self.simulation.run(
+                        steps=max(self.simulation.tsteps - self.simulation.step, 0)
+                    )
+                    self.returncode = 0
+                except sp.TimeoutExpired:
+                    raise
+                except SystemExit as exc:
+                    self.returncode = exc.code or 0
+                except BaseException:
+                    self.returncode = 1
+                    self.stderr.write(traceback.format_exc())
+                finally:
+                    self._ran = True
+                    self.kill()
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, old_alarm)
+            os.chdir(old_cwd)
+
+        return (
+            self.stdout.getvalue().encode("ascii", errors="replace"),
+            self.stderr.getvalue().encode("ascii", errors="replace"),
+        )
+
+    def kill(self):
+        if self.returncode is None:
+            self.returncode = -9
+        if self._cleanup_done:
+            return
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.cwd)
+            # Run softexit cleanup callbacks without calling sys.exit().
+            with contextlib.redirect_stdout(self.stdout), contextlib.redirect_stderr(
+                self.stderr
+            ):
+                softexit.cleanup()
+        finally:
+            os.chdir(old_cwd)
+            self.simulation = None
+
+        self._cleanup_done = True
+        softexit.reset()
+
+
 def get_test_settings(
     example_folder,
     settings_file="test_settings.dat",
@@ -109,7 +282,8 @@ def get_test_settings(
             driver_model = "dummy"
             address_name = "localhost"
             port_number = 33333
-            socket_mode = "unix"
+            # None means "use the transport declared in the example's input.xml"
+            socket_mode = None
             flaglist = {}
             for line in block:
                 if "driver_code" in line:
@@ -159,7 +333,7 @@ def get_test_settings(
         driver_models.append("dummy")
         address_names.append("localhost")
         port_numbers.append(33333)
-        socket_modes.append("unix")
+        socket_modes.append(None)
         flaglists.append({})
 
     driver_info = {
@@ -208,20 +382,28 @@ def modify_xml_4_dummy_test(
             ff_sockets.append(ff_socket)
 
     for s, ffsocket in enumerate(ff_sockets):
-        ffsocket.attrib["mode"] = driver_info["socket_mode"][s]
+        # honor the transport requested in test_settings.dat, otherwise keep the
+        # one declared in the example so each example is tested as written
+        mode = driver_info["socket_mode"][s] or ffsocket.attrib.get("mode", "unix")
+        ffsocket.attrib["mode"] = mode
 
         for element in ffsocket:
             port = driver_info["port_number"][s]
             if element.tag == "port":
                 element.text = str(port)
             elif element.tag == "address":
-                dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
+                # inet binds to a real host, so keep the address resolvable;
+                # unix/shm rendezvous files get a unique name to avoid clashes
+                if mode == "inet":
+                    dd = driver_info["address_name"][s]
+                else:
+                    dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
 
         model = driver_info["driver_model"][s]
 
-        clients.append([model, "unix", address, port])
+        clients.append([model, mode, address, port])
 
         for key in driver_info["flag"][s].keys():
             if "-o" in key:
@@ -235,7 +417,7 @@ def modify_xml_4_dummy_test(
         ):
             for remaining_client_idx in range(s + 1, len(driver_info["driver_model"])):
                 model = driver_info["driver_model"][remaining_client_idx]
-                clients.append([model, "unix", address, port])
+                clients.append([model, mode, address, port])
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
                     if "-o" in key:
@@ -265,6 +447,7 @@ class Runner(object):
         self,
         parent,
         call_ipi="i-pi input.xml",
+        run_ipi_in_process=False,
     ):
         """Store parent directory and commands to call i-pi and driver
         call_ipi: command to call i-pi
@@ -272,6 +455,7 @@ class Runner(object):
 
         self.parent = parent
         self.call_ipi = call_ipi
+        self.run_ipi_in_process = run_ipi_in_process
 
     def run(self, cwd, nid):
         """This function tries to run the test in a tmp folder and
@@ -308,20 +492,29 @@ class Runner(object):
         try:
             # Run i-pi
 
-            ipi = sp.Popen(
-                self.call_ipi,
-                cwd=(self.tmp_dir),
-                shell=True,
-                stdin=sp.DEVNULL,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-            )
+            if getattr(self, "run_ipi_in_process", False):
+                ipi = InProcessIPI(self.call_ipi, self.tmp_dir)
+            else:
+                ipi = sp.Popen(
+                    self.call_ipi,
+                    cwd=(self.tmp_dir),
+                    shell=True,
+                    stdin=sp.DEVNULL,
+                    stdout=sp.PIPE,
+                    stderr=sp.PIPE,
+                    start_new_session=True,
+                    # so a SIGABRT on timeout makes i-PI dump where it is stuck
+                    env={**os.environ, "PYTHONFAULTHANDLER": "1"},
+                )
 
             if len(clients) > 0:
-                f_connected = False
                 for client in clients:
+                    # reset per client: every socket must come up on its own,
+                    # otherwise a multi-socket example proceeds (and launches the
+                    # next driver) before i-PI has created the matching socket
+                    f_connected = False
                     for i in range(100):
-                        if os.path.exists("/tmp/ipi_" + client[2]):
+                        if _socket_ready(client):
                             f_connected = True
                             break
                         else:
@@ -365,13 +558,18 @@ class Runner(object):
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]
                     )
+                elif client[1] == "shm":
+                    # shared-memory transport: UNIX control socket plus --shm
+                    clientcall = call_driver + " -m {} {} {} -u --shm ".format(
+                        client[0], address_key, client[2]
+                    )
                 elif client[1] == "inet":
                     clientcall = call_driver + " -m {} {} {} -p {}".format(
-                        client[0], client[2], address_key, client[3]
+                        client[0], address_key, client[2], client[3]
                     )
 
                 else:
-                    raise ValueError("Driver mode has to be either unix or inet")
+                    raise ValueError("Driver mode has to be unix, shm or inet")
 
                 cmd = clientcall
 
@@ -401,6 +599,7 @@ class Runner(object):
                     stdin=sp.DEVNULL,
                     stdout=sp.PIPE,
                     stderr=sp.PIPE,
+                    start_new_session=True,
                 )
 
                 drivers.append(driver)
@@ -414,8 +613,11 @@ class Runner(object):
                 # if i-PI has ended, we can wait for the driver to quit
                 driver_out, driver_err = driver.communicate(timeout=TIMEOUT)
                 if driver.returncode != 0:
-                    ipi.kill()
-                    ipi_out, ipi_error = ipi.communicate()
+                    _terminate(ipi)
+                    try:
+                        ipi_out, ipi_error = ipi.communicate(timeout=2)
+                    except sp.TimeoutExpired:
+                        ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
                     assert (
                         driver.returncode == 0
                     ), "Driver error occurred: {}\n Driver Output: {}\n i-PI Output: {}\n i-PI Error: {}".format(
@@ -423,37 +625,29 @@ class Runner(object):
                     )
 
         except sp.TimeoutExpired:
-            ipi.kill()
-            try:
-                ipi_out, ipi_error = ipi.communicate(timeout=2)
-            except:
-                ipi_out, ipi_error = "", "Could not get outputs from ipi"
-                pass
-
-            drivers[0].kill()
-            try:
-                driver_out, driver_err = drivers[0].communicate(timeout=2)
-            except:
-                driver_out, driver_err = "", "Could not get outputs from drivers"
-                pass
-
-            print(
-                "Timeout during {} test \
-              **** i-PI output **** \
-              stdout {} \
-              stderr {} \
-              **** driver output **** \
-              stdout {} \
-              stderr {} \
-              ".format(
-                    str(cwd), ipi_out, ipi_error, driver_out, driver_err
-                )
-            )
-            raise
-
+            # first try to get a Python traceback out of the hung i-PI (it shows
+            # where it is stuck), then kill the whole i-PI and driver process
+            # groups so no orphan keeps a pipe open and deadlocks the next call
+            dumped = _dump_hung_ipi(ipi)
+            if dumped is not None:
+                ipi_out, ipi_error = dumped
+            else:
+                _terminate(ipi)
+                try:
+                    ipi_out, ipi_error = ipi.communicate(timeout=2)
+                except Exception:
+                    ipi_out, ipi_error = b"", b"Could not get outputs from i-PI"
+            _terminate(ipi)
+            for driver in drivers:
+                _terminate(driver)
+                try:
+                    driver.communicate(timeout=2)
+                except Exception:
+                    pass
             raise RuntimeError(
-                "Time is out. Aborted during {} test.".format(
-                    str(cwd),
+                "Timeout ({}s) during {} test.\n"
+                " **** i-PI stdout ****\n{}\n **** i-PI stderr ****\n{}".format(
+                    TIMEOUT, str(cwd), ipi_out, ipi_error
                 )
             )
 
@@ -462,3 +656,8 @@ class Runner(object):
 
         except ValueError:
             return "Value Error\n{}".format(str(cwd))
+
+        finally:
+            # always clear this run's own rendezvous sockets, including when the
+            # example failed or timed out and i-PI was killed before cleaning up
+            _cleanup_unix_sockets(clients)
