@@ -418,6 +418,64 @@ class FFEval(ForceField):
         request["status"] = "Done"
 
 
+class FFMPI(ForceField):
+    """Forcefield that exchanges positions and forces with driver ranks over MPI.
+
+    i-PI runs as rank 0 of MPI_COMM_WORLD; each driver it talks to is the root
+    of a (possibly multi-rank) sub-communicator, so a single driver can wrap an
+    MPI-parallel code. The actual communication is delegated to an InterfaceMPI
+    (mirroring how FFSocket delegates to InterfaceSocket). Several FFMPI
+    forcefields can coexist; each claims the driver ranks launched with its own
+    `--mpi-name` (see ipi.interfaces.mpi.MPIWorldManager).
+    """
+
+    def __init__(
+        self,
+        latency=1e-4,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=False,
+        active=np.array([-1]),
+        threaded=True,
+        mode="mpi",
+        batch_size=1,
+        interface=None,
+    ):
+        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
+        if not threaded:
+            raise ValueError("FFMPI requires threaded=True to poll the driver ranks.")
+        if mode != "mpi":
+            raise ValueError("Unknown ffmpi mode '%s'." % mode)
+        self.mode = mode
+        if interface is None:
+            self.interface = InterfaceMPI(name=name, batch_size=batch_size)
+        else:
+            self.interface = interface
+        self.interface.requests = self.requests
+        self.interface.offset = self.offset
+
+    def poll(self):
+        """Function to check the status of the driver calculations."""
+
+        self.interface.poll()
+
+    def start(self):
+        """Joins the shared MPI world and spawns the polling thread."""
+
+        self.interface.open()
+        super().start()
+
+    def stop(self):
+        """Stops the poll thread and tells every driver root to exit."""
+
+        super().stop()
+        if self._thread is not None:
+            # must wait until the poll loop has ended before signalling exit
+            self._thread.join()
+        self.interface.close()
+
+
 class FFDirect(ForceField):
     def __init__(
         self,
