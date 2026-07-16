@@ -79,6 +79,7 @@ class MetatomicDriver(Dummy_driver):
         non_conservative_variant=None,
         uncertainty_variant=None,
         uncertainty_threshold=0.0,
+        skin=2.0,
         *args,
         **kwargs,
     ):
@@ -108,6 +109,7 @@ class MetatomicDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
         self.template = template
+        self.skin = skin
 
         # Determine suffixes for different model outputs
         self.energy_suffix = "" if energy_variant is None else f"/{energy_variant}"
@@ -194,7 +196,9 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
-        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model("A", self.model)
+        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model(
+            "A", self.model, skin=self.skin
+        )
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 

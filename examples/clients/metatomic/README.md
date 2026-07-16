@@ -42,6 +42,8 @@ The options (after `-o`) are as follow:
   the model) an ensemble of energy predictions
 - `force_virial_ensemble` is a bool specifying whether to also compute
   an ensemble of force predictions
+- `skin` is a float indicating that the neighbor list should use a Verlet skin
+  to avoid unnecessary re-calculations
 
 NB: the model nickel-lj.pt pre-build model should be compatible with modern torch and 
 metatomic APIs. If it is not, you can try to build a version based on your 
