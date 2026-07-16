@@ -287,11 +287,6 @@ class Simulation:
                         no.print_header()
                     isys += 1
 
-        if self.threading:
-            self.executor = ThreadPoolExecutor(
-                max_workers=max(len(self.syslist), len(self.outputs))
-            )
-
         self.chk = eoutputs.CheckpointOutput("RESTART", 1, True, 0)
         self.chk.bind(self)
 
@@ -330,6 +325,24 @@ class Simulation:
         when necessary. Also deals with starting and cleaning up the threads used
         in the communication between the driver and the PIMD code.
         """
+
+        # the thread pool lives for the duration of one run: workers are joined
+        # before returning, so that any thread-local state of external libraries
+        # (e.g. torch) is torn down while the interpreter is fully alive.
+        # threads that are cleaned up during interpreter shutdown can abort
+        # the process
+        if self.threading:
+            self.executor = ThreadPoolExecutor(
+                max_workers=max(len(self.syslist), len(self.outputs))
+            )
+        try:
+            self._run_loop(write_outputs)
+        finally:
+            if self.threading:
+                self.executor.shutdown(wait=True)
+
+    def _run_loop(self, write_outputs=True):
+        """Implements the main loop of `run`."""
 
         # prints inital configuration -- only if we are not restarting
         if self.step == 0 and write_outputs:
