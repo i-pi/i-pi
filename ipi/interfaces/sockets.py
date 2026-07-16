@@ -448,9 +448,10 @@ class Driver(DriverSocket):
 
         if self.status & Status.NeedExtra:
             try:
+                payload = extra.encode("utf-8")
                 # reduces latency by combining all messages in one
                 self.sendall(
-                    MESSAGE["extradata"] + np.int32(len(extra)) + extra.encode("utf-8")
+                    MESSAGE["extradata"] + np.int32(len(payload)).tobytes() + payload
                 )  # header  # extras
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
@@ -588,7 +589,7 @@ class Driver(DriverSocket):
 
         r["start"] = time.time()
 
-        if self.status & (Status.Ready & Status.NeedExtra):
+        if (self.status & Status.Ready) and (self.status & Status.NeedExtra):
             warning(
                 " @SOCKET:   Keep calm: set Ready and NeedExtra once at a time.",
                 verbosity.high,
@@ -665,15 +666,29 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch_send! (II)",
+                verbosity.low,
+            )
+            return False
+
+        if self.status & Status.NeedExtra:
+            if "extra" not in r:
+                warning(" @SOCKET:   'extra' is empty.", verbosity.high)
+                r["extra"] = ""
+            self.sendextra(r["extra"])
+            self.get_status()
+
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (III)",
                 verbosity.low,
             )
             return False

@@ -2686,6 +2686,7 @@ class FFDielectric(ForceField):
         u -= dipole @ Efield
         f += np.einsum("ijk,j->ik", Z, Efield).flatten()
 
+        # ATTENTION: this equation has to be corrected
         # virials
         ve = volume * e + dipole[:, None, None] * np.eye(3)[None, :, :]
         ve = np.einsum("ijk,i->jk", ve, Efield)

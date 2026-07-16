@@ -12,6 +12,7 @@ appropriate conserved energy quantity for the ensemble of choice.
 
 import numpy as np
 
+from ipi.utils.softexit import softexit
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat

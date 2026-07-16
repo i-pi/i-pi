@@ -79,6 +79,7 @@ def run_driver(
     f_init = False
     f_data = False
     f_extra = False  # whether the driver has extra data
+    requires_extra = getattr(driver, "requires_extra", False)
 
     # batched evaluation: batch_n>1 is announced by i-PI in the INIT string
     batch_n = 1
@@ -106,7 +107,7 @@ def run_driver(
             # responds to a status request
             if not f_init:
                 sock.sendall(Message("NEEDINIT"))
-            elif not f_extra and driver.requires_extra:  # this goes before f_data
+            elif not f_extra and requires_extra:  # this goes before f_data
                 sock.sendall(Message("NEEDEXTRA"))
             elif f_data:
                 sock.sendall(Message("HAVEDATA"))
@@ -207,7 +208,7 @@ def run_driver(
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
         elif header == Message("EXTRADATA"):
-            if not driver.requires_extra:
+            if not requires_extra:
                 raise ValueError("The driver does not support EXTRADATA.")
 
             # The following code has been roughly copied and pasted from 'ipi/interfaces/sockets.py'
