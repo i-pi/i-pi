@@ -1,0 +1,43 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'> [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt} ] </properties>
+    <trajectory filename='dip' stride='1' extra_type='dipole'> extras </trajectory>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+
+  <!-- qTIP4P/f supplies energy and nuclear forces. -->
+  <ffsocket name='qtip4pf' mode='unix' pbc='False'>
+    <address>h2o-dip-pol-qtip4pf</address>
+    <latency>1e-3</latency>
+  </ffsocket>
+
+  <!-- Evaluate the dipole surface in-process at every force evaluation. -->
+  <ffdirect name='dipole' pbc='False'>
+    <pes>h2o_dip_pol</pes>
+  </ffdirect>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'>../../../init_files/water_64.xyz</file>
+      <cell mode='manual' units='angstrom'>
+        [12.417, 0.0, 0.0, 0.0, 12.417, 0.0, 0.0, 0.0, 12.417]
+      </cell>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'/>
+      <force forcefield='dipole'/>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'>0.5</timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+  </system>
+</simulation>
