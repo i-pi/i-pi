@@ -23,6 +23,8 @@ from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.interfaces.mpi import InterfaceMPI
+from ipi.interfaces.utils import parse_extra
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
@@ -47,6 +49,10 @@ class ForceRequest(dict):
     Here I only care if requests are instances of the very same object.
     This is useful for the `in` operator, which uses equality to test membership.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._event_done = threading.Event()
 
     def __eq__(self, y):
         """Overwrites the standard equals function."""
@@ -226,6 +232,7 @@ class ForceField:
                         {"raw": ""},
                     ]
                     r["status"] = "Done"
+                    r._event_done.set()
                     r["t_finished"] = time.time()
 
     def _poll_loop(self):
@@ -253,6 +260,9 @@ class ForceField:
         """
 
         """Frees up a request."""
+
+        if "thread" in request:
+            request["thread"].join()
 
         with self._threadlock if lock else nullcontext():
             if request in self.requests:
@@ -334,7 +344,7 @@ class FFSocket(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -375,7 +385,11 @@ class FFSocket(ForceField):
 
     def start(self):
         """Spawns a new thread."""
-
+        if self.socket.batch_size > 1 and not self.socket.consolidate_messages:
+            raise ValueError(
+                "Batched socket evaluation (batch_size > 1) requires "
+                "consolidate_messages to be enabled."
+            )
         self.socket.open()
         super(FFSocket, self).start()
 
@@ -394,6 +408,11 @@ class FFEval(ForceField):
     to compute the potential, force and virial.
     """
 
+    def _eval_thread(self, request):
+        """Evaluates a single request and applies the offset."""
+        self.evaluate(request)
+        request["result"][0] -= self.offset
+
     def poll(self):
         """Polls the forcefield checking if there are requests that should
         be answered, and if necessary evaluates the associated forces and energy."""
@@ -401,12 +420,20 @@ class FFEval(ForceField):
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
         with self._threadlock:
+            new_requests = []
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-                    r["result"][0] -= self.offset  # subtract constant offset
+                    new_requests.append(r)
+
+        for r in new_requests:
+            if self.threaded:
+                r["thread"] = threading.Thread(target=self._eval_thread, args=(r,))
+                r["thread"].start()
+            else:
+                with self._threadlock:
+                    self._eval_thread(r)
 
     def evaluate(self, request):
         request["result"] = [
@@ -416,6 +443,7 @@ class FFEval(ForceField):
             {"raw": ""},
         ]
         request["status"] = "Done"
+        request._event_done.set()
 
 
 class FFMPI(ForceField):
@@ -479,7 +507,7 @@ class FFMPI(ForceField):
 class FFDirect(ForceField):
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -505,7 +533,9 @@ class FFDirect(ForceField):
             active: Indexes of active atoms in this forcefield
             pes: The name of the potential-energy surface to be used
             batch_size: The number of structures that should be combined and evaluated
-                at once in a single batch.
+                at once in a single batch. NB: program will hang if the number of force
+                evaluations is not a multiple of batch_size, unless threaded is set to
+                True.
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -518,6 +548,9 @@ class FFDirect(ForceField):
         self.pes_path = pes_path
         self.batch_size = batch_size
         self.request_batch = []
+        self._batch_idle_cycles = 0
+        # wait longer to flush the queue if the batch size is large
+        self._batch_idle_threshold = self.batch_size
 
         try:
             if self.pes == "custom" and self.pes_path == "":
@@ -545,48 +578,50 @@ class FFDirect(ForceField):
         # called by many threads at once.
         # This is slightly different than for FFEval because of the batched evaluation
         with self._threadlock:
+            new_requests = False
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
+                    new_requests = True
+            # for batched evaluation, flush incomplete batches
+            # if the poll loop has been idle for a few cycles
+            if self.batch_size > 1 and len(self.request_batch) > 0:
+                if new_requests:
+                    self._batch_idle_cycles = 0
+                else:
+                    self._batch_idle_cycles += 1
+                if self._batch_idle_cycles >= self._batch_idle_threshold:
+                    self.launch_batch()
 
     def _process_results(self, results, request):
-        # ensure forces and virial have the correct shape to fit the results
+        # ensure shapes, apply the offset and parse the extra string
         results[0] -= self.offset
-        results[1] = results[1].reshape(-1)
-        results[2] = results[2].reshape(3, 3)
-
-        # converts the extra fields, if there are any
-        mxtra = results[3]
-        mxtradict = {}
-        if mxtra:
-            try:
-                mxtradict = json.loads(mxtra)
-                info(
-                    "@driver.getforce: Extra string JSON has been loaded.",
-                    verbosity.debug,
-                )
-            except:
-                # if we can't parse it as a dict, issue a warning and carry on
-                info(
-                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
-                    + mxtra,
-                    verbosity.debug,
-                )
-                mxtradict = {}
-                pass
-            if "raw" in mxtradict:
-                raise ValueError(
-                    "'raw' cannot be used as a field in a JSON-formatted extra string"
-                )
-
-            mxtradict["raw"] = mxtra
-        results[3] = mxtradict
+        results[1] = np.asarray(results[1]).reshape(-1)
+        results[2] = np.asarray(results[2]).reshape(3, 3)
+        results[3] = parse_extra(results[3])
 
         request["result"] = results
         request["status"] = "Done"
+        request._event_done.set()
         request["t_finished"] = time.time()
+
+    def launch_batch(self):
+        """Dispatches the current batch for evaluation."""
+
+        info(
+            f"Launching batch evaluation, "
+            f"{len(self.request_batch)} / {self.batch_size}",
+            verbosity.high,
+        )
+        cell_batch = [r["cell"][0] for r in self.request_batch]
+        pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
+        results_batch = self.driver(cell_batch, pos_batch)
+        for results, request in zip(results_batch, self.request_batch):
+            self._process_results(list(results), request)
+        self.request_batch = []
+        self._batch_idle_cycles = 0
 
     def evaluate(self, request):
         if "extra" in request:
@@ -598,16 +633,8 @@ class FFDirect(ForceField):
             self._process_results(results, request)
         else:
             self.request_batch.append(request)
-            if len(self.request_batch) == self.batch_size:
-                cell_batch = [request["cell"][0] for request in self.request_batch]
-                pos_batch = [
-                    request["pos"].reshape(-1, 3) for request in self.request_batch
-                ]
-                results_batch = self.driver(cell_batch, pos_batch)
-                for results, request in zip(results_batch, self.request_batch):
-                    self._process_results(list(results), request)
-
-                self.request_batch = []
+            if len(self.request_batch) >= self.batch_size:
+                self.launch_batch()
 
 
 class FFLennardJones(FFEval):
@@ -628,7 +655,7 @@ class FFLennardJones(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -782,6 +809,7 @@ class FFdmd(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
+        r._event_done.set()
 
     def dmd_update(self):
         """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
@@ -805,7 +833,7 @@ class FFDebye(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         H=None,
@@ -862,6 +890,7 @@ class FFDebye(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -882,7 +911,7 @@ class FFPlumed(FFEval):
 
     def __init__(
         self,
-        latency=1.0e-3,
+        latency=1.0e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -911,6 +940,13 @@ class FFPlumed(FFEval):
         super(FFPlumed, self).__init__(
             latency, offset, name, pars, dopbc=False, threaded=threaded
         )
+
+        if self.threaded:
+            warning(
+                "PLUMED is not thread-safe, overriding threaded execution",
+                verbosity.low,
+            )
+            self.threaded = False
         self.plumed = plumed.Plumed()
         self.plumed_dat = plumed_dat
         self.plumed_step = plumed_step
@@ -918,13 +954,19 @@ class FFPlumed(FFEval):
         self.compute_work = compute_work
         self.init_file = init_file
 
-        if self.init_file.mode == "xyz":
+        if self.init_file.mode in ["xyz", "pdb", "ase"]:
             infile = open(self.init_file.value, "r")
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
             myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+        else:
+            raise ValueError(
+                "Unsupported init file format for FFPlumed: "
+                + self.init_file.mode
+                + ". Supported formats are xyz, pdb and ase."
+            )
 
         self.natoms = myatoms.natoms
         self.plumed.cmd("setRealPrecision", 8)  # i-PI uses double precision
@@ -997,15 +1039,21 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0].T.copy())
-        pos = r["pos"].reshape(-1, 3)
-
         if self.system_force is not None:
+            # setup to use energy as CV
             f[:] = dstrip(self.system_force.f).reshape((-1, 3))
             vir[:] = -dstrip(self.system_force.vir)
             self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
 
-        self.plumed.cmd("setPositions", pos)
+        # must hold a copy of cell and positions because plumed stores a pointer!
+        # there is potential for memory corruption if these are overwritten before
+        # next time getBias is called
+        self.box = r["cell"][0].T.copy()
+        self.plumed.cmd("setBox", self.box)
+
+        self.pos = r["pos"].reshape(-1, 3).copy()
+        self.plumed.cmd("setPositions", self.pos)
+
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
@@ -1029,6 +1077,7 @@ class FFPlumed(FFEval):
         # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, extras]
         r["status"] = "Done"
+        r._event_done.set()
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1044,18 +1093,22 @@ class FFPlumed(FFEval):
         bias_before = np.zeros(1, float)
         bias_after = np.zeros(1, float)
 
-        if self.compute_work:
-            self.plumed.cmd("getBias", bias_before)
-
         # Checks that the update is called on the right position.
         # this should be the case for most workflows - if this error
         # is triggered and your input makes sense, the right thing to
         # do is to perform a full plumed-side update (which will have a cost,
         # so see if you can avoid it)
         if np.linalg.norm(self.lastq - pos) > 1e-10:
-            raise ValueError(
-                "Metadynamics update is performed using an incorrect position"
+            warning(
+                "mtd_update: Positions moved since last PLUMED evaluation: "
+                "triggering a full PLUMED update.",
+                verbosity.medium,
             )
+            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            self.evaluate(request)
+
+        if self.compute_work:
+            self.plumed.cmd("getBias", bias_before)
 
         # sets the step and does the actual update
         self.plumed.cmd("setStep", self.plumed_step)
@@ -1076,7 +1129,7 @@ class FFYaff(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         threaded=False,
@@ -1180,6 +1233,7 @@ class FFYaff(FFEval):
 
         r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
+        r._event_done.set()
 
 
 class FFsGDML(FFEval):
@@ -1191,7 +1245,7 @@ class FFsGDML(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         threaded=False,
@@ -1312,6 +1366,7 @@ class FFsGDML(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event_done.set()
         r["t_finished"] = time.time()
 
 
@@ -1322,7 +1377,7 @@ class FFCommittee(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -1627,6 +1682,7 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event_done.set()
 
 
 class FFRotations(ForceField):
@@ -1636,7 +1692,7 @@ class FFRotations(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -1807,13 +1863,17 @@ class FFRotations(ForceField):
         # "dissolve" the extras dictionaries into a list
         if isinstance(xtrs[0], dict):
             for k in xtrs[0].keys():
-                r["result"][3][k] = []
-                for x in xtrs:
-                    r["result"][3][k].append(x[k])
+                if k == "raw":
+                    # "raw" must stay a string for compatibility with extra_combine
+                    r["result"][3][k] = (
+                        "[ " + ", ".join(x.get(k, "") for x in xtrs) + " ]"
+                    )
+                else:
+                    r["result"][3][k] = []
+                    for x in xtrs:
+                        r["result"][3][k].append(x[k])
         else:
-            r["result"][3]["raw"] = []
-            for x in xtrs:
-                r["result"][3]["raw"].append(x)
+            r["result"][3]["raw"] = "[ " + ", ".join(str(x) for x in xtrs) + " ]"
 
         for ff_r in r["ff_handles"]:
             self.ff.release(ff_r)
@@ -1828,6 +1888,7 @@ class FFRotations(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event_done.set()
                     self.release(r, lock=False)
 
 
@@ -1932,6 +1993,7 @@ class PhotonDriver:
         Returns:
             total energy of photonic system
         """
+
         # calculate the photonic potential energy
         e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
 
@@ -1972,6 +2034,7 @@ class PhotonDriver:
         Returns:
             force array of all photonic dimensions (3*nphoton) [1x, 1y, 1z, 2x..]
         """
+
         # calculat the bare photonic contribution of the force
         f_ph = -self.omega_klambda3**2 * self.pos_ph
 
@@ -1988,7 +2051,9 @@ class PhotonDriver:
             f_ph[1::3] -= self.varepsilon_k * d_dot_f_y
         return f_ph
 
-    def get_nuc_cav_forces(self, dx_array, dy_array, charge_array_bath):
+    def get_nuc_cav_forces(
+        self, dx_array, dy_array, charge_array_bath=None, dipole_der=None
+    ):
         """
         Calculate the photonic forces on nuclei from MM partial charges
 
@@ -1996,11 +2061,12 @@ class PhotonDriver:
             dx_array: x-direction dipole array of molecular subsystems
             dy_array: y-direction dipole array of molecular subsystems
             charge_array_bath: partial charges of all atoms in a single bath
+            dipole_der: the (9*natoms) derivative of the dipole moment (or born effective charges) with respect to nuclear coordinates
 
         Returns:
             force array of all nuclear dimensions (3*natoms) [1x, 1y, 1z, 2x..]
         """
-
+        # In the evaluation part, only one of charge_array_bath and dipole_der with correct dimensions will be provided.
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
         d_dot_f_y = np.dot(self.ftilde_ky, dy_array)
@@ -2018,9 +2084,21 @@ class PhotonDriver:
         # dimension of independent baths (xy grid points)
         coeff_x = np.dot(np.transpose(Ekx), self.ftilde_kx)
         coeff_y = np.dot(np.transpose(Eky), self.ftilde_ky)
-        fx = -np.kron(coeff_x, charge_array_bath)
-        fy = -np.kron(coeff_y, charge_array_bath)
-        return fx, fy
+
+        if dipole_der is None:
+            fx = -np.kron(coeff_x, charge_array_bath)
+            fy = -np.kron(coeff_y, charge_array_bath)
+            fz = np.zeros_like(fx)
+        else:
+            fx = -np.kron(coeff_x, dipole_der[::9]) - np.kron(coeff_y, dipole_der[3::9])
+            fy = -np.kron(coeff_x, dipole_der[1::9]) - np.kron(
+                coeff_y, dipole_der[4::9]
+            )
+            fz = -np.kron(coeff_x, dipole_der[2::9]) - np.kron(
+                coeff_y, dipole_der[5::9]
+            )
+
+        return fx, fy, fz
 
 
 class FFCavPhSocket(FFSocket):
@@ -2034,7 +2112,7 @@ class FFCavPhSocket(FFSocket):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -2044,6 +2122,8 @@ class FFCavPhSocket(FFSocket):
         interface=None,
         charge_array=None,
         apply_photon=True,
+        dipole_surface=False,
+        evaluate_photon=True,
         E0=1e-4,
         omega_c=0.01,
         ph_rep="loose",
@@ -2062,6 +2142,7 @@ class FFCavPhSocket(FFSocket):
               with the client codes.
            charge_array: An N-dimensional numpy array for fixed point charges of all atoms
            apply_photon: If add photonic degrees of freedom in the dynamics
+           dipole_surface: If add the dipole surface contribution to the forces on nuclei
            E0: Effective light-matter coupling strength
            omega_c: Cavity mode frequency
            ph_rep: A string to control how to represent the photonic coordinates: 'loose' or 'dense'.
@@ -2084,6 +2165,8 @@ class FFCavPhSocket(FFSocket):
 
         # store photonic variables
         self.apply_photon = apply_photon
+        self.dipole_surface = dipole_surface
+        self.evaluate_photon = evaluate_photon
         self.E0 = E0
         self.omega_c = omega_c
         self.ph_rep = ph_rep
@@ -2129,6 +2212,59 @@ class FFCavPhSocket(FFSocket):
         dy_array = np.array(dy_array)
         dz_array = np.array(dz_array)
         return dx_array, dy_array, dz_array
+
+    def combine_bath_extras(self, extras_list):
+        """Collects bath-level extras into one system-level extras dictionary.
+
+        For multiple baths, values are kept in bath-index order so that
+        `combined[key][idx]` corresponds to the `idx`-th bath.
+        """
+
+        if len(extras_list) == 0:
+            return {"raw": ""}
+
+        if len(extras_list) == 1:
+            if isinstance(extras_list[0], dict):
+                combined = dict(extras_list[0])
+                if "raw" not in combined:
+                    combined["raw"] = ""
+                return combined
+            return {"raw": str(extras_list[0])}
+
+        if not all(isinstance(extra, dict) for extra in extras_list):
+            return {"raw": [str(extra) for extra in extras_list]}
+
+        combined = {}
+        keys = set()
+        for extra in extras_list:
+            keys.update(extra.keys())
+
+        for key in keys:
+            values = [extra.get(key, None) for extra in extras_list]
+
+            if key == "raw":
+                combined[key] = [
+                    "" if value is None else str(value) for value in values
+                ]
+                continue
+
+            try:
+                if any(value is None for value in values):
+                    combined[key] = values
+                    continue
+
+                arrays = [np.asarray(value, dtype=float) for value in values]
+                if all(array.shape == arrays[0].shape for array in arrays):
+                    combined[key] = np.asarray(arrays)
+                else:
+                    combined[key] = values
+            except Exception:
+                combined[key] = values
+
+        if "raw" not in combined:
+            combined["raw"] = [""] * len(extras_list)
+
+        return combined
 
     def queue(self, atoms, cell, reqid=-1):
         """Adds a request.
@@ -2237,7 +2373,7 @@ class FFCavPhSocket(FFSocket):
                     while softexit.exiting:
                         time.sleep(self.latency)
                     sys.exit()
-                time.sleep(self.latency)
+                self.request._event_done.wait(timeout=1.0)
 
             """
             with self._threadlock:
@@ -2258,43 +2394,95 @@ class FFCavPhSocket(FFSocket):
 
         # 3. At this moment, we combine the small requests to a big mega request (updated results)
         result_tot = [0.0, np.zeros(len(pbcpos), float), np.zeros((3, 3), float), {}]
+        bath_extras = []
         for idx, newreq in enumerate(newreq_lst):
             u, f, vir, extra = newreq["result"]
             result_tot[0] += u
             result_tot[1][ndim_local * idx : ndim_local * (idx + 1)] = f
             result_tot[2] += vir
-            result_tot[3][idx] = extra
+            bath_extras.append(extra)
+        result_tot[3] = self.combine_bath_extras(bath_extras)
+
+        # When multiple drivers are attached to i-pi, only one of them needs to
+        # be coupled to the photons; the others may just provide nuclear force components.
+        # For the driver coupled to the photons, `evaluate_driver = True`;
+        # For the other drivers, `evaluate_driver = False`, and photonic energy, forces, cavity forces
+        # will be set as zero. This is to avoid double counting of photonic contributions when multiple drivers are attached.
 
         if self.ph.apply_photon:
-            # 4. calculate total dipole moment array for N baths
-            dx_array, dy_array, dz_array = self.calc_dipole_xyz_mm(
-                pos=pbcpos_atoms,
-                n_bath=self.n_independent_bath,
-                charge_array_bath=self.charge_array,
-            )
-            # check the size of photon modes + molecules to match the total number of particles
-            if (
-                self.ph.n_photon + self.n_independent_bath * self.charge_array.size
-                != int(len(pbcpos) // 3)
-            ):
-                softexit.trigger(
-                    "Total number of photons + molecules does not match total number of particles"
-                )
-            # info("mux = %.6f muy = %.6f muz = %.6f [units of a.u.]" %(dipole_x_tot, dipole_y_tot, dipole_z_tot), verbosity.medium)
-            # 5. calculate photonic contribution of total energy
-            e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
-            # 6. calculate photonic forces
-            f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
-            # 7. calculate cavity forces on nuclei
-            fx_cav, fy_cav = self.ph.get_nuc_cav_forces(
-                dx_array=dx_array,
-                dy_array=dy_array,
-                charge_array_bath=self.charge_array,
-            )
+
+            # this path is for the driver that is coupled to the photons, and we need to calculate photonic contributions to energy and forces
+            if self.evaluate_photon:
+
+                if self.dipole_surface:
+
+                    has_dipole_der = ("dipole" in extra) and (
+                        "dipole_derivative" in extra
+                    )
+                    check_dipole_der = (len(extra["dipole"]) == 3) and (
+                        len(extra["dipole_derivative"])
+                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    )
+                    if not has_dipole_der or not check_dipole_der:
+                        softexit.trigger(
+                            "Dipole surface is turned on, but the required dipole information is not provided in extras. \
+                            Please check if the driver provides the dipole and its derivative information in extras, \
+                            and make sure the size of dipole and dipole derivative information matches the number of atoms. \
+                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                        )
+
+                    # this is the path when using a dipole driver in i-pi to calculate dipole information
+                    # !!! ONLY WORK FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
+                    dx_array, dy_array = np.array([extra["dipole"][0]]), np.array(
+                        [extra["dipole"][1]]
+                    )
+                    dipole_der = extra["dipole_derivative"]
+
+                else:
+                    # we fall back to the original path with charge array to calculate dipole information
+                    # check the size of photon modes + molecules to match the total number of particles
+                    if (
+                        self.ph.n_photon
+                        + self.n_independent_bath * self.charge_array.size
+                        != int(len(pbcpos) // 3)
+                    ):
+                        softexit.trigger(
+                            "Total number of photons + molecules does not match total number of particles"
+                        )
+                    # 4. calculate total dipole moment array for N baths
+                    dx_array, dy_array, _ = self.calc_dipole_xyz_mm(
+                        pos=pbcpos_atoms,
+                        n_bath=self.n_independent_bath,
+                        charge_array_bath=self.charge_array,
+                    )
+
+                # 5. calculate photonic contribution of total energy
+                e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
+                # 6. calculate photonic forces
+                f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
+                # 7. calculate cavity forces on nuclei
+                if self.dipole_surface:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array, dy_array=dy_array, dipole_der=dipole_der
+                    )
+                else:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array,
+                        dy_array=dy_array,
+                        charge_array_bath=self.charge_array,
+                    )
+
+            # this is the path to avoid double counting of photonic contributions when multiple drivers are attached to i-pi
+            else:
+                e_ph = 0
+                f_ph = 0
+                fx_cav, fy_cav, fz_cav = 0, 0, 0
+
             # 8. add cavity effects to our output
             result_tot[0] += e_ph
             result_tot[1][:ndim_tot:3] += fx_cav
             result_tot[1][1:ndim_tot:3] += fy_cav
+            result_tot[1][2:ndim_tot:3] += fz_cav
             result_tot[1][ndim_tot:] = f_ph
 
         result_tot[0] -= self.offset
@@ -2465,7 +2653,8 @@ class FFDielectric(ForceField):
             with self.logger.section("post_process apply_ensemble fixed_E (5)"):
                 request["result"] = self.fixed_E(request)
         elif self.mode == "D":  # fixed-D ensemble
-            request["result"] = self.fixed_D(request)
+            with self.logger.section("post_process apply_ensemble fixed_D (5)"):
+                request["result"] = self.fixed_D(request)
         else:  # there is an error in the implementation
             raise ValueError("coding error")
         return request
@@ -2507,18 +2696,5 @@ class FFDielectric(ForceField):
 
         return u, f, v, x
 
-    @timeit(name="fixed_D")
     def fixed_D(self, request: dict):
         raise ValueError("Not implemented yet")
-
-    # @property
-    # def requests(self):
-    #     if self.ready:
-    #         raise ValueError("FFDielectric does not have its own requests list")
-    #     return self._requests
-
-    # @requests.setter
-    # def requests(self, value):
-    #     if self.ready:
-    #         raise ValueError("FFDielectric does not have its own requests list")
-    #     self._requests = value
