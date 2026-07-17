@@ -22,7 +22,11 @@ class InputFriction(Input):
         ),
         "debug_mf_mode": (
             InputValue,
-            {"dtype": str, "default": "none", "help": "..."},
+            {
+                "dtype": str,
+                "default": "on",
+                "help": "Caldeira-Leggett mean-field/counterterm toggle. Use 'on' to apply the MF force and 'off' to disable it. Legacy 'none' is treated as 'off'.",
+            },
         ),
         "Lambda": (
             InputArray,
@@ -72,6 +76,30 @@ class InputFriction(Input):
                 "help": "Force-extras key for bead-resolved coupling values F(q), expected shape (nbeads, nbath).",
             },
         ),
+        "coupling_mode": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "driver",
+                "help": "How to obtain variable-friction coupling values. 'driver' reads coupling_key from extras; 'centroid_endpoint_trapezoid' computes bead-centroid endpoint coupling from bead Sigma and centroid Sigma.",
+            },
+        ),
+        "centroid_sigma_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "centroid_sigma",
+                "help": "Force-extras key for the centroid Sigma payload used by coupling_mode='centroid_endpoint_trapezoid'.",
+            },
+        ),
+        "coupling_friction_atom": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": -1,
+                "help": "Optional 0-based atom index used for centroid-relative coupling displacements. If negative, infer from sigma_meta.friction_atoms when exactly one atom is present.",
+            },
+        ),
     }
 
     default_help = "Friction operator configuration (MF + markovian/non-markovian bath). For variable friction, sigma must be provided in force extras."
@@ -94,6 +122,9 @@ class InputFriction(Input):
 
         self.sigma_key.store(friction.sigma_key)
         self.coupling_key.store(friction.coupling_key)
+        self.coupling_mode.store(friction.coupling_mode)
+        self.centroid_sigma_key.store(friction.centroid_sigma_key)
+        self.coupling_friction_atom.store(friction.coupling_friction_atom)
 
     def fetch(self) -> Friction:
         return Friction(
@@ -108,4 +139,7 @@ class InputFriction(Input):
 
             sigma_key=self.sigma_key.fetch(),
             coupling_key=self.coupling_key.fetch(),
+            coupling_mode=self.coupling_mode.fetch(),
+            centroid_sigma_key=self.centroid_sigma_key.fetch(),
+            coupling_friction_atom=self.coupling_friction_atom.fetch(),
         )
