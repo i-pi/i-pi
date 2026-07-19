@@ -193,7 +193,7 @@ class MetatomicDriver(Dummy_driver):
             model = model.to(device)
             self.models.append(model)
             self.nl_calculators.append(
-                vesin_metatomic.neighbor_lists_for_model("A", model)
+                vesin_metatomic.neighbor_lists_for_model("A", model, skin=self.skin)
             )
 
         # ensure self.device and self.modelare initialized (to the first device)
