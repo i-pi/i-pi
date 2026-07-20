@@ -1348,11 +1348,9 @@ class HessianOptimizer(DummyOptimizer):
                             )
                         )
                     else:
-                        raise ValueError(
-                            """
+                        raise ValueError("""
               'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
-                    """
-                        )
+                    """)
                 self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
