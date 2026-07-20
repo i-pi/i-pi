@@ -77,7 +77,8 @@ def _eco_fit(nbeads, xmax, y0=None):
     of the Eco path integral, minimizing the rms fractional error in the
     radius of gyration of harmonic oscillators with 0 <= beta*hbar*omega <= xmax.
     Follows the reference implementation in the supplementary material of
-    Zeng & Manolopoulos, "Economised path integrals": safe Newton iterations
+    Zeng & Manolopoulos, "Economised path integrals", arXiv:2607.06414
+    (https://arxiv.org/abs/2607.06414): safe Newton iterations
     with an eigenvalue-shifted Hessian and a line search that keeps the y_k
     positive and in ascending order. Starts from the Matsubara frequencies,
     or from the initial guess y0 (e.g. a previous solution) if given.
@@ -133,8 +134,22 @@ def _eco_fit(nbeads, xmax, y0=None):
             c *= 0.5
         else:
             break
-        if s >= sp:
+        # stops when the relative decrease of the objective becomes negligible
+        if sp - s <= 1e-12 * sp:
             break
+    else:
+        # when many modes fit an easy target the minimum is a flat valley and
+        # the loop can spend all iterations shaving negligible amounts off an
+        # already-excellent fit; an error is raised only if the exhausted
+        # optimisation is still far from a stationary point (large gradient)
+        # of a good fit (rms error in R^2 above ~1e-4, i.e. sqrt(2e-8))
+        if s > 1e-8 and np.abs(g).max() > 1e-6:
+            raise ValueError(
+                "Eco frequency optimisation did not converge in 500 iterations for "
+                "nbeads=%d, xmax=%g (rms fractional error in R^2 = %g); check that the "
+                "maximum frequency and the temperature are physically sensible."
+                % (nbeads, xmax, np.sqrt(2.0 * s))
+            )
 
     info(
         " @nmtransform: Eco fit for nbeads=%d, xmax=%g: rms fractional error in R^2 = %g"
@@ -151,6 +166,8 @@ def eco_eva(nbeads, xmax, y0=None):
     omega_k = omegan * eco_eva(nbeads, xmax)_k, in analogy with nm_eva.
     An initial guess y0 for the nbeads//2 free parameters (e.g. the solution
     at a nearby temperature) can be given to speed up the fit.
+    See Zeng & Manolopoulos, "Economised path integrals", arXiv:2607.06414
+    (https://arxiv.org/abs/2607.06414).
     """
 
     if xmax <= 0:

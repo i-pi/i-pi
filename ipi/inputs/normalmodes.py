@@ -37,11 +37,11 @@ free particle, and all the normal modes will coincide at frequency wmax.
 replaces the spring frequencies of the ring polymer with economised values that are
 optimized to reproduce the exact radii of gyration of harmonic oscillators up to that
 frequency, accelerating convergence with the number of beads
-[Zeng and Manolopoulos, "Economised path integrals"]. The bead masses are the
-physical ones, and the standard (Trotter) estimators for observables remain valid.
-Combinations that assume Trotter springs raise an error: bosons, open paths,
-Suzuki-Chin dynamics, the planetary model, and the isotope-fractionation and
-Suzuki-Chin estimators.
+[Zeng and Manolopoulos, "Economised path integrals", arXiv:2607.06414]. The bead
+masses are the physical ones, and the standard (Trotter) estimators for observables
+remain valid. Combinations that assume Trotter springs raise an error: bosons, open
+paths, Suzuki-Chin dynamics, the planetary model, instantons, nm_gle thermostats,
+and the isotope-fractionation and Suzuki-Chin estimators.
 """,
             "options": ["pa-cmd", "wmax-cmd", "manual", "rpmd", "eco"],
         },

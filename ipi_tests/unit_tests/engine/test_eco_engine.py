@@ -31,8 +31,17 @@ def eco_xml(
     dynamics="nvt",
     thermostat="<thermostat mode='pile_l'> <tau units='femtosecond'> 10 </tau> </thermostat>",
     nm_extra="",
+    motion=None,
 ):
     """Builds the XML input for a small harmonic-potential PIMD simulation."""
+
+    if motion is None:
+        motion = f"""<motion mode='dynamics'>
+      <dynamics mode='{dynamics}'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        {thermostat}
+      </dynamics>
+    </motion>"""
 
     rng = np.random.RandomState(27182)
     beads = Beads(nbeads=NBEADS, natoms=NATOMS)
@@ -63,12 +72,7 @@ def eco_xml(
     </initialize>
     <forces> <force forcefield='harm'/> </forces>
     <ensemble> <temperature units='kelvin'> 300 </temperature> </ensemble>
-    <motion mode='dynamics'>
-      <dynamics mode='{dynamics}'>
-        <timestep units='femtosecond'> 0.25 </timestep>
-        {thermostat}
-      </dynamics>
-    </motion>
+    {motion}
     <normal_modes propagator='{propagator}'>
       {frequencies}
       {nm_extra}
@@ -173,6 +177,23 @@ def test_guard_suzuki_chin(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with pytest.raises(ValueError, match="Suzuki-Chin"):
         InteractiveSimulation(eco_xml(dynamics="sc"))
+
+
+def test_guard_nm_gle(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    a_matrix = str([1e-3] * NBEADS)
+    thermostat = f"<thermostat mode='nm_gle'> <A shape='({NBEADS},1,1)'> {a_matrix} </A> </thermostat>"
+    with pytest.raises(ValueError, match="nm_gle"):
+        InteractiveSimulation(eco_xml(thermostat=thermostat))
+
+
+def test_guard_instanton(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    motion = """<motion mode='instanton'>
+      <instanton mode='rate'> <opt> nichols </opt> </instanton>
+    </motion>"""
+    with pytest.raises(ValueError, match="Instanton"):
+        InteractiveSimulation(eco_xml(motion=motion))
 
 
 @pytest.mark.parametrize(
