@@ -899,6 +899,12 @@ class ThermoNMGLE(Thermostat):
                 "ThermoNMGLE.bind expects a NormalModes argument to bind to"
             )
 
+        if nm.mode == "eco":
+            raise ValueError(
+                "nm_gle thermostats are parameterized for Trotter ring-polymer frequencies "
+                "and cannot be used with mode='eco'."
+            )
+
         if prng is None:
             self.prng = Random()
         else:

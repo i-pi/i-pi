@@ -233,6 +233,11 @@ class InstantonMotion(Motion):
         prng: The random number generator object which controls random number generation.
         """
 
+        if nm.mode == "eco":
+            raise ValueError(
+                "Instanton calculations assume Trotter springs and cannot be used with mode='eco'."
+            )
+
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Redefine normal modes
@@ -1343,9 +1348,11 @@ class HessianOptimizer(DummyOptimizer):
                             )
                         )
                     else:
-                        raise ValueError("""
+                        raise ValueError(
+                            """
               'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
-                    """)
+                    """
+                        )
                 self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
