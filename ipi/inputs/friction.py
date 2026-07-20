@@ -13,7 +13,7 @@ class InputFriction(Input):
             {
                 "dtype": bool,
                 "default": True,
-                "help": "If true, read position-dependent sigma from force extras; if false, use sigma_static.",
+                "help": "If true, read a position-dependent canonical coupling Jacobian and Gamma from force extras; if false, use sigma_static.",
             },
         ),
         "bath_mode": (
@@ -60,12 +60,28 @@ class InputFriction(Input):
                 "help": "Constant linear coupling amplitude used when variable_friction=False.",
             },
         ),
-        "sigma_key": (
+        "coupling_jacobian_key": (
             InputValue,
             {
                 "dtype": str,
-                "default": "sigma",
-                "help": "Force-extras key for variable friction payload. Expected shape is (nbeads, nbath, 3*natoms).",
+                "default": "friction_coupling_jacobian",
+                "help": "Force-extras key for dF_channel/dQ with shape (nbeads, nchannels, nactive_dof).",
+            },
+        ),
+        "gamma_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "friction_gamma",
+                "help": "Force-extras key for canonical Gamma with shape (nbeads, nactive_dof, nactive_dof).",
+            },
+        ),
+        "friction_meta_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "friction_meta",
+                "help": "Force-extras key for canonical schema, active DOFs, channel labels, and units.",
             },
         ),
         "coupling_key": (
@@ -81,15 +97,23 @@ class InputFriction(Input):
             {
                 "dtype": str,
                 "default": "driver",
-                "help": "How to obtain variable-friction coupling values. 'driver' reads coupling_key from extras; 'centroid_endpoint_trapezoid' computes bead-centroid endpoint coupling from bead Sigma and centroid Sigma.",
+                "help": "How to obtain variable-friction coupling values. 'driver' reads coupling_key; 'centroid_endpoint_trapezoid' uses canonical bead and centroid coupling Jacobians.",
             },
         ),
-        "centroid_sigma_key": (
+        "centroid_coupling_jacobian_key": (
             InputValue,
             {
                 "dtype": str,
-                "default": "centroid_sigma",
-                "help": "Force-extras key for the centroid Sigma payload used by coupling_mode='centroid_endpoint_trapezoid'.",
+                "default": "centroid_friction_coupling_jacobian",
+                "help": "Force-extras key for the centroid coupling Jacobian used by endpoint trapezoid coupling.",
+            },
+        ),
+        "centroid_friction_meta_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "centroid_friction_meta",
+                "help": "Force-extras key for centroid canonical friction metadata.",
             },
         ),
         "coupling_friction_atom": (
@@ -97,12 +121,12 @@ class InputFriction(Input):
             {
                 "dtype": int,
                 "default": -1,
-                "help": "Optional 0-based atom index used for centroid-relative coupling displacements. If negative, infer from sigma_meta.friction_atoms when exactly one atom is present.",
+                "help": "Optional 0-based atom index used for centroid-relative coupling displacements. If negative, infer from friction_meta.active_atoms when exactly one atom is present.",
             },
         ),
     }
 
-    default_help = "Friction operator configuration (MF + markovian/non-markovian bath). For variable friction, sigma must be provided in force extras."
+    default_help = "Friction operator configuration (MF + Markovian/non-Markovian bath) using a canonical driver coupling Jacobian and Gamma."
     default_label = "FRICTION"
 
     def store(self, friction: Friction) -> None:
@@ -120,10 +144,15 @@ class InputFriction(Input):
         self.debug_alpha_input.store(friction.debug_alpha_input)
         self.sigma_static.store(friction.sigma_static)
 
-        self.sigma_key.store(friction.sigma_key)
+        self.coupling_jacobian_key.store(friction.coupling_jacobian_key)
+        self.gamma_key.store(friction.gamma_key)
+        self.friction_meta_key.store(friction.friction_meta_key)
         self.coupling_key.store(friction.coupling_key)
         self.coupling_mode.store(friction.coupling_mode)
-        self.centroid_sigma_key.store(friction.centroid_sigma_key)
+        self.centroid_coupling_jacobian_key.store(
+            friction.centroid_coupling_jacobian_key
+        )
+        self.centroid_friction_meta_key.store(friction.centroid_friction_meta_key)
         self.coupling_friction_atom.store(friction.coupling_friction_atom)
 
     def fetch(self) -> Friction:
@@ -137,9 +166,12 @@ class InputFriction(Input):
             debug_alpha_input=self.debug_alpha_input.fetch(),
             sigma_static=self.sigma_static.fetch(),
 
-            sigma_key=self.sigma_key.fetch(),
+            coupling_jacobian_key=self.coupling_jacobian_key.fetch(),
+            gamma_key=self.gamma_key.fetch(),
+            friction_meta_key=self.friction_meta_key.fetch(),
             coupling_key=self.coupling_key.fetch(),
             coupling_mode=self.coupling_mode.fetch(),
-            centroid_sigma_key=self.centroid_sigma_key.fetch(),
+            centroid_coupling_jacobian_key=self.centroid_coupling_jacobian_key.fetch(),
+            centroid_friction_meta_key=self.centroid_friction_meta_key.fetch(),
             coupling_friction_atom=self.coupling_friction_atom.fetch(),
         )

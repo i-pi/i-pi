@@ -139,6 +139,17 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         extras = json.dumps(
             {
+                "friction_coupling_jacobian": diffusion_coefficient.tolist(),
+                "friction_gamma": friction_tensor.tolist(),
+                "friction_meta": {
+                    "schema": "ipi_friction_v1",
+                    "active_atoms": list(range(pos.shape[0])),
+                    "channel_labels": [
+                        f"atom_{iatom}_x" for iatom in range(pos.shape[0])
+                    ],
+                    "jacobian_units": "ipi_internal_mass_scaled",
+                    "gamma_units": "ipi_internal_mass_scaled",
+                },
                 "friction": friction_tensor.tolist(),
                 "diffusion_coefficient": diffusion_coefficient.tolist(),
                 "friction_coupling": friction_coupling.tolist(),

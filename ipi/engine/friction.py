@@ -4,27 +4,26 @@
 This module separates electronic friction into two layers.
 
 `Friction`
-    High-level operator owned by the `nve-f` / `nvt-f` integrators. It parses
-    force-driver extras, constructs `sigma` and `gamma`, manages metadata such
-    as `sigma_meta`, and evaluates the optional friction mean-field (MF)
+    High-level operator owned by the `nve-f` / `nvt-f` integrators. It reads a
+    canonical, channel-resolved coupling Jacobian and friction matrix from
+    force-driver extras and evaluates the optional friction mean-field (MF)
     contribution (`friction_coupling_nm`, `force_mf`, `energy_mf`).
 
 `FrictionGLE`
     Bath propagator used by `Friction.step(pdt)`. In the current implementation
     it covers the Markovian electronic-friction bath for both:
       - static friction (`sigma_static`)
-      - variable friction (`sigma(q)` from driver extras)
+      - variable friction (canonical driver Jacobian and Gamma)
     and Non-Markovian for both static and variable friction.
 
 Current Markovian/Non-Markovian behavior:
     1. `Friction.step(pdt)` applies the MF momentum kick, if enabled.
     2. `FrictionGLE.step(pdt)` applies the dissipative/stochastic bath update.
 
-For variable friction, drivers provide `sigma`; i-PI converts it to
-`gamma = sigma^T sigma` and uses an exact frozen-geometry OU update over the
-current substep. When the driver only returns friction-active atoms,
-`sigma_meta["friction_atoms"]` is used to embed the reduced matrix into the
-full Cartesian system (n_atoms).
+For variable friction, drivers provide arrays in a model-independent wire
+format. When only friction-active coordinates are returned, `active_dofs` or
+`active_atoms` metadata is used to embed reduced arrays into the full Cartesian
+system. Representation-specific packing belongs in the driver.
 """
 
 # TODO: Decide on representation (normal mode etc) for all branches
@@ -189,12 +188,12 @@ class FrictionGLE(FrictionBath):
             3 * int(self.friction.beads.natoms),
         )
 
-    def _get_non_markovian_sigma(self) -> np.ndarray:
+    def _get_non_markovian_jacobian(self) -> np.ndarray:
         coupling_jacobian = np.asarray(self.friction._get_coupling_jacobian(), dtype=float)
         if coupling_jacobian.ndim != 3:
             raise ValueError(
-                "Variable non-markovian friction requires sigma with shape "
-                "(nbeads, nbath, ndof)."
+                "Variable non-markovian friction requires coupling_jacobian "
+                "with shape (nbeads, nchannels, ndof)."
             )
         expected_shape = (
             int(self.friction.beads.nbeads),
@@ -210,7 +209,7 @@ class FrictionGLE(FrictionBath):
         if self.s.shape != expected_shape:
             raise ValueError(
                 "Non-markovian auxiliary state shape is inconsistent with the "
-                f"current sigma payload. Expected {expected_shape}, got {self.s.shape}."
+                f"current Jacobian payload. Expected {expected_shape}, got {self.s.shape}."
             )
         return coupling_jacobian
 
@@ -223,9 +222,9 @@ class FrictionGLE(FrictionBath):
             self._nm_transform_matrix = np.asarray(nmtransform.mk_nm_matrix(nbeads), dtype=float)
         return self._nm_transform_matrix
 
-    def _get_non_markovian_nmdsigma(self) -> np.ndarray:
-        """Returns dF_nm[n'] / dQ_nm[n] from bead-space sigma=dF/dq."""
-        coupling_jacobian = self._get_non_markovian_sigma()
+    def _get_non_markovian_nm_jacobian(self) -> np.ndarray:
+        """Return dF_nm[n']/dQ_nm[n] from the bead-space Jacobian."""
+        coupling_jacobian = self._get_non_markovian_jacobian()
         cmat = self._get_nm_transform_matrix()
         return np.einsum("rb,nb,bci->rnci", cmat, cmat, coupling_jacobian)
 
@@ -267,8 +266,8 @@ class FrictionGLE(FrictionBath):
 
     def _step_markovian_variable(self, pdt: float) -> None:
         friction = self.friction
-        sigma = friction._get_sigma()
-        nbeads = sigma.shape[0]
+        coupling_jacobian = friction._get_coupling_jacobian()
+        nbeads = coupling_jacobian.shape[0]
         gamma = np.asarray(friction.gamma, dtype=float)
         p = friction.beads.p
         m = friction.beads.m3
@@ -323,7 +322,7 @@ class FrictionGLE(FrictionBath):
         if pdt <= 0.0 or self.ns == 0:
             return
         if self.s is None:
-            self._get_non_markovian_sigma()
+            self._get_non_markovian_jacobian()
         self.T_aux, self.S_aux = _compute_aux_ou_matrices(
             self.A_aux, pdt, self.friction._kbt_rp()
         )
@@ -349,9 +348,9 @@ class FrictionGLE(FrictionBath):
             return
         p = self.friction.nm.pnm.copy()
         if self.friction.variable_friction:
-            nmdsigma = self._get_non_markovian_nmdsigma()
+            nm_jacobian = self._get_non_markovian_nm_jacobian()
             theta_s = np.einsum("a,rac->rc", self.theta, self.s)
-            p_new = p - pdt * np.einsum("rc,rnci->ni", theta_s, nmdsigma)
+            p_new = p - pdt * np.einsum("rc,rnci->ni", theta_s, nm_jacobian)
         else:
             m = self.friction.nm.dynm3.copy()
             sm = np.sqrt(m)
@@ -377,8 +376,8 @@ class FrictionGLE(FrictionBath):
         p = self.friction.nm.pnm.copy()
         m = self.friction.nm.dynm3.copy()
         if self.friction.variable_friction:
-            nmdsigma = self._get_non_markovian_nmdsigma()
-            drive = np.einsum("rnci,ni->rc", nmdsigma, p / m)
+            nm_jacobian = self._get_non_markovian_nm_jacobian()
+            drive = np.einsum("rnci,ni->rc", nm_jacobian, p / m)
             self.s[:] += pdt * self.theta[None, :, None] * drive[:, None, :]
         else:
             sigma = float(self.friction.sigma_static)
@@ -404,8 +403,10 @@ class Friction:
 
     sigma_static: float
 
-    # Extras parsing
-    sigma_key: str
+    # Canonical force-driver extras
+    coupling_jacobian_key: str
+    gamma_key: str
+    friction_meta_key: str
 
     # -------------------------
     # Runtime bound
@@ -417,7 +418,7 @@ class Friction:
 
     def __init__(
         self,
-        variable_friction: bool = True,   #Variable_friction true means sigma changes with position. Otherwise use static_sigma
+        variable_friction: bool = True,
         bath_mode: str = "non-markovian", # can be 1. none (no dissipative, no random force),  
         # todo:Make a boolean, only_conservative - true or false. 
 
@@ -441,10 +442,13 @@ class Friction:
         sigma_static: float = 1.0,
         # if vartiable_friction is false.. then gamma = s * s   (s is a float)
 
-        sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored.
+        coupling_jacobian_key: str = "friction_coupling_jacobian",
+        gamma_key: str = "friction_gamma",
+        friction_meta_key: str = "friction_meta",
         coupling_key: str = "friction_coupling",
         coupling_mode: str = "driver",
-        centroid_sigma_key: str = "centroid_sigma",
+        centroid_coupling_jacobian_key: str = "centroid_friction_coupling_jacobian",
+        centroid_friction_meta_key: str = "centroid_friction_meta",
         coupling_friction_atom: int = -1,
     ):
         """Initialises the friction object.
@@ -473,16 +477,18 @@ class Friction:
         self.Ap = np.asanyarray(Ap, dtype=float).copy()
         self.debug_alpha_input = np.asanyarray(debug_alpha_input, dtype=float).copy()
 
-        self._sigma = depend_value(name="sigma", func=self._get_sigma)
+        self._coupling_jacobian = depend_value(
+            name="coupling_jacobian", func=self._get_coupling_jacobian
+        )
         self._gamma = depend_value(
-            name="gamma", func=self._get_gamma, dependencies=[self._sigma]
+            name="gamma", func=self._get_gamma, dependencies=[self._coupling_jacobian]
         )
     
     #     # Friction coupling: F(q), such that Σ{i,α} = ∂F(q) / ∂q{i,α}
         self._friction_coupling_nm = depend_value(
             name="friction_coupling_nm",
             func=self.get_friction_coupling_nm,
-            dependencies=[self._sigma],
+            dependencies=[self._coupling_jacobian],
         )
         # Frictional mean-field force
         self._force_mf_nm = depend_value(
@@ -501,18 +507,21 @@ class Friction:
 
         self.sigma_static = float(sigma_static)
 
-        self.sigma_key = str(sigma_key)
+        self.coupling_jacobian_key = str(coupling_jacobian_key)
+        self.gamma_key = str(gamma_key)
+        self.friction_meta_key = str(friction_meta_key)
         self.coupling_key = str(coupling_key)
         self.coupling_mode = str(coupling_mode)
-        self.centroid_sigma_key = str(centroid_sigma_key)
-        self.centroid_sigma_meta_key = self.centroid_sigma_key + "_meta"
+        self.centroid_coupling_jacobian_key = str(centroid_coupling_jacobian_key)
+        self.centroid_friction_meta_key = str(centroid_friction_meta_key)
         self.coupling_friction_atom = int(coupling_friction_atom)
-        self.sigma_meta_key = "sigma_meta"
-        self._sigma_meta = {}
-        self._centroid_sigma_meta = {}
-        self._sigma_blocks = None
+        self._friction_meta = {}
+        self._centroid_friction_meta = {}
         self._friction_atoms_idx: np.ndarray | None = None
         self._friction_dof_idx: np.ndarray | None = None
+        self._channel_labels: list[str] = []
+        self._friction_contract_signature = None
+        self._gamma_reconstruction_error = 0.0
         self._nm_transform_matrix = None
         self.bath: FrictionBath | None = None
 
@@ -569,7 +578,8 @@ class Friction:
             f"  debug_mf_mode       = {self.debug_mf_mode}\n"
             f"  sigma_static     = {self.sigma_static}\n"
             f"  Ap shape           = {self.Ap.shape}\n"
-            f"  sigma_key           = '{self.sigma_key}'\n",
+            f"  coupling_jacobian_key = '{self.coupling_jacobian_key}'\n"
+            f"  gamma_key             = '{self.gamma_key}'\n",
             verbosity.low,
         )
 
@@ -578,7 +588,7 @@ class Friction:
             self.bath.bind(self, motion)
 
         # Dependencies
-        self._sigma.add_dependency(self.forces._extras)
+        self._coupling_jacobian.add_dependency(self.forces._extras)
         self._friction_coupling_nm.add_dependency(self.beads._q)
         self._energy_mf.add_dependency(self._friction_coupling_nm)
         self._energy_mf._func = self.get_energy_mf
@@ -714,422 +724,190 @@ class Friction:
         return alpha
 
     # ==========================================================================
-    # Parse Sigma
+    # Canonical driver payload
     # ==========================================================================
 
-    def _set_friction_atoms_from_meta(self, sigma_meta: dict, natoms: int) -> None:
-        atoms = sigma_meta.get("friction_atoms")
-        if atoms is None:
-            self._friction_atoms_idx = None
-            self._friction_dof_idx = None
-            return
-
-        atoms = np.asarray(atoms, dtype=int).flatten()
-        if atoms.size == 0:
-            self._friction_atoms_idx = None
-            self._friction_dof_idx = None
-            return
-        if np.any(atoms < 0) or np.any(atoms >= natoms):
-            raise ValueError(
-                f"{self.sigma_meta_key}.friction_atoms must be 0-based indices in [0, {natoms - 1}], got {atoms}."
-            )
-        if np.unique(atoms).size != atoms.size:
-            raise ValueError(
-                f"{self.sigma_meta_key}.friction_atoms contains duplicate indices: {atoms}"
-            )
-
-        self._friction_atoms_idx = atoms
-        self._friction_dof_idx = np.concatenate(
-            [np.arange(3 * a, 3 * a + 3, dtype=int) for a in atoms]
-        )
-
-    def _embed_if_needed(self, sigma3d: np.ndarray, ndof: int) -> np.ndarray:
-        ndof_reduced = int(sigma3d.shape[2])
-        if ndof_reduced == ndof:
-            return sigma3d
-        if self._friction_dof_idx is None:
-            raise ValueError(
-                f"{self.sigma_key} shape {sigma3d.shape} incompatible with ndof={ndof}, "
-                f"and no {self.sigma_meta_key}.friction_atoms metadata was provided."
-            )
-        if ndof_reduced != self._friction_dof_idx.size:
-            raise ValueError(
-                f"Reduced {self.sigma_key} ndof={ndof_reduced} does not match "
-                f"3*len({self.sigma_meta_key}.friction_atoms)={self._friction_dof_idx.size}."
-            )
-        sigma_full = np.zeros((sigma3d.shape[0], sigma3d.shape[1], ndof), dtype=sigma3d.dtype)
-        sigma_full[:, :, self._friction_dof_idx] = sigma3d
-        return sigma_full
-
-    # AKA get_diffusion_coefficient
-    def _rep_mats_from_dict(self, dsig: dict, meta: dict | None = None) -> list[np.ndarray]:
-        """Extract deterministic dense Sigma blocks from a Julia/ACE JSON dict."""
-        mats = []
-        rep_order = None
-        if isinstance(meta, dict):
-            ro = meta.get("rep_order")
-            if isinstance(ro, (list, tuple)) and all(isinstance(k, str) for k in ro):
-                rep_order = list(ro)
-        if rep_order is None:
-            pref_keys = ("equ", "eqv", "inv", "cov")
-            extra_keys = sorted([k for k in dsig.keys() if k not in pref_keys], key=lambda x: str(x))
-            rep_order = list(pref_keys) + list(extra_keys)
-
-        for rep_key in rep_order:
-            rep_data = dsig.get(rep_key)
-            if rep_data is None:
-                continue
-            if isinstance(rep_data, dict):
-                for k in sorted(rep_data.keys(), key=lambda x: str(x)):
-                    mats.append(np.asarray(rep_data[k], dtype=float))
-            else:
-                mats.append(np.asarray(rep_data, dtype=float))
-
-        if len(mats) == 0:
-            raise ValueError(
-                f"{self.sigma_key} dict payload does not contain recognised representation entries."
-            )
-
-        ndof0 = None
-        for m in mats:
-            if m.ndim != 2:
-                raise ValueError(
-                    f"Each matrix in Sigma dict payload must be 2D. Got {m.shape}."
-                )
-            if ndof0 is None:
-                ndof0 = int(m.shape[1])
-            elif int(m.shape[1]) != ndof0:
-                raise ValueError(
-                    f"Inconsistent ndof across Sigma dict payload: {[mm.shape for mm in mats]}"
-                )
-
-        return mats
-
-    def _get_sigma(self) -> np.ndarray:
-        """ 
-
-        Reads i-PI combined extras:
-            extras[key] is expected to be a 
-            each entry being the per-bead payload (a dict).
-
-        Returns:
-            sigma : (shape)
-
-        """
-
-
-        if (not self.variable_friction):
-            return float(self.sigma_static)
-
-        nbeads = int(self.beads.nbeads)
-        ndof = 3 * int(self.beads.natoms)
-
-        sigma = self.forces.extras.get(self.sigma_key)
-        sigma_meta = self._get_sigma_meta()
-        self._sigma_meta = sigma_meta
-        self._sigma_blocks = None
-        self._set_friction_atoms_from_meta(sigma_meta, natoms=int(self.beads.natoms))
-
-        if sigma is None:
-            raise KeyError(
-                f"Did not find '{self.sigma_key}' among the force extras = {self.forces.extras}"
-            )
-
-        # Accept JSON-string payloads and decode before shape handling.
-        if isinstance(sigma, str):
+    @staticmethod
+    def _decode_json(value):
+        if isinstance(value, str):
             try:
-                sigma = json.loads(sigma)
+                return json.loads(value)
             except json.JSONDecodeError:
-                pass
+                return value
+        return value
 
-        # Handle nested ACE/Julia payload:
-        #   {"inv": {"1": M, ...}, "equ"/"eqv": {"1": M, ...}}
-        # or per-bead list/tuple of such dicts.
-        # IMPORTANT: independent representation blocks are concatenated along the
-        # bath dimension (rows), not summed. Summing would introduce cross terms
-        # in Sigma^T Sigma and distort Gamma.
-        if isinstance(sigma, dict):
-            if nbeads != 1:
-                raise ValueError(
-                    f"{self.sigma_key} received a single dict payload but nbeads={nbeads}. "
-                    f"Provide one dict per bead (list length must equal nbeads)."
-                )
-            mats = self._rep_mats_from_dict(sigma, sigma_meta)
-            sigma_eff = np.concatenate(mats, axis=0)
-            sigma = sigma_eff[np.newaxis, :, :].copy()
-            self._sigma_blocks = [mats]
-        elif isinstance(sigma, (list, tuple)) and len(sigma) > 0 and all(
-            isinstance(s, dict) for s in sigma
-        ):
-            if len(sigma) != nbeads:
-                raise ValueError(
-                    f"{self.sigma_key} list-of-dicts length {len(sigma)} incompatible with nbeads={nbeads}."
-                )
-            sigma_blocks = [self._rep_mats_from_dict(s, sigma_meta) for s in sigma]
-            sigma = np.asarray([np.concatenate(mats, axis=0) for mats in sigma_blocks], dtype=float)
-            self._sigma_blocks = sigma_blocks
-        else: # plain array like double well driver
-            info(str(sigma), verbosity.low)
-            sigma = np.asarray(sigma, dtype=float)
-
-        sigma_mode = str(sigma_meta.get("sigma_mode", "column")).lower()
-        if sigma.ndim != 3:
-            raise ValueError(f"{self.sigma_key} must have ndim=3 (nbeads, nbath, ndof). Got shape {sigma.shape}.")
-        if sigma.shape[0] != nbeads:
-            raise ValueError(
-                f"{self.sigma_key} shape {sigma.shape} incompatible with nbeads={nbeads}."
-            )
-        if sigma_mode in ("row", "pairwise"):
-            # Row/pairwise modes keep raw dense blocks in _sigma_blocks.
-            # These raw blocks are not necessarily shaped as (channel, dof);
-            # consumers that need CL channels must use _get_coupling_jacobian().
-            return sigma
-        sigma = self._embed_if_needed(sigma, ndof=ndof)
-
-        return sigma
-
-    def _get_sigma_meta(self) -> dict:
-        """Fetches optional sigma metadata dictionary from force extras."""
-        meta = self.forces.extras.get(self.sigma_meta_key)
+    def _get_consistent_meta(self, key: str, bead_resolved: bool) -> dict:
+        """Read metadata and require identical dictionaries across beads."""
+        meta = self.forces.extras.get(key)
         if meta is None:
-            return {}
-        # Extras can be bead-resolved lists/tuples.
+            raise KeyError(f"Missing required canonical friction metadata '{key}'.")
+        meta = self._decode_json(meta)
         if isinstance(meta, (list, tuple)):
             if len(meta) == 0:
-                return {}
-            nbeads = int(self.beads.nbeads)
-            if len(meta) == nbeads:
-                # Use bead-0 metadata; require consistency if multiple beads.
-                m0 = meta[0]
-                for mb in meta[1:]:
-                    if type(mb) != type(m0):
-                        raise ValueError(
-                            f"{self.sigma_meta_key} payload types differ across beads: "
-                            f"{[type(x) for x in meta]}"
-                        )
-                meta = m0
-            else:
-                # Non-bead list: try first item as a best-effort fallback.
-                meta = meta[0]
-        if isinstance(meta, str):
-            try:
-                meta = json.loads(meta)
-            except json.JSONDecodeError:
-                return {}
-        return meta if isinstance(meta, dict) else {}
-
-    def _get_centroid_sigma_meta(self) -> dict:
-        """Fetch optional metadata for centroid Sigma payloads."""
-        meta = self.forces.extras.get(self.centroid_sigma_meta_key)
-        if meta is None:
-            return {}
-        if isinstance(meta, (list, tuple)):
-            meta = meta[0] if len(meta) > 0 else {}
-        if isinstance(meta, str):
-            try:
-                meta = json.loads(meta)
-            except json.JSONDecodeError:
-                return {}
-        return meta if isinstance(meta, dict) else {}
-
-    def _get_centroid_sigma(self) -> np.ndarray:
-        """Return centroid Sigma as shape (1, nbath, ndof)."""
-        sigma_c = self.forces.extras.get(self.centroid_sigma_key)
-        if sigma_c is None:
-            raise KeyError(
-                f"coupling_mode='centroid_endpoint_trapezoid' requires "
-                f"'{self.centroid_sigma_key}' in force extras."
-            )
-        if isinstance(sigma_c, (list, tuple)):
-            if len(sigma_c) != 1:
+                raise ValueError(f"Canonical friction metadata '{key}' is empty.")
+            decoded = [self._decode_json(item) for item in meta]
+            if bead_resolved and len(decoded) != int(self.beads.nbeads):
                 raise ValueError(
-                    f"{self.centroid_sigma_key} must be a one-centroid payload; got length {len(sigma_c)}."
+                    f"'{key}' must contain one entry per bead; got {len(decoded)} "
+                    f"for {self.beads.nbeads} beads."
                 )
-            sigma_c = sigma_c[0]
-        if isinstance(sigma_c, str):
-            try:
-                sigma_c = json.loads(sigma_c)
-            except json.JSONDecodeError:
-                pass
-
-        meta_c = self._get_centroid_sigma_meta()
-        self._centroid_sigma_meta = meta_c
-        self._validate_centroid_sigma_meta(meta_c)
-
-        if isinstance(sigma_c, dict):
-            mats = self._rep_mats_from_dict(sigma_c, meta_c)
-            sigma_mode = str(meta_c.get("sigma_mode", self._sigma_meta.get("sigma_mode", "column"))).lower()
-            if sigma_mode == "row":
-                mats = [np.asarray(m, dtype=float).T for m in mats]
-            elif sigma_mode == "pairwise":
-                raise ValueError(
-                    "centroid_endpoint_trapezoid does not support pairwise Sigma packing."
-                )
-            sigma_c = np.concatenate(mats, axis=0)[np.newaxis, :, :].copy()
-        else:
-            sigma_c = np.asarray(sigma_c, dtype=float)
-            if sigma_c.ndim == 2:
-                sigma_c = sigma_c[np.newaxis, :, :]
-        if sigma_c.ndim != 3 or sigma_c.shape[0] != 1:
+            first = decoded[0]
+            if any(item != first for item in decoded[1:]):
+                raise ValueError(f"Canonical friction metadata '{key}' differs across beads.")
+            meta = first
+        if not isinstance(meta, dict):
+            raise ValueError(f"Canonical friction metadata '{key}' must be a dictionary.")
+        if meta.get("schema") != "ipi_friction_v1":
             raise ValueError(
-                f"{self.centroid_sigma_key} must have shape (1, nbath, ndof) or (nbath, ndof); got {sigma_c.shape}."
+                f"'{key}.schema' must be 'ipi_friction_v1', got {meta.get('schema')!r}."
             )
-        sigma_c = self._embed_if_needed(sigma_c, ndof=3 * int(self.beads.natoms))
-        if not np.all(np.isfinite(sigma_c)):
-            raise ValueError(f"{self.centroid_sigma_key} contains non-finite values.")
-        return sigma_c
+        return meta
+
+    def _configure_active_dofs(self, meta: dict) -> None:
+        natoms = int(self.beads.natoms)
+        ndof = 3 * natoms
+        if "active_dofs" in meta:
+            dofs = np.asarray(meta["active_dofs"], dtype=int).reshape(-1)
+            atoms = np.unique(dofs // 3)
+        elif "active_atoms" in meta:
+            atoms = np.asarray(meta["active_atoms"], dtype=int).reshape(-1)
+            dofs = np.concatenate(
+                [np.arange(3 * atom, 3 * atom + 3, dtype=int) for atom in atoms]
+            ) if atoms.size else np.zeros(0, dtype=int)
+        else:
+            raise ValueError(
+                f"'{self.friction_meta_key}' must define zero-based active_dofs or active_atoms."
+            )
+        if dofs.size == 0 or np.any(dofs < 0) or np.any(dofs >= ndof):
+            raise ValueError(f"Active Cartesian DOFs must be unique indices in [0, {ndof - 1}].")
+        if np.unique(dofs).size != dofs.size:
+            raise ValueError("Canonical friction metadata contains duplicate active DOFs.")
+        if np.any(atoms < 0) or np.any(atoms >= natoms):
+            raise ValueError(f"Active atoms must be zero-based indices in [0, {natoms - 1}].")
+        self._friction_dof_idx = dofs
+        self._friction_atoms_idx = atoms
+
+    def _embed_jacobian(self, reduced: np.ndarray) -> np.ndarray:
+        ndof = 3 * int(self.beads.natoms)
+        if reduced.shape[-1] == ndof:
+            return reduced
+        if self._friction_dof_idx is None or reduced.shape[-1] != len(self._friction_dof_idx):
+            raise ValueError(
+                f"Reduced coupling Jacobian shape {reduced.shape} is inconsistent with active DOFs."
+            )
+        full = np.zeros(reduced.shape[:-1] + (ndof,), dtype=float)
+        full[..., self._friction_dof_idx] = reduced
+        return full
+
+    def _embed_gamma(self, reduced: np.ndarray) -> np.ndarray:
+        ndof = 3 * int(self.beads.natoms)
+        if reduced.shape[-2:] == (ndof, ndof):
+            return reduced
+        nactive = 0 if self._friction_dof_idx is None else len(self._friction_dof_idx)
+        if reduced.shape[-2:] != (nactive, nactive):
+            raise ValueError(
+                f"Reduced Gamma shape {reduced.shape} is inconsistent with {nactive} active DOFs."
+            )
+        full = np.zeros(reduced.shape[:-2] + (ndof, ndof), dtype=float)
+        for bead in range(reduced.shape[0]):
+            full[bead][np.ix_(self._friction_dof_idx, self._friction_dof_idx)] = reduced[bead]
+        return full
 
     def _get_coupling_jacobian(self) -> np.ndarray:
-        """Return dF_c(Q_b)/dQ_i as (nbeads, nchannels, ndof).
-
-        Driver extras are named "sigma" for historical reasons. Physically,
-        the canonical array used by the CL bath, centroid coupling, and MF
-        force is the channel-resolved coupling Jacobian.
-        """
+        """Return dF_c(Q_b)/dQ_i as (nbeads, nchannels, full_ndof)."""
         if not self.variable_friction:
-            raise ValueError("coupling_jacobian is only defined for variable friction.")
-        _ = self.sigma
-        sigma_mode = str(self._sigma_meta.get("sigma_mode", "column")).lower()
-        if sigma_mode == "row":
-            if self._sigma_blocks is None:
-                raise ValueError(
-                    "row-mode coupling_jacobian requires dict Sigma block payloads."
-                )
-            coupling_jacobian = np.asarray(
-                [
-                    np.concatenate(
-                        [np.asarray(m, dtype=float).T for m in mats], axis=0
-                    )
-                    for mats in self._sigma_blocks
-                ],
-                dtype=float,
-            )
-            return self._embed_if_needed(
-                coupling_jacobian, ndof=3 * int(self.beads.natoms)
-            )
-        if sigma_mode == "pairwise":
+            return float(self.sigma_static)
+        meta = self._get_consistent_meta(self.friction_meta_key, bead_resolved=True)
+        self._configure_active_dofs(meta)
+        labels = meta.get("channel_labels")
+        if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels):
+            raise ValueError(f"'{self.friction_meta_key}.channel_labels' must be a list of strings.")
+        signature = (
+            tuple(int(dof) for dof in self._friction_dof_idx),
+            tuple(labels),
+            meta.get("jacobian_units"),
+            meta.get("gamma_units"),
+        )
+        if self._friction_contract_signature is None:
+            self._friction_contract_signature = signature
+        elif signature != self._friction_contract_signature:
             raise ValueError(
-                "pairwise Sigma packing cannot be interpreted as independent CL coupling channels."
+                "Canonical friction active DOFs, channel labels, or units changed "
+                "during the simulation."
             )
-        if sigma_mode != "column":
+        payload = self._decode_json(self.forces.extras.get(self.coupling_jacobian_key))
+        if payload is None:
+            raise KeyError(f"Missing canonical driver extra '{self.coupling_jacobian_key}'.")
+        jacobian = np.asarray(payload, dtype=float)
+        expected_prefix = (int(self.beads.nbeads), len(labels))
+        if jacobian.ndim != 3 or jacobian.shape[:2] != expected_prefix:
             raise ValueError(
-                f"Unsupported {self.sigma_meta_key}.sigma_mode='{sigma_mode}' for coupling_jacobian."
+                f"'{self.coupling_jacobian_key}' must have shape "
+                f"(nbeads, nchannels, nactive_dof); got {jacobian.shape}."
             )
-        return np.asarray(self.sigma, dtype=float)
+        if not np.all(np.isfinite(jacobian)):
+            raise ValueError(f"'{self.coupling_jacobian_key}' contains non-finite values.")
+        self._friction_meta = meta
+        self._channel_labels = list(labels)
+        return self._embed_jacobian(jacobian)
 
-    def _get_sigma_for_coupling(self) -> np.ndarray:
-        """Backward-compatible alias for the channel-resolved coupling Jacobian."""
-        return self._get_coupling_jacobian()
-
-    def _validate_centroid_sigma_meta(self, meta_c: dict) -> None:
-        """Validate centroid Sigma metadata against bead Sigma metadata when present."""
-        meta_b = self._sigma_meta if isinstance(self._sigma_meta, dict) else {}
-        for key in ("rep_order", "sigma_mode", "friction_atoms", "channel_labels"):
-            if key in meta_b and key in meta_c and meta_b[key] != meta_c[key]:
-                raise ValueError(
-                    f"Centroid Sigma metadata mismatch for '{key}': bead={meta_b[key]} centroid={meta_c[key]}"
-                )
+    def _get_centroid_coupling_jacobian(self) -> np.ndarray:
+        payload = self._decode_json(
+            self.forces.extras.get(self.centroid_coupling_jacobian_key)
+        )
+        if payload is None:
+            raise KeyError(
+                f"coupling_mode='centroid_endpoint_trapezoid' requires "
+                f"'{self.centroid_coupling_jacobian_key}'."
+            )
+        meta = self._get_consistent_meta(
+            self.centroid_friction_meta_key, bead_resolved=False
+        )
+        for key in ("active_atoms", "active_dofs", "channel_labels"):
+            if meta.get(key) != self._friction_meta.get(key):
+                raise ValueError(f"Centroid friction metadata mismatch for '{key}'.")
+        jacobian = np.asarray(payload, dtype=float)
+        if jacobian.ndim == 3 and jacobian.shape[0] == 1:
+            jacobian = jacobian[0]
+        if jacobian.ndim != 2 or jacobian.shape[0] != len(self._channel_labels):
+            raise ValueError(
+                f"'{self.centroid_coupling_jacobian_key}' must have shape "
+                f"(nchannels, nactive_dof); got {jacobian.shape}."
+            )
+        if not np.all(np.isfinite(jacobian)):
+            raise ValueError(
+                f"'{self.centroid_coupling_jacobian_key}' contains non-finite values."
+            )
+        self._centroid_friction_meta = meta
+        return self._embed_jacobian(jacobian[np.newaxis, ...])
 
     def _get_gamma(self):
-        """Returns Gamma from Sigma.
-
-        - static friction: gamma = sigma_static^2 (scalar)
-        - variable friction: Gamma[b] = Sigma[b]^T Sigma[b] (ndof x ndof)
-        """
-        sigma = self.sigma
-        if np.isscalar(sigma):
-            s = float(sigma)
-            return s * s
-
-        sarr = np.asarray(sigma, dtype=float)
-        if sarr.ndim != 3:
+        """Return driver-supplied Gamma after validating its canonical factor."""
+        if not self.variable_friction:
+            return float(self.sigma_static) ** 2
+        jacobian = np.asarray(self.coupling_jacobian, dtype=float)
+        payload = self._decode_json(self.forces.extras.get(self.gamma_key))
+        if payload is None:
+            raise KeyError(f"Missing canonical driver extra '{self.gamma_key}'.")
+        gamma = np.asarray(payload, dtype=float)
+        if gamma.ndim != 3 or gamma.shape[0] != int(self.beads.nbeads):
             raise ValueError(
-                f"friction.sigma has unsupported ndim={sarr.ndim}, expected scalar or 3."
+                f"'{self.gamma_key}' must have shape (nbeads, nactive_dof, nactive_dof); "
+                f"got {gamma.shape}."
             )
-        # Metadata-controlled sigma mode:
-        # - "column" (default): Gamma = Sigma^T Sigma from packed rows/channels.
-        # - "row": Gamma = sum_k (M_k M_k^T) using per-channel blocks M_k.
-        # - "pairwise": ACE PWC-style block square on 3x3 atom blocks.
-        sigma_mode = str(self._sigma_meta.get("sigma_mode", "column")).lower()
-
-        if sigma_mode in ("row", "pairwise"):
-            if self._sigma_blocks is None:
-                raise ValueError(
-                    f"{self.sigma_meta_key}.sigma_mode='{sigma_mode}' requires sigma payload with dict blocks."
-                )
-            nbeads = sarr.shape[0]
-            ndof = 3 * int(self.beads.natoms)
-            gamma = np.zeros((nbeads, ndof, ndof), dtype=float)
-            for b, mats in enumerate(self._sigma_blocks):
-                for m in mats:
-                    mm = np.asarray(m, dtype=float)
-
-                    def _square_pairwise_block(M: np.ndarray) -> np.ndarray:
-                        """ACE PWC-style square on dense 3x3 atom blocks."""
-                        if M.ndim != 2 or M.shape[0] != M.shape[1] or (M.shape[0] % 3) != 0:
-                            raise ValueError(
-                                f"{self.sigma_meta_key}.sigma_mode='pairwise' requires square 3N x 3N blocks. "
-                                f"Got shape {M.shape}."
-                            )
-                        nat = M.shape[0] // 3
-                        G = np.zeros_like(M)
-                        for i in range(nat):
-                            si = slice(3 * i, 3 * i + 3)
-                            for j in range(i, nat):
-                                sj = slice(3 * j, 3 * j + 3)
-                                sij = M[si, sj]
-                                sji = M[sj, si]
-                                G[si, sj] += sij @ sji.T
-                                G[sj, si] += sji @ sij.T
-                                G[si, si] += sij @ sij.T
-                                G[sj, sj] += sji @ sji.T
-                        return G
-
-                    if sigma_mode == "row":
-                        if mm.ndim != 2:
-                            raise ValueError(
-                                f"{self.sigma_meta_key}.sigma_mode='row' requires 2D blocks. Got {mm.shape}."
-                            )
-                        block_gamma = mm @ mm.T
-                    else:
-                        if mm.shape[0] != mm.shape[1]:
-                            raise ValueError(
-                                f"{self.sigma_meta_key}.sigma_mode='pairwise' requires square blocks. Got {mm.shape}."
-                            )
-                        block_gamma = _square_pairwise_block(mm)
-
-                    # Full-dof block: use directly.
-                    if block_gamma.shape == (ndof, ndof):
-                        gamma[b] += block_gamma
-                        continue
-
-                    if self._friction_dof_idx is not None:
-                        nred = int(len(self._friction_dof_idx))
-                        if block_gamma.shape == (nred, nred):
-                            gamma[b][np.ix_(self._friction_dof_idx, self._friction_dof_idx)] += block_gamma
-                            continue
-
-                    raise ValueError(
-                        f"{self.sigma_meta_key}.sigma_mode='{sigma_mode}' got unsupported block shape {mm.shape} "
-                        f"which squares to {block_gamma.shape}. "
-                        f"Expected ({ndof},{ndof})"
-                        + (
-                            ""
-                            if self._friction_dof_idx is None
-                            else f" or ({len(self._friction_dof_idx)},{len(self._friction_dof_idx)})"
-                        )
-                        + "."
-                    )
-            return gamma
-
-        if sigma_mode != "column":
+        if not np.all(np.isfinite(gamma)):
+            raise ValueError(f"'{self.gamma_key}' contains non-finite values.")
+        gamma = self._embed_gamma(gamma)
+        reconstructed = np.einsum("bci,bcj->bij", jacobian, jacobian)
+        diff = np.linalg.norm(gamma - reconstructed, axis=(1, 2))
+        scale = np.maximum(np.linalg.norm(gamma, axis=(1, 2)), 1.0e-30)
+        self._gamma_reconstruction_error = float(np.max(diff / scale))
+        if not np.allclose(gamma, reconstructed, rtol=1.0e-8, atol=1.0e-12):
             raise ValueError(
-                f"Unsupported {self.sigma_meta_key}.sigma_mode='{sigma_mode}'. "
-                "Supported values are 'column', 'row', 'pairwise'."
+                f"Driver Gamma is inconsistent with coupling Jacobian J^T J; "
+                f"maximum relative Frobenius error={self._gamma_reconstruction_error:.3e}."
             )
-
-        # (nbeads, nbath, ndof) -> (nbeads, ndof, ndof)
-        return np.einsum("bai,baj->bij", sarr, sarr)
+        return gamma
     
 
     # ==========================================================================
@@ -1184,22 +962,22 @@ class Friction:
         if self._friction_atoms_idx is None or self._friction_atoms_idx.size != 1:
             raise ValueError(
                 "coupling_mode='centroid_endpoint_trapezoid' requires exactly one friction atom "
-                "in sigma_meta.friction_atoms, or an explicit coupling_friction_atom."
+                "in friction_meta.active_atoms, or an explicit coupling_friction_atom."
             )
         return int(self._friction_atoms_idx[0])
 
     def _get_centroid_endpoint_trapezoid_coupling(self) -> np.ndarray:
-        """Compute 0.5*(Sigma(Qc)+Sigma(Qk))*MIC(Qk-Qc) for each bead/channel."""
-        _ = self.sigma
-        sigma_b = np.asarray(self._get_coupling_jacobian(), dtype=float)
-        sigma_c = np.asarray(self._get_centroid_sigma(), dtype=float)
-        if sigma_b.ndim != 3:
+        """Compute the endpoint-trapezoid coupling for each bead and channel."""
+        jacobian_b = np.asarray(self.coupling_jacobian, dtype=float)
+        jacobian_c = np.asarray(self._get_centroid_coupling_jacobian(), dtype=float)
+        if jacobian_b.ndim != 3:
             raise ValueError(
-                f"centroid_endpoint_trapezoid requires bead Sigma with ndim=3; got {sigma_b.shape}."
+                "centroid_endpoint_trapezoid requires a channel-resolved coupling Jacobian."
             )
-        if sigma_c.shape[1] != sigma_b.shape[1] or sigma_c.shape[2] != sigma_b.shape[2]:
+        if jacobian_c.shape[1:] != jacobian_b.shape[1:]:
             raise ValueError(
-                f"Centroid Sigma shape {sigma_c.shape} incompatible with bead Sigma shape {sigma_b.shape}."
+                f"Centroid Jacobian shape {jacobian_c.shape} incompatible with "
+                f"bead Jacobian shape {jacobian_b.shape}."
             )
 
         atom = self._infer_coupling_atom()
@@ -1210,14 +988,16 @@ class Friction:
             self.forces.cell.array_pbc(dq_flat)
             dq = dq_flat.reshape((-1, 3))
 
-        sigma_h = sigma_b[:, :, dof]
-        sigma_ch = sigma_c[0, :, dof]
-        coupling = 0.5 * np.einsum("bai,bi->ba", sigma_h + sigma_ch[np.newaxis, :, :], dq)
+        jacobian_h = jacobian_b[:, :, dof]
+        jacobian_ch = jacobian_c[0, :, dof]
+        coupling = 0.5 * np.einsum(
+            "bci,bi->bc", jacobian_h + jacobian_ch[np.newaxis, :, :], dq
+        )
         if not np.all(np.isfinite(coupling)):
             raise ValueError("centroid_endpoint_trapezoid coupling contains non-finite values.")
         return coupling
 
-    def _get_nmdsigma(self) -> np.ndarray:
+    def _get_nm_coupling_jacobian(self) -> np.ndarray:
         coupling_jacobian = np.asarray(self._get_coupling_jacobian(), dtype=float)
         cmat = self._get_nm_transform_matrix()
         return np.einsum("rb,nb,bci->rnci", cmat, cmat, coupling_jacobian)
@@ -1233,7 +1013,7 @@ class Friction:
             # is of the form F(q) = SUM[ c{i,α} q{i,α}, {{i,0,n_atom-1}, {α,0,2}} ] where α indexes Cartesian components
             # The diffusion coefficients for bead index l returned by the driver are expected to be packed as
             # Σ{i,α} = ∂F(q) / ∂q{i,α} = diffusion_coeff[l, 3*i+α].
-            return np.sum(self.sigma * self.nm.qnm, axis=-1)
+            return np.sum(float(self.sigma_static) * self.nm.qnm, axis=-1)
 
     def get_energy_mf(self):
         """Compute the frictional potential of mean field, Eq. (S19) of https://doi.org/10.1103/PhysRevLett.134.226201"""
@@ -1241,17 +1021,11 @@ class Friction:
         if self.debug_mf_mode == "off":
             return 0.0
 
-        # debug
         coupling_nm = np.asarray(self.friction_coupling_nm, dtype=float)
         if coupling_nm.ndim == 1:
             weighted_coupling2 = self.alpha * coupling_nm**2
         else:
             weighted_coupling2 = self.alpha[:, np.newaxis] * coupling_nm**2
-        info("alpha "+str(self.alpha), verbosity.low)
-        info("coupling "+str(coupling_nm**2))
-        info("EMF "+str(np.sum(weighted_coupling2)), verbosity.low) 
-
-
         return np.sum(weighted_coupling2) / 2
         
     def get_force_mf_nm(self):
@@ -1261,10 +1035,12 @@ class Friction:
                 "r,rc,rnci->ni",
                 self.alpha,
                 np.asarray(self.friction_coupling_nm, dtype=float),
-                self._get_nmdsigma(),
+                self._get_nm_coupling_jacobian(),
             )
 
-        return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
+        return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * float(
+            self.sigma_static
+        )
 
     def get_force_mf(self):
         """Negative derivative of the frictional potential of mean field with respect to bead positions"""
@@ -1292,7 +1068,18 @@ class Friction:
 
 
 
-dproperties(Friction, ["sigma", "gamma", "friction_coupling_nm", "energy_mf", "ediss", "force_mf_nm", "force_mf"])
+dproperties(
+    Friction,
+    [
+        "coupling_jacobian",
+        "gamma",
+        "friction_coupling_nm",
+        "energy_mf",
+        "ediss",
+        "force_mf_nm",
+        "force_mf",
+    ],
+)
 
 
 

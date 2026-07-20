@@ -397,7 +397,7 @@ class TrajectoryOutput(BaseOutput):
             "forces_spring",
             "Eforces",
             "extras",
-            "friction_sigma_matrix",
+            "friction_coupling_jacobian",
             "friction_gamma_matrix",
             # "extras_component_raw", write out a single file as we don't know how to do contraction here
             "extras_bias",
@@ -616,7 +616,7 @@ class TrajectoryOutput(BaseOutput):
                 stream.flush()
                 os.fsync(stream)
             return
-        elif key in ["friction_sigma_matrix", "friction_gamma_matrix"]:
+        elif key in ["friction_coupling_jacobian", "friction_gamma_matrix"]:
             stream.write(
                 " #%s# Step:  %10d  Bead:  %5d  \n"
                 % (key.upper(), self.system.simul.step + 1, b)
