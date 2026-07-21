@@ -153,14 +153,69 @@ def test_eco_dynamics(tmp_path, monkeypatch, propagator):
 
 def test_guard_bosons(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    with pytest.raises(ValueError, match="bosons or open paths"):
+    with pytest.raises(ValueError, match="bosons"):
         InteractiveSimulation(eco_xml(nm_extra="<bosons id='index'> [0] </bosons>"))
 
 
-def test_guard_open_paths(tmp_path, monkeypatch):
+@pytest.fixture
+def eco_open_sim(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    with pytest.raises(ValueError, match="bosons or open paths"):
-        InteractiveSimulation(eco_xml(nm_extra="<open_paths> [0] </open_paths>"))
+    return InteractiveSimulation(eco_xml(nm_extra="<open_paths> [0] </open_paths>"))
+
+
+def test_eco_open_omegak(eco_open_sim):
+    """Checks that the open-path frequencies of an open+eco simulation are
+    the economised ones, and the closed-path ones are unaffected."""
+
+    nm = eco_open_sim.syslist[0].nm
+    xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
+    np.testing.assert_allclose(
+        dstrip(nm.o_omegak),
+        nm.omegan * nmtransform.eco_o_eva(nm.nbeads, xmax),
+        rtol=1e-10,
+    )
+    np.testing.assert_allclose(
+        dstrip(nm.omegak),
+        nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax),
+        rtol=1e-10,
+    )
+    # open and closed eco spectra must differ
+    assert not np.allclose(dstrip(nm.o_omegak), dstrip(nm.omegak))
+    # masses stay physical
+    np.testing.assert_allclose(dstrip(nm.o_nm_factor), np.ones(NBEADS))
+
+
+def test_eco_open_spring_and_kinetic_td(eco_open_sim):
+    """Checks the spring energy of an open+eco system against an explicit
+    normal-mode sum (open springs for the open atom, closed for the other),
+    and the consistency of the primitive kinetic energy estimator with it."""
+
+    sys = eco_open_sim.syslist[0]
+    nm = sys.nm
+    qnm = dstrip(nm.qnm)
+    m3 = dstrip(sys.beads.m3)
+    wk2 = dstrip(nm.omegak) ** 2
+    o_wk2 = dstrip(nm.o_omegak) ** 2
+    vspring = 0.5 * np.sum(o_wk2[:, np.newaxis] * m3[:, 0:3] * qnm[:, 0:3] ** 2)
+    vspring += 0.5 * np.sum(wk2[:, np.newaxis] * m3[:, 3:6] * qnm[:, 3:6] ** 2)
+    np.testing.assert_allclose(dstrip(nm.vspring), vspring, rtol=1e-12)
+
+    ktd = sys.properties["kinetic_td"][0]
+    kt = Constants.kb * sys.ensemble.temp
+    np.testing.assert_allclose(
+        ktd, 1.5 * NATOMS * NBEADS * kt - vspring / NBEADS, rtol=1e-10
+    )
+
+
+def test_eco_open_dynamics(tmp_path, monkeypatch):
+    """Runs a few steps of open+eco PIMD and checks energy conservation."""
+
+    monkeypatch.chdir(tmp_path)
+    sim = InteractiveSimulation(eco_xml(nm_extra="<open_paths> [0] </open_paths>"))
+    e0 = sim.properties("conserved")
+    sim.run(4, write_outputs=False)
+    assert np.isfinite(sim.properties("conserved"))
+    assert abs(sim.properties("conserved") - e0) < 1e-2 * abs(e0)
 
 
 def test_guard_nm_freqs(tmp_path, monkeypatch):
@@ -203,6 +258,7 @@ def test_guard_instanton(tmp_path, monkeypatch):
         "chin_weight",
         "ti_weight",
         "kinetic_prsc",
+        "displacedpath(ux=0.1)",
     ],
 )
 def test_guard_estimators(eco_sim, prop):

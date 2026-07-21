@@ -1496,13 +1496,32 @@ class Properties:
                 continue
 
             if i in self.nm.open_paths:
-                # open-path atoms are not described by the ring-polymer normal modes;
-                # uses the cyclic bead-difference spring energy (primitive-estimator
-                # definition, including the ring-closure term)
-                dq = q[:, 3 * i : 3 * (i + 1)] - np.roll(
-                    q[:, 3 * i : 3 * (i + 1)], 1, axis=0
-                )
-                ktd = -0.5 * m[i] * self.nm.omegan2 * (dq**2).sum() / self.beads.nbeads
+                if self.nm.mode == "eco":
+                    # for eco open paths the primitive bead-difference formula does
+                    # not apply; uses the actual open-chain spring energy in the
+                    # (open-path) normal-mode representation
+                    o_omegak2 = dstrip(self.nm.o_omegak) ** 2
+                    ktd = (
+                        -0.5
+                        * m[i]
+                        * (o_omegak2 @ (qnm[:, 3 * i : 3 * (i + 1)] ** 2).sum(axis=1))
+                        / self.beads.nbeads
+                    )
+                else:
+                    # open-path atoms are not described by the ring-polymer normal
+                    # modes; uses the cyclic bead-difference spring energy
+                    # (primitive-estimator definition, including the ring-closure
+                    # term)
+                    dq = q[:, 3 * i : 3 * (i + 1)] - np.roll(
+                        q[:, 3 * i : 3 * (i + 1)], 1, axis=0
+                    )
+                    ktd = (
+                        -0.5
+                        * m[i]
+                        * self.nm.omegan2
+                        * (dq**2).sum()
+                        / self.beads.nbeads
+                    )
             else:
                 # spring energy of atom i, computed in the normal-mode representation
                 # so that it is valid for any circulant spring matrix (Trotter or eco)
@@ -1982,6 +2001,10 @@ class Properties:
            atom: If given, specifies the atom to give the kinetic energy
               for. If not, the simulation kinetic energy is given.
         """
+
+        # the opening profile and the free-particle prefactor are those of the
+        # Trotter factorization
+        self._require_trotter_springs("displacedpath")
 
         try:
             # iatom gives the index of the atom to be studied
