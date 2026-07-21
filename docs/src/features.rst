@@ -133,7 +133,10 @@ standard Trotter calculation for comparable accuracy), while the bead
 masses remain the physical ones and the standard Trotter estimators
 remain valid. Activated by setting
 ``<frequencies style='eco'> [ omega_max ] </frequencies>`` within the
-``<normal_modes>`` block.
+``<normal_modes>`` block. Atoms sampled with open paths (for momentum
+distribution estimation) are also supported: their open-chain spring
+frequencies are fitted to reproduce the end-to-end distribution and the
+radius of gyration of open harmonic paths.
 
 | **Main contributors:** Michele Ceriotti
 | **Theory:**

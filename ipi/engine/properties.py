@@ -1471,14 +1471,22 @@ class Properties:
 
         # spring energy of each atom, computed in the normal-mode representation
         # so that it is valid for any circulant spring matrix (Trotter or eco)
-        spring = self.nm.omegak2 @ (self._atom_rows(self.nm.qnm) ** 2).sum(axis=2)
+        sqnm2 = (self._atom_rows(self.nm.qnm) ** 2).sum(axis=2)
+        spring = self.nm.omegak2 @ sqnm2
         if len(self.nm.open_paths) > 0:
-            # open-path atoms are not described by the ring-polymer normal modes;
-            # uses the cyclic bead-difference spring energy (primitive-estimator
-            # definition, including the ring-closure term)
-            q = self.beads.q
-            dq = self._atom_rows(q - xp.roll(q, 1, axis=0))
-            open_spring = self.nm.omegan2 * (dq**2).sum(axis=(0, 2))
+            if self.nm.mode == "eco":
+                # for eco open paths the primitive bead-difference formula does
+                # not apply; uses the actual open-chain spring energy in the
+                # (open-path) normal-mode representation
+                open_spring = self.nm.o_omegak**2 @ sqnm2
+            else:
+                # open-path atoms are not described by the ring-polymer normal
+                # modes; uses the cyclic bead-difference spring energy
+                # (primitive-estimator definition, including the ring-closure
+                # term)
+                q = self.beads.q
+                dq = self._atom_rows(q - xp.roll(q, 1, axis=0))
+                open_spring = self.nm.omegan2 * (dq**2).sum(axis=(0, 2))
             is_open = np.zeros(self.beads.natoms, bool)
             is_open[self.nm.open_paths] = True
             spring = xp.where(xp.asarray(is_open), open_spring, spring)
@@ -1875,6 +1883,10 @@ class Properties:
            atom: If given, specifies the atom to give the kinetic energy
               for. If not, the simulation kinetic energy is given.
         """
+
+        # the opening profile and the free-particle prefactor are those of the
+        # Trotter factorization
+        self._require_trotter_springs("displacedpath")
 
         try:
             # iatom gives the index of the atom to be studied

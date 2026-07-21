@@ -149,6 +149,7 @@ def dhist_by_dr(qpath, fpath, r, r2_kernel, k_param):
     coeffs = k_param[1]
     beta_P = k_param[2]
     mw_P2 = k_param[3]
+    mu = k_param[4] if len(k_param) > 4 else None
     P = qpath.shape[1] / 3
 
     for i in range(len(qpath)):
@@ -161,23 +162,31 @@ def dhist_by_dr(qpath, fpath, r, r2_kernel, k_param):
         # Calculates the end-to-end joining vector.
         x = q[:3] - q[-3:]
         d = np.linalg.norm(x)
-        spring_q = q.copy()
 
-        # Calculates the derivative of the spring term with the mw_P^2 term.
-        spring_q[3 : 3 * (P - 1)] += q[3 : 3 * (P - 1)]
-        spring_q[3:] -= q[: 3 * (P - 1)]
-        spring_q[: 3 * (P - 1)] -= q[3:]
+        if mu is None:
+            spring_q = q.copy()
+
+            # Calculates the derivative of the spring term with the mw_P^2 term.
+            spring_q[3 : 3 * (P - 1)] += q[3 : 3 * (P - 1)]
+            spring_q[3:] -= q[: 3 * (P - 1)]
+            spring_q[: 3 * (P - 1)] -= q[3:]
+
+            c_mw_P2_spring_q2 = mw_P2 * np.asarray(
+                [
+                    np.dot(spring_q[0::3], coeffs),
+                    np.dot(spring_q[1::3], coeffs),
+                    np.dot(spring_q[2::3], coeffs),
+                ]
+            )
+        else:
+            # for economised springs the coefficients are the minimum-spring-energy
+            # unit-stretch profile lambda = K^+ c / (c^T K^+ c), so that
+            # lambda^T K q = mu (q_P - q_1) analytically
+            c_mw_P2_spring_q2 = -mu * x
 
         # Multiplies the force and the position with the coefficients to calculates the scaled gradient.
         c_f = np.asarray(
             [np.dot(f[0::3], coeffs), np.dot(f[1::3], coeffs), np.dot(f[2::3], coeffs)]
-        )
-        c_mw_P2_spring_q2 = mw_P2 * np.asarray(
-            [
-                np.dot(spring_q[0::3], coeffs),
-                np.dot(spring_q[1::3], coeffs),
-                np.dot(spring_q[2::3], coeffs),
-            ]
         )
         scaled_gradient = beta_P * (c_mw_P2_spring_q2 - c_f)
 
@@ -195,7 +204,7 @@ def dhist_by_dr(qpath, fpath, r, r2_kernel, k_param):
     return d_dhist_by_dr
 
 
-def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
+def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der, wmax=0.0):
     """
     Computes the radial distribution of the particle momentum and the end-to-end distance.
 
@@ -223,6 +232,11 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
                     The number of inital `steps' to be skipped.
     der         :   boolean
                     Triggers the scaled derivative estimator.
+    wmax        :   float
+                    If positive, the maximum physical frequency (cm^-1) of an
+                    economised ("eco") open path integral; the scaled-gradient
+                    coefficients are computed for the economised springs.
+                    Zero (default) corresponds to standard Trotter springs.
 
     """
 
@@ -239,12 +253,29 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
         fpath = np.loadtxt(fpath_file, skiprows=int(skip))
         # Defines parameters of the derivative histogram.
         is2half = 0.5 * m * P * T
-        coeffs = 0.5 * np.asarray(
-            [-1.0 + float(j) * 2.0 / float(P - 1) for j in range(P)]
-        )
         beta_P = 1.0 / (P * T)
         mw_P2 = m * (P * T) ** 2
-        der_params = [is2half, coeffs, beta_P, mw_P2]
+        if wmax > 0:
+            # economised open-path springs: the scaled-gradient coefficients are
+            # the minimum-spring-energy profile with unit end-to-end stretch,
+            # lambda = K^+ c / (c^T K^+ c), c = e_P - e_1 (arithmetic progression
+            # for Trotter springs)
+            from ipi.utils import nmtransform
+            from ipi.utils.units import unit_to_internal
+
+            xmax = unit_to_internal("frequency", "inversecm", wmax) / T
+            w2 = (P * T * nmtransform.eco_o_eva(P, xmax)) ** 2
+            C = nmtransform.mk_o_nm_matrix(P)
+            ct = C[:, P - 1] - C[:, 0]
+            lam_nm = np.divide(ct, m * w2, out=np.zeros(P), where=w2 > 0)
+            mu = 1.0 / (ct @ lam_nm)
+            coeffs = mu * (C.T @ lam_nm)
+            der_params = [is2half, coeffs, beta_P, mw_P2, mu]
+        else:
+            coeffs = 0.5 * np.asarray(
+                [-1.0 + float(j) * 2.0 / float(P - 1) for j in range(P)]
+            )
+            der_params = [is2half, coeffs, beta_P, mw_P2]
 
     # Defines the extremum of the grid if not specified.
     if s <= 0:
@@ -413,6 +444,12 @@ if __name__ == "__main__":
         default=False,
         help="Derives, integrates and then takes the Fourier transform",
     )
+    parser.add_argument(
+        "-wmax",
+        type=float,
+        default=0.0,
+        help="Maximum physical frequency (cm^-1) of an eco open path integral; 0 for Trotter springs",
+    )
 
     args = parser.parse_args()
 
@@ -428,4 +465,5 @@ if __name__ == "__main__":
         args.ns,
         args.skip,
         args.der,
+        args.wmax,
     )
