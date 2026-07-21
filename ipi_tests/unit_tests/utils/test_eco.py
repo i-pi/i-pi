@@ -9,6 +9,7 @@ import pytest
 import numpy as np
 
 from ipi.utils import nmtransform
+from ipi.utils import eco
 
 
 def rms_r2_error(eva, nbeads, xmax, npts=2000):
@@ -18,7 +19,7 @@ def rms_r2_error(eva, nbeads, xmax, npts=2000):
     t, w = np.polynomial.legendre.leggauss(npts)
     x = 0.5 * xmax * (t + 1.0)
     y = eva[1:] * nbeads  # y_k = beta*hbar*omega_k
-    f = nmtransform._eco_f(x)
+    f = eco._eco_f(x)
     r = f * (1.0 / (x[:, np.newaxis] ** 2 + y**2)).sum(axis=1) - 1.0
     return np.sqrt(0.5 * (w * r**2).sum())
 
@@ -28,7 +29,7 @@ def rms_r2_error(eva, nbeads, xmax, npts=2000):
 def test_eco_eva_structure(nbeads, xmax):
     """Checks centroid, symmetry and positivity of the eco eigenvalues."""
 
-    eva = nmtransform.eco_eva(nbeads, xmax)
+    eva = eco.eco_eva(nbeads, xmax)
     assert eva.shape == (nbeads,)
     assert eva[0] == 0.0
     assert np.all(eva[1:] > 0)
@@ -43,7 +44,7 @@ def test_eco_eva_accuracy(nbeads, xmax):
     """Checks that eco frequencies reproduce harmonic radii of gyration
     better than the Trotter ones."""
 
-    err_eco = rms_r2_error(nmtransform.eco_eva(nbeads, xmax), nbeads, xmax)
+    err_eco = rms_r2_error(eco.eco_eva(nbeads, xmax), nbeads, xmax)
     err_trotter = rms_r2_error(nmtransform.nm_eva(nbeads), nbeads, xmax)
     assert err_eco <= err_trotter
     # well-converged regime: eco error should be dramatically smaller
@@ -55,7 +56,7 @@ def test_eco_f_small_x():
     """Checks the small-x expansion of the objective kernel is smooth."""
 
     x = np.array([1e-8, 0.1, 0.4999, 0.5001, 1.0])
-    f = nmtransform._eco_f(x)
+    f = eco._eco_f(x)
     assert np.all(np.isfinite(f))
     np.testing.assert_allclose(f[0], 12.0, rtol=1e-10)
     # continuity across the series/direct switchover
@@ -66,25 +67,25 @@ def test_eco_eva_invalid_xmax():
     """Checks that non-positive maximum frequencies are rejected."""
 
     with pytest.raises(ValueError):
-        nmtransform.eco_eva(8, 0.0)
+        eco.eco_eva(8, 0.0)
     with pytest.raises(ValueError):
-        nmtransform.eco_eva(8, -1.0)
+        eco.eco_eva(8, -1.0)
 
 
 def test_eco_eva_classical_limit():
     """A single bead has no springs regardless of the fit."""
 
-    assert np.all(nmtransform.eco_eva(1, 10.0) == 0.0)
+    assert np.all(eco.eco_eva(1, 10.0) == 0.0)
 
 
 def test_eco_eva_warm_start():
     """A fit warm-started from a nearby solution must match a cold fit."""
 
     nbeads = 16
-    cold = nmtransform.eco_eva(nbeads, 20.0)
+    cold = eco.eco_eva(nbeads, 20.0)
     y0 = cold[1 : nbeads // 2 + 1] * nbeads  # previous dimensionless solution
-    warm = nmtransform.eco_eva(nbeads, 20.5, y0)
-    ref = nmtransform.eco_eva(nbeads, 20.5)
+    warm = eco.eco_eva(nbeads, 20.5, y0)
+    ref = eco.eco_eva(nbeads, 20.5)
     np.testing.assert_allclose(warm, ref, rtol=1e-6)
 
 
@@ -99,8 +100,8 @@ def test_eco_eva_warm_start():
 def test_eco_eva_bad_guess_falls_back(y0):
     """Invalid initial guesses are ignored, falling back to the Matsubara start."""
 
-    ref = nmtransform.eco_eva(16, 20.0)
-    np.testing.assert_allclose(nmtransform.eco_eva(16, 20.0, y0), ref, rtol=1e-8)
+    ref = eco.eco_eva(16, 20.0)
+    np.testing.assert_allclose(eco.eco_eva(16, 20.0, y0), ref, rtol=1e-8)
 
 
 @pytest.mark.parametrize("nbeads", [2, 3, 8, 16, 33])
@@ -119,24 +120,24 @@ def test_spring_energy_parseval(nbeads):
     np.testing.assert_allclose(vnm, vbead, rtol=1e-10)
 
 
-def rms_open_errors(eva, nbeads, xmax, npts=2000):
+def rms_open_errors(eva, nbeads, xmax, u=None, npts=2000):
     """RMS fractional errors of the open-path end-to-end variance (including
-    the endpoint-kernel term 1/P, over its representable window) and radius
-    of gyration, for dimensionless open-chain mode eigenvalues eva."""
+    the endpoint-kernel variance u; 1/P if not given) and radius of
+    gyration, for dimensionless open-chain mode eigenvalues eva."""
 
     P = nbeads
+    if u is None:
+        u = 1.0 / P
     x = (np.arange(npts) + 0.5) * (xmax / npts)
     y = eva[1:] * P
     k = np.arange(1, P)
     wa = np.where(k % 2 == 1, 8.0 * np.cos(k * np.pi / (2 * P)) ** 2, 0.0)
-    t = nmtransform._eco_open_t(x)
-    g = nmtransform._eco_open_g(x)
+    t = eco._eco_open_t(x)
+    g = eco._eco_open_g(x)
     d = 1.0 / (y[np.newaxis, :] ** 2 + x[:, np.newaxis] ** 2)
-    in_a = t >= 2.0 / P
-    ra = (((d * wa).sum(axis=1) + 1.0 / P) / t - 1.0)[in_a]
+    ra = ((d * wa).sum(axis=1) + u) / t - 1.0
     rb = d.sum(axis=1) / g - 1.0
-    rms_a = np.sqrt((ra**2).mean()) if in_a.any() else np.nan
-    return rms_a, np.sqrt((rb**2).mean())
+    return np.sqrt((ra**2).mean()), np.sqrt((rb**2).mean())
 
 
 @pytest.mark.parametrize("nbeads", [2, 3, 4, 8, 16, 32, 33])
@@ -144,7 +145,7 @@ def rms_open_errors(eva, nbeads, xmax, npts=2000):
 def test_eco_o_eva_structure(nbeads, xmax):
     """Checks centroid, positivity and boundedness of the open eco eigenvalues."""
 
-    eva = nmtransform.eco_o_eva(nbeads, xmax)
+    eva = eco.eco_o_eva(nbeads, xmax)
     assert eva.shape == (nbeads,)
     assert eva[0] == 0.0
     assert np.all(eva[1:] > 0)
@@ -159,24 +160,47 @@ def test_eco_o_eva_accuracy(nbeads, xmax):
     """Checks that open eco frequencies reproduce both the end-to-end variance
     and the open-path gyration better than the Trotter ones."""
 
-    ea_eco, eb_eco = rms_open_errors(nmtransform.eco_o_eva(nbeads, xmax), nbeads, xmax)
+    u = eco.eco_o_kernel(nbeads, xmax)
+    ea_eco, eb_eco = rms_open_errors(eco.eco_o_eva(nbeads, xmax), nbeads, xmax, u)
     ea_tr, eb_tr = rms_open_errors(nmtransform.o_nm_eva(nbeads), nbeads, xmax)
     assert ea_eco <= ea_tr
     assert eb_eco <= eb_tr
     # well-converged regime: both errors should be dramatically smaller (at
-    # the smallest bead numbers the fixed endpoint-kernel term and the exact
-    # Trotter free-particle limit leave less room for improvement)
+    # the smallest bead numbers the exact Trotter free-particle limit
+    # leaves less room for improvement)
     if nbeads >= 4 * xmax and nbeads >= 16:
         assert ea_eco < ea_tr / 30.0
         assert eb_eco < eb_tr / 30.0
+
+
+@pytest.mark.parametrize("nbeads", [4, 8, 16])
+def test_eco_o_kernel_small_nbeads(nbeads):
+    """When nbeads < beta*hbar*omega_max the kernel is economised below the
+    Trotter value, making the end-to-end target representable; the fit must
+    then beat Trotter over the FULL frequency window."""
+
+    xmax = 19.2
+    u = eco.eco_o_kernel(nbeads, xmax)
+    assert 0.0 < u < 1.0 / nbeads
+    ea_eco, _ = rms_open_errors(eco.eco_o_eva(nbeads, xmax), nbeads, xmax, u)
+    ea_tr, _ = rms_open_errors(nmtransform.o_nm_eva(nbeads), nbeads, xmax)
+    assert ea_eco < 0.5 * ea_tr
+
+
+def test_eco_o_kernel_trotter_limit():
+    """For nbeads well above beta*hbar*omega_max the fitted kernel returns
+    to the Trotter factor 1/nbeads."""
+
+    u = eco.eco_o_kernel(32, 2.0)
+    np.testing.assert_allclose(u, 1.0 / 32, rtol=1e-2)
 
 
 def test_eco_open_targets_small_x():
     """Checks the small-x expansions of the open-path targets are smooth."""
 
     x = np.array([1e-8, 0.1, 0.4999, 0.5001, 1.0])
-    t = nmtransform._eco_open_t(x)
-    g = nmtransform._eco_open_g(x)
+    t = eco._eco_open_t(x)
+    g = eco._eco_open_g(x)
     assert np.all(np.isfinite(t)) and np.all(np.isfinite(g))
     np.testing.assert_allclose(t[0], 1.0, rtol=1e-10)
     np.testing.assert_allclose(g[0], 1.0 / 6.0, rtol=1e-10)
@@ -191,27 +215,28 @@ def test_eco_o_eva_free_particle_limit():
     the fit accuracy."""
 
     nbeads, xmax = 32, 5.0
-    eva = nmtransform.eco_o_eva(nbeads, xmax)
+    eva = eco.eco_o_eva(nbeads, xmax)
+    u = eco.eco_o_kernel(nbeads, xmax)
     y = eva[1:] * nbeads
     k = np.arange(1, nbeads)
     wa = np.where(k % 2 == 1, 8.0 * np.cos(k * np.pi / (2 * nbeads)) ** 2, 0.0)
-    d2_0 = (wa / y**2).sum() + 1.0 / nbeads
+    d2_0 = (wa / y**2).sum() + u
     np.testing.assert_allclose(d2_0, 1.0, rtol=1e-3)
 
 
 def test_eco_o_eva_classical_limit():
     """A single bead has no springs regardless of the fit."""
 
-    assert np.all(nmtransform.eco_o_eva(1, 10.0) == 0.0)
+    assert np.all(eco.eco_o_eva(1, 10.0) == 0.0)
 
 
 def test_eco_o_eva_invalid_xmax():
     """Checks that non-positive maximum frequencies are rejected."""
 
     with pytest.raises(ValueError):
-        nmtransform.eco_o_eva(8, 0.0)
+        eco.eco_o_eva(8, 0.0)
     with pytest.raises(ValueError):
-        nmtransform.eco_o_eva(8, -1.0)
+        eco.eco_o_eva(8, -1.0)
 
 
 def test_eco_o_eva_warm_start():
@@ -220,9 +245,9 @@ def test_eco_o_eva_warm_start():
     themselves may differ slightly between equally good optima)."""
 
     nbeads = 16
-    y0 = nmtransform.eco_o_eva(nbeads, 5.0)[1:] * nbeads  # previous solution
-    warm = nmtransform.eco_o_eva(nbeads, 5.1, y0)
-    cold = nmtransform.eco_o_eva(nbeads, 5.1)
+    y0 = eco.eco_o_eva(nbeads, 5.0)[1:] * nbeads  # previous solution
+    warm = eco.eco_o_eva(nbeads, 5.1, y0)
+    cold = eco.eco_o_eva(nbeads, 5.1)
     ea_w, eb_w = rms_open_errors(warm, nbeads, 5.1)
     ea_c, eb_c = rms_open_errors(cold, nbeads, 5.1)
     assert ea_w < 2.0 * ea_c
@@ -240,8 +265,8 @@ def test_eco_o_eva_warm_start():
 def test_eco_o_eva_bad_guess_falls_back(y0):
     """Invalid initial guesses are ignored, falling back to the two-stage fit."""
 
-    ref = nmtransform.eco_o_eva(16, 5.0)
-    np.testing.assert_allclose(nmtransform.eco_o_eva(16, 5.0, y0), ref, rtol=1e-8)
+    ref = eco.eco_o_eva(16, 5.0)
+    np.testing.assert_allclose(eco.eco_o_eva(16, 5.0, y0), ref, rtol=1e-8)
 
 
 @pytest.mark.parametrize("nbeads", [2, 3, 8, 16, 33])

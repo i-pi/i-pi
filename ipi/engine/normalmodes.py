@@ -17,6 +17,7 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.utils import units
 from ipi.utils import nmtransform
+from ipi.utils import eco
 from ipi.utils.array_backend import xp, xp_setitem, to_numpy
 from ipi.utils.jit import compiled
 from ipi.utils.messages import verbosity, warning, info
@@ -480,7 +481,7 @@ class NormalModes:
             )
             if not np.all(y0 > 0):  # zeros before the first evaluation
                 y0 = None
-            return xp.asarray(self.omegan * nmtransform.eco_eva(self.nbeads, xmax, y0))
+            return xp.asarray(self.omegan * eco.eco_eva(self.nbeads, xmax, y0))
         return xp.asarray(self.omegan * nmtransform.nm_eva(self.nbeads))
 
     def get_o_omegak(self):
@@ -506,9 +507,7 @@ class NormalModes:
             y0 = to_numpy(self.o_omegak_._load()[1:]) * self.nbeads / self.omegan
             if not np.all(y0 > 0):  # zeros before the first evaluation
                 y0 = None
-            return xp.asarray(
-                self.omegan * nmtransform.eco_o_eva(self.nbeads, xmax, y0)
-            )
+            return xp.asarray(self.omegan * eco.eco_o_eva(self.nbeads, xmax, y0))
         return xp.asarray(self.omegan * nmtransform.o_nm_eva(self.nbeads))
 
     def get_dynwk(self):

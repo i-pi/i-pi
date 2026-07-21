@@ -41,7 +41,11 @@ frequency, accelerating convergence with the number of beads
 masses are the physical ones, and the standard (Trotter) estimators for observables
 remain valid. For atoms with open paths, the open-chain spring frequencies are
 economised as well, fitted to reproduce the end-to-end distribution (hence the
-particle momentum distribution) and the radius of gyration of open harmonic paths.
+particle momentum distribution) and the radius of gyration of open harmonic paths;
+the endpoint smearing kernel of the end-to-end estimator is economised as well,
+to the analytical value (2/x)tanh(x/(2 nbeads)) with x = beta*hbar*omega_max, in
+units of beta*hbar^2/m (reported in the log; post-processing must use it, e.g.
+via tools/py/get_np_rad.py -wmax).
 Combinations that assume Trotter springs raise an error: bosons, Suzuki-Chin
 dynamics, the planetary model, instantons, nm_gle thermostats, and the
 isotope-fractionation and Suzuki-Chin estimators.

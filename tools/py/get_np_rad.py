@@ -248,11 +248,24 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der, wma
     # Reads the file containing the position of all the beads of the ring polymer.
     qpath = np.loadtxt(qpath_file, skiprows=int(skip))
 
+    # endpoint-kernel variance sigma^2 = u/(m*T) per Cartesian component:
+    # u = 1/P for the Trotter factorization, economised (fitted together with
+    # the spring frequencies) for eco open paths
+    if wmax > 0:
+        from ipi.utils import nmtransform
+        from ipi.utils import eco
+        from ipi.utils.units import unit_to_internal
+
+        xmax = unit_to_internal("frequency", "inversecm", wmax) / T
+        u_kern = eco.eco_o_kernel(P, xmax)
+    else:
+        u_kern = 1.0 / P
+    is2half = 0.5 * m * T / u_kern
+
     # Reads the file containing the force acting on all the beads of the ring polymer if the flag for calculating the derivative is True.
     if der is True:
         fpath = np.loadtxt(fpath_file, skiprows=int(skip))
         # Defines parameters of the derivative histogram.
-        is2half = 0.5 * m * P * T
         beta_P = 1.0 / (P * T)
         mw_P2 = m * (P * T) ** 2
         if wmax > 0:
@@ -260,11 +273,7 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der, wma
             # the minimum-spring-energy profile with unit end-to-end stretch,
             # lambda = K^+ c / (c^T K^+ c), c = e_P - e_1 (arithmetic progression
             # for Trotter springs)
-            from ipi.utils import nmtransform
-            from ipi.utils.units import unit_to_internal
-
-            xmax = unit_to_internal("frequency", "inversecm", wmax) / T
-            w2 = (P * T * nmtransform.eco_o_eva(P, xmax)) ** 2
+            w2 = (P * T * eco.eco_o_eva(P, xmax)) ** 2
             C = nmtransform.mk_o_nm_matrix(P)
             ct = C[:, P - 1] - C[:, 0]
             lam_nm = np.divide(ct, m * w2, out=np.zeros(P), where=w2 > 0)
@@ -310,9 +319,7 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der, wma
             # fpath_block = fpath[x*bsize : (x+1)*bsize]
 
             # Calculates the radial distribution function of the end-to-end distance.
-            r2_4pi_h_block = (
-                4.0 * np.pi * r2_hist_K(qpath_block, r, r2_K, 0.5 * T * P * m)
-            )
+            r2_4pi_h_block = 4.0 * np.pi * r2_hist_K(qpath_block, r, r2_K, is2half)
             r2_4pi_h_list.append(r2_4pi_h_block)
 
             # Calculates the radial distribution of momentum.
