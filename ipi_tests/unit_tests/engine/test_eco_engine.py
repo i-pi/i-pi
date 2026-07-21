@@ -17,6 +17,7 @@ from ipi.inputs.cell import InputCell
 from ipi.inputs.normalmodes import InputNormalModes
 from ipi.scripting import InteractiveSimulation
 from ipi.utils import nmtransform
+from ipi.utils import eco
 from ipi.utils.depend import dstrip
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 from ipi.utils.units import Constants
@@ -95,7 +96,7 @@ def test_omegak_and_masses(eco_sim):
     omegak = dstrip(nm.omegak)
     xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
-        omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-10
+        omegak, nm.omegan * eco.eco_eva(nm.nbeads, xmax), rtol=1e-10
     )
     assert omegak[0] == 0.0
     # eco changes the springs but not the dynamical masses
@@ -132,7 +133,7 @@ def test_temperature_refit(eco_sim):
     omegak = dstrip(nm.omegak)
     xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
-        omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-8
+        omegak, nm.omegan * eco.eco_eva(nm.nbeads, xmax), rtol=1e-8
     )
     # the dimensionless spectrum must change shape, not just rescale
     gamma_new = omegak / nm.omegan
@@ -171,12 +172,12 @@ def test_eco_open_omegak(eco_open_sim):
     xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
         dstrip(nm.o_omegak),
-        nm.omegan * nmtransform.eco_o_eva(nm.nbeads, xmax),
+        nm.omegan * eco.eco_o_eva(nm.nbeads, xmax),
         rtol=1e-10,
     )
     np.testing.assert_allclose(
         dstrip(nm.omegak),
-        nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax),
+        nm.omegan * eco.eco_eva(nm.nbeads, xmax),
         rtol=1e-10,
     )
     # open and closed eco spectra must differ
