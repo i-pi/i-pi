@@ -17,7 +17,11 @@ clients/yaff/mil53_ffsocket
 clients/ffsgdml/benzene_pimd.10
 clients/ffsgdml/benzene_scpimd.10
 
+clients/mace-batched
+
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
 features/metadynamics/wte_metadynamics_zundel
 features/metadynamics/opes_metadynamics_zundel
+
+
