@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-"""An interface for the [MACE](https://github.com/ACEsuit/mace) calculator that supports batched evaluation."""
+"""An interface for the [MACE](https://github.com/ACEsuit/mace) calculator that
+supports batched evaluation.
+
+See ``examples/clients/mace-batched`` for a complete example.
+"""
 
 try:
     import mace  # noqa: F401
@@ -41,7 +45,7 @@ __DRIVER_CLASS__ = "MACE_driver"
 
 MAX_VOLUME = 1e12
 
-ase_like_properties = {
+_DEFAULT_ASE_LIKE_PROPERTIES = {
     "energy": (),
     "interaction_energy": (),
     "forces": ("natoms", 3),
@@ -52,6 +56,8 @@ ase_like_properties = {
     "atomic_dipoles": ("natoms", 3),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
 }
+# Kept as a public module-level name for backwards compatibility.
+ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES
 
 to_ignore_properties = ["interaction_energy", "node_feats", "node_energy"]
 
@@ -163,21 +169,65 @@ class BatchedMACE(MACECalculator):
     def __init__(
         self,
         instructions: dict = None,
+        ase_like_properties: Optional[Dict[str, Tuple]] = None,
         *argc,
         **kwargs,
     ):
-
         self.instructions = instructions if instructions is not None else {}
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
-        self.batch_size = self.instructions.pop("batch_size", 1)
+        self.batch_size = self.instructions.pop("batch_size", None)
+        self.ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES.copy()
+        if ase_like_properties is not None:
+            self.ase_like_properties.update(
+                self._normalize_ase_like_properties(ase_like_properties)
+            )
         if "arrays_keys" not in kwargs:
             kwargs["arrays_keys"] = {}
         if "oxn" not in kwargs["arrays_keys"]:
             kwargs["arrays_keys"].update({"oxn": "oxn"})
         super().__init__(*argc, **kwargs)
+        self._output_summary_printed = False
         assert not self.use_compile, "self.use_compile=True is not supported yet."
+
+    @staticmethod
+    def _normalize_ase_like_properties(
+        properties: Dict[str, Tuple],
+    ) -> Dict[str, Tuple]:
+        """Validate property shapes and convert JSON lists to tuples."""
+        if not isinstance(properties, dict):
+            raise TypeError("'ase_like_properties' must be a dictionary")
+
+        normalized = {}
+        for key, shape in properties.items():
+            if not isinstance(key, str):
+                raise TypeError(
+                    "Property names in 'ase_like_properties' must be strings"
+                )
+            if not isinstance(shape, (list, tuple)):
+                raise TypeError(
+                    f"The shape of property '{key}' must be a list or tuple"
+                )
+
+            shape = tuple(shape)
+            if any(
+                dimension != "natoms"
+                and (not isinstance(dimension, int) or dimension < 0)
+                for dimension in shape
+            ):
+                raise ValueError(
+                    f"Invalid shape for property '{key}': {shape}. "
+                    "Dimensions must be non-negative integers or 'natoms'."
+                )
+            if "natoms" in shape and shape[0] != "natoms":
+                raise ValueError(
+                    f"Invalid shape for property '{key}': 'natoms' must be the "
+                    "first dimension"
+                )
+            normalized[key] = shape
+
+        return normalized
 
     def preprocess(self, atoms: List[Atoms]) -> Tuple[DataLoader, Dict[str, bool]]:
         """
@@ -217,26 +267,6 @@ class BatchedMACE(MACECalculator):
         training = self.use_compile or compute_bec
 
         if self.model_type in ["MACE", "EnergyDipoleMACE"]:
-            for n, batch in enumerate(dataset):
-                # batch = next(iter(data_loader)).to(self.device)
-                # batch = self._clone_batch(batch)
-                node_heads = batch["head"][batch["batch"]]
-                num_atoms_arange = torch.arange(
-                    batch["positions"].shape[0], device=batch["positions"].device
-                )
-
-                # this try-except is to be compatible with different MACE versions
-                try:
-                    # newer versions of MACE
-                    node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
-                        num_atoms_arange, node_heads
-                    ]
-                except Exception:
-                    # older versions of MACE
-                    node_e0 = self.models[0].atomic_energies_fn(
-                        batch["node_attrs"], node_heads
-                    )
-                dataset[n]["node_e0"] = node_e0
             compute_stress = not self.use_compile
         else:
             compute_stress = False
@@ -260,9 +290,12 @@ class BatchedMACE(MACECalculator):
         forward_kwargs["compute_virials"] = False
         forward_kwargs["compute_edge_forces"] = False
 
+        batch_size = (
+            self.batch_size if self.batch_size is not None else max(len(dataset), 1)
+        )
         data_loader = DataLoader(
             dataset,
-            batch_size=self.batch_size,
+            batch_size=batch_size,
             shuffle=False,
             drop_last=False,
         )
@@ -302,7 +335,7 @@ class BatchedMACE(MACECalculator):
 
         # model evaluation
         model_results = [
-            ModelResults(ase_like_properties) for _ in range(self.num_models)
+            ModelResults(self.ase_like_properties) for _ in range(self.num_models)
         ]
         # loop over models in the committee
         for batch_base in data_loader:
@@ -310,8 +343,26 @@ class BatchedMACE(MACECalculator):
             batch = self._clone_batch(batch_base).to_dict()
             Natoms = self.batch2natoms(batch)
 
-            for i, model in enumerate(self.models):
+            if self.model_type in ["MACE", "EnergyDipoleMACE"]:
+                node_heads = batch["head"][batch["batch"]]
+                num_atoms_arange = torch.arange(
+                    batch["positions"].shape[0], device=batch["positions"].device
+                )
 
+                # this try-except is to be compatible with different MACE versions
+                try:
+                    # newer versions of MACE
+                    node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
+                        num_atoms_arange, node_heads
+                    ]
+                except Exception:
+                    # older versions of MACE
+                    node_e0 = self.models[0].atomic_energies_fn(
+                        batch["node_attrs"], node_heads
+                    )
+                batch["node_e0"] = node_e0
+
+            for i, model in enumerate(self.models):
                 out: dict[str, torch.Tensor] = model(
                     batch,
                     training=training,
@@ -333,10 +384,98 @@ class BatchedMACE(MACECalculator):
 
                     results_tensors[key] = value.detach().cpu().numpy()
 
+                if not self._output_summary_printed:
+                    self._print_output_summary(out, results_tensors)
+                    self._output_summary_printed = True
+
                 model_results[i].store(Natoms, results_tensors)
 
         # re-order results
         return ModelResults.mean(model_results)
+
+    def _print_output_summary(
+        self,
+        model_output: Dict[str, torch.Tensor],
+        cpu_output: Dict[str, np.ndarray],
+    ) -> None:
+        """Print the available and CPU-transferred outputs once per calculator."""
+
+        def classify(keys):
+            arrays = []
+            info = []
+            unregistered = []
+            for key in sorted(keys):
+                shape = self.ase_like_properties.get(key)
+                if shape is None:
+                    unregistered.append(key)
+                elif "natoms" in shape:
+                    arrays.append(key)
+                else:
+                    info.append(key)
+            return arrays, info, unregistered
+
+        available_keys = [
+            key for key, value in model_output.items() if value is not None
+        ]
+        model_arrays, model_info, model_unregistered = classify(available_keys)
+        cpu_arrays, cpu_info, cpu_unregistered = classify(cpu_output)
+
+        def display(keys):
+            return ", ".join(keys) if keys else "(none)"
+
+        print("MACE output summary (printed once):")
+        print(
+            "  'Produced' means that MACE created the property on the selected "
+            "compute device."
+        )
+        print(
+            "  'Copied to CPU' means that the property was detached from PyTorch "
+            "and converted to a NumPy value for i-PI."
+        )
+        print(
+            "  Per-atom properties (ASE arrays) contain values for every atom; "
+            "per-structure properties (ASE info) contain one value or tensor "
+            "for each structure."
+        )
+        print(
+            "  Unregistered model outputs have no shape declared in "
+            "ase_like_properties. They are usually internal MACE values and "
+            "cannot be returned until a shape is configured."
+        )
+        print(
+            "  Performance tip: avoid unnecessary GPU-to-CPU transfers by "
+            "ignoring optional outputs you do not need."
+        )
+        print("  In a MACE settings JSON file, use:")
+        print('    {"instructions": {"ignore": ["property_name", "..."]}}')
+        print(
+            "  Replace property_name with an optional name from the 'Copied to "
+            "CPU' lists below. Never ignore energy, forces, or stress; i-PI "
+            "requires them."
+        )
+        print(
+            "  Pass that file as 'mace_kwargs' in the i-PI force-field "
+            "parameters, or with --mace_kwargs in the standalone CLI."
+        )
+        print(f"  Produced per-atom properties (ASE arrays): {display(model_arrays)}")
+        print(
+            "  Produced per-structure properties (ASE info): " f"{display(model_info)}"
+        )
+        print(
+            "  Produced unregistered model outputs: " f"{display(model_unregistered)}"
+        )
+        print(
+            f"  Copied to CPU per-atom properties (ASE arrays): {display(cpu_arrays)}"
+        )
+        print(
+            "  Copied to CPU per-structure properties (ASE info): "
+            f"{display(cpu_info)}"
+        )
+        print(
+            "  Copied to CPU unregistered model outputs: "
+            f"{display(cpu_unregistered)}",
+            flush=True,
+        )
 
     def augment_output(
         self,
@@ -545,6 +684,21 @@ if __name__ == "__main__":
         help="prefix for saved properties (default: %(default)s).",
         **argv,
     )
+    parser.add_argument(
+        "--ase_like_properties",
+        "--ase-like-properties",
+        dest="ase_like_properties",
+        type=str,
+        required=False,
+        default=None,
+        help=(
+            "JSON file mapping additional MACE output names to ASE shapes. "
+            "Use 'natoms' as the first dimension for arrays; other shapes are "
+            'stored in info. Example: {"charges": ["natoms"], '
+            '"polarizability": [3, 3], "free_energy": []}.'
+        ),
+        **argv,
+    )
 
     args = parser.parse_args()
 
@@ -560,6 +714,18 @@ if __name__ == "__main__":
             mace_kwargs = json.load(f)
         print("Loaded extra kwargs:", mace_kwargs)
 
+    if args.ase_like_properties is not None:
+        print(
+            "Loading additional ASE-like properties from "
+            f"'{args.ase_like_properties}'..."
+        )
+        with open(args.ase_like_properties, "r") as f:
+            mace_kwargs["ase_like_properties"] = json.load(f)
+        print(
+            "Loaded additional ASE-like properties:",
+            mace_kwargs["ase_like_properties"],
+        )
+
     print(
         f"Initializing MACECalculator with model '{args.model}' on device '{args.device}'..."
     )
@@ -574,7 +740,7 @@ if __name__ == "__main__":
     print("Saving results into ASE Atoms objects...")
     for n, (atoms, results) in enumerate(zip(structures, results)):
         for key, value in results.items():
-            shape = ase_like_properties[key]
+            shape = calc.ase_like_properties[key]
             if "natoms" in shape:
                 atoms.arrays[f"{args.prefix}{key}"] = value
             else:

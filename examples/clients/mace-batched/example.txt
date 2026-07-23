@@ -1,0 +1,139 @@
+
+ ____       ____       ____       ____
+/    \     /    \     /    \     /    \
+|  #################################  |
+\__#_/     \____/     \____/     \_#__/
+   #    _        _______  _____    #
+   #   (_)      |_   __ \|_   _|   #      -*-   v 3.3.0  -*-
+   #   __  ______ | |__) | | |     #
+   Y  [  ||______||  ___/  | |     #      A Universal Force Engine
+  0 0  | |       _| |_    _| |_    #
+   #  [___]     |_____|  |_____|   #
+ __#_       ____       ____       _#__
+/  # \     /    \     /    \     / #  \
+|  #################################  |
+\____/     \____/     \____/     \____/
+
+    
+# Git information:
+#    i-PI version: 3.3.0
+#      Remote URL: git@github.com:i-pi/i-pi.git
+#          Branch: btached-mace            
+#     Last Commit: 2a4611cbd445c5476a0ce33b5bf177b2c39b387c
+#
+# Simulation information:
+#           Machine Name: cfelm-pcx32361
+#      Working Directory: /home/stoccoel/codes/i-pi/examples/clients/mace-batched
+#          Date and Time: 2026-07-23 10:48:13
+
+cuequivariance or cuequivariance_torch is not available. Cuequivariance acceleration will be disabled.
+ @system: Initializing system object 
+ @simulation: Initializing simulation object 
+@ RANDOM SEED: The seed used in this calculation was 31415
+ @initializer: Initializer (stage 1) parsing positions object.
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @process_units: Interpreting input with dimension length, units ase and cell units ase
+ @set_vector: Initialize is rescaling from     1 beads to     4 beads
+ @initializer: Initializer (stage 1) parsing masses object.
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @process_units: Interpreting input with dimension length, units ase and cell units ase
+ @initializer: Initializer (stage 1) parsing labels object.
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @process_units: Interpreting input with dimension length, units ase and cell units ase
+ @initializer: Initializer (stage 1) parsing cell object.
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @process_units: Interpreting input with dimension length, units ase and cell units ase
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @process_units: Interpreting input with dimension length, units ase and cell units ase
+ @initializer: Initializer (stage 1) parsing velocities object.
+ @initializer: Resampling velocities at temperature 300.0 kelvin
+Import of PyFFTW unsuccessful, using NumPy library instead. 
+ !W! Install PyFFTW to avoid slow normal-modes integration
+ --- begin input file content ---
+
+  <simulation verbosity='high'>
+    <output prefix='simulation'>
+      <properties filename='out' stride='1'>[ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ]</properties>
+      <trajectory filename='pos' stride='1' format='ase'>positions</trajectory>
+    </output>
+    <total_steps>10</total_steps>
+    <prng>
+      <seed>31415</seed>
+    </prng>
+    <ffdirect name='driver' pbc='False'>
+      <pes>mace</pes>
+      <parameters>{template:init.xyz,model:mace.model,device:cpu,mace_kwargs:mace_kwargs.json}</parameters>
+      <batch_size>4</batch_size>
+    </ffdirect>
+    <system>
+      <initialize nbeads='4'>
+        <file mode='ase'>init.xyz</file>
+        <velocities mode='thermal' units='kelvin'>300</velocities>
+      </initialize>
+      <forces>
+        <force forcefield='driver'>
+        </force>
+      </forces>
+      <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+          <thermostat mode='svr'>
+            <tau units='femtosecond'>100</tau>
+          </thermostat>
+          <timestep units='femtosecond'>0.50</timestep>
+        </dynamics>
+      </motion>
+      <ensemble>
+        <temperature units='kelvin'>300</temperature>
+      </ensemble>
+    </system>
+  </simulation>
+ ---  end input file content  ---
+ @system.bind: Binding the forces 
+Import of PyFFTW unsuccessful, using NumPy library instead. 
+ !W! Install PyFFTW to avoid slow normal-modes integration
+ @initializer: Initializer (stage 2) parsing positions object.
+ @initializer: Initializer (stage 2) parsing masses object.
+ @initializer: Initializer (stage 2) parsing labels object.
+ @initializer: Initializer (stage 2) parsing cell object.
+ @initializer: Initializer (stage 2) parsing velocities object.
+ @open_backup: Backup performed: simulation.out -> #simulation.out#0#
+ @open_backup: Backup performed: simulation.pos_0.extxyz -> #simulation.pos_0.extxyz#0#
+ @open_backup: Backup performed: simulation.pos_1.extxyz -> #simulation.pos_1.extxyz#0#
+ @open_backup: Backup performed: simulation.pos_2.extxyz -> #simulation.pos_2.extxyz#0#
+ @open_backup: Backup performed: simulation.pos_3.extxyz -> #simulation.pos_3.extxyz#0#
+Launching batch evaluation, 4 / 4
+MACE output summary (printed once):
+  Performance tip: avoid unnecessary GPU-to-CPU transfers by ignoring optional outputs you do not need.
+  In a MACE settings JSON file, use:
+    {"instructions": {"ignore": ["property_name", "..."]}}
+  Pass that file as 'mace_kwargs' in the i-PI force-field parameters, or with --mace_kwargs in the standalone CLI.
+  Available arrays: forces
+  Available info: displacement, energy, interaction_energy, stress
+  Available other outputs: node_energy, node_feats
+  Moved to CPU arrays: forces
+  Moved to CPU info: energy, stress
+  Moved to CPU other outputs: (none)
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       0. t/step: 8.95021e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       1. t/step: 9.64561e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       2. t/step: 8.52552e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       3. t/step: 9.43523e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       4. t/step: 8.90898e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       5. t/step: 9.24798e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       6. t/step: 8.99315e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       7. t/step: 8.85087e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       8. t/step: 9.49280e+00
+Launching batch evaluation, 4 / 4
+ @simulation.run: Average timings at MD step       9. t/step: 9.26766e+00
+ @softexit.trigger:  SOFTEXIT CALLED FROM THREAD <_MainThread(MainThread, started 22372954916096)>  @ SIMULATION: Exiting cleanly.
+ !W! Soft exit has been requested with message: ' @ SIMULATION: Exiting cleanly. I-PI reports success. Restartable as is: NO.'. Cleaning up.
+ @simulation.softexit: Saving the latest status at the end of the step
+ @open_backup: Backup performed: RESTART -> #RESTART#0#
