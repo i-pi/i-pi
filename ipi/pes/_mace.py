@@ -429,6 +429,7 @@ class BatchedMACE(MACECalculator):
 
         def display(keys):
             return ", ".join(keys) if keys else "(none)"
+
         print("-----------------------------------")
         print("  MACE output summary (printed once):")
         # print(
@@ -456,10 +457,9 @@ class BatchedMACE(MACECalculator):
         print("  To do so, in a MACE settings JSON file, use:")
         print('    {"instructions": {"ignore": ["property_name", "..."]}}')
         print(
-            "  Replace 'property_name' with an optional name from the "
-            "lists below.")
-        print("  Never ignore energy, forces, or stress; i-PI "
-            "requires them.")
+            "  Replace 'property_name' with an optional name from the " "lists below."
+        )
+        print("  Never ignore energy, forces, or stress; i-PI " "requires them.")
         print(
             "  You can pass that JSON file as 'mace_kwargs' in the i-PI force-field "
             "parameters, or with --mace_kwargs in the standalone CLI."
