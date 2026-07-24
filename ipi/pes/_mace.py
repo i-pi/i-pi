@@ -33,6 +33,7 @@ from ase.outputs import _defineprop, all_outputs
 from mace import data
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
+from mace.tools import torch_tools
 from mace.tools.torch_geometric.batch import Batch
 from mace.tools.torch_geometric.dataloader import DataLoader
 
@@ -188,6 +189,11 @@ class BatchedMACE(MACECalculator):
         if "oxn" not in kwargs["arrays_keys"]:
             kwargs["arrays_keys"].update({"oxn": "oxn"})
         super().__init__(*argc, **kwargs)
+        # MACE versions before 0.3.16 select the model dtype but do not expose
+        # it on the calculator. Infer it from the (possibly converted) model so
+        # batched preprocessing can use the same dtype on all supported versions.
+        if not hasattr(self, "default_dtype"):
+            self.default_dtype = next(self.models[0].parameters()).dtype
         self._output_summary_printed = False
         assert not self.use_compile, "self.use_compile=True is not supported yet."
 
@@ -237,18 +243,19 @@ class BatchedMACE(MACECalculator):
         keyspec = data.KeySpecification(
             info_keys=self.info_keys, arrays_keys=self.arrays_keys
         )
-        configs = data.config_from_atoms_list(
-            atoms, key_specification=keyspec, head_name=self.head
-        )
-        dataset = [
-            data.AtomicData.from_config(
-                config,
-                z_table=self.z_table,
-                cutoff=self.r_max,
-                heads=self.available_heads,
-            ).to(self.device)
-            for config in configs
-        ]
+        with torch_tools.default_dtype(self.default_dtype):
+            configs = data.config_from_atoms_list(
+                atoms, key_specification=keyspec, head_name=self.head
+            )
+            dataset = [
+                data.AtomicData.from_config(
+                    config,
+                    z_table=self.z_table,
+                    cutoff=self.r_max,
+                    heads=self.available_heads,
+                ).to(self.device)
+                for config in configs
+            ]
 
         compute_bec = False
         if "compute_BEC" in self.instructions:
@@ -422,41 +429,42 @@ class BatchedMACE(MACECalculator):
 
         def display(keys):
             return ", ".join(keys) if keys else "(none)"
-
-        print("MACE output summary (printed once):")
-        print(
-            "  'Produced' means that MACE created the property on the selected "
-            "compute device."
-        )
-        print(
-            "  'Copied to CPU' means that the property was detached from PyTorch "
-            "and converted to a NumPy value for i-PI."
-        )
-        print(
-            "  Per-atom properties (ASE arrays) contain values for every atom; "
-            "per-structure properties (ASE info) contain one value or tensor "
-            "for each structure."
-        )
-        print(
-            "  Unregistered model outputs have no shape declared in "
-            "ase_like_properties. They are usually internal MACE values and "
-            "cannot be returned until a shape is configured."
-        )
+        print("-----------------------------------")
+        print("  MACE output summary (printed once):")
+        # print(
+        #     "  'Produced' means that MACE created the property on the selected "
+        #     "compute device."
+        # )
+        # print(
+        #     "  'Copied to CPU' means that the property was detached from PyTorch "
+        #     "and converted to a NumPy value for i-PI."
+        # )
+        # print(
+        #     "  Per-atom properties (ASE arrays) contain values for every atom; "
+        #     "per-structure properties (ASE info) contain one value or tensor "
+        #     "for each structure."
+        # )
+        # print(
+        #     "  Unregistered model outputs have no shape declared in "
+        #     "ase_like_properties. They are usually internal MACE values and "
+        #     "cannot be returned until a shape is configured."
+        # )
         print(
             "  Performance tip: avoid unnecessary GPU-to-CPU transfers by "
             "ignoring optional outputs you do not need."
         )
-        print("  In a MACE settings JSON file, use:")
+        print("  To do so, in a MACE settings JSON file, use:")
         print('    {"instructions": {"ignore": ["property_name", "..."]}}')
         print(
-            "  Replace property_name with an optional name from the 'Copied to "
-            "CPU' lists below. Never ignore energy, forces, or stress; i-PI "
-            "requires them."
-        )
+            "  Replace 'property_name' with an optional name from the "
+            "lists below.")
+        print("  Never ignore energy, forces, or stress; i-PI "
+            "requires them.")
         print(
-            "  Pass that file as 'mace_kwargs' in the i-PI force-field "
+            "  You can pass that JSON file as 'mace_kwargs' in the i-PI force-field "
             "parameters, or with --mace_kwargs in the standalone CLI."
         )
+        print()
         print(f"  Produced per-atom properties (ASE arrays): {display(model_arrays)}")
         print(
             "  Produced per-structure properties (ASE info): " f"{display(model_info)}"
@@ -471,11 +479,12 @@ class BatchedMACE(MACECalculator):
             "  Copied to CPU per-structure properties (ASE info): "
             f"{display(cpu_info)}"
         )
-        print(
-            "  Copied to CPU unregistered model outputs: "
-            f"{display(cpu_unregistered)}",
-            flush=True,
-        )
+        # print(
+        #     "  Copied to CPU unregistered model outputs: "
+        #     f"{display(cpu_unregistered)}",
+        #     flush=True,
+        # )
+        print("-----------------------------------")
 
     def augment_output(
         self,

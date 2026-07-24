@@ -10,7 +10,7 @@
   </prng>
   <ffdirect name='driver'  pbc='False'>
       <pes> mace </pes>
-      <parameters> {template:init.xyz,model:mace.model,device:cpu} </parameters>
+      <parameters> {template:init.xyz,model:mace.model,device:cpu,mace_kwargs:mace_kwargs.json} </parameters>
   </ffdirect>
   <system>
     <initialize nbeads='1'>

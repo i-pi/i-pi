@@ -18,8 +18,8 @@ clients/ffsgdml/benzene_pimd.10
 clients/ffsgdml/benzene_scpimd.10
 
 # Needs external packages
-clients/mace
-clients/mace-batched
+clients/mace/single          # convered by .github/workflows/mace.yml
+clients/mace/batched  # convered by .github/workflows/mace.yml
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
