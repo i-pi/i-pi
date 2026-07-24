@@ -1,17 +1,17 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <!-- Select the properties and trajectories of your liking. If you want the same units as in ASE, just specify  {ase}. -->  
-    <properties filename='out' stride='200'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ] </properties>
-    <trajectory filename='pos' stride='200' format='ase'> positions </trajectory>
-    <checkpoint stride='2000'/>
+    <properties filename='out' stride='1'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ] </properties>
+    <trajectory filename='pos' stride='1' format='ase'> positions </trajectory>
   </output>
-  <total_steps>20000</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffsocket name='driver' mode='unix' pbc='False'>
-      <address> driver </address>
-  </ffsocket>
+  <ffdirect name='driver'  pbc='False'>
+      <pes> mace </pes>
+      <parameters> {template:init.xyz,model:mace.model,device:cpu} </parameters>
+  </ffdirect>
   <system>
     <initialize nbeads='1'>
       <file mode='ase'> init.xyz </file>
