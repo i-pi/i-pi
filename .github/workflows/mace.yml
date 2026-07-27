@@ -2,9 +2,12 @@ name: MACE examples
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
 
 concurrency:
-  group: mace-examples-${{ github.event.pull_request.number }}
+  group: mace-examples-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +27,7 @@ jobs:
       - name: Install i-PI and MACE
         run: |
           python -m pip install --upgrade pip
-          python -m pip install . mace-torch
+          python -m pip install -e . mace-torch coverage
 
       - name: Download MACE model for single example
         working-directory: examples/clients/mace/single
@@ -32,7 +35,7 @@ jobs:
 
       - name: Run single MACE example
         working-directory: examples/clients/mace/single
-        run: i-pi input.xml
+        run: python -m coverage run --source=ipi "$(command -v i-pi)" input.xml
 
       - name: Download MACE model for batched example
         working-directory: examples/clients/mace/batched
@@ -40,4 +43,14 @@ jobs:
 
       - name: Run batched MACE example
         working-directory: examples/clients/mace/batched
-        run: i-pi input.xml
+        run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Generate coverage report
+        run: python -m coverage xml -o coverage-mace.xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-mace.xml
+          fail_ci_if_error: true
