@@ -8,15 +8,19 @@ on:
 
 concurrency:
   group: mace-examples-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   mace-examples:
     name: MACE examples
     runs-on: ubuntu-22.04
+    env:
+      COVERAGE_FILE: ${{ github.workspace }}/.coverage-mace
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
