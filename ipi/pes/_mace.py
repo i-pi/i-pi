@@ -562,10 +562,9 @@ class BatchedMACE(MACECalculator):
         self,
         data: Dict[str, torch.Tensor],
         batch: Batch,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute and store both Born charges and the piezoelectric tensor."""
 
-        mu = self._proper_model_dipole(data)
         bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
 
         if data.get("BEC") is None:
@@ -573,15 +572,10 @@ class BatchedMACE(MACECalculator):
             data["BEC"] = bec.moveaxis(0, 1)
 
         if data.get("piezoelectric") is None:
-            cell = batch["cell"].view((-1, 3, 3))
-            volume = torch.det(cell)
-            data["piezoelectric"] = dmu_deta2piezoelectric(
-                dmu_deta.moveaxis(0, 1),
-                mu,
-                volume,
-            )
+            # (mu_xyz,graph,eta_i,eta_j) --> (graph,mu_xyz,eta_i,eta_j)
+            data["piezoelectric"] = dmu_deta.moveaxis(0, 1)
 
-        return bec, dmu_deta, mu
+        return bec, dmu_deta
 
     def compute_dmu_dR_deta(
         self,
@@ -644,34 +638,6 @@ class BatchedMACE(MACECalculator):
 def proper_dipole(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
     """Return the dipole corrected for the cell displacement."""
     return mu - torch.einsum("bil,bl->bi", strain, mu)
-
-
-def dmu_deta2piezoelectric(
-    dmu_deta: torch.Tensor,
-    mu: torch.Tensor,
-    volume: torch.Tensor,
-) -> torch.Tensor:
-    """Convert dipole-strain derivatives to the improper piezoelectric tensor."""
-
-    batch_size = dmu_deta.shape[0]
-    expected_derivative_shape = (batch_size, 3, 3, 3)
-    if tuple(dmu_deta.shape) != expected_derivative_shape:
-        raise ValueError(
-            f"dmu_deta must have shape {expected_derivative_shape}, "
-            f"got {tuple(dmu_deta.shape)}."
-        )
-    if tuple(mu.shape) != (batch_size, 3):
-        raise ValueError(
-            f"mu must have shape {(batch_size, 3)}, got {tuple(mu.shape)}."
-        )
-    if tuple(volume.shape) != (batch_size,):
-        raise ValueError(
-            f"volume must have shape {(batch_size,)}, got {tuple(volume.shape)}."
-        )
-
-    identity = torch.eye(3, device=dmu_deta.device, dtype=dmu_deta.dtype)
-    mu_delta = mu[:, :, None, None] * identity[None, None, :, :]
-    return (dmu_deta - mu_delta) / volume[:, None, None, None]
 
 
 # --------------------------------------- #

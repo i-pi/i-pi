@@ -16,7 +16,6 @@ from ipi.pes._mace import (
     MACE_driver,
     ase_like_properties as mace_ase_like_properties,
     compute_dielectric_gradients,
-    dmu_deta2piezoelectric,
     proper_dipole,
     run_cli,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "ExtendedMACECalculator",
     "add_bec_inplace",
     "compute_dielectric_gradients",
-    "dmu_deta2piezoelectric",
     "proper_dipole",
 ]
 
@@ -136,7 +134,7 @@ class ExtendedMACECalculator(BatchedMACE):
             data = self.get_forces_stress(data, batch, training)
 
         if compute_bec:
-            bec, _, _ = self.add_dielectric_response(data, batch)
+            bec, _ = self.add_dielectric_response(data, batch)
             add_bec_inplace(data, bec)
 
         # Preserve the extended driver's historical per-atom interaction
