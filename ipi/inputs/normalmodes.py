@@ -32,9 +32,18 @@ Specifies the technique to be used to calculate the dynamical masses.
 'pa-cmd' takes an argument giving the frequency to set all the non-centroid normal modes to.
 'wmax-cmd' is similar to 'pa-cmd', except instead of taking one argument it takes two
 ([wmax,wtarget]). The lowest-lying normal mode will be set to wtarget for a
-free particle, and all the normal modes will coincide at frequency wmax. 
+free particle, and all the normal modes will coincide at frequency wmax.
+'eco' takes an argument giving the maximum physical frequency in the problem, and
+replaces the spring frequencies of the ring polymer with economised values that are
+optimized to reproduce the exact radii of gyration of harmonic oscillators up to that
+frequency, accelerating convergence with the number of beads
+[Zeng and Manolopoulos, "Economised path integrals", arXiv:2607.06414]. The bead
+masses are the physical ones, and the standard (Trotter) estimators for observables
+remain valid. Combinations that assume Trotter springs raise an error: bosons, open
+paths, Suzuki-Chin dynamics, the planetary model, instantons, nm_gle thermostats,
+and the isotope-fractionation and Suzuki-Chin estimators.
 """,
-            "options": ["pa-cmd", "wmax-cmd", "manual", "rpmd"],
+            "options": ["pa-cmd", "wmax-cmd", "manual", "rpmd", "eco"],
         },
     )
 

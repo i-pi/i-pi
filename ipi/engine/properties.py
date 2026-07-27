@@ -1319,6 +1319,16 @@ class Properties:
 
         return fq * 0.5 / self.beads.nbeads
 
+    def _require_trotter_springs(self, name):
+        """Raises when an estimator derived for Trotter ring-polymer springs
+        is requested with a different spring matrix."""
+
+        if self.nm.mode == "eco":
+            raise ValueError(
+                "The %s estimator assumes Trotter ring-polymer springs and cannot be used with mode='eco'."
+                % name
+            )
+
     def get_sckintd(self, atom=""):
         """Calculates the Suzuki-Chin thermodynamic quantum centroid virial kinetic energy estimator.
 
@@ -1327,6 +1337,7 @@ class Properties:
               for. If not, the system kinetic energy is given.
         """
 
+        self._require_trotter_springs("kinetic_tdsc")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -1470,7 +1481,9 @@ class Properties:
                 atoms not to be considered in the distinguishable estimator (e.g. bosons)
         """
         q = dstrip(self.beads.q)
+        qnm = dstrip(self.nm.qnm)
         m = dstrip(self.beads.m)
+        omegak2 = dstrip(self.nm.omegak2)
         PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
 
         atd = 0.0
@@ -1482,14 +1495,23 @@ class Properties:
             if i in skip_atom_indices:
                 continue
 
-            ktd = 0.0
-            for b in range(1, self.beads.nbeads):
-                for j in range(3 * i, 3 * (i + 1)):
-                    ktd += (q[b, j] - q[b - 1, j]) ** 2
-            for j in range(3 * i, 3 * (i + 1)):
-                ktd += (q[self.beads.nbeads - 1, j] - q[0, j]) ** 2
-
-            ktd *= -0.5 * m[i] * self.nm.omegan2 / self.beads.nbeads
+            if i in self.nm.open_paths:
+                # open-path atoms are not described by the ring-polymer normal modes;
+                # uses the cyclic bead-difference spring energy (primitive-estimator
+                # definition, including the ring-closure term)
+                dq = q[:, 3 * i : 3 * (i + 1)] - np.roll(
+                    q[:, 3 * i : 3 * (i + 1)], 1, axis=0
+                )
+                ktd = -0.5 * m[i] * self.nm.omegan2 * (dq**2).sum() / self.beads.nbeads
+            else:
+                # spring energy of atom i, computed in the normal-mode representation
+                # so that it is valid for any circulant spring matrix (Trotter or eco)
+                ktd = (
+                    -0.5
+                    * m[i]
+                    * (omegak2 @ (qnm[:, 3 * i : 3 * (i + 1)] ** 2).sum(axis=1))
+                    / self.beads.nbeads
+                )
             ktd += PkT32
             atd += ktd
             ncount += 1
@@ -1499,6 +1521,7 @@ class Properties:
     def get_sckinpr(self):
         """Calculates the quantum centroid virial kinetic energy estimator."""
 
+        self._require_trotter_springs("kinetic_prsc")
         spring = self.nm.vspring / self.beads.nbeads
         PkT32 = (
             1.5
@@ -2330,6 +2353,7 @@ class Properties:
               sign(sum(weight*ke)) )
         """
 
+        self._require_trotter_springs("isotope_thermo")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -2436,6 +2460,7 @@ class Properties:
            (spraverage, spr2average, sprexpaverage)
         """
 
+        self._require_trotter_springs("isotope_zetatd")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -2586,6 +2611,7 @@ class Properties:
             (ti_weight, chin_weight)
         """
 
+        self._require_trotter_springs("isotope_zetatd_4th")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -2707,6 +2733,7 @@ class Properties:
            (ti_weight, chin_weight)
         """
 
+        self._require_trotter_springs("isotope_zetasc_4th")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -2804,6 +2831,7 @@ class Properties:
         )
 
     def get_chin_correction(self):
+        self._require_trotter_springs("chin_weight")
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         pots = self.forces.pots
@@ -2827,6 +2855,7 @@ class Properties:
         return np.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
+        self._require_trotter_springs("ti_weight")
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         #        pots = self.forces.pots    #
@@ -2854,6 +2883,7 @@ class Properties:
               for. If not, the system kinetic energy is given.
         """
 
+        self._require_trotter_springs("ti_pot")
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -3229,6 +3259,10 @@ class Trajectories:
         Args:
            alpha: m'/m the mass ratio
         """
+        if self.system.nm.mode == "eco":
+            raise ValueError(
+                "The isotope_zetatd estimator assumes Trotter ring-polymer springs and cannot be used with mode='eco'."
+            )
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)

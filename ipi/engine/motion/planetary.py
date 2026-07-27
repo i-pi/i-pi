@@ -114,6 +114,11 @@ class Planetary(Motion):
         self.basebeads = beads
         self.basenm = nm
 
+        if nm.mode == "eco":
+            raise ValueError(
+                "The planetary model assumes Trotter springs and cannot be used with mode='eco'."
+            )
+
         # copies of all of the helper classes that are needed to bind the ccdyn object
         self.dbeads = beads.clone(nbeads=self.nbeads)
         self.dcell = cell.clone()
