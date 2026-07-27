@@ -56,6 +56,7 @@ _DEFAULT_ASE_LIKE_PROPERTIES = {
     "dipole": (3,),
     "atomic_dipoles": ("natoms", 3),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
+    "piezoelectric": (3, 3, 3),
 }
 # Kept as a public module-level name for backwards compatibility.
 ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES
@@ -166,6 +167,8 @@ class BatchedMACE(MACECalculator):
      - supports batched evaluation of many atomic structures
      - can be used with a i-PI driver or as a standalone
     """
+
+    ignored_properties = frozenset(to_ignore_properties)
 
     def __init__(
         self,
@@ -379,7 +382,7 @@ class BatchedMACE(MACECalculator):
                 out = self.augment_output(out, batch, training, compute_bec)
 
                 # collect the results
-                ignored = set(to_ignore_properties)
+                ignored = set(self.ignored_properties)
                 if "ignore" in self.instructions:
                     ignored |= set(self.instructions["ignore"])
 
@@ -493,14 +496,13 @@ class BatchedMACE(MACECalculator):
         training: bool,
         compute_bec: bool,
     ) -> Dict[str, torch.Tensor]:
-        """Augment the output of the MACE model with derived properties such as forces, stress, and Born Effective Charges."""
+        """Add forces, stress, Born charges, and piezoelectric response."""
         data = self.get_forces_stress(data, batch, training)
 
-        if compute_bec and "BEC" not in data:
-            bec = self.compute_dmu_dR(data, batch)
-            # store to output results
-            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
-            data["BEC"] = bec.moveaxis(0, 1)
+        if compute_bec and (
+            data.get("BEC") is None or data.get("piezoelectric") is None
+        ):
+            self.add_dielectric_response(data, batch)
 
         return data
 
@@ -540,52 +542,136 @@ class BatchedMACE(MACECalculator):
 
         return data
 
+    @staticmethod
+    def _proper_model_dipole(data: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Return the strain-corrected model dipole required for response."""
+
+        if data.get("dipole") is None:
+            raise ValueError(
+                "The selected MACE model does not provide the dipole required "
+                "for dielectric-response calculations."
+            )
+        if data.get("displacement") is None:
+            raise ValueError(
+                "The MACE output does not contain the displacement tensor "
+                "required for dielectric-response calculations."
+            )
+        return proper_dipole(data["dipole"], data["displacement"])
+
+    def add_dielectric_response(
+        self,
+        data: Dict[str, torch.Tensor],
+        batch: Batch,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute and store both Born charges and the piezoelectric tensor."""
+
+        mu = self._proper_model_dipole(data)
+        bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
+
+        if data.get("BEC") is None:
+            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
+            data["BEC"] = bec.moveaxis(0, 1)
+
+        if data.get("piezoelectric") is None:
+            cell = batch["cell"].view((-1, 3, 3))
+            volume = torch.det(cell)
+            data["piezoelectric"] = dmu_deta2piezoelectric(
+                dmu_deta.moveaxis(0, 1),
+                mu,
+                volume,
+            )
+
+        return bec, dmu_deta, mu
+
+    def compute_dmu_dR_deta(
+        self,
+        data: Dict[str, torch.Tensor],
+        batch: Batch,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Differentiate the dipole with respect to positions and strain."""
+
+        mu = self._proper_model_dipole(data)
+        positions = batch.get("positions")
+        if not isinstance(positions, torch.Tensor):
+            raise ValueError("The MACE batch does not contain tensor positions.")
+        if not positions.requires_grad:
+            raise ValueError(
+                "MACE positions must retain gradients when 'compute_BEC: true' "
+                "so that Born charges can be computed."
+            )
+
+        displacement = data["displacement"]
+        if not isinstance(displacement, torch.Tensor):
+            raise ValueError("The MACE output does not contain a tensor displacement.")
+        if not displacement.requires_grad:
+            raise ValueError(
+                "The MACE displacement tensor must retain gradients when "
+                "'compute_BEC: true' so that the piezoelectric tensor can be "
+                "computed."
+            )
+
+        bec, dmu_deta = compute_dielectric_gradients(
+            mu,
+            [positions, displacement],
+        )
+
+        expected_bec_shape = (3, *positions.shape)
+        if tuple(bec.shape) != expected_bec_shape:
+            raise ValueError(
+                "The computed Born charges have the wrong shape: expected "
+                f"{expected_bec_shape}, got {tuple(bec.shape)}."
+            )
+
+        expected_strain_shape = (3, *displacement.shape)
+        if tuple(dmu_deta.shape) != expected_strain_shape:
+            raise ValueError(
+                "The dipole-strain derivative has the wrong shape: expected "
+                f"{expected_strain_shape}, got {tuple(dmu_deta.shape)}."
+            )
+        if not torch.allclose(dmu_deta, dmu_deta.transpose(-1, -2)):
+            raise ValueError("The dipole-strain derivative is not symmetric.")
+
+        return bec, dmu_deta
+
     def compute_dmu_dR(
         self, data: Dict[str, torch.Tensor], batch: Batch
     ) -> torch.Tensor:
-        """
-        Compute the derivative of the dipole (mu) w.r.t. the positions (R),
-        i.e. the Born Effective Charges, or Atomic Polar Tensors.
-        """
+        """Compute Born effective charges, retaining the historical API."""
 
-        if "dipole" not in data:
-            raise ValueError(
-                f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
-            )
-        try:
-            batch["positions"]
-        except Exception:
-            raise ValueError(
-                f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.keys())}"
-            )
-        dipole_components = 3
-        mu = data["dipole"][:, :dipole_components]  # just for debugging
-        pos = batch["positions"]
-        if not isinstance(mu, torch.Tensor):
-            raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
-        if not isinstance(pos, torch.Tensor):
-            raise ValueError(
-                f"The positions are not a torch.Tensor rather a {type(pos)}"
-            )
+        return self.compute_dmu_dR_deta(data, batch)[0]
 
-        bec = compute_dielectric_gradients(mu, [pos])[0]
 
-        if not isinstance(bec, torch.Tensor):
-            raise ValueError(
-                f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
-            )
-        if tuple(bec.shape) != (dipole_components, *pos.shape):
-            raise ValueError(
-                f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
-            )
+def proper_dipole(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
+    """Return the dipole corrected for the cell displacement."""
+    return mu - torch.einsum("bil,bl->bi", strain, mu)
 
-        # Attention:
-        # The tensor 'bec' has 3 dimensions.
-        # Its shape is (3,*pos.shape).
-        # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
-        # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
 
-        return bec
+def dmu_deta2piezoelectric(
+    dmu_deta: torch.Tensor,
+    mu: torch.Tensor,
+    volume: torch.Tensor,
+) -> torch.Tensor:
+    """Convert dipole-strain derivatives to the improper piezoelectric tensor."""
+
+    batch_size = dmu_deta.shape[0]
+    expected_derivative_shape = (batch_size, 3, 3, 3)
+    if tuple(dmu_deta.shape) != expected_derivative_shape:
+        raise ValueError(
+            f"dmu_deta must have shape {expected_derivative_shape}, "
+            f"got {tuple(dmu_deta.shape)}."
+        )
+    if tuple(mu.shape) != (batch_size, 3):
+        raise ValueError(
+            f"mu must have shape {(batch_size, 3)}, got {tuple(mu.shape)}."
+        )
+    if tuple(volume.shape) != (batch_size,):
+        raise ValueError(
+            f"volume must have shape {(batch_size,)}, got {tuple(volume.shape)}."
+        )
+
+    identity = torch.eye(3, device=dmu_deta.device, dtype=dmu_deta.dtype)
+    mu_delta = mu[:, :, None, None] * identity[None, None, :, :]
+    return (dmu_deta - mu_delta) / volume[:, None, None, None]
 
 
 # --------------------------------------- #
@@ -630,16 +716,23 @@ def compute_dielectric_gradients(
 
 
 # -----------------------------------------------------------
-# Script entry point
+# Reusable script entry point
 # -----------------------------------------------------------
-if __name__ == "__main__":
+def run_cli(
+    calculator_class=BatchedMACE,
+    calculator_name="MACECalculator",
+):
+    """Run the standalone MACE structure-evaluation command-line interface."""
+
     argv = {
         "metavar": "\b",
     }
 
     parser = argparse.ArgumentParser(
-        description="Evaluate a MACE model on structures using MACECalculator.\n\
-        Run with 'python extmace.py -m mace.model -i dataset.extxyz -o output.extxyz'"
+        description=(
+            f"Evaluate a MACE model on structures using {calculator_name}.\n"
+            "Run with '-m mace.model -i dataset.extxyz -o output.extxyz'."
+        )
     )
 
     parser.add_argument(
@@ -736,9 +829,14 @@ if __name__ == "__main__":
         )
 
     print(
-        f"Initializing MACECalculator with model '{args.model}' on device '{args.device}'..."
+        f"Initializing {calculator_name} with model '{args.model}' "
+        f"on device '{args.device}'..."
     )
-    calc = BatchedMACE(model_paths=args.model, device=args.device, **mace_kwargs)
+    calc = calculator_class(
+        model_paths=args.model,
+        device=args.device,
+        **mace_kwargs,
+    )
     print("Calculator initialized.")
 
     print("Evaluating structures with MACE model...")
@@ -757,3 +855,7 @@ if __name__ == "__main__":
     print(f"Writing output structures to '{args.output_structures}'...")
     write(args.output_structures, images=structures, format="extxyz")
     print("All done!")
+
+
+if __name__ == "__main__":
+    run_cli()
