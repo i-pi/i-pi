@@ -204,12 +204,8 @@ class ModelResults:
                     "(verify manually)"
                 )
 
-        registration = json.dumps(
-            {"ase_like_properties": registrations}, indent=2
-        )
-        ignore = json.dumps(
-            {"instructions": {"ignore": sorted(unknown)}}, indent=2
-        )
+        registration = json.dumps({"ase_like_properties": registrations}, indent=2)
+        ignore = json.dumps({"instructions": {"ignore": sorted(unknown)}}, indent=2)
         manual_note = ""
         if ambiguous:
             manual_note = (
@@ -225,8 +221,7 @@ class ModelResults:
             + registration
             + manual_note
             + "\nIf none of these outputs is needed, merge this ignore block "
-            "instead:\n"
-            + ignore
+            "instead:\n" + ignore
         )
 
     def __len__(self) -> int:
