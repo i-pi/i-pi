@@ -2588,9 +2588,7 @@ class FFDielectric(ForceField):
 
     def get_electric_field(self):
         """Returns the cached, summed electric field in atomic units."""
-        return self._get_cached_vector_field(
-            0, "electric field", self.electric_fields
-        )
+        return self._get_cached_vector_field(0, "electric field", self.electric_fields)
 
     def get_electric_displacement(self):
         """Returns the cached, summed electric displacement in atomic units."""

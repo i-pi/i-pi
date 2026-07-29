@@ -2961,16 +2961,12 @@ class Properties:
 
         forcefield = self.system.simul.fflist[forcefield_name]
         if not isinstance(forcefield, FFDielectric):
-            raise TypeError(
-                f"Forcefield '{forcefield_name}' is not an FFDielectric."
-            )
+            raise TypeError(f"Forcefield '{forcefield_name}' is not an FFDielectric.")
         return getattr(forcefield, getter)()
 
     def get_electric_field(self, forcefield_name):
         """Returns the cached total electric field from an FFDielectric."""
-        return self._get_ffdielectric_field(
-            forcefield_name, "get_electric_field"
-        )
+        return self._get_ffdielectric_field(forcefield_name, "get_electric_field")
 
     def get_electric_displacement(self, forcefield_name):
         """Returns the cached total electric displacement from an FFDielectric."""

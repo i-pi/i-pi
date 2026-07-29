@@ -34,9 +34,7 @@ def gaussian(time, amplitude, sigma, peak=0.0):
     return np.asarray(amplitude) * _gaussian_envelope(time, sigma, peak)
 
 
-def plane_wave_gaussian(
-    time, amplitude, frequency, sigma, peak=0.0, phase=0.0
-):
+def plane_wave_gaussian(time, amplitude, frequency, sigma, peak=0.0, phase=0.0):
     """Returns a plane wave multiplied by a Gaussian envelope."""
 
     return plane_wave(time, amplitude, frequency, phase) * _gaussian_envelope(

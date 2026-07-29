@@ -600,9 +600,9 @@ class BatchedMACE(MACECalculator):
                     "The number of cell volumes does not match the number of "
                     "dipole-strain derivatives."
                 )
-            data["piezoelectric"] = dmu_deta.moveaxis(0, 1) / volume[
-                :, None, None, None
-            ]
+            data["piezoelectric"] = (
+                dmu_deta.moveaxis(0, 1) / volume[:, None, None, None]
+            )
 
         return bec, dmu_deta
 
