@@ -20,7 +20,7 @@ clients/ffsgdml/benzene_scpimd.10
 # Needs external packages
 clients/mace/single          # covered by .github/workflows/mace.yml
 clients/mace/batched  # covered by .github/workflows/mace.yml
-examples/clients/mace/polar # covered by .github/workflows/mace.ym
+clients/mace/polar # covered by .github/workflows/mace.ym
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
