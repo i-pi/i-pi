@@ -32,6 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e . mace-torch coverage
+          python -m pip install "git+https://github.com/WillBaldwin0/graph_electrostatics.git"
 
       - name: Download MACE model for single example
         working-directory: examples/clients/mace/single
@@ -47,6 +48,20 @@ jobs:
 
       - name: Run batched MACE example
         working-directory: examples/clients/mace/batched
+        run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Cache MACE-POLAR-1-M model
+        uses: actions/cache@v4
+        with:
+          path: examples/clients/mace/polar/MACE-POLAR-1-M.model
+          key: mace-polar-1-m-${{ hashFiles('examples/clients/mace/polar/download_mace_polar.sh') }}
+
+      - name: Download MACE-POLAR model
+        working-directory: examples/clients/mace/polar
+        run: bash download_mace_polar.sh
+
+      - name: Run polar MACE example
+        working-directory: examples/clients/mace/polar
         run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
 
       - name: Generate coverage report
