@@ -64,6 +64,12 @@ jobs:
         working-directory: examples/clients/mace/polar
         run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
 
+      - name: Run MACE-POLAR FFDielectric example
+        working-directory: examples/features/ffdieletric/mace-polar+E
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
       - name: Generate coverage report
         run: python -m coverage xml -o coverage-mace.xml
 

@@ -2686,13 +2686,18 @@ class FFDielectric(ForceField):
         u -= dipole @ Efield
         f += np.einsum("ijk,j->ik", Z, Efield).flatten()
 
-        # ATTENTION: this equation has to be corrected
-        # virials
-        ve = volume * e + dipole[:, None, None] * np.eye(3)[None, :, :]
-        ve = np.einsum("ijk,i->jk", ve, Efield)
-        # assert np.allclose(
-        #     ve, ve.T
-        # ), "E-dependent part of the virials tensor is not symmetric"
+        # The proper piezoelectric tensor gives the field-induced stress as
+        # sigma_E[j, k] = -sum_i e[i, j, k] E[i]. Since i-PI uses the
+        # convention v = -volume * sigma, its virial contribution is
+        # v_E[j, k] = volume * sum_i e[i, j, k] E[i].
+        ve = volume * np.einsum("ijk,i->jk", e, Efield)
+        if not np.allclose(ve, ve.T):
+            nonsymmetric_norm = np.linalg.norm(ve - ve.T)
+            raise ValueError(
+                "The electric-field-induced virial is not symmetric: "
+                "the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
         v += ve
 
         return u, f, v, x

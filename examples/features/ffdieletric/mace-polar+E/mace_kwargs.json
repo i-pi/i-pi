@@ -1,0 +1,31 @@
+{
+    "model_type": "PolarMACE",
+    "default_dtype": "float32",
+    "instructions": {
+        "_comments": {
+            "model_type": "Selects the PolarMACE calculator architecture used by this checkpoint.",
+            "default_dtype": "Evaluates the model in float32, matching the precision of this checkpoint.",
+            "instructions": "Contains options interpreted by the i-PI MACE wrapper rather than by the MACE model constructor.",
+            "compute_BEC": "Computes Born effective charges and the proper piezoelectric tensor by automatic differentiation.",
+            "ignore": "Skips copying unused optional model outputs from the device to CPU; required energy, force, stress, dipole, BEC, and piezoelectric data remain available."
+        },
+        "compute_BEC" : true,
+        "ignore": [
+            "displacement",
+            "charges",
+            "density_coefficients",
+            "spin_charge_density",
+            "spin_density",
+            "spins",
+            "electrostatic_energy",
+            "electron_energy",
+            "polarizability",
+            "polarizability_sh",
+            "charges_history",
+            "fermi_level",
+            "external_field",
+            "total_charge",
+            "BECx", "BECy", "BECz", "node_energy"
+        ]
+    }
+}

@@ -36,6 +36,7 @@ __all__ = [
 _EXTENDED_ASE_LIKE_PROPERTIES = {
     "node_energy": ("natoms",),
     "atomic-oxn-dipole": ("natoms", 3),
+    "BEC": ("natoms", 3, 3),
     "BECx": ("natoms", 3),
     "BECy": ("natoms", 3),
     "BECz": ("natoms", 3),

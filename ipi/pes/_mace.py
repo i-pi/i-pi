@@ -591,7 +591,18 @@ class BatchedMACE(MACECalculator):
 
         if data.get("piezoelectric") is None:
             # (mu_xyz,graph,eta_i,eta_j) --> (graph,mu_xyz,eta_i,eta_j)
-            data["piezoelectric"] = dmu_deta.moveaxis(0, 1)
+            cell = batch.get("cell")
+            if not isinstance(cell, torch.Tensor):
+                raise ValueError("The MACE batch does not contain a tensor cell.")
+            volume = torch.linalg.det(cell.view(-1, 3, 3)).abs()
+            if volume.shape[0] != dmu_deta.shape[1]:
+                raise ValueError(
+                    "The number of cell volumes does not match the number of "
+                    "dipole-strain derivatives."
+                )
+            data["piezoelectric"] = dmu_deta.moveaxis(0, 1) / volume[
+                :, None, None, None
+            ]
 
         return bec, dmu_deta
 
@@ -641,7 +652,13 @@ class BatchedMACE(MACECalculator):
                 f"{expected_strain_shape}, got {tuple(dmu_deta.shape)}."
             )
         if not torch.allclose(dmu_deta, dmu_deta.transpose(-1, -2)):
-            raise ValueError("The dipole-strain derivative is not symmetric.")
+            nonsymmetric_norm = torch.linalg.norm(
+                dmu_deta - dmu_deta.transpose(-1, -2)
+            ).item()
+            raise ValueError(
+                "The dipole-strain derivative is not symmetric: "
+                f"the norm of its nonsymmetric part is {nonsymmetric_norm:.6e}."
+            )
 
         return bec, dmu_deta
 
@@ -654,8 +671,9 @@ class BatchedMACE(MACECalculator):
 
 
 def proper_dipole(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
-    """Return the dipole corrected for the cell displacement."""
-    return mu - torch.einsum("bil,bl->bi", strain, mu)
+    """Return the dipole corrected for an infinitesimal symmetric strain."""
+    symmetric_strain = 0.5 * (strain + strain.transpose(-1, -2))
+    return mu - torch.einsum("bil,bl->bi", symmetric_strain, mu)
 
 
 # --------------------------------------- #
