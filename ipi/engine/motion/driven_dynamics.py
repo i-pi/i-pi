@@ -4,10 +4,16 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import hashlib
+import importlib
+import importlib.util
+from pathlib import Path
+import sys
+
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.utils.units import Constants
+from ipi.utils.units import Constants, unit_to_internal, unit_to_user
 from ipi.engine.motion.dynamics import (
     NVEIntegrator,
     DummyIntegrator,
@@ -473,83 +479,87 @@ class VectorField:
         """Get the value of the vector field at a given time."""
         raise NotImplementedError("This method should be implemented in subclasses.")
 
-    def fetch(self):
-        """Fetch the vector field value."""
-        raise NotImplementedError("This method should be implemented in subclasses.")
 
+class PythonVectorField(VectorField):
+    """A vector field evaluated by a user-provided Python callable.
 
-class ConstantVectorField(VectorField):
-    """Class for a constant vector field in driven dynamics."""
+    The callable is imported once and called as ``function(time, **parameters)``.
+    The internal simulation time is converted to ``time_units`` before the call,
+    and the returned vector is interpreted in ``units`` and converted back to
+    i-PI atomic units.
+    """
 
-    def __init__(self, amplitude=None):
-        self._amplitude = depend_array(
-            name="amplitude", value=amplitude if amplitude is not None else np.zeros(3)
-        )
+    def __init__(
+        self,
+        file,
+        name,
+        family,
+        units="atomic_unit",
+        time_units="atomic_unit",
+        parameters=None,
+    ):
+        self.file = str(file)
+        self.name = str(name)
+        self.family = str(family)
+        self.units = str(units)
+        self.time_units = str(time_units)
+        self.parameters = {} if parameters is None else dict(parameters)
+        unit_to_internal(self.family, self.units, 1.0)
+        unit_to_internal("time", self.time_units, 1.0)
+        self._function = self._load_function()
 
-    def get(self, time: float):
-        return self.amplitude
+    def _load_function(self):
+        if self.file == "":
+            module = importlib.import_module("ipi.pes.electric_field")
+            source = "the built-in ipi.pes.electric_field module"
+            return self._get_function(module, source)
 
+        path = Path(self.file).expanduser().resolve()
+        if not path.is_file():
+            raise ValueError(f"Vector-field Python file does not exist: {path}")
 
-dproperties(
-    ConstantVectorField,
-    ["amplitude"],
-)
+        digest = hashlib.sha256(str(path).encode()).hexdigest()[:16]
+        module_name = f"ipi_user_vector_field_{digest}"
+        module = sys.modules.get(module_name)
+        if module is None:
+            spec = importlib.util.spec_from_file_location(module_name, path)
+            if spec is None or spec.loader is None:
+                raise ValueError(f"Cannot import vector-field Python file: {path}")
 
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            try:
+                spec.loader.exec_module(module)
+            except Exception:
+                sys.modules.pop(module_name, None)
+                raise
 
-class PlaneWaveVectorField(VectorField):
-    """Class for a plane wave vector field in driven dynamics."""
+        return self._get_function(module, f"Python file '{path}'")
 
-    def __init__(self, amplitude=None, freq=None, phase=None):
-        self._amplitude = depend_array(
-            name="amplitude", value=amplitude if amplitude is not None else np.zeros(3)
-        )
-        self._freq = depend_value(name="freq", value=freq if freq is not None else 0.0)
-        self._phase = depend_array(
-            name="phase", value=phase if phase is not None else 0.0
-        )
+    def _get_function(self, module, source):
+        try:
+            function = getattr(module, self.name)
+        except AttributeError as exc:
+            raise ValueError(f"{source} does not define '{self.name}'.") from exc
+        if not callable(function):
+            raise ValueError(f"'{self.name}' in {source} is not callable.")
+        return function
 
-    def get(self, time: float):
-        return self.amplitude * np.cos(self.freq * time + np.pi * self.phase / 180.0)
-
-
-dproperties(
-    PlaneWaveVectorField,
-    ["amplitude", "freq", "phase"],
-)
-
-
-class PlaneWaveGaussVectorField(PlaneWaveVectorField):
-    """Class for a plane wave vector field in driven dynamics."""
-
-    def __init__(self, amplitude=None, freq=None, phase=None, peak=None, fwhm=None):
-        super().__init__(amplitude, freq, phase)
-        self._peak = depend_array(name="peak", value=peak if peak is not None else 0.0)
-
-        self._fwhm = depend_array(name="fwhm", value=fwhm if fwhm is not None else 0.0)
-
-    @staticmethod
-    def fwhm2sigma(fwhm: float) -> float:
-        """
-        Convert Full Width at Half Maximum (FWHM) to standard deviation (σ) for a Gaussian.
-
-        σ = FWHM / (2 * sqrt(2 * ln(2)))
-
-        Parameters:
-            fwhm (float): Full Width at Half Maximum
-
-        Returns:
-            float: Standard deviation σ
-        """
-        return fwhm / (2 * np.sqrt(2 * np.log(2)))
-
-    def get(self, time: float):
-        pw = super().get(time)
-        sigma = self.fwhm2sigma(self.fwhm)
-        gauss = np.exp(-0.5 * ((time - self.peak) / sigma) ** 2)
-        return pw * gauss
-
-
-dproperties(
-    PlaneWaveGaussVectorField,
-    ["amplitude", "freq", "phase", "peak", "fwhm"],
-)
+    def get(self, actual_time: float):
+        time = unit_to_user("time", self.time_units, float(actual_time))
+        value = np.asarray(self._function(time, **self.parameters))
+        if value.shape != (3,):
+            raise ValueError(
+                f"Vector-field function '{self.name}' must return shape (3,), "
+                f"got {value.shape}."
+            )
+        if not np.issubdtype(value.dtype, np.number) or np.iscomplexobj(value):
+            raise ValueError(
+                f"Vector-field function '{self.name}' must return three real numbers."
+            )
+        value = value.astype(float, copy=False)
+        if not np.all(np.isfinite(value)):
+            raise ValueError(
+                f"Vector-field function '{self.name}' returned non-finite values."
+            )
+        return unit_to_internal(self.family, self.units, value)

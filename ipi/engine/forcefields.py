@@ -36,7 +36,6 @@ from ipi.utils.mathtools import (
     get_rotation_quadrature_lebedev,
     random_rotation,
 )
-from ipi.utils.timing import Timer, timeit
 
 plumed = None
 
@@ -2511,20 +2510,18 @@ class FFDielectric(ForceField):
     def __init__(
         self,
         name: str,
-        mode: str,
         where: str,
         dipole: dict,
         bec: dict,
         piezo: dict,
-        field: VectorField,
+        electric_fields: list[VectorField],
+        electric_displacements: list[VectorField],
         forcefield: ForceField,
-        logfile: str,
     ):
         # self._requests = []
         # self.ready = False
         super().__init__()
         self.name = name  # this might be useless
-        self.mode = mode
         self.where = where
         self.dipole = ArrayFromDict(
             **dipole
@@ -2535,11 +2532,13 @@ class FFDielectric(ForceField):
         self.piezo = ArrayFromDict(
             **piezo
         )  # how to read the piezoelectric tensor from the client code
-        self.field = field  # what type of external field should be applied
+        self.electric_fields = list(electric_fields)
+        self.electric_displacements = list(electric_displacements)
         self.forcefield = forcefield
         self.template = {}
-        self.logfile = logfile
-        self.logger = Timer(logfile != "", logfile)
+        self._field_cache_lock = threading.Lock()
+        self._field_cache_time = None
+        self._field_cache = (None, None)
         # self.ready = True
 
     def bind(self, output_maker=None):
@@ -2570,74 +2569,114 @@ class FFDielectric(ForceField):
         """
         self.forcefield.release(request, lock)
 
-    @timeit(name="get_extra", report=True)
     def get_extra(self):
         """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
         return self.template.copy()
 
-    @timeit(name="queue", report=True)
+    def _get_cached_vector_field(self, index, label, configured_fields):
+        """Returns a copy of a summed field already evaluated for this step."""
+        if not configured_fields:
+            raise ValueError(f"FFDielectric '{self.name}' has no {label} configured.")
+        with self._field_cache_lock:
+            field = self._field_cache[index]
+            if field is None:
+                raise RuntimeError(
+                    f"The {label} for FFDielectric '{self.name}' has not been "
+                    "evaluated yet."
+                )
+            return field.copy()
+
+    def get_electric_field(self):
+        """Returns the cached, summed electric field in atomic units."""
+        return self._get_cached_vector_field(
+            0, "electric field", self.electric_fields
+        )
+
+    def get_electric_displacement(self):
+        """Returns the cached, summed electric displacement in atomic units."""
+        return self._get_cached_vector_field(
+            1, "electric displacement", self.electric_displacements
+        )
+
+    @staticmethod
+    def _sum_vector_fields(fields, actual_time):
+        """Evaluates and sums one category of user-provided vector fields."""
+        if not fields:
+            return None
+        total = np.zeros(3)
+        for field in fields:
+            value = np.asarray(dstrip(field.get(actual_time)), dtype=float)
+            if value.shape != (3,):
+                raise ValueError(
+                    f"A vector field must have shape (3,), got {value.shape}."
+                )
+            total += value
+        return total
+
+    def _evaluate_fields(self, actual_time):
+        """Evaluates each field once per simulation time, also for many beads."""
+        with self._field_cache_lock:
+            if self._field_cache_time != actual_time:
+                self._field_cache = (
+                    self._sum_vector_fields(self.electric_fields, actual_time),
+                    self._sum_vector_fields(self.electric_displacements, actual_time),
+                )
+                self._field_cache_time = actual_time
+            return tuple(
+                None if value is None else value.copy() for value in self._field_cache
+            )
+
     def queue(self, atoms, cell, template=None, **kwargs) -> dict:
         if template is None:
             template = {}
 
-        # time-dependent information
-        with self.logger.section("getting time (1)"):
-            time = float(atoms.motion.actual_time)
-        with self.logger.section("getting field (2)"):
-            field = self.field.get(time)
-        with self.logger.section("getting dstrip field (3)"):
-            field = dstrip(field).tolist()
-        with self.logger.section("getting extra_template (4)"):
-            extra_template = {  # extra information
-                "time": time,  # necessary in 'fixed_E'
-                "extra": json.dumps(
-                    {
-                        "Efield": field,  # electric field
-                    }
-                ),
-            }
-        with self.logger.section("copy extra_template (5)"):
-            self.template = extra_template.copy()  # just for debugging
+        actual_time = float(atoms.motion.actual_time)
+        electric_field, electric_displacement = self._evaluate_fields(actual_time)
+        driver_extra = {"time": actual_time, "where": self.where}
+        extra_template = {"time": actual_time}
+        if electric_field is not None:
+            electric_field = electric_field.tolist()
+            extra_template["Efield"] = electric_field
+            if self.where == "client":
+                driver_extra["Efield"] = electric_field
+        if electric_displacement is not None:
+            electric_displacement = electric_displacement.tolist()
+            extra_template["Dfield"] = electric_displacement
+            if self.where == "client":
+                driver_extra["Dfield"] = electric_displacement
+        extra_template["extra"] = json.dumps(driver_extra)
+        self.template = extra_template.copy()
 
         assert self.where in ["client", "server"], "coding error"
 
-        # send the extra information only if requested
-        with self.logger.section("getting template (6)"):
-            if self.where == "client":
-                template = {**template, **extra_template}
+        # The top-level request retains fields needed by i-PI post-processing.
+        # The serialized driver extras contain fields only for client-side use.
+        template = {**template, **extra_template}
+        return self.forcefield.queue(atoms, cell, template=template, **kwargs)
 
-        with self.logger.section("forcefield.queue (7)"):
-            newreq = self.forcefield.queue(atoms, cell, template=template, **kwargs)
-        return newreq
-
-    @timeit(name="post_process", report=True)
     def post_process(self, r: dict):
         """Post-processes the results of the forcefield request."""
         # This is a no-op for now, but can be overridden in subclasses
 
         # general safe checks
-        with self.logger.section("post_process status (1)"):
-            if r["status"] != "Done":
-                softexit.trigger(
-                    status="bad",
-                    message=f"Forcefield request {r['id']} is not done, cannot post-process (this is coding error).",
-                )
-        with self.logger.section("post_process requests (2)"):
-            if r not in self.forcefield.requests:
-                softexit.trigger(
-                    status="bad",
-                    message=f"Forcefield request {r['id']} is not in the forcefield's request list (this is coding error).",
-                )
-        with self.logger.section("post_process result (3)"):
-            if "result" not in r:
-                softexit.trigger(
-                    status="bad",
-                    message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
-                )
+        if r["status"] != "Done":
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not done, cannot post-process (this is coding error).",
+            )
+        if r not in self.forcefield.requests:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not in the forcefield's request list (this is coding error).",
+            )
+        if "result" not in r:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
+            )
 
         if self.where == "server":
-            with self.logger.section("post_process apply_ensemble (4)"):
-                return self.apply_ensemble(r)
+            return self.apply_ensemble(r)
         elif self.where == "client":
             return r
         else:
@@ -2645,22 +2684,19 @@ class FFDielectric(ForceField):
 
     def apply_ensemble(self, request: dict) -> dict:
         """
-        Apply the selected ensemble.
+        Apply fields whose equations of motion are implemented in i-PI.
+
+        Electric displacement is already carried by the request so that a
+        future fixed-D implementation can be added here without changing the
+        input or driver protocol.
         """
-        if self.mode == "none":
-            return request
-        elif self.mode == "E":  # fixed-E ensemble
-            with self.logger.section("post_process apply_ensemble fixed_E (5)"):
-                request["result"] = self.fixed_E(request)
-        elif self.mode == "D":  # fixed-D ensemble
-            with self.logger.section("post_process apply_ensemble fixed_D (5)"):
-                request["result"] = self.fixed_D(request)
-        else:  # there is an error in the implementation
-            raise ValueError("coding error")
+        if "Efield" in request:
+            request["result"] = self.fixed_E(request)
+        # Deliberately do not apply request["Dfield"] yet: fixed-D equations of
+        # motion have not been implemented. The field is still sent to clients.
         return request
 
     def fixed_E(self, request: dict) -> tuple:
-
         # Extract  energy, forces, virials and extra information
         # from the results returned from the driver.
         u, f, v, x = request["result"]
@@ -2674,9 +2710,8 @@ class FFDielectric(ForceField):
             x, np.zeros((3, 3, 3))
         )  # piezoelectric tensor, with shape (3,3,3)
 
-        # Evaluate the (time-dependent) electric field
-        time = self.template["time"]
-        Efield = self.field.get(time)
+        # This is the summed field evaluated when this request was queued.
+        Efield = np.asarray(request["Efield"])
 
         # Compute the volume of the structure
         cell = request["cell"][0]

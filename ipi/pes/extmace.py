@@ -3,10 +3,13 @@
 
 The standard batching, model evaluation, force/stress calculation, output
 handling, and command-line interface live in :mod:`ipi.pes._mace`.  This module
-only adds the electric-field ensembles and the associated response tensors.
+only adds electric-field coupling and the associated response tensors.
+
+Runnable static-field and resonant-field examples for both client-side and
+server-side coupling are provided under ``examples/features/ffdieletric``.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -19,7 +22,6 @@ from ipi.pes._mace import (
     proper_dipole,
     run_cli,
 )
-from ipi.pes.tools import JSONLogger, Parent
 from ipi.utils.units import unit_to_user
 
 __DRIVER_NAME__ = "extmace"
@@ -76,7 +78,7 @@ class Extended_MACE_driver(MACE_driver):
 
 
 class ExtendedMACECalculator(BatchedMACE):
-    """Batched MACE calculator extended with electric-field ensembles."""
+    """Batched MACE calculator extended with electric-field coupling."""
 
     ignored_properties = frozenset(to_ignore_properties)
 
@@ -92,13 +94,13 @@ class ExtendedMACECalculator(BatchedMACE):
         instructions = {} if instructions is None else instructions.copy()
         instructions["forward_kwargs"] = instructions.get("forward_kwargs", {}).copy()
 
-        self.ensemble = str(instructions.get("ensemble", "none")).upper()
-        instructions["ensemble"] = self.ensemble
-        if self.ensemble not in {"NONE", "E"}:
-            raise ValueError(f"Ensemble {self.ensemble} not implemented (yet).")
+        if "ensemble" in instructions:
+            raise ValueError(
+                "The extmace 'ensemble' instruction has been removed. "
+                "Use <electric_field> in <ffdielectric> and select where the "
+                "coupling is applied with its 'where' attribute."
+            )
 
-        instructions.pop("log", None)
-        self.results_logger = JSONLogger(instructions.pop("log_results", None))
         self.extras = {}
 
         properties = _EXTENDED_ASE_LIKE_PROPERTIES.copy()
@@ -106,14 +108,6 @@ class ExtendedMACECalculator(BatchedMACE):
             properties.update(ase_like_properties)
 
         super().__init__(instructions, properties, *args, **kwargs)
-
-    def compute_batched(self, atoms) -> List[Parent]:
-        """Evaluate structures and optionally retain the legacy result log."""
-
-        results = super().compute_batched(atoms)
-        for index, result in enumerate(results):
-            self.results_logger.save(result, f"results.{index}.json")
-        return results
 
     def augment_output(
         self,
@@ -124,14 +118,19 @@ class ExtendedMACECalculator(BatchedMACE):
     ) -> Dict[str, torch.Tensor]:
         """Add electric-field contributions and dielectric response tensors."""
 
-        if self.ensemble == "NONE":
-            data = self.get_forces_stress(data, batch, training)
-        else:
+        if "Dfield" in self.extras:
+            raise NotImplementedError(
+                "Electric-displacement coupling is not implemented in extmace yet."
+            )
+
+        if "Efield" in self.extras:
             mu = self._proper_model_dipole(data)
             electric_field = self._electric_field(mu)
             # Differentiating the field-coupled energy supplies the field
             # contributions to forces and stress automatically.
             data["energy"] -= mu @ electric_field
+            data = self.get_forces_stress(data, batch, training)
+        else:
             data = self.get_forces_stress(data, batch, training)
 
         if compute_bec:
@@ -149,8 +148,8 @@ class ExtendedMACECalculator(BatchedMACE):
         extras = self.extras
         if not extras or "Efield" not in extras:
             raise ValueError(
-                "The extra information dictionary must contain 'Efield' when "
-                f"using ensemble '{self.ensemble}'."
+                "The extra information dictionary must contain 'Efield' for "
+                "client-side electric-field coupling."
             )
 
         electric_field = np.asarray(extras["Efield"])

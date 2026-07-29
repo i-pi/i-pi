@@ -248,6 +248,18 @@ class Properties:
                 "help": "The elapsed simulation time.",
                 "func": (lambda: self.ensemble.time),
             },
+            "electric_field": {
+                "dimension": "electric-field",
+                "size": 3,
+                "help": "The cached total electric field applied by an FFDielectric force field. Takes the force-field name as its argument.",
+                "func": self.get_electric_field,
+            },
+            "electric_displacement": {
+                "dimension": "electric-polarization",
+                "size": 3,
+                "help": "The cached total electric displacement defined by an FFDielectric force field. Takes the force-field name as its argument.",
+                "func": self.get_electric_displacement,
+            },
             "temperature": {
                 "dimension": "temperature",
                 "help": "The current temperature, as obtained from the MD kinetic energy.",
@@ -2939,6 +2951,32 @@ class Properties:
         if self.nm.exchange_potential is None:
             raise Exception("No bosons found for fermionic_sign")
         return self.nm.exchange_potential.fermionic_sign
+
+    def _get_ffdielectric_field(self, forcefield_name, getter):
+        """Fetches a cached field from a named FFDielectric instance."""
+        if forcefield_name not in self.system.simul.fflist:
+            raise ValueError(f"Forcefield {forcefield_name} does not exist.")
+
+        from ipi.engine.forcefields import FFDielectric
+
+        forcefield = self.system.simul.fflist[forcefield_name]
+        if not isinstance(forcefield, FFDielectric):
+            raise TypeError(
+                f"Forcefield '{forcefield_name}' is not an FFDielectric."
+            )
+        return getattr(forcefield, getter)()
+
+    def get_electric_field(self, forcefield_name):
+        """Returns the cached total electric field from an FFDielectric."""
+        return self._get_ffdielectric_field(
+            forcefield_name, "get_electric_field"
+        )
+
+    def get_electric_displacement(self, forcefield_name):
+        """Returns the cached total electric displacement from an FFDielectric."""
+        return self._get_ffdielectric_field(
+            forcefield_name, "get_electric_displacement"
+        )
 
 
 class Trajectories:

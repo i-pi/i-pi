@@ -4,16 +4,17 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import json
+
 from ipi.engine.motion.driven_dynamics import (
     ElectricField,
     BEC,
-    ConstantVectorField,
-    PlaneWaveVectorField,
-    PlaneWaveGaussVectorField,
+    PythonVectorField,
 )
 from ipi.utils.inputvalue import (
     input_default,
 )
+from ipi.utils.units import UnitMap
 from ipi.inputs.motion.dynamics import InputDynamics
 import numpy as np
 
@@ -22,162 +23,122 @@ from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.cell import *
 from copy import copy
+from copy import deepcopy
 
-__all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC", "InputFunction"]
-
-CommonFields = {
-    "amplitude": (
-        InputArray,
-        {
-            "dtype": float,
-            "default": np.zeros(3),
-            "help": "The amplitude of the external field (in cartesian coordinates)",
-            "dimension": "electric-field",
-        },
-    ),
-    "freq": (
-        InputValue,
-        {
-            "dtype": float,
-            "default": 0.0,
-            "help": "The pulsation of the external field",
-            "dimension": "frequency",
-        },
-    ),
-    "phase": (
-        InputValue,
-        {
-            "dtype": float,
-            "default": 0.0,
-            "help": "The phase of the external field (in deg)",
-            "dimension": "number",
-        },
-    ),
-    "peak": (
-        InputValue,
-        {
-            "dtype": float,
-            "default": 0.0,
-            "help": "The time when the external field gets its maximum value",
-            "dimension": "time",
-        },
-    ),
-    "fwhm": (
-        InputValue,
-        {
-            "dtype": float,
-            "default": np.inf,
-            "help": "The FWHM of the gaussian envelope function of the external field",
-            "dimension": "time",
-        },
-    ),
-}
+__all__ = [
+    "InputDrivenDynamics",
+    "InputElectricField",
+    "InputBEC",
+    "InputPythonVectorField",
+]
 
 
-class _InputCommonVectorField(Input):
-    _VF = None
+class InputFieldParameters(InputValue):
+    """A JSON dictionary of keyword arguments for a field function."""
+
+    def __init__(self, help=None, default=None):
+        if default is None:
+            default = {}
+        super().__init__(help=help, default=json.dumps(default), dtype=str)
+
+    def store(self, value, units=""):
+        if isinstance(value, str):
+            encoded = value
+        else:
+            encoded = json.dumps(value)
+        super().store(encoded, units=units)
 
     def fetch(self):
-        kwargs = {}
-        for k in self.fields.keys():
-            kwargs[k] = getattr(self, k).fetch()
-        return self._VF(**kwargs)
-
-    def store(self, field):
-        super().store(field)
-        for k in self.fields.keys():
-            value = getattr(field, k)
-            self.__dict__[k].store(value)
+        value = json.loads(super().fetch())
+        if not isinstance(value, dict):
+            raise ValueError("Vector-field parameters must be a JSON dictionary.")
+        return value
 
 
-class InputConstantVectorField(_InputCommonVectorField):
+class InputPythonVectorField(Input):
+    """Input for a vector field returned by a user Python callable."""
 
-    fields = {"amplitude": CommonFields["amplitude"]}
-    _VF = ConstantVectorField
-
-
-class InputPlaneWaveVectorField(_InputCommonVectorField):
     fields = {
-        "amplitude": CommonFields["amplitude"],
-        "freq": CommonFields["freq"],
-        "phase": CommonFields["phase"],
+        "parameters": (
+            InputFieldParameters,
+            {
+                "default": {},
+                "help": "JSON dictionary of keyword arguments passed to the vector-field callable.",
+            },
+        ),
     }
 
-    _VF = PlaneWaveVectorField
-
-
-class InputPlaneWaveGaussVectorField(_InputCommonVectorField):
-    fields = CommonFields.copy()
-    _VF = PlaneWaveGaussVectorField
-
-
-class InputVectorField(Input):
-
     attribs = {
-        "mode": (
+        "file": (
             InputAttribute,
             {
                 "dtype": str,
-                "default": "constant",
-                "options": ["constant", "pw", "pw+gauss"],
-                "help": "The type of electric field.",
+                "default": "",
+                "help": "Optional Python file containing the callable. If omitted, the function is read from ipi.pes.electric_field.",
             },
-        )
+        ),
+        "name": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "help": "Name of a callable that accepts the simulation time.",
+            },
+        ),
+        "units": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "atomic_unit",
+                "help": "Units of the three-vector returned by the callable.",
+            },
+        ),
+        "time_units": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "atomic_unit",
+                "help": "Units used for the time passed as the first callable argument.",
+            },
+        ),
     }
+    _family = None
 
-    fields = {
-        "constant": (
-            InputConstantVectorField,
-            {
-                "default": input_default(factory=ConstantVectorField),
-                "help": "Option for constant field",
-            },
-        ),
-        "pw": (
-            InputPlaneWaveVectorField,
-            {
-                "default": input_default(factory=PlaneWaveVectorField),
-                "help": "Option for plane-wave field",
-            },
-        ),
-        "pwgauss": (
-            InputPlaneWaveGaussVectorField,
-            {
-                "default": input_default(factory=PlaneWaveGaussVectorField),
-                "help": "Option for plane-wave field with gaussian envelope",
-            },
-        ),
-    }
+    @classmethod
+    def specialize(cls, family, units="atomic_unit"):
+        if family not in UnitMap:
+            raise ValueError(f"Unknown unit family '{family}'.")
+        if units not in UnitMap[family]:
+            raise ValueError(f"Unknown units '{units}' for family '{family}'.")
+        attribs = deepcopy(cls.attribs)
+        attribs["units"][1]["default"] = units
+        return type(
+            f"{cls.__name__}_{family.replace('-', '_')}",
+            (cls,),
+            {"attribs": attribs, "_family": family},
+        )
 
     def fetch(self):
         super().fetch()
-        mode = self.mode.fetch()
-        if mode == "constant":
-            return (
-                self.constant.fetch()
-            )  # this will return a 'ConstantVectorField' object
-        elif mode == "pw":
-            return self.pw.fetch()  # this will return a 'PlaneWaveVectorField' object
-        elif mode == "pwgauss":
-            return (
-                self.pwgauss.fetch()
-            )  # this will return a 'PlaneWaveGaussVectorField' object
-        else:
-            raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
+        return PythonVectorField(
+            file=self.file.fetch(),
+            name=self.name.fetch(),
+            family=self._family,
+            units=self.units.fetch(),
+            time_units=self.time_units.fetch(),
+            parameters=self.parameters.fetch(),
+        )
 
     def store(self, field):
-        super().store()
-        if isinstance(field, ConstantVectorField):
-            self.mode.store("constant")
-            self.constant.store(field)
-        elif isinstance(field, PlaneWaveVectorField):
-            self.mode.store("pw")
-            self.pw.store(field)
-        elif isinstance(field, PlaneWaveGaussVectorField):
-            self.mode.store("pwgauss")
-            self.pwgauss.store(field)
-        else:
-            raise ValueError(f"Unknown type {type(field)} in InputVectorField.store()")
+        if not isinstance(field, PythonVectorField) or field.family != self._family:
+            raise TypeError(
+                f"Expected a PythonVectorField with family '{self._family}'."
+            )
+        super().store(field)
+        self.file.store(field.file)
+        self.name.store(field.name)
+        self.units.store(field.units)
+        self.time_units.store(field.time_units)
+        self.parameters.store(field.parameters)
 
 
 # Here come the old classes
