@@ -435,24 +435,7 @@ class BatchedMACE(MACECalculator):
 
         print("-----------------------------------")
         print("  MACE output summary (printed once):")
-        # print(
-        #     "  'Produced' means that MACE created the property on the selected "
-        #     "compute device."
-        # )
-        # print(
-        #     "  'Copied to CPU' means that the property was detached from PyTorch "
-        #     "and converted to a NumPy value for i-PI."
-        # )
-        # print(
-        #     "  Per-atom properties (ASE arrays) contain values for every atom; "
-        #     "per-structure properties (ASE info) contain one value or tensor "
-        #     "for each structure."
-        # )
-        # print(
-        #     "  Unregistered model outputs have no shape declared in "
-        #     "ase_like_properties. They are usually internal MACE values and "
-        #     "cannot be returned until a shape is configured."
-        # )
+        print(f"  Using device: {self.device}")
         print(
             "  Performance tip: avoid unnecessary GPU-to-CPU transfers by "
             "ignoring optional outputs you do not need."
