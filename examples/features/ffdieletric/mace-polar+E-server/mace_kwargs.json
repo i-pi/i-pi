@@ -1,11 +1,11 @@
 {
     "model_type": "PolarMACE",
-    "default_dtype": "float32",
+    "default_dtype": "float64",
     "instructions": {
         "_comments": {
             "model_type": "Selects the PolarMACE calculator architecture used by this checkpoint.",
-            "default_dtype": "Evaluates the model in float32, matching the precision of this checkpoint.",
-            "instructions": "Contains options interpreted by the i-PI MACE wrapper rather than by the MACE model constructor.",
+            "default_dtype": "Evaluates the model in float64.",
+            "instructions": "Contains options interpreted by the i-PI MACE wrapper rather than by the MACE model constructor. Field selection is supplied at run time by FFDielectric, so no ensemble key is needed here.",
             "compute_BEC": "Computes Born effective charges and the proper piezoelectric tensor by automatic differentiation.",
             "ignore": "Skips copying unused optional model outputs from the device to CPU; required energy, force, stress, dipole, BEC, and piezoelectric data remain available."
         },

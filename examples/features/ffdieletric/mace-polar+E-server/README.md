@@ -1,14 +1,19 @@
-# BaTiO3, MACE-POLAR, and a homogeneous electric field
+# Water, MACE-POLAR, and a homogeneous electric field
 
 This example exercises i-PI's in-process MACE driver, MACE-POLAR dielectric
 response, and the `FFDielectric` fixed-electric-field wrapper. No socket client
 is needed. The calculation uses a local `MACE-POLAR-1-M.model` checkpoint.
+The MACE-POLAR-optimized water monomer is centered in a 20 angstrom cell. Its
+initial dipole points along -z, antiparallel to the applied +z field.
 
-MACE-POLAR-1 was trained on molecular data from OMol25. The periodic BaTiO3
-cell used here is therefore a wiring and smoke test, not a validated BaTiO3
-potential. In addition, a total dipole is branch-dependent under periodic
-boundary conditions. Do not interpret this short trajectory as a physical
-prediction for BaTiO3.
+## Files in this folder
+
+- `input.xml`: static-field calculation with `where='server'`.
+- `start.extxyz`: water coordinates read by i-PI and MACE; `start.xyz` contains
+  the same geometry in plain XYZ form.
+- `mace_kwargs.json`: PolarMACE calculator and response-tensor options.
+- `download_mace_polar.sh`: downloads `MACE-POLAR-1-M.model` locally.
+- `README.md`: setup, conventions, tensor definitions, and validation notes.
 
 ## Install
 
@@ -37,13 +42,10 @@ The download script writes `MACE-POLAR-1-M.model`. The relevant force-field
 part of `input.xml` is:
 
 ```xml
-<ffdielectric name='mu+E' mode='E' where='server'>
-  <field mode='pw'>
-    <pw>
-      <amplitude units='V/ang'>[0, 0, 1]</amplitude>
-      <freq units='THz'>0</freq>
-    </pw>
-  </field>
+<ffdielectric name='mu+E' where='server'>
+  <electric_field name='static' units='V/ang' time_units='femtosecond'>
+    <parameters>{ "amplitude": [0, 0, 1] }</parameters>
+  </electric_field>
   <ffdirect name='mace' pbc='True'>
     <pes>extmace</pes>
     <parameters>{
@@ -56,10 +58,70 @@ part of `input.xml` is:
 </ffdielectric>
 ```
 
+With no `file` attribute, the named function is read from
+`ipi.pes.electric_field`. i-PI converts its internal `actual_time` to
+`time_units` and evaluates it as `function(time, **parameters)`. The returned
+Cartesian vector is interpreted in `units` and converted to atomic units. This
+example therefore applies a static 1 V/Angstrom field along z. Multiple
+`<electric_field>` entries are evaluated independently and summed.
+
+The summed field is available as the fixed-size property
+`electric_field(mu+E)`. The example requests
+`electric_field(mu+E){V/ang}` in `properties.out`, so its final three columns
+are the applied Cartesian field in V/Angstrom. Reading this property uses the
+field already cached for the force evaluation and does not call the function
+again.
+
+The built-in functions and their formulas are:
+
+```text
+static:              amplitude
+plane_wave:          amplitude * cos(frequency*time + phase)
+gaussian:            amplitude * exp[-(time-peak)^2/(2*sigma^2)]
+plane_wave_gaussian: plane_wave * Gaussian envelope
+```
+
+`amplitude` uses the field `units`; `sigma` and `peak` use `time_units`;
+`frequency` is an angular frequency in radians per selected time unit; and
+`phase` is in radians. `peak` and `phase` default to zero. The contents of
+`<parameters>` are JSON, so parameter names must be enclosed in double quotes.
+For example:
+
+```xml
+<electric_field name='plane_wave_gaussian'
+                units='V/ang' time_units='femtosecond'>
+  <parameters>{
+    "amplitude": [0, 0, 1],
+    "frequency": 0.1,
+    "phase": 0.0,
+    "sigma": 10.0,
+    "peak": 25.0
+  }</parameters>
+</electric_field>
+```
+
+To use a custom function, add `file` while keeping the same calling convention:
+
+```xml
+<electric_field file='my_fields.py' name='my_field'
+                units='V/ang' time_units='femtosecond'>
+  <parameters>{ "amplitude": [0, 0, 1], "ramp": 20.0 }</parameters>
+</electric_field>
+```
+
+```python
+def my_field(time, amplitude, ramp):
+    return [component * min(time / ramp, 1.0) for component in amplitude]
+```
+
 `where='server'` means that MACE returns the zero-field energy, forces,
 stress, dipole, Born effective charges, and piezoelectric response. i-PI then
 adds the field-dependent contribution. With `where='client'`, the underlying
-driver would instead be responsible for applying the field.
+driver instead applies the field. i-PI therefore includes `Efield` in the
+driver extras only with `where='client'`; `extmace` applies a field solely when
+that key is present. The `time` and `where` metadata are sent in either case.
+Electric-displacement functions use the parallel `<electric_displacement>` tag,
+but their equations of motion are intentionally not implemented yet.
 
 `mace_kwargs.json` sets `model_type` to `PolarMACE`. It also enables response
 derivatives inside the `instructions` dictionary:
@@ -67,7 +129,7 @@ derivatives inside the `instructions` dictionary:
 ```json
 {
     "model_type": "PolarMACE",
-    "default_dtype": "float32",
+    "default_dtype": "float64",
     "instructions": {
         "compute_BEC": true,
         "ignore": []
@@ -78,9 +140,8 @@ derivatives inside the `instructions` dictionary:
 The placement of `compute_BEC` is important: it is an instruction to the i-PI
 MACE wrapper, not a top-level `MACECalculator` argument.
 
-Use `device:cuda` for a CUDA GPU. Float32 is appropriate for this MD smoke
-test. For response validation or finite-difference comparisons, use
-`default_dtype: float64`.
+Use `device:cuda` for a CUDA GPU. This example uses float64 so that response
+symmetry and finite-difference checks are not dominated by float32 roundoff.
 
 `start.extxyz` supplies the global electronic state expected by MACE-POLAR:
 neutral charge, singlet spin multiplicity, and zero external field. Change

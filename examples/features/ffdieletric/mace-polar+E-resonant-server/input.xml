@@ -1,0 +1,66 @@
+<simulation verbosity='high'>
+  <total_steps>20</total_steps>
+
+  <ffdielectric name='mu+E' where='server'>
+    <!-- The built-in plane_wave function returns
+         amplitude*cos(frequency*time + phase). Frequency is an angular
+         frequency in rad/fs because time_units is femtosecond. The value
+         below is resonant with the MACE-POLAR symmetric O-H stretch
+         (3818.84 cm^-1). The initial water dipole points along -z. -->
+    <electric_field name='plane_wave' units='V/ang' time_units='femtosecond'>
+      <parameters>{
+        "amplitude": [0, 0, 0.1],
+        "frequency": 0.719335584407,
+        "phase": 0.0
+      }</parameters>
+    </electric_field>
+    <!-- These entries reproduce the FFDielectric defaults and are included
+         only to show how the driver keys and units can be customized. -->
+    <dipole units="eang"   key="dipole" />
+    <bec    units="e"      key="BEC" />
+    <piezo  units="e/ang2" key="piezoelectric" />
+    <ffdirect name='mace' pbc='True'>
+      <pes>extmace</pes>
+      <parameters>{
+        template:start.extxyz,
+        model:MACE-POLAR-1-M.model,
+        device:cpu,
+        mace_kwargs:mace_kwargs.json
+      }</parameters>
+    </ffdirect>
+  </ffdielectric>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_field(mu+E){V/ang}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'>start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='mu+E'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

@@ -1,14 +1,14 @@
 <simulation verbosity='high'>
   <total_steps>10</total_steps>
 
-  <ffdielectric name='mu+E' mode='E' where='server'> 
-    <!-- electric field parameters -->
-    <field mode='pw'>
-      <pw>
-        <amplitude units="V/ang">  [0,0,1] </amplitude>
-        <freq units="THz">  0 </freq>
-      </pw>
-    </field>
+  <ffdielectric name='mu+E' where='client'>
+    <!-- "static" is provided by ipi.pes.electric_field. The function receives
+         time in time_units and returns a three-vector in units. Multiple
+         electric_field entries would be evaluated and summed. -->
+    <electric_field name='static' units='V/ang' time_units='femtosecond'>
+      <!-- The initial water dipole points along -z, antiparallel to this field. -->
+      <parameters>{ "amplitude": [0, 0, 1] }</parameters>
+    </electric_field>
     <!-- The following dipole, BEC, and piezo entries reproduce exactly the
          FFDielectric defaults, so they can be omitted. They are shown here to
          illustrate how to customize the extra-information keys and units for
@@ -32,7 +32,8 @@
   <output prefix='i-pi'>
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
-       kinetic_md{electronvolt}, potential{electronvolt}]
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_field(mu+E){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>
@@ -57,7 +58,7 @@
 
     <motion mode='dynamics'>
       <dynamics mode='nvt'>
-        <timestep units='femtosecond'> 1 </timestep>
+        <timestep units='femtosecond'> 0.5 </timestep>
         <thermostat mode='langevin'>
             <tau units='femtosecond'> 100 </tau>
           </thermostat>

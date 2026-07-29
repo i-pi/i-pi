@@ -1,8 +1,25 @@
-# Response tensors used by `FFDielectric`
+# `FFDielectric` examples
 
-With `mode='E'` and `where='server'`, the driver must return the dipole, Born
-effective charges (BECs), and proper piezoelectric tensor in its `extras`
-dictionary. The Cartesian order is always `x, y, z`.
+This directory contains four MACE-POLAR water examples:
+
+| Folder | Field | Where the coupling is applied |
+|---|---|---|
+| `mace-polar+E-server` | static | i-PI, using response tensors from MACE |
+| `mace-polar+E-client` | static | MACE, after receiving `Efield` from i-PI |
+| `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
+| `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `Efield` from i-PI |
+
+Each folder contains an `input.xml`, water starting coordinates, MACE options,
+a model-download script, and a README with the run instructions. The examples
+use the in-process `extmace` driver, so they do not require a socket client.
+
+## Response tensors
+
+With one or more `<electric_field>` entries and `where='server'`, the driver
+must return the dipole, Born effective charges (BECs), and proper piezoelectric
+tensor in its `extras` dictionary. The Cartesian order is always `x, y, z`.
+Fields can use a built-in function from `ipi.pes.electric_field`, or a custom
+Python function selected with the optional `file` attribute.
 
 ## Expected data
 
@@ -74,6 +91,3 @@ bec_driven = bec_ff.transpose(0, 2, 1).reshape(3 * natoms, 3)
 Thus the physical convention is the same, but the stored per-atom matrices
 are transposed. When driven-dynamics values are dimensionless and
 `FFDielectric` uses `units="e"`, their numerical values otherwise agree.
-
-For details about constructing the proper piezoelectric tensor with
-MACE-POLAR, see the [MACE-POLAR example](mace-polar+E/README.md).

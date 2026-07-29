@@ -1,0 +1,68 @@
+<simulation verbosity='high'>
+  <total_steps>10</total_steps>
+
+  <ffdielectric name='mu+E' where='server'>
+    <!-- "static" is provided by ipi.pes.electric_field. The function receives
+         time in time_units and returns a three-vector in units. Multiple
+         electric_field entries would be evaluated and summed. -->
+    <electric_field name='static' units='V/ang' time_units='femtosecond'>
+      <!-- The initial water dipole points along -z, antiparallel to this field. -->
+      <parameters>{ "amplitude": [0, 0, 1] }</parameters>
+    </electric_field>
+    <!-- The following dipole, BEC, and piezo entries reproduce exactly the
+         FFDielectric defaults, so they can be omitted. They are shown here to
+         illustrate how to customize the extra-information keys and units for
+         a driver that uses different conventions. -->
+    <dipole units="eang"   key="dipole" />
+    <bec    units="e"      key="BEC" />
+    <piezo  units="e/ang2" key="piezoelectric" />
+    <!-- PES+dipole -->
+    <!-- MACE runs in-process; no socket client is needed. -->
+    <ffdirect name='mace' pbc='True'>
+      <pes>extmace</pes>
+      <parameters>{
+        template:start.extxyz,
+        model:MACE-POLAR-1-M.model,
+        device:cpu,
+        mace_kwargs:mace_kwargs.json
+      }</parameters>
+    </ffdirect>
+  </ffdielectric>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_field(mu+E){V/ang}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase' >start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+
+    <forces>
+      <force forcefield='mu+E'/>
+    </forces>
+
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100 </tau>
+          </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
