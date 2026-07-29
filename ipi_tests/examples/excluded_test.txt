@@ -18,6 +18,7 @@ clients/ffsgdml/benzene_pimd.10
 clients/ffsgdml/benzene_scpimd.10
 
 # Needs external packages
+
 clients/mace/single   # covered by .github/workflows/mace.yml
 clients/mace/batched  # covered by .github/workflows/mace.yml
 clients/mace/polar    # covered by .github/workflows/mace.yml
@@ -25,6 +26,7 @@ features/ffdieletric/mace-polar+E-server            # covered by .github/workflo
 features/ffdieletric/mace-polar+E-client            # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-resonant-server   # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-resonant-client   # covered by .github/workflows/mace.yml
+
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
