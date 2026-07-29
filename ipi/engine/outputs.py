@@ -277,12 +277,12 @@ class PropertyOutput(BaseOutput):
             return
         self.out.write("  ")
         for what in self.outlist:
-            # try:
-            quantity, dimension, unit = self.system.properties[what]
-            if dimension != "" and unit != "":
-                quantity = unit_to_user(dimension, unit, quantity)
-            # except Exception as e:
-            #     raise Exception(f"An error occurred for property '{what}': {e}") from e
+            try:
+                quantity, dimension, unit = self.system.properties[what]
+                if dimension != "" and unit != "":
+                    quantity = unit_to_user(dimension, unit, quantity)
+            except KeyError:
+                raise KeyError(what + " is not a recognized property")
             if not hasattr(quantity, "__len__"):
                 self.out.write(write_type(float, quantity) + "   ")
             else:

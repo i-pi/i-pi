@@ -188,7 +188,8 @@ class Beads:
         newbd.p[:] = self.p[:nbeads]
         newbd.m[:] = self.m
         newbd.names[:] = self.names
-        newbd.motion = self.motion
+        if self.motion is not None:
+            newbd.bind(self.motion)
         return newbd
 
     def m3tosm3(self):

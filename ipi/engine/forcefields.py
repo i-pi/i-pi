@@ -708,6 +708,7 @@ class FFLennardJones(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
+        r._event_done.set()
 
 
 class FFdmd(FFEval):
@@ -2518,10 +2519,8 @@ class FFDielectric(ForceField):
         electric_displacements: list[VectorField],
         forcefield: ForceField,
     ):
-        # self._requests = []
-        # self.ready = False
         super().__init__()
-        self.name = name  # this might be useless
+        self.name = name
         self.where = where
         self.dipole = ArrayFromDict(
             **dipole
@@ -2539,7 +2538,6 @@ class FFDielectric(ForceField):
         self._field_cache_lock = threading.Lock()
         self._field_cache_time = None
         self._field_cache = (None, None)
-        # self.ready = True
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2628,7 +2626,7 @@ class FFDielectric(ForceField):
         if template is None:
             template = {}
 
-        actual_time = float(atoms.motion.actual_time)
+        actual_time = float(atoms.motion.integrator.actual_time)
         electric_field, electric_displacement = self._evaluate_fields(actual_time)
         driver_extra = {"time": actual_time, "where": self.where}
         extra_template = {"time": actual_time}

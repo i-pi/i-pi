@@ -189,6 +189,18 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
+        if self.enstype == "nvt-cc":
+            from ipi.engine.forcefields import FFDielectric
+
+            active_forcefields = (
+                bforce.ff[component.ffield] for component in bforce.fcomp
+            )
+            if any(isinstance(ff, FFDielectric) for ff in active_forcefields):
+                raise ValueError(
+                    "NVTCCIntegrator is not compatible with FFDielectric: "
+                    "the centroid coordinate is constrained."
+                )
+
         self.integrator.bind(self)
 
         self.ensemble.add_econs(self.thermostat._ethermo)
@@ -233,9 +245,6 @@ class Dynamics(Motion):
                     "You need to provide a positive value for temperature inside ensemble to run a PIMD simulation, even when choosing NVE propagation."
                 )
 
-        self._actual_time = depend_value(name="actual_time", value=ens.time)
-        dpipe(dfrom=self.integrator._actual_time, dto=self._actual_time)
-
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
 
@@ -247,7 +256,7 @@ class Dynamics(Motion):
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
-        if np.abs(self.ensemble.time - self.actual_time) > self.dt / 100.0:
+        if np.abs(self.ensemble.time - self.integrator.actual_time) > self.dt / 100.0:
             softexit.trigger(
                 status="bad", message=" @ SIMULATION: Error in the actual time update."
             )
@@ -256,7 +265,7 @@ class Dynamics(Motion):
         )  # overwrite to avoid accumulating numerical noise
 
 
-dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp", "actual_time"])
+dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
 
 
 class DummyIntegrator:
@@ -629,7 +638,9 @@ class NVTCCIntegrator(NVTIntegrator):
         # The centroid is constrained, so qcstep is skipped, but the internal
         # ring-polymer modes still need the two half-step free propagations.
         self.nm.free_qstep()
+        self.update_actual_time(self.qdt)
         self.nm.free_qstep()
+        self.update_actual_time(self.qdt)
 
         self.pstep()
         self.nm.pnm[0, :] = 0.0
