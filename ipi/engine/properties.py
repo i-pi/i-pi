@@ -2954,12 +2954,12 @@ class Properties:
 
     def _get_ffdielectric_field(self, forcefield_name, getter):
         """Fetches a cached field from a named FFDielectric instance."""
-        if forcefield_name not in self.system.simul.fflist:
+        if forcefield_name not in self.simul.fflist:
             raise ValueError(f"Forcefield {forcefield_name} does not exist.")
 
         from ipi.engine.forcefields import FFDielectric
 
-        forcefield = self.system.simul.fflist[forcefield_name]
+        forcefield = self.simul.fflist[forcefield_name]
         if not isinstance(forcefield, FFDielectric):
             raise TypeError(f"Forcefield '{forcefield_name}' is not an FFDielectric.")
         return getattr(forcefield, getter)()
