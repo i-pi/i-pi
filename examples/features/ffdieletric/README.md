@@ -1,6 +1,6 @@
 # `FFDielectric` examples
 
-This directory contains four MACE-POLAR water examples:
+This directory contains MACE-POLAR water examples:
 
 | Folder | Field | Where the coupling is applied |
 |---|---|---|
@@ -8,10 +8,14 @@ This directory contains four MACE-POLAR water examples:
 | `mace-polar+E-client` | static | MACE, after receiving `Efield` from i-PI |
 | `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
 | `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `Efield` from i-PI |
+| `mace-polar+E-client-socket` | static | MACE socket client, after receiving `Efield` through `EXTRADATA` |
+| `mace-polar+E-resonant-client-socket` | resonant plane wave | MACE socket client, after receiving `Efield` through `EXTRADATA` |
 
-Each folder contains an `input.xml`, water starting coordinates, MACE options,
-a model-download script, and a README with the run instructions. The examples
-use the in-process `extmace` driver, so they do not require a socket client.
+The in-process examples each contain an `input.xml`, water starting
+coordinates, MACE options, a model-download script, and a README. The socket
+examples reuse the corresponding client example's model assets and launch
+`i-pi-py_driver`; its `requires_extra=true` parameter makes it advertise the
+opt-in `NEEDEXTRA` capability.
 
 ## Response tensors
 

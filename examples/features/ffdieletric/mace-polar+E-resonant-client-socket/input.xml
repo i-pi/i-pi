@@ -1,0 +1,52 @@
+<simulation verbosity='high'>
+  <total_steps>20</total_steps>
+
+  <ffdielectric name='mu+E' where='client'>
+    <!-- Resonant plane wave: frequency is in rad/fs. -->
+    <electric_field name='plane_wave' units='V/ang' time_units='femtosecond'>
+      <parameters>{
+        "amplitude": [0, 0, 0.1],
+        "frequency": 0.719335584407,
+        "phase": 0.0
+      }</parameters>
+    </electric_field>
+    <ffsocket name='mace' mode='unix' pbc='True'>
+      <address>mace-polar-resonant-extra</address>
+      <consolidate_messages>False</consolidate_messages>
+    </ffsocket>
+  </ffdielectric>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_field(mu+E){V/ang}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'>../mace-polar+E-resonant-client/start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='mu+E'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

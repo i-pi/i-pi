@@ -88,6 +88,28 @@ jobs:
           cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
           python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
 
+      - name: Run static FFDielectric socket example (field sent to MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-client-socket
+        run: |
+          assets_dir=../mace-polar+E-client
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" "$assets_dir/"
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml > log.i-pi 2>&1 &
+          ipi_pid=$!
+          sleep 2
+          i-pi-py_driver -u -a mace-polar-static-extra -m extmace -o "template=$assets_dir/start.extxyz,model=$assets_dir/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=$assets_dir/mace_kwargs.json,requires_extra=true" > log.driver 2>&1
+          wait "$ipi_pid"
+
+      - name: Run resonant FFDielectric socket example (field sent to MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-resonant-client-socket
+        run: |
+          assets_dir=../mace-polar+E-resonant-client
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" "$assets_dir/"
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml > log.i-pi 2>&1 &
+          ipi_pid=$!
+          sleep 2
+          i-pi-py_driver -u -a mace-polar-resonant-extra -m extmace -o "template=$assets_dir/start.extxyz,model=$assets_dir/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=$assets_dir/mace_kwargs.json,requires_extra=true" > log.driver 2>&1
+          wait "$ipi_pid"
+
       - name: Generate coverage report
         run: python -m coverage xml -o coverage-mace.xml
 

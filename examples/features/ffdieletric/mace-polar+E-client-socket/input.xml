@@ -1,0 +1,49 @@
+<simulation verbosity='high'>
+  <total_steps>10</total_steps>
+
+  <ffdielectric name='mu+E' where='client'>
+    <!-- i-PI evaluates this field, then sends it to the socket driver. -->
+    <electric_field name='static' units='V/ang' time_units='femtosecond'>
+      <parameters>{ "amplitude": [0, 0, 1] }</parameters>
+    </electric_field>
+    <ffsocket name='mace' mode='unix' pbc='True'>
+      <address>mace-polar-static-extra</address>
+      <!-- The EXTRADATA capability extends the base socket protocol. -->
+      <consolidate_messages>False</consolidate_messages>
+    </ffsocket>
+  </ffdielectric>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_field(mu+E){V/ang}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'>../mace-polar+E-client/start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='mu+E'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
