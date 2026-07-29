@@ -54,7 +54,10 @@ _DEFAULT_ASE_LIKE_PROPERTIES = {
     "stress": (3, 3),
     "virials": (3, 3),
     "dipole": (3,),
+    "charges": ("natoms",),
     "atomic_dipoles": ("natoms", 3),
+    "polarizability": (3, 3),
+    "polarizability_sh": (6,),
     "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
     "piezoelectric": (3, 3, 3),
 }
@@ -192,6 +195,22 @@ class BatchedMACE(MACECalculator):
         if "oxn" not in kwargs["arrays_keys"]:
             kwargs["arrays_keys"].update({"oxn": "oxn"})
         super().__init__(*argc, **kwargs)
+        if self.model_type == "PolarMACE":
+            # PolarMACE exposes additional per-structure and per-atom tensors.
+            # Register their shapes so callers can retain them instead of being
+            # forced to list every PolarMACE-specific output under ``ignore``.
+            density_dim = (
+                getattr(self.models[0], "atomic_multipoles_max_l", 0) + 1
+            ) ** 2
+            self.ase_like_properties.update(
+                {
+                    "electrostatic_energy": (),
+                    "electron_energy": (),
+                    "spins": ("natoms",),
+                    "density_coefficients": ("natoms", density_dim),
+                    "spin_charge_density": ("natoms", 2, density_dim),
+                }
+            )
         # MACE versions before 0.3.16 select the model dtype but do not expose
         # it on the calculator. Infer it from the (possibly converted) model so
         # batched preprocessing can use the same dtype on all supported versions.
@@ -276,7 +295,7 @@ class BatchedMACE(MACECalculator):
         # If you don't believe me, please have a look at the keyword 'retain_graph' in 'mace/modules/utils.py' in the function 'compute_forces'.
         training = self.use_compile or compute_bec
 
-        if self.model_type in ["MACE", "EnergyDipoleMACE"]:
+        if self.model_type in ["MACE", "EnergyDipoleMACE", "PolarMACE"]:
             compute_stress = not self.use_compile
         else:
             compute_stress = False
@@ -353,7 +372,7 @@ class BatchedMACE(MACECalculator):
             batch = self._clone_batch(batch_base).to_dict()
             Natoms = self.batch2natoms(batch)
 
-            if self.model_type in ["MACE", "EnergyDipoleMACE"]:
+            if self.model_type in ["MACE", "EnergyDipoleMACE", "PolarMACE"]:
                 node_heads = batch["head"][batch["batch"]]
                 num_atoms_arange = torch.arange(
                     batch["positions"].shape[0], device=batch["positions"].device
@@ -433,6 +452,16 @@ class BatchedMACE(MACECalculator):
         def display(keys):
             return ", ".join(keys) if keys else "(none)"
 
+        def display_with_shapes(keys, values):
+            return (
+                ", ".join(
+                    f"{key} (shape {tuple(np.asarray(values[key]).shape)})"
+                    for key in keys
+                )
+                if keys
+                else "(none)"
+            )
+
         print("-----------------------------------")
         print("  MACE output summary (printed once):")
         print(f"  Using device: {self.device}")
@@ -465,11 +494,17 @@ class BatchedMACE(MACECalculator):
             "  Copied to CPU per-structure properties (ASE info): "
             f"{display(cpu_info)}"
         )
-        # print(
-        #     "  Copied to CPU unregistered model outputs: "
-        #     f"{display(cpu_unregistered)}",
-        #     flush=True,
-        # )
+        print(
+            "  Copied to CPU unregistered model outputs: "
+            f"{display_with_shapes(cpu_unregistered, cpu_output)}"
+        )
+        if cpu_unregistered:
+            print(
+                "  Register an output under 'ase_like_properties' in the MACE "
+                "settings JSON, or skip it with 'instructions.ignore'. If i-PI "
+                "cannot infer the registration automatically, the error below "
+                "will show the observed shape and suggested JSON."
+            )
         print("-----------------------------------")
 
     def augment_output(

@@ -130,12 +130,16 @@ class ModelResults:
         """
         Store results of one model over multiple structures.
         """
+        unknown = {
+            key: value for key, value in results.items() if key not in self._shapes
+        }
+        if unknown:
+            raise ValueError(self._unknown_properties_message(unknown, natoms))
+
         ptr = np.cumsum([0] + natoms)
         new_structs = [StructureResults(n, self._shapes) for n in natoms]
 
         for key, value in results.items():
-            if key not in self._shapes:
-                raise ValueError(f"Unknown property '{key}'")
             if "natoms" in self._shapes[key]:
                 value = np.split(value, ptr[1:], axis=0)[:-1]
 
@@ -143,6 +147,87 @@ class ModelResults:
                 s.store(key, value[i])
 
         self._results.extend(new_structs)
+
+    @staticmethod
+    def _shape_candidates(value: Any, natoms: List[int]) -> Tuple[Tuple, List[List]]:
+        """Return the raw tensor shape and plausible settings-file shapes."""
+
+        raw_shape = tuple(np.asarray(value).shape)
+        shape_candidates = []
+
+        if raw_shape and raw_shape[0] == sum(natoms):
+            shape_candidates.append(["natoms", *raw_shape[1:]])
+        if raw_shape and raw_shape[0] == len(natoms):
+            per_structure = list(raw_shape[1:])
+            if per_structure not in shape_candidates:
+                shape_candidates.append(per_structure)
+
+        return raw_shape, shape_candidates
+
+    @classmethod
+    def _unknown_properties_message(
+        cls, unknown: Dict[str, Any], natoms: List[int]
+    ) -> str:
+        """Report every unregistered output and consolidated JSON remedies."""
+
+        details = []
+        registrations = {}
+        ambiguous = []
+
+        for key in sorted(unknown):
+            raw_shape, candidates = cls._shape_candidates(unknown[key], natoms)
+            if len(candidates) == 1:
+                inferred = candidates[0]
+                registrations[key] = inferred
+                kind = (
+                    "per-atom"
+                    if inferred and inferred[0] == "natoms"
+                    else "per-structure"
+                )
+                details.append(
+                    f"- '{key}': raw shape {raw_shape}; inferred {kind} shape "
+                    f"{json.dumps(inferred)}"
+                )
+            elif len(candidates) > 1:
+                ambiguous.append(key)
+                choices = " or ".join(json.dumps(shape) for shape in candidates)
+                details.append(
+                    f"- '{key}': raw shape {raw_shape}; ambiguous shape, choose "
+                    f"{choices} based on the property's semantics"
+                )
+            else:
+                inferred = list(raw_shape)
+                registrations[key] = inferred
+                details.append(
+                    f"- '{key}': raw shape {raw_shape}; no atom/batch leading "
+                    f"dimension detected, suggested shape {json.dumps(inferred)} "
+                    "(verify manually)"
+                )
+
+        registration = json.dumps(
+            {"ase_like_properties": registrations}, indent=2
+        )
+        ignore = json.dumps(
+            {"instructions": {"ignore": sorted(unknown)}}, indent=2
+        )
+        manual_note = ""
+        if ambiguous:
+            manual_note = (
+                "\nAmbiguous properties are omitted from the consolidated "
+                "registration block; add one of the shapes shown above manually."
+            )
+
+        return (
+            f"Unknown model properties for a batch with natoms={natoms}:\n"
+            + "\n".join(details)
+            + "\nTo retain the unambiguous outputs, merge this block into the "
+            "MACE settings JSON and verify the inferred shapes:\n"
+            + registration
+            + manual_note
+            + "\nIf none of these outputs is needed, merge this ignore block "
+            "instead:\n"
+            + ignore
+        )
 
     def __len__(self) -> int:
         return len(self._results)

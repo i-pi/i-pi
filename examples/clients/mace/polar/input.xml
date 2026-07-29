@@ -1,0 +1,50 @@
+<simulation verbosity='high'>
+  <total_steps>10</total_steps>
+
+  <!-- MACE runs in-process; no socket client is needed. -->
+  <ffdirect name='shell' pbc='True'>
+    <pes>mace</pes>
+    <parameters>{
+      template:start.extxyz,
+      model:MACE-POLAR-1-M.model,
+      device:cpu,
+      mace_kwargs:mace_kwargs.json
+    }</parameters>
+  </ffdirect>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase' >start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+
+    <forces>
+      <force forcefield='shell'/>
+    </forces>
+
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 1 </timestep>
+        <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100 </tau>
+          </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
