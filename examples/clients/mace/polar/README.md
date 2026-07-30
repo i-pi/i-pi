@@ -54,6 +54,16 @@ for MD and avoids copying unused charge-density tensors from the accelerator.
 Use `device:cuda` for a CUDA GPU. For higher-accuracy static checks, change
 `default_dtype` to `float64`.
 
+When `instructions.compute_BEC` is enabled, i-PI uses the strain-corrected
+(`proper`) dipole by default to calculate Born effective charges and the
+piezoelectric tensor. To use the raw dipole returned by the model instead, set
+`use_proper_dipole` to `false`, either in `mace_kwargs.json` or directly in the
+force-field parameters:
+
+```xml
+<parameters>{...,use_proper_dipole:false}</parameters>
+```
+
 `start.extxyz` supplies the global electronic state expected by MACE-POLAR:
 neutral charge, singlet spin multiplicity, and zero external field. Change
 these metadata when simulating a different charge, spin state, or static

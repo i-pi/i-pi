@@ -73,7 +73,14 @@ class MACE_driver(ASEDriver):
     template: Atoms
 
     def __init__(
-        self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
+        self,
+        template,
+        model,
+        device="cpu",
+        mace_kwargs=None,
+        use_proper_dipole=None,
+        *args,
+        **kwargs,
     ):
         """
         Initialize the MACE driver.
@@ -88,6 +95,10 @@ class MACE_driver(ASEDriver):
             Torch device ("cpu" or "cuda").
         mace_kwargs : str or None
             Path to JSON file with MACE kwargs.
+        use_proper_dipole : bool or None
+            Whether dielectric-response calculations use the strain-corrected
+            dipole. ``None`` preserves the value in ``mace_kwargs`` (or its
+            default of ``True``).
         """
 
         self.model = model
@@ -98,6 +109,8 @@ class MACE_driver(ASEDriver):
         if mace_kwargs is not None:
             with open(mace_kwargs, "r") as f:
                 self.mace_kwargs = json.load(f)
+        if use_proper_dipole is not None:
+            self.mace_kwargs["use_proper_dipole"] = use_proper_dipole
 
         template = read(template)
         super().__init__(template, *args, **kwargs)
@@ -177,9 +190,13 @@ class BatchedMACE(MACECalculator):
         self,
         instructions: dict = None,
         ase_like_properties: Optional[Dict[str, Tuple]] = None,
+        use_proper_dipole: bool = True,
         *argc,
         **kwargs,
     ):
+        if not isinstance(use_proper_dipole, bool):
+            raise TypeError("'use_proper_dipole' must be a boolean")
+        self.use_proper_dipole = use_proper_dipole
         self.instructions = instructions if instructions is not None else {}
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
@@ -560,15 +577,16 @@ class BatchedMACE(MACECalculator):
 
         return data
 
-    @staticmethod
-    def _proper_model_dipole(data: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Return the strain-corrected model dipole required for response."""
+    def _response_dipole(self, data: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Return the selected model dipole for dielectric response."""
 
         if data.get("dipole") is None:
             raise ValueError(
                 "The selected MACE model does not provide the dipole required "
                 "for dielectric-response calculations."
             )
+        if not self.use_proper_dipole:
+            return data["dipole"]
         if data.get("displacement") is None:
             raise ValueError(
                 "The MACE output does not contain the displacement tensor "
@@ -613,7 +631,7 @@ class BatchedMACE(MACECalculator):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Differentiate the dipole with respect to positions and strain."""
 
-        mu = self._proper_model_dipole(data)
+        mu = self._response_dipole(data)
         positions = batch.get("positions")
         if not isinstance(positions, torch.Tensor):
             raise ValueError("The MACE batch does not contain tensor positions.")
