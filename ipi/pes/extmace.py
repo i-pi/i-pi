@@ -9,6 +9,7 @@ Runnable static-field and resonant-field examples for both client-side and
 server-side coupling are provided under ``examples/features/ffdieletric``.
 """
 
+import json
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -75,6 +76,16 @@ class Extended_MACE_driver(MACE_driver):
 
         self.batched_calculator.extras = self.extra or {}
         return super().compute(cell, pos)
+
+    def post_process(self, properties, structure):
+        """Return normal MACE extras and acknowledge any applied field."""
+        energy, forces, virial, extras = super().post_process(properties, structure)
+        if "Efield" not in (self.extra or {}):
+            return energy, forces, virial, extras
+
+        extras_dict = {} if not extras else json.loads(extras)
+        extras_dict["applied_fields"] = ["electric_field"]
+        return energy, forces, virial, json.dumps(extras_dict)
 
 
 class ExtendedMACECalculator(BatchedMACE):

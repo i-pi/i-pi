@@ -2508,6 +2508,11 @@ class FFCavPhSocket(FFSocket):
 
 
 class FFDielectric(ForceField):
+    _CLIENT_FIELD_ACKNOWLEDGEMENTS = {
+        "Efield": "electric_field",
+        "Dfield": "electric_displacement",
+    }
+
     def __init__(
         self,
         name: str,
@@ -2674,9 +2679,42 @@ class FFDielectric(ForceField):
         if self.where == "server":
             return self.apply_ensemble(r)
         elif self.where == "client":
+            self._validate_client_field_application(r)
             return r
         else:
             raise ValueError("coding error")
+
+    def _validate_client_field_application(self, request: dict) -> None:
+        """Require a client to confirm every field sent for this request.
+
+        A client-side field affects the potential energy surface. Silently
+        ignoring it would therefore produce an incorrect trajectory, so the
+        driver must return an ``applied_fields`` list in its extras dictionary.
+        """
+        expected = [
+            acknowledgement
+            for field, acknowledgement in self._CLIENT_FIELD_ACKNOWLEDGEMENTS.items()
+            if field in request
+        ]
+        if not expected:
+            return
+
+        extras = request["result"][3]
+        applied = extras.get("applied_fields") if isinstance(extras, dict) else None
+        if not isinstance(applied, list) or not all(
+            isinstance(field, str) for field in applied
+        ):
+            raise ValueError(
+                "The client-side FFDielectric driver must return an "
+                "'applied_fields' list in its extras dictionary."
+            )
+
+        missing = set(expected).difference(applied)
+        if missing:
+            raise ValueError(
+                "The client-side FFDielectric driver did not confirm that it "
+                f"applied: {', '.join(sorted(missing))}."
+            )
 
     def apply_ensemble(self, request: dict) -> dict:
         """

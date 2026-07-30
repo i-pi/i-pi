@@ -17,6 +17,18 @@ examples reuse the corresponding client example's model assets and launch
 `i-pi-py_driver`; its `requires_extra=true` parameter makes it advertise the
 opt-in `NEEDEXTRA` capability.
 
+## Client-side field acknowledgement
+
+When `where='client'`, the driver must include every field it applied in its
+returned extras JSON. For an electric field, return
+
+```json
+{"applied_fields": ["electric_field"]}
+```
+
+i-PI stops with an error if a field it sent is not acknowledged, preventing a
+driver that silently ignores the field from producing an incorrect trajectory.
+
 ## Response tensors
 
 With one or more `<electric_field>` entries and `where='server'`, the driver
