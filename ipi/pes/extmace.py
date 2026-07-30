@@ -135,7 +135,7 @@ class ExtendedMACECalculator(BatchedMACE):
             )
 
         if "Efield" in self.extras:
-            mu = self._proper_model_dipole(data)
+            mu = self._response_dipole(data)
             electric_field = self._electric_field(mu)
             # Differentiating the field-coupled energy supplies the field
             # contributions to forces and stress automatically.
