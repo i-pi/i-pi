@@ -140,6 +140,12 @@ derivatives inside the `instructions` dictionary:
 The placement of `compute_BEC` is important: it is an instruction to the i-PI
 MACE wrapper, not a top-level `MACECalculator` argument.
 
+By default, `extmace` uses the strain-corrected (`proper`) dipole for both
+client-side electric-field coupling and response derivatives. Set the top-level
+MACE option `"use_proper_dipole": false` in `mace_kwargs.json` (or
+`use_proper_dipole:false` in the `<parameters>` dictionary) to use the raw
+model dipole instead.
+
 Use `device:cuda` for a CUDA GPU. This example uses float64 so that response
 symmetry and finite-difference checks are not dominated by float32 roundoff.
 
