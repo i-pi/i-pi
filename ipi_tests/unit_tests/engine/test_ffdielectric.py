@@ -14,7 +14,11 @@ def _client_dielectric():
         where="client",
         dipole={"family": "dipole", "units": "atomic_unit", "key": "dipole"},
         bec={"family": "born_charge", "units": "atomic_unit", "key": "BEC"},
-        piezo={"family": "electric-polarization", "units": "atomic_unit", "key": "piezoelectric"},
+        piezo={
+            "family": "electric-polarization",
+            "units": "atomic_unit",
+            "key": "piezoelectric",
+        },
         electric_fields=[],
         electric_displacements=[],
         forcefield=wrapped,
