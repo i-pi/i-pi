@@ -1,6 +1,7 @@
 {
     "instructions": 
     {
+        "graph_workers": 4,
         "ignore": ["displacement"]
     }
 }

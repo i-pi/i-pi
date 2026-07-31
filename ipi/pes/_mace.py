@@ -23,6 +23,7 @@ except Exception:
 
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -202,6 +203,21 @@ class BatchedMACE(MACECalculator):
             self.instructions["forward_kwargs"] = {}
 
         self.batch_size = self.instructions.pop("batch_size", None)
+        self.graph_workers = self.instructions.pop("graph_workers", 1)
+        if isinstance(self.graph_workers, bool) or not isinstance(
+            self.graph_workers, int
+        ):
+            raise TypeError("'graph_workers' must be an integer")
+        if self.graph_workers < 1:
+            raise ValueError("'graph_workers' must be at least one")
+        self._graph_executor = (
+            ThreadPoolExecutor(
+                max_workers=self.graph_workers,
+                thread_name_prefix="mace-graph",
+            )
+            if self.graph_workers > 1
+            else None
+        )
         self.ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES.copy()
         if ase_like_properties is not None:
             self.ase_like_properties.update(
@@ -235,6 +251,21 @@ class BatchedMACE(MACECalculator):
             self.default_dtype = next(self.models[0].parameters()).dtype
         self._output_summary_printed = False
         assert not self.use_compile, "self.use_compile=True is not supported yet."
+
+    def _config_to_atomic_data(self, config):
+        """Build one MACE graph on the CPU."""
+        return data.AtomicData.from_config(
+            config,
+            z_table=self.z_table,
+            cutoff=self.r_max,
+            heads=self.available_heads,
+        )
+
+    def _configs_to_dataset(self, configs):
+        """Build graphs, optionally in parallel while preserving their order."""
+        if self._graph_executor is None or len(configs) < 2:
+            return [self._config_to_atomic_data(config) for config in configs]
+        return list(self._graph_executor.map(self._config_to_atomic_data, configs))
 
     @staticmethod
     def _normalize_ase_like_properties(
@@ -286,15 +317,7 @@ class BatchedMACE(MACECalculator):
             configs = data.config_from_atoms_list(
                 atoms, key_specification=keyspec, head_name=self.head
             )
-            dataset = [
-                data.AtomicData.from_config(
-                    config,
-                    z_table=self.z_table,
-                    cutoff=self.r_max,
-                    heads=self.available_heads,
-                ).to(self.device)
-                for config in configs
-            ]
+            dataset = self._configs_to_dataset(configs)
 
         compute_bec = False
         if "compute_BEC" in self.instructions:
@@ -360,14 +383,8 @@ class BatchedMACE(MACECalculator):
         """
         Return the number of atoms in batch.
         """
-        return [
-            a.shape[0]
-            for a in np.split(
-                batch["positions"].cpu().numpy(),
-                batch["ptr"][1:].cpu().numpy(),
-                axis=0,
-            )[:-1]
-        ]
+        ptr = batch["ptr"]
+        return [int(n) for n in (ptr[1:] - ptr[:-1]).detach().cpu().tolist()]
 
     def compute_batched(self, atoms: List[Atoms]) -> List[Parent]:
         """
@@ -385,7 +402,7 @@ class BatchedMACE(MACECalculator):
         ]
         # loop over models in the committee
         for batch_base in data_loader:
-            # batch = batch_base.to(self.device)
+            batch_base = batch_base.to(self.device)
             batch = self._clone_batch(batch_base).to_dict()
             Natoms = self.batch2natoms(batch)
 

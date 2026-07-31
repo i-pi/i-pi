@@ -44,6 +44,24 @@ These settings mean:
 
 The system also uses `nbeads='4'`, so the four ring-polymer beads fill one complete batch at every force evaluation. `BatchedMACE` evaluates all four structures together unless a smaller internal batch size is explicitly configured.
 
+## Parallel graph construction
+
+Graph construction for the structures is serial by default. The committed
+`mace_kwargs.json` enables persistent graph workers for this four-bead example:
+
+```json
+{
+  "instructions": {
+    "graph_workers": 4,
+    "ignore": ["displacement"]
+  }
+}
+```
+
+The workers construct neighbor graphs concurrently and preserve the input
+structure order. Start with two to four workers and benchmark, since very small
+structures may not offset thread-scheduling overhead.
+
 ## Avoiding unnecessary GPU-to-CPU transfers
 
 MACE can produce optional properties that i-PI does not use. Copying those tensors from a GPU to the CPU costs time. The driver therefore prints a summary once at startup showing:
@@ -51,17 +69,9 @@ MACE can produce optional properties that i-PI does not use. Copying those tenso
 - every property available after the MACE evaluation; and
 - the subset copied to the CPU for i-PI.
 
-The committed [`mace_kwargs.json`](mace_kwargs.json) contains:
-
-```json
-{
-  "instructions": {
-    "ignore": ["displacement"]
-  }
-}
-```
-
-Here, MACE still creates `displacement` because it is needed internally to calculate stress, but the driver does not copy it to the CPU as a returned result.
+The same settings file lists `displacement` under `ignore`. MACE still creates
+it because it is needed internally to calculate stress, but the driver does not
+copy it to the CPU as a returned result.
 
 To suppress more optional results, add their names to the `ignore` list after checking the startup summary. Never ignore `energy`, `forces`, or `stress`, because i-PI requires them.
 
