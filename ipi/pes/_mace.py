@@ -585,14 +585,20 @@ class BatchedMACE(MACECalculator):
                 "The selected MACE model does not provide the dipole required "
                 "for dielectric-response calculations."
             )
-        if not self.use_proper_dipole:
-            return data["dipole"]
         if data.get("displacement") is None:
             raise ValueError(
                 "The MACE output does not contain the displacement tensor "
                 "required for dielectric-response calculations."
             )
-        return proper_dipole(data["dipole"], data["displacement"])
+
+        mu = _normalize_dipole_shape(data["dipole"], data["displacement"])
+        # Keep the normalized value in the model output as well. This prevents
+        # the same compatibility dimension from reaching ModelResults when the
+        # caller requests the raw dipole in addition to using it for coupling.
+        data["dipole"] = mu
+        if not self.use_proper_dipole:
+            return mu
+        return proper_dipole(mu, data["displacement"])
 
     def add_dielectric_response(
         self,
@@ -688,10 +694,45 @@ class BatchedMACE(MACECalculator):
         return self.compute_dmu_dR_deta(data, batch)[0]
 
 
+def _normalize_dipole_shape(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
+    """Normalize removable singleton dimensions in a batched model dipole."""
+
+    if not isinstance(mu, torch.Tensor):
+        raise TypeError(f"The MACE dipole must be a torch.Tensor, got {type(mu)}.")
+    if not isinstance(strain, torch.Tensor):
+        raise TypeError(
+            f"The MACE displacement must be a torch.Tensor, got {type(strain)}."
+        )
+    if strain.ndim < 2 or tuple(strain.shape[-2:]) != (3, 3):
+        raise ValueError(
+            "The MACE displacement must end in shape (3, 3), got "
+            f"{tuple(strain.shape)}."
+        )
+
+    expected_shape = (*strain.shape[:-2], 3)
+    if tuple(mu.shape) == expected_shape:
+        return mu
+
+    # Some MACE/PyTorch combinations wrap per-structure outputs in an extra
+    # singleton dimension, e.g. (B, 1, 3) rather than (B, 3). Reshaping is safe
+    # only when removing singleton dimensions recovers the expected layout.
+    observed_non_singleton = tuple(size for size in mu.shape if size != 1)
+    expected_non_singleton = tuple(size for size in expected_shape if size != 1)
+    if observed_non_singleton != expected_non_singleton:
+        raise ValueError(
+            "The MACE dipole shape is incompatible with its displacement: "
+            f"expected {expected_shape}, got {tuple(mu.shape)}. Only extra "
+            "singleton dimensions can be normalized."
+        )
+
+    return mu.reshape(expected_shape)
+
+
 def proper_dipole(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
     """Return the dipole corrected for an infinitesimal symmetric strain."""
+    mu = _normalize_dipole_shape(mu, strain)
     symmetric_strain = 0.5 * (strain + strain.transpose(-1, -2))
-    return mu - torch.einsum("bil,bl->bi", symmetric_strain, mu)
+    return mu - torch.einsum("...il,...l->...i", symmetric_strain, mu)
 
 
 # --------------------------------------- #
