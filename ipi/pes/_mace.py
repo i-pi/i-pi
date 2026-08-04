@@ -29,7 +29,6 @@ import numpy as np
 import torch
 from ase import Atoms
 from ase.io import read, write
-from ase.outputs import _defineprop, all_outputs
 from mace import data
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
@@ -58,8 +57,6 @@ _DEFAULT_ASE_LIKE_PROPERTIES = {
     "atomic_dipoles": ("natoms", 3),
     "polarizability": (3, 3),
     "polarizability_sh": (6,),
-    "BEC": ("natoms", 9),  # ("natoms", 3, 3) is not supported by ASE
-    "piezoelectric": (3, 3, 3),
 }
 # Kept as a public module-level name for backwards compatibility.
 ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES
@@ -78,7 +75,6 @@ class MACE_driver(ASEDriver):
         model,
         device="cpu",
         mace_kwargs=None,
-        use_proper_dipole=None,
         *args,
         **kwargs,
     ):
@@ -95,10 +91,6 @@ class MACE_driver(ASEDriver):
             Torch device ("cpu" or "cuda").
         mace_kwargs : str or None
             Path to JSON file with MACE kwargs.
-        use_proper_dipole : bool or None
-            Whether dielectric-response calculations use the strain-corrected
-            dipole. ``None`` preserves the value in ``mace_kwargs`` (or its
-            default of ``True``).
         """
 
         self.model = model
@@ -109,9 +101,6 @@ class MACE_driver(ASEDriver):
         if mace_kwargs is not None:
             with open(mace_kwargs, "r") as f:
                 self.mace_kwargs = json.load(f)
-        if use_proper_dipole is not None:
-            self.mace_kwargs["use_proper_dipole"] = use_proper_dipole
-
         template = read(template)
         super().__init__(template, *args, **kwargs)
 
@@ -185,19 +174,26 @@ class BatchedMACE(MACECalculator):
     """
 
     ignored_properties = frozenset(to_ignore_properties)
+    supported_instruction_keys = frozenset(
+        {"_comments", "batch_size", "forward_kwargs", "ignore"}
+    )
 
     def __init__(
         self,
         instructions: dict = None,
         ase_like_properties: Optional[Dict[str, Tuple]] = None,
-        use_proper_dipole: bool = True,
         *argc,
         **kwargs,
     ):
-        if not isinstance(use_proper_dipole, bool):
-            raise TypeError("'use_proper_dipole' must be a boolean")
-        self.use_proper_dipole = use_proper_dipole
         self.instructions = instructions if instructions is not None else {}
+        unsupported = set(self.instructions) - self.supported_instruction_keys
+        if unsupported:
+            names = ", ".join(sorted(unsupported))
+            supported = ", ".join(sorted(self.supported_instruction_keys))
+            raise ValueError(
+                f"Unsupported {__DRIVER_NAME__} instruction(s): {names}. "
+                f"Supported instructions are: {supported}."
+            )
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
@@ -274,6 +270,11 @@ class BatchedMACE(MACECalculator):
 
         return normalized
 
+    def requires_model_gradients(self) -> bool:
+        """Whether output augmentation needs the model autograd graph."""
+
+        return False
+
     def preprocess(self, atoms: List[Atoms]) -> Tuple[DataLoader, Dict[str, bool]]:
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
@@ -296,21 +297,7 @@ class BatchedMACE(MACECalculator):
                 for config in configs
             ]
 
-        compute_bec = False
-        if "compute_BEC" in self.instructions:
-            compute_bec = self.instructions["compute_BEC"]
-
-        if compute_bec and "BEC" not in all_outputs:
-            _defineprop("BEC", dtype=float, shape=("natoms", 3, 3))
-
-        # Attention:
-        # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
-        # However, since the forces are always computed, MACE always calls 'torch.autograd.grad' on the energy w.r.t. the positions.
-        # This happens in 'compute_forces' in 'mace/modules/utils.py'.
-        # If 'training' == False, in that function the computational graph will be destroy and the Born Charges can not be computed afterwards.
-        # For this reason, we set 'training' == True so that the computational graph is preserved and we can call 'torch.autograd.grad' in 'compute_dielectric_gradients'.
-        # If you don't believe me, please have a look at the keyword 'retain_graph' in 'mace/modules/utils.py' in the function 'compute_forces'.
-        training = self.use_compile or compute_bec
+        training = self.use_compile or self.requires_model_gradients()
 
         if self.model_type in ["MACE", "EnergyDipoleMACE", "PolarMACE"]:
             compute_stress = not self.use_compile
@@ -350,7 +337,6 @@ class BatchedMACE(MACECalculator):
             data_loader,
             {
                 "training": training,
-                "compute_bec": compute_bec,
                 "forward_kwargs": forward_kwargs,
             },
         )
@@ -376,7 +362,6 @@ class BatchedMACE(MACECalculator):
 
         data_loader, options = self.preprocess(atoms)
         training = options["training"]
-        compute_bec = options["compute_bec"]
         forward_kwargs = options["forward_kwargs"]
 
         # model evaluation
@@ -415,7 +400,7 @@ class BatchedMACE(MACECalculator):
                     **forward_kwargs,
                 )
 
-                out = self.augment_output(out, batch, training, compute_bec)
+                out = self.augment_output(out, batch, training)
 
                 # collect the results
                 ignored = set(self.ignored_properties)
@@ -529,17 +514,10 @@ class BatchedMACE(MACECalculator):
         data: Dict[str, torch.Tensor],
         batch: Batch,
         training: bool,
-        compute_bec: bool,
     ) -> Dict[str, torch.Tensor]:
-        """Add forces, stress, Born charges, and piezoelectric response."""
-        data = self.get_forces_stress(data, batch, training)
+        """Add quantities derived from the generic MACE model output."""
 
-        if compute_bec and (
-            data.get("BEC") is None or data.get("piezoelectric") is None
-        ):
-            self.add_dielectric_response(data, batch)
-
-        return data
+        return self.get_forces_stress(data, batch, training)
 
     def get_forces_stress(
         self, data: Dict[str, torch.Tensor], batch: Batch, training: bool
@@ -576,204 +554,6 @@ class BatchedMACE(MACECalculator):
                 data[keyword] = value
 
         return data
-
-    def _response_dipole(self, data: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Return the selected model dipole for dielectric response."""
-
-        if data.get("dipole") is None:
-            raise ValueError(
-                "The selected MACE model does not provide the dipole required "
-                "for dielectric-response calculations."
-            )
-        if data.get("displacement") is None:
-            raise ValueError(
-                "The MACE output does not contain the displacement tensor "
-                "required for dielectric-response calculations."
-            )
-
-        mu = _normalize_dipole_shape(data["dipole"], data["displacement"])
-        # Keep the normalized value in the model output as well. This prevents
-        # the same compatibility dimension from reaching ModelResults when the
-        # caller requests the raw dipole in addition to using it for coupling.
-        data["dipole"] = mu
-        if not self.use_proper_dipole:
-            return mu
-        return proper_dipole(mu, data["displacement"])
-
-    def add_dielectric_response(
-        self,
-        data: Dict[str, torch.Tensor],
-        batch: Batch,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute and store both Born charges and the piezoelectric tensor."""
-
-        bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
-
-        if data.get("BEC") is None:
-            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
-            data["BEC"] = bec.moveaxis(0, 1)
-
-        if data.get("piezoelectric") is None:
-            # (mu_xyz,graph,eta_i,eta_j) --> (graph,mu_xyz,eta_i,eta_j)
-            cell = batch.get("cell")
-            if not isinstance(cell, torch.Tensor):
-                raise ValueError("The MACE batch does not contain a tensor cell.")
-            volume = torch.linalg.det(cell.view(-1, 3, 3)).abs()
-            if volume.shape[0] != dmu_deta.shape[1]:
-                raise ValueError(
-                    "The number of cell volumes does not match the number of "
-                    "dipole-strain derivatives."
-                )
-            data["piezoelectric"] = (
-                dmu_deta.moveaxis(0, 1) / volume[:, None, None, None]
-            )
-
-        return bec, dmu_deta
-
-    def compute_dmu_dR_deta(
-        self,
-        data: Dict[str, torch.Tensor],
-        batch: Batch,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Differentiate the dipole with respect to positions and strain."""
-
-        mu = self._response_dipole(data)
-        positions = batch.get("positions")
-        if not isinstance(positions, torch.Tensor):
-            raise ValueError("The MACE batch does not contain tensor positions.")
-        if not positions.requires_grad:
-            raise ValueError(
-                "MACE positions must retain gradients when 'compute_BEC: true' "
-                "so that Born charges can be computed."
-            )
-
-        displacement = data["displacement"]
-        if not isinstance(displacement, torch.Tensor):
-            raise ValueError("The MACE output does not contain a tensor displacement.")
-        if not displacement.requires_grad:
-            raise ValueError(
-                "The MACE displacement tensor must retain gradients when "
-                "'compute_BEC: true' so that the piezoelectric tensor can be "
-                "computed."
-            )
-
-        bec, dmu_deta = compute_dielectric_gradients(
-            mu,
-            [positions, displacement],
-        )
-
-        expected_bec_shape = (3, *positions.shape)
-        if tuple(bec.shape) != expected_bec_shape:
-            raise ValueError(
-                "The computed Born charges have the wrong shape: expected "
-                f"{expected_bec_shape}, got {tuple(bec.shape)}."
-            )
-
-        expected_strain_shape = (3, *displacement.shape)
-        if tuple(dmu_deta.shape) != expected_strain_shape:
-            raise ValueError(
-                "The dipole-strain derivative has the wrong shape: expected "
-                f"{expected_strain_shape}, got {tuple(dmu_deta.shape)}."
-            )
-        if not torch.allclose(dmu_deta, dmu_deta.transpose(-1, -2)):
-            nonsymmetric_norm = torch.linalg.norm(
-                dmu_deta - dmu_deta.transpose(-1, -2)
-            ).item()
-            raise ValueError(
-                "The dipole-strain derivative is not symmetric: "
-                f"the norm of its nonsymmetric part is {nonsymmetric_norm:.6e}."
-            )
-
-        return bec, dmu_deta
-
-    def compute_dmu_dR(
-        self, data: Dict[str, torch.Tensor], batch: Batch
-    ) -> torch.Tensor:
-        """Compute Born effective charges, retaining the historical API."""
-
-        return self.compute_dmu_dR_deta(data, batch)[0]
-
-
-def _normalize_dipole_shape(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
-    """Normalize removable singleton dimensions in a batched model dipole."""
-
-    if not isinstance(mu, torch.Tensor):
-        raise TypeError(f"The MACE dipole must be a torch.Tensor, got {type(mu)}.")
-    if not isinstance(strain, torch.Tensor):
-        raise TypeError(
-            f"The MACE displacement must be a torch.Tensor, got {type(strain)}."
-        )
-    if strain.ndim < 2 or tuple(strain.shape[-2:]) != (3, 3):
-        raise ValueError(
-            "The MACE displacement must end in shape (3, 3), got "
-            f"{tuple(strain.shape)}."
-        )
-
-    expected_shape = (*strain.shape[:-2], 3)
-    if tuple(mu.shape) == expected_shape:
-        return mu
-
-    # Some MACE/PyTorch combinations wrap per-structure outputs in an extra
-    # singleton dimension, e.g. (B, 1, 3) rather than (B, 3). Reshaping is safe
-    # only when removing singleton dimensions recovers the expected layout.
-    observed_non_singleton = tuple(size for size in mu.shape if size != 1)
-    expected_non_singleton = tuple(size for size in expected_shape if size != 1)
-    if observed_non_singleton != expected_non_singleton:
-        raise ValueError(
-            "The MACE dipole shape is incompatible with its displacement: "
-            f"expected {expected_shape}, got {tuple(mu.shape)}. Only extra "
-            "singleton dimensions can be normalized."
-        )
-
-    return mu.reshape(expected_shape)
-
-
-def proper_dipole(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
-    """Return the dipole corrected for an infinitesimal symmetric strain."""
-    mu = _normalize_dipole_shape(mu, strain)
-    symmetric_strain = 0.5 * (strain + strain.transpose(-1, -2))
-    return mu - torch.einsum("...il,...l->...i", symmetric_strain, mu)
-
-
-# --------------------------------------- #
-# Function taken from https://github.com/davkovacs/mace/tree/mu_alpha
-def compute_dielectric_gradients(
-    dielectric: torch.Tensor, inputs: List[torch.Tensor], clean: Optional[bool] = False
-) -> List[torch.Tensor]:
-    """
-    Compute gradients of the dielectric tensor with respect to a list of input tensors.
-
-    Args:
-        dielectric: Tensor whose gradients are computed.
-        inputs: Tensors to differentiate with respect to (arbitrary shapes allowed).
-        clean: If True, frees parts of the autograd graph when possible.
-
-    Returns:
-        List[torch.Tensor]: For each input tensor, the gradient d(dielectric)/d(input).
-    """
-    d_dielectric_dr = [
-        [None for _ in range(dielectric.shape[-1])] for _ in range(len(inputs))
-    ]
-    grad_outputs: List[torch.Tensor] = [
-        torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
-    ]
-    for i in range(dielectric.shape[-1]):
-        gradients = torch.autograd.grad(
-            outputs=[dielectric[:, i].unsqueeze(-1)],
-            inputs=inputs,
-            grad_outputs=grad_outputs,
-            retain_graph=(i < dielectric.shape[-1] - 1)
-            or not clean,  # small optimization
-            create_graph=False,  # small optimization
-            allow_unused=False,  # small optimization
-        )
-        assert len(gradients) == len(inputs), "coding error"
-        for j, (gradient, input) in enumerate(zip(gradients, inputs)):
-            assert gradient.shape == input.shape, "coding error"
-            d_dielectric_dr[j][i] = gradient.detach()
-        del gradients  # cleanup
-    del grad_outputs  # cleanup
-    return [torch.stack(out, dim=0) for out in d_dielectric_dr]
 
 
 # -----------------------------------------------------------

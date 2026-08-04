@@ -7,8 +7,12 @@ import pytest
 pytest.importorskip("mace")
 torch = pytest.importorskip("torch")
 
-from ipi.pes._mace import MACE_driver, proper_dipole
-from ipi.pes.extmace import Extended_MACE_driver, ExtendedMACECalculator
+from ipi.pes._mace import BatchedMACE, MACE_driver
+from ipi.pes.extmace import (
+    Extended_MACE_driver,
+    ExtendedMACECalculator,
+    proper_dipole,
+)
 
 
 def test_extmace_acknowledges_applied_electric_field(monkeypatch):
@@ -54,6 +58,7 @@ def test_extmace_skips_dipole_coupling_for_zero_field(monkeypatch):
 
     calculator = object.__new__(ExtendedMACECalculator)
     calculator.extras = {"Efield": [0.0, 0.0, 0.0]}
+    calculator.compute_bec_response = False
     data = {"energy": torch.tensor([1.0])}
 
     monkeypatch.setattr(
@@ -71,8 +76,15 @@ def test_extmace_skips_dipole_coupling_for_zero_field(monkeypatch):
         data=data,
         batch={},
         training=False,
-        compute_bec=False,
     )
 
     assert result is data
     assert torch.equal(result["energy"], torch.tensor([1.0]))
+
+
+def test_plain_mace_has_no_electrical_response_implementation():
+    """The base calculator remains usable without the extmace module."""
+
+    assert not hasattr(BatchedMACE, "add_dielectric_response")
+    assert not hasattr(BatchedMACE, "compute_dmu_dR_deta")
+    assert not hasattr(BatchedMACE, "_response_dipole")
