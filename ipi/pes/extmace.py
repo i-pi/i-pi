@@ -357,11 +357,10 @@ class ExtendedMACECalculator(BatchedMACE):
 
         if "Efield" in self.extras:
             electric_field = self._electric_field(data["energy"])
-            if torch.any(electric_field != 0):
-                mu = self._response_dipole(data)
-                # Differentiating the field-coupled energy supplies the field
-                # contributions to forces and stress automatically.
-                data["energy"] -= mu @ electric_field
+            mu = self._response_dipole(data)
+            # Differentiating the field-coupled energy supplies the field
+            # contributions to forces and stress automatically.
+            data["energy"] -= mu @ electric_field
             data = self.get_forces_stress(data, batch, training)
         else:
             data = self.get_forces_stress(data, batch, training)
