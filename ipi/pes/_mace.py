@@ -555,6 +555,7 @@ class BatchedMACE(MACECalculator):
 
         return data
 
+
 # -----------------------------------------------------------
 # Reusable script entry point
 # -----------------------------------------------------------
