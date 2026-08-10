@@ -2739,7 +2739,9 @@ class FFDielectric(ForceField):
         # The values returned here will be already in atomic_unit
         # even though the driver might return them with differnt units
         dipole = self.dipole.get(x)  # electric dipole, with shape = (3,)
+        natoms = np.asarray(f).reshape((-1, 3)).shape[0]
         Z = self.bec.get(x)  # Born Effective Charges, with (natoms,3,3)
+        Z = Z.reshape((natoms, 3, 3))
         e = self.piezo.get(
             x, np.zeros((3, 3, 3))
         )  # piezoelectric tensor, with shape (3,3,3)
@@ -2753,6 +2755,7 @@ class FFDielectric(ForceField):
 
         # Update energy, forces and virials
         u -= dipole @ Efield
+        # the order of these indices have been checked and it is correct
         f += np.einsum("ijk,j->ik", Z, Efield).flatten()
 
         # The proper piezoelectric tensor gives the field-induced stress as

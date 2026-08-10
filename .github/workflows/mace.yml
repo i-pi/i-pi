@@ -76,6 +76,40 @@ jobs:
           cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
           python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
 
+      - name: Check static FFDielectric server and client trajectories agree
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          import numpy as np
+          from ase.io import iread
+
+          trajectory_root = Path("examples/features/ffdieletric")
+          server = list(
+              iread(trajectory_root / "mace-polar+E-server/i-pi.positions_0.extxyz")
+          )
+          client = list(
+              iread(trajectory_root / "mace-polar+E-client/i-pi.positions_0.extxyz")
+          )
+
+          if len(server) != len(client):
+              raise AssertionError(
+                  f"server produced {len(server)} frames; client produced {len(client)}"
+              )
+
+          for frame, (server_atoms, client_atoms) in enumerate(zip(server, client)):
+              if server_atoms.get_chemical_symbols() != client_atoms.get_chemical_symbols():
+                  raise AssertionError(f"different species in trajectory frame {frame}")
+              np.testing.assert_allclose(
+                  server_atoms.positions, client_atoms.positions, rtol=0.0, atol=2e-8,
+                  err_msg=f"positions differ in trajectory frame {frame}",
+              )
+              np.testing.assert_allclose(
+                  server_atoms.cell.array, client_atoms.cell.array, rtol=0.0, atol=2e-8,
+                  err_msg=f"cell differs in trajectory frame {frame}",
+              )
+          PY
+
       - name: Run resonant FFDielectric example (field applied by i-PI)
         working-directory: examples/features/ffdieletric/mace-polar+E-resonant-server
         run: |
