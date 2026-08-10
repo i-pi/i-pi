@@ -30,15 +30,13 @@ __DRIVER_CLASS__ = "Extended_MACE_driver"
 __all__ = [
     "Extended_MACE_driver",
     "ExtendedMACECalculator",
-    "add_bec_inplace",
-    "compute_dielectric_gradients",
     "proper_dipole",
 ]
 
 _EXTENDED_ASE_LIKE_PROPERTIES = {
     "node_energy": ("natoms",),
     "atomic-oxn-dipole": ("natoms", 3),
-    "BEC": ("natoms", 3, 3),
+    "BEC": ("natoms", 9),
     "BECx": ("natoms", 3),
     "BECy": ("natoms", 3),
     "BECz": ("natoms", 3),
