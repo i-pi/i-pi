@@ -508,6 +508,16 @@ class Properties:
                     )
                 ),
             },
+            "friction_gamma_reconstruction_error": {
+                "dimension": "undefined",
+                "help": "Maximum relative error between driver Gamma and J^T J at the current step.",
+                "func": self.get_friction_gamma_reconstruction_error,
+            },
+            "friction_auxiliary_norm": {
+                "dimension": "undefined",
+                "help": "Euclidean norm of the non-Markovian auxiliary bath state.",
+                "func": self.get_friction_auxiliary_norm,
+            },
             "kinetic_md": {
                 "dimension": "energy",
                 "help": "The kinetic energy of the (extended) classical system.",
@@ -1004,6 +1014,19 @@ class Properties:
                                see doi:10.1063/5.0008720.""",
             },
         }
+
+    def get_friction_gamma_reconstruction_error(self):
+        """Return the current maximum relative Gamma versus J^T J error."""
+        friction = self.motion.integrator.friction
+        _ = friction.gamma
+        return float(friction._gamma_reconstruction_error)
+
+    def get_friction_auxiliary_norm(self):
+        """Return the Euclidean norm of the current auxiliary bath state."""
+        friction = self.motion.integrator.friction
+        bath = getattr(friction, "bath", None)
+        state = None if bath is None else getattr(bath, "s", None)
+        return 0.0 if state is None else float(np.linalg.norm(np.asarray(state)))
 
     def bind(self, system):
         """Binds the necessary objects from the system to calculate the
@@ -3176,6 +3199,13 @@ class Trajectories:
                       Written as a matrix block per step, one file per bead unless bead output is selected.""",
                 "func": self.get_friction_gamma_matrix,
             },
+            "friction_gamma_active_matrix": {
+                "dimension": "undefined",
+                "help": """The canonical per-bead friction matrix Gamma restricted to the active
+                      Cartesian DOFs declared by the driver. Written as a compact matrix block per
+                      step, one file per bead.""",
+                "func": self.get_friction_gamma_active_matrix,
+            },
             "isotope_zetatd": {
                 "dimension": "undefined",
                 "help": """Thermodynamic isotope fractionation direct estimator in the form of ratios of partition functions. Takes two arguments, 'alpha' , which gives the
@@ -3420,6 +3450,23 @@ class Trajectories:
                 f"friction.gamma has unsupported ndim={gamma.ndim}, expected 0/2/3."
             )
         return gamma
+
+    def get_friction_gamma_active_matrix(self):
+        """Return Gamma restricted to the driver-declared active Cartesian DOFs."""
+        friction = self._get_motion_friction()
+        # Evaluating Gamma also validates J^T J and configures the active DOFs.
+        gamma = self.get_friction_gamma_matrix()
+        active = getattr(friction, "_friction_dof_idx", None)
+        if active is None:
+            if getattr(friction, "variable_friction", False):
+                raise ValueError(
+                    "Variable friction did not declare active Cartesian DOFs."
+                )
+            return gamma
+        active = np.asarray(active, dtype=int).reshape(-1)
+        if active.size == 0:
+            raise ValueError("Friction active Cartesian DOF list is empty.")
+        return gamma[:, active, :][:, :, active]
 
     def __getitem__(self, key):
         """Retrieves the item given by key.
