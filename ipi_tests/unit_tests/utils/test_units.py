@@ -17,8 +17,6 @@ def test_case_insensitive():
 
 
 def test_cyclic_frequency_units_are_not_angular():
-    cycles_per_au = units.unit_to_internal(
-        "frequency-cyclic", "GHz", 1.0
-    )
+    cycles_per_au = units.unit_to_internal("frequency-cyclic", "GHz", 1.0)
     angular_per_au = units.unit_to_internal("frequency", "GHz", 1.0)
     np.testing.assert_allclose(angular_per_au, 2.0 * np.pi * cycles_per_au)
