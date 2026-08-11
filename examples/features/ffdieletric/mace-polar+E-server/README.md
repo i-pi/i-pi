@@ -43,7 +43,7 @@ part of `input.xml` is:
 
 ```xml
 <ffdielectric name='mu+E' where='server'>
-  <electric_field name='static' units='V/ang' time_units='femtosecond'>
+  <electric_field name='static' units='V/ang'>
     <parameters>{ "amplitude": [0, 0, 1] }</parameters>
   </electric_field>
   <ffdirect name='mace' pbc='True'>
@@ -59,8 +59,8 @@ part of `input.xml` is:
 ```
 
 With no `file` attribute, the named function is read from
-`ipi.pes.electric_field`. i-PI converts its internal `actual_time` to
-`time_units` and evaluates it as `function(time, **parameters)`. The returned
+`ipi.pes.electric_field`. i-PI evaluates it as `function(time, **parameters)`
+with `time` in atomic units. The returned
 Cartesian vector is interpreted in `units` and converted to atomic units. This
 example therefore applies a static 1 V/Angstrom field along z. Multiple
 `<electric_field>` entries are evaluated independently and summed.
@@ -76,26 +76,28 @@ The built-in functions and their formulas are:
 
 ```text
 static:              amplitude
-plane_wave:          amplitude * cos(frequency*time + phase)
+plane_wave:          amplitude * cos(2*pi*frequency*time + phase)
 gaussian:            amplitude * exp[-(time-peak)^2/(2*sigma^2)]
 plane_wave_gaussian: plane_wave * Gaussian envelope
 ```
 
-`amplitude` uses the field `units`; `sigma` and `peak` use `time_units`;
-`frequency` is an angular frequency in radians per selected time unit; and
-`phase` is in radians. `peak` and `phase` default to zero. The contents of
-`<parameters>` are JSON, so parameter names must be enclosed in double quotes.
-For example:
+`amplitude` uses the field `units`; `frequency` is a cyclic frequency and uses
+`frequency_units`; `sigma` and `peak` use `sigma_units` and `peak_units`; and
+`phase` is in radians. All quantities are converted to atomic units before
+evaluation. The contents of `<parameters>` are JSON, so parameter names must
+be enclosed in double quotes. For example:
 
 ```xml
-<electric_field name='plane_wave_gaussian'
-                units='V/ang' time_units='femtosecond'>
+<electric_field name='plane_wave_gaussian' units='V/ang'>
   <parameters>{
     "amplitude": [0, 0, 1],
-    "frequency": 0.1,
+    "frequency": 100,
+    "frequency_units": "GHz",
     "phase": 0.0,
     "sigma": 10.0,
-    "peak": 25.0
+    "sigma_units": "femtosecond",
+    "peak": 25.0,
+    "peak_units": "femtosecond"
   }</parameters>
 </electric_field>
 ```
@@ -103,8 +105,7 @@ For example:
 To use a custom function, add `file` while keeping the same calling convention:
 
 ```xml
-<electric_field file='my_fields.py' name='my_field'
-                units='V/ang' time_units='femtosecond'>
+<electric_field file='my_fields.py' name='my_field' units='V/ang'>
   <parameters>{ "amplitude": [0, 0, 1], "ramp": 20.0 }</parameters>
 </electric_field>
 ```

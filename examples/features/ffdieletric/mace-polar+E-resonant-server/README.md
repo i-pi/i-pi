@@ -3,10 +3,10 @@
 This example drives a MACE-POLAR-optimized water monomer with
 
 ```text
-E_z(t) = 0.1 cos(0.719335584407 t) V/angstrom,
+E_z(t) = 0.1 cos(2*pi*114485.814 GHz*t) V/angstrom,
 ```
 
-where `t` is in femtoseconds. The angular frequency corresponds to the
+where `t` is in atomic units. The cyclic frequency corresponds to the
 MACE-POLAR symmetric O-H stretch at 3818.84 cm^-1 (period 8.735 fs). The
 initial molecular dipole points along -z, so it is antiparallel to the +z
 field at `t=0`.

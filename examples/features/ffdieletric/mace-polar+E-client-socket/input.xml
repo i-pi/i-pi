@@ -3,7 +3,7 @@
 
   <ffdielectric name='mu+E' where='client'>
     <!-- i-PI evaluates this field, then sends it to the socket driver. -->
-    <electric_field name='static' units='V/ang' time_units='femtosecond'>
+    <electric_field name='static' units='V/ang'>
       <parameters>{ "amplitude": [0, 0, 1] }</parameters>
     </electric_field>
     <ffsocket name='mace' mode='unix' pbc='True'>

@@ -3,14 +3,15 @@
 
   <ffdielectric name='mu+E' where='client'>
     <!-- The built-in plane_wave function returns
-         amplitude*cos(frequency*time + phase). Frequency is an angular
-         frequency in rad/fs because time_units is femtosecond. The value
-         below is resonant with the MACE-POLAR symmetric O-H stretch
+         amplitude*cos(2*pi*frequency*time + phase), with time in atomic
+         units. The frequency below is in GHz and is resonant with the
+         MACE-POLAR symmetric O-H stretch
          (3818.84 cm^-1). The initial water dipole points along -z. -->
-    <electric_field name='plane_wave' units='V/ang' time_units='femtosecond'>
+    <electric_field name='plane_wave' units='V/ang'>
       <parameters>{
         "amplitude": [0, 0, 0.1],
-        "frequency": 0.719335584407,
+        "frequency": 114485.814,
+        "frequency_units": "GHz",
         "phase": 0.0
       }</parameters>
     </electric_field>

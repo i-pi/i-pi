@@ -20,6 +20,6 @@ connects `i-pi-py_driver` through the UNIX socket
 NEEDEXTRA → EXTRADATA(JSON with Efield) → READY → POSDATA → GETFORCE
 ```
 
-The field amplitude is 0.1 V/Angstrom along z and its angular frequency is
-0.719335584407 rad/fs. The final three columns of `properties.out` show the
+The field amplitude is 0.1 V/Angstrom along z and its cyclic frequency is
+114485.814 GHz. The final three columns of `properties.out` show the
 time-dependent field in V/Angstrom.

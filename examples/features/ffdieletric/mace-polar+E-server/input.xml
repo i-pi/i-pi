@@ -3,9 +3,9 @@
 
   <ffdielectric name='mu+E' where='server'>
     <!-- "static" is provided by ipi.pes.electric_field. The function receives
-         time in time_units and returns a three-vector in units. Multiple
+         time in atomic units and returns a three-vector in units. Multiple
          electric_field entries would be evaluated and summed. -->
-    <electric_field name='static' units='V/ang' time_units='femtosecond'>
+    <electric_field name='static' units='V/ang'>
       <!-- The initial water dipole points along -z, antiparallel to this field. -->
       <parameters>{ "amplitude": [0, 0, 1] }</parameters>
     </electric_field>

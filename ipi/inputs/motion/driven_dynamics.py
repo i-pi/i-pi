@@ -92,14 +92,6 @@ class InputPythonVectorField(Input):
                 "help": "Units of the three-vector returned by the callable.",
             },
         ),
-        "time_units": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "atomic_unit",
-                "help": "Units used for the time passed as the first callable argument.",
-            },
-        ),
     }
     _family = None
 
@@ -124,7 +116,6 @@ class InputPythonVectorField(Input):
             name=self.name.fetch(),
             family=self._family,
             units=self.units.fetch(),
-            time_units=self.time_units.fetch(),
             parameters=self.parameters.fetch(),
         )
 
@@ -137,7 +128,6 @@ class InputPythonVectorField(Input):
         self.file.store(field.file)
         self.name.store(field.name)
         self.units.store(field.units)
-        self.time_units.store(field.time_units)
         self.parameters.store(field.parameters)
 
 

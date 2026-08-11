@@ -13,7 +13,7 @@ import sys
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.utils.units import Constants, unit_to_internal, unit_to_user
+from ipi.utils.units import Constants, unit_to_internal
 from ipi.engine.motion.dynamics import (
     NVEIntegrator,
     DummyIntegrator,
@@ -483,10 +483,9 @@ class VectorField:
 class PythonVectorField(VectorField):
     """A vector field evaluated by a user-provided Python callable.
 
-    The callable is imported once and called as ``function(time, **parameters)``.
-    The internal simulation time is converted to ``time_units`` before the call,
-    and the returned vector is interpreted in ``units`` and converted back to
-    i-PI atomic units.
+    The callable is imported once and called as ``function(time, **parameters)``
+    with ``time`` in atomic units. The returned vector is interpreted in
+    ``units`` and converted back to i-PI atomic units.
     """
 
     def __init__(
@@ -495,17 +494,14 @@ class PythonVectorField(VectorField):
         name,
         family,
         units="atomic_unit",
-        time_units="atomic_unit",
         parameters=None,
     ):
         self.file = str(file)
         self.name = str(name)
         self.family = str(family)
         self.units = str(units)
-        self.time_units = str(time_units)
         self.parameters = {} if parameters is None else dict(parameters)
         unit_to_internal(self.family, self.units, 1.0)
-        unit_to_internal("time", self.time_units, 1.0)
         self._function = self._load_function()
 
     def _load_function(self):
@@ -546,8 +542,7 @@ class PythonVectorField(VectorField):
         return function
 
     def get(self, actual_time: float):
-        time = unit_to_user("time", self.time_units, float(actual_time))
-        value = np.asarray(self._function(time, **self.parameters))
+        value = np.asarray(self._function(float(actual_time), **self.parameters))
         if value.shape != (3,):
             raise ValueError(
                 f"Vector-field function '{self.name}' must return shape (3,), "
