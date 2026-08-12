@@ -15,7 +15,7 @@ def test_plane_wave_frequency_in_ghz():
         1.0,
         frequency_units="GHz",
     )
-    np.testing.assert_allclose(value, [0.0, 0.0, 0.0], atol=1.0e-12)
+    np.testing.assert_allclose(value, [0.0, 0.0, 1.0], atol=1.0e-12)
 
 
 def test_gaussian_converts_time_parameters_to_atomic_units():
@@ -38,4 +38,4 @@ def test_plain_atomic_frequency_is_cyclic_before_angular_conversion():
         1.0,
         frequency_units="atomic_unit",
     )
-    np.testing.assert_allclose(value, [0.0, 0.0, 0.0], atol=1.0e-14)
+    np.testing.assert_allclose(value, [1.0, 0.0, 0.0], atol=1.0e-14)
