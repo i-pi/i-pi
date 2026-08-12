@@ -47,7 +47,7 @@ def plane_wave(
     phase=0.0,
     frequency_units="atomic_unit",
 ):
-    """Return ``amplitude * cos(omega * time + phase)``.
+    """Return ``amplitude * sin(omega * time + phase)``.
 
     ``frequency`` is a cyclic frequency, such as ``100`` with
     ``frequency_units="GHz"``. The returned vector remains in the units
@@ -55,7 +55,7 @@ def plane_wave(
     """
 
     omega = _angular_frequency(frequency, frequency_units)
-    return np.asarray(amplitude) * np.cos(omega * time + phase)
+    return np.asarray(amplitude) * np.sin(omega * time + phase)
 
 
 def gaussian(
