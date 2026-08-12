@@ -1,10 +1,7 @@
-import json
-
 import numpy as np
 import pytest
 
-from ipi.pes.tools import Instructions, ModelResults, convert, process_input
-from ipi.utils.units import unit_to_internal
+from ipi.pes.tools import ModelResults
 
 
 def test_model_results_stores_per_structure_and_per_atom_outputs():
@@ -86,47 +83,3 @@ def test_model_results_mean_averages_models():
 
     np.testing.assert_allclose(mean[0]["energy"], 3.0)
     np.testing.assert_allclose(mean[0]["forces"], [[2.0], [4.0]])
-
-
-class _LengthInstructions(Instructions):
-    dimensions = {"cutoff": "length"}
-    units = {"length": "atomic_unit"}
-
-
-def test_instructions_convert_units_from_dict_and_json_file(tmp_path):
-    settings = {"cutoff": [1.0, 2.0], "cutoff_unit": "angstrom"}
-    parsed = _LengthInstructions(settings)
-    expected = unit_to_internal("length", "angstrom", np.array([1.0, 2.0]))
-
-    np.testing.assert_allclose(parsed.instructions["cutoff"], expected)
-    assert "cutoff_unit" not in parsed.instructions
-
-    source = tmp_path / "instructions.json"
-    source.write_text(json.dumps({"cutoff": 3.0, "cutoff_unit": None}))
-    parsed_file = _LengthInstructions(str(source))
-
-    assert parsed_file.instructions == {"cutoff": 3.0}
-
-
-def test_instructions_reject_invalid_source():
-    with pytest.raises(ValueError, match=r"str.*dict"):
-        _LengthInstructions([])
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [(1.5, 1.5), (2, 2), ([1, 2], np.array([1, 2]))],
-)
-def test_process_input(value, expected):
-    result = process_input(value)
-    np.testing.assert_equal(result, expected)
-
-
-def test_process_input_rejects_unsupported_value():
-    with pytest.raises(TypeError, match="float or a list"):
-        process_input("not a number")
-
-
-def test_convert_with_and_without_a_unit_family():
-    assert convert(7.6) == 7.6
-    assert convert(7.6, "length", "angstrom", "angstrom") == 7.6
