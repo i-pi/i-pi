@@ -94,7 +94,7 @@ class DrivenDynamics(Dynamics):
 
     def step(self, *argc, **kwargs):
         warning(
-            "DrivenDynamics is deprecated. Use the FFDielectric instead. "
+            "DrivenDynamics is deprecated. Use the FFDielectric instead.\n"
             + "You can find several examples in examples/features/ffdieletric."
         )
         super().step(*argc, **kwargs)
@@ -282,10 +282,10 @@ class BEC:
 
             if bec.shape[1] == 9:
                 warning(
-                    "The BEC tensors are returned in a flattened form (9 components per atom). "
-                    + "i-PI expects your driver to return the BEC tensors in the shape of (3xNatoms,3)."
+                    "The BEC tensors are returned in a flattened form (9 components per atom).\n"
+                    + "i-PI expects your driver to return the BEC tensors in the shape of (3xNatoms,3).\n"
                     + "i-PI will reshape the BEC tensors automatically, assuming that once reshaped as (Natoms,3,3) "
-                    + "the second axis corresponds to the cartesian components of the dipole. "
+                    + "the second axis corresponds to the cartesian components of the dipole.\n"
                     + "If this is not the case, please change your driver to return the BEC tensors in the correct shape."
                 )
                 bec = np.moveaxis(bec.reshape((self.natoms, 3, 3)), 1, 2).reshape(
