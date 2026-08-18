@@ -13,6 +13,7 @@ import sys
 import numpy as np
 
 from ipi.utils.depend import *
+from ipi.utils.messages import warning
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.engine.motion.dynamics import (
     NVEIntegrator,
@@ -90,6 +91,13 @@ class DrivenDynamics(Dynamics):
         self.Electric_Dipole.bind(ens)
         self.Electric_Field.bind(self, self.enstype)
         self.Born_Charges.bind(ens, self.enstype, self._asr_threshold)
+
+    def step(self, *argc, **kwargs):
+        warning(
+            "DrivenDynamics is deprecated. Use the FFDielectric instead. "
+            + "You can find several examples in examples/features/ffdieletric."
+        )
+        super().step(*argc, **kwargs)
 
 
 dproperties(
@@ -271,6 +279,14 @@ class BEC:
         Z = np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
         for n in range(self.nbeads):
             bec = np.asarray(self.forces.extras["BEC"][n])
+
+            if bec.shape[1] == 9:
+                warning(
+                    "The BEC tensors are returned in a flattened form (9 components per atom). "
+                    + "i-PI expects your driver to return the BEC tensors in the shape of (3xNatoms,3)."
+                )
+                bec = bec.reshape((3 * self.natoms, 3))
+            # print(bec.shape)
 
             if bec.shape[0] != 3 * self.natoms:
                 raise ValueError(
