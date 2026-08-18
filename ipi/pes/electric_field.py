@@ -26,13 +26,6 @@ def _gaussian_envelope(
     return np.exp(-0.5 * ((time - peak) / sigma) ** 2)
 
 
-def _angular_frequency(frequency, frequency_units):
-    """Convert a cyclic frequency to angular frequency in atomic units."""
-
-    cycles = unit_to_internal("frequency-cyclic", frequency_units, frequency)
-    return 2.0 * np.pi * cycles
-
-
 def static(time, amplitude):
     """Return a time-independent vector with the requested amplitude."""
 
@@ -43,19 +36,18 @@ def static(time, amplitude):
 def plane_wave(
     time,
     amplitude,
-    frequency,
+    omega,
     phase=0.0,
-    frequency_units="atomic_unit",
+    omega_units="atomic_unit",
 ):
     """Return ``amplitude * sin(omega * time + phase)``.
 
-    ``frequency`` is a cyclic frequency, such as ``100`` with
-    ``frequency_units="GHz"``. The returned vector remains in the units
+    ``omega`` is a angular omega, such as ``100`` with
+    ``omega_units="GHz"``. The returned vector remains in the units
     specified by the enclosing ``<electric_field units="...">`` element.
     """
-
-    omega = _angular_frequency(frequency, frequency_units)
-    return np.asarray(amplitude) * np.sin(omega * time + phase)
+    omega = unit_to_internal("omega", omega_units, omega)
+    return np.asarray(amplitude) * np.cos(omega * time + phase)
 
 
 def gaussian(
@@ -80,11 +72,11 @@ def gaussian(
 def plane_wave_gaussian(
     time,
     amplitude,
-    frequency,
+    omega,
     sigma,
     peak=0.0,
     phase=0.0,
-    frequency_units="atomic_unit",
+    omega_units="atomic_unit",
     sigma_units="atomic_unit",
     peak_units="atomic_unit",
 ):
@@ -93,9 +85,9 @@ def plane_wave_gaussian(
     return plane_wave(
         time,
         amplitude,
-        frequency,
+        omega,
         phase=phase,
-        frequency_units=frequency_units,
+        omega_units=omega_units,
     ) * _gaussian_envelope(
         time,
         sigma,

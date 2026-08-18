@@ -2,16 +2,11 @@
   <total_steps>20</total_steps>
 
   <ffdielectric name='mu+E' where='server'>
-    <!-- The built-in plane_wave function returns
-         amplitude*cos(2*pi*frequency*time + phase), with time in atomic
-         units. The frequency below is in GHz and is resonant with the
-         MACE-POLAR symmetric O-H stretch
-         (3818.84 cm^-1). The initial water dipole points along -z. -->
     <electric_field name='plane_wave' units='V/ang'>
       <parameters>{
         "amplitude": [0, 0, 0.1],
-        "frequency": 114485.814,
-        "frequency_units": "GHz",
+        "omega": 10,
+        "omega_units": "thz",
         "phase": 0.0
       }</parameters>
     </electric_field>

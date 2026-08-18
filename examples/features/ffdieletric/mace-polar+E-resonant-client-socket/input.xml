@@ -2,12 +2,11 @@
   <total_steps>20</total_steps>
 
   <ffdielectric name='mu+E' where='client'>
-    <!-- Resonant plane wave: frequency is in GHz. -->
     <electric_field name='plane_wave' units='V/ang'>
       <parameters>{
         "amplitude": [0, 0, 0.1],
-        "frequency": 114485.814,
-        "frequency_units": "GHz",
+        "omega": 10,
+        "omega_units": "thz",
         "phase": 0.0
       }</parameters>
     </electric_field>
