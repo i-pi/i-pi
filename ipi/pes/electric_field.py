@@ -46,7 +46,7 @@ def plane_wave(
     ``omega_units="GHz"``. The returned vector remains in the units
     specified by the enclosing ``<electric_field units="...">`` element.
     """
-    omega = unit_to_internal("omega", omega_units, omega)
+    omega = unit_to_internal("frequency", omega_units, omega)
     return np.asarray(amplitude) * np.cos(omega * time + phase)
 
 
