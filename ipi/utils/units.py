@@ -232,19 +232,6 @@ UnitMap = {
         "thz": 1.5198298e-4,
         "phz": 1.5198298e-1,
     },
-    "frequency-cyclic": {  # cycles per atomic time; no 2*pi factor
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00,
-        "hertz*rad": 2.4188843e-17,
-        "hertz": 2.4188843e-17,
-        "hz": 2.4188843e-17,
-        "khz": 2.4188843e-14,
-        "mhz": 2.4188843e-11,
-        "ghz": 2.4188843e-8,
-        "thz": 2.4188843e-5,
-        "phz": 2.4188843e-2,
-    },
     "electric-field": {  # Hartree/Bohr radius
         # 1Hartree = 27.2113862459 eV
         #    1Bohr = 0.5291772109  A
