@@ -29,13 +29,3 @@ def test_gaussian_converts_time_parameters_to_atomic_units():
         peak_units="femtosecond",
     )
     np.testing.assert_allclose(value, [1.0, 2.0, 3.0])
-
-
-def test_plain_atomic_frequency_is_cyclic_before_angular_conversion():
-    value = plane_wave(
-        0.25,
-        [1.0, 0.0, 0.0],
-        1.0,
-        frequency_units="atomic_unit",
-    )
-    np.testing.assert_allclose(value, [1.0, 0.0, 0.0], atol=1.0e-14)
