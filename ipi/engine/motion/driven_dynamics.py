@@ -284,9 +284,13 @@ class BEC:
                 warning(
                     "The BEC tensors are returned in a flattened form (9 components per atom). "
                     + "i-PI expects your driver to return the BEC tensors in the shape of (3xNatoms,3)."
+                    + "i-PI will reshape the BEC tensors automatically, assuming that once reshaped as (Natoms,3,3) "
+                    + "the second axis corresponds to the cartesian components of the dipole. "
+                    + "If this is not the case, please change your driver to return the BEC tensors in the correct shape."
                 )
-                bec = bec.reshape((3 * self.natoms, 3))
-            # print(bec.shape)
+                bec = np.moveaxis(bec.reshape((self.natoms, 3, 3)), 1, 2).reshape(
+                    (3 * self.natoms, 3)
+                )
 
             if bec.shape[0] != 3 * self.natoms:
                 raise ValueError(
