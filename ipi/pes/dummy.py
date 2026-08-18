@@ -15,7 +15,7 @@ class Dummy_driver(object):
         :param verbose: bool to determine whether the PES should output verbose info.
     """
 
-    def __init__(self, verbose=False, requires_extra=False, *args, **kwargs):
+    def __init__(self, verbose=False, requires_extra=True, *args, **kwargs):
         """Initialized dummy drivers"""
         self.verbose = verbose
         self.args = args
