@@ -25,10 +25,11 @@ from ipi.utils.mathtools import (
     sinch,
     mat_taylor,
 )
+from ipi.utils.messages import warning, verbosity
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
-__all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
+__all__ = ["Barostat", "BaroSCR", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
 def mask_from_fix(fix):
@@ -424,6 +425,216 @@ dproperties(
         "tdt",
     ],
 )
+
+
+class BaroSCR(Barostat):
+    """Bernetti--Bussi stochastic cell-rescaling barostat.
+
+    Mode ``stochastic-rescaling`` implements the reversible, isotropic
+    Trotter scheme with instantaneous kinetic pressure described in
+    Bernetti and Bussi, J. Chem. Phys. 153, 114107 (2020)
+    [doi:10.1063/5.0020514]. Positions and cell vectors are scaled by the
+    same factor, while momenta are scaled by its inverse.
+
+    This first implementation is restricted to classical, single-time-step
+    dynamics. The particle thermostat remains responsible for temperature
+    control; stochastic cell rescaling does not have a separate piston or
+    cell thermostat.
+    """
+
+    def __init__(
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        pext=None,
+        compressibility=None,
+        stride=1,
+    ):
+        """Initializes the stochastic cell-rescaling barostat.
+
+        Args:
+            dt: Optional simulation time step.
+            temp: Optional simulation temperature.
+            tau: Pressure relaxation time.
+            ebaro: Accumulated effective-energy correction, used on restart.
+            thermostat: Must be the dummy thermostat. Kept for input
+                compatibility with other barostats.
+            pext: Optional external pressure.
+            compressibility: Estimate of the isothermal compressibility.
+            stride: Number of MD steps between cell-rescaling moves.
+        """
+
+        super(BaroSCR, self).__init__(dt, temp, tau, ebaro, thermostat)
+
+        self._compressibility = depend_value(
+            name="compressibility",
+            value=-1.0 if compressibility is None else compressibility,
+        )
+        self.stride = int(stride)
+        if self.stride != stride or self.stride <= 0:
+            raise ValueError(
+                "The stochastic cell-rescaling stride must be a positive integer."
+            )
+        self.prng = None
+        self._scr_state = None
+
+        if pext is not None:
+            self.pext = pext
+
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
+        """Binds the physical system and random-number generator."""
+
+        super(BaroSCR, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
+
+        if self.tau <= 0.0:
+            raise ValueError(
+                "The stochastic cell-rescaling relaxation time must be positive."
+            )
+        if self.compressibility <= 0.0:
+            raise ValueError(
+                "The stochastic cell-rescaling compressibility must be positive."
+            )
+        if type(self.thermostat) is not Thermostat:
+            raise ValueError(
+                "Stochastic cell rescaling does not use a separate cell thermostat."
+            )
+        if prng is None:
+            raise ValueError(
+                "Stochastic cell rescaling requires the simulation random-number "
+                "generator."
+            )
+
+        self.prng = prng
+        self._pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[cell._V, self._pext]
+        )
+        self._cell_jacobian = depend_value(
+            name="cell_jacobian",
+            func=self.get_cell_jacobian,
+            dependencies=[cell._V, self._temp],
+        )
+
+    def get_pot(self):
+        """Returns the external-pressure contribution to the enthalpy."""
+
+        return self.pext * self.cell.V
+
+    def get_cell_jacobian(self):
+        """Returns the Jacobian contribution for lambda = sqrt(volume)."""
+
+        return -0.5 * Constants.kb * self.temp * np.log(self.cell.V)
+
+    def get_lambda_force(self):
+        """Returns the drift force acting on lambda = sqrt(volume)."""
+
+        volume = self.cell.V
+        if not np.isfinite(volume) or volume <= 0.0:
+            raise ValueError(
+                "Stochastic cell rescaling encountered a non-positive or "
+                "non-finite volume."
+            )
+        pressure = np.trace(self.stress_mts(0)) / 3.0
+        if not np.isfinite(pressure):
+            raise ValueError(
+                "Stochastic cell rescaling encountered a non-finite internal "
+                "pressure."
+            )
+
+        lam = np.sqrt(volume)
+        return (
+            -2.0
+            * lam
+            * (self.pext - pressure - Constants.kb * self.temp / (2.0 * volume))
+        )
+
+    def prepare(self):
+        """Draws a cell move and returns its isotropic length scale."""
+
+        lambda_force = self.get_lambda_force()
+        volume = self.cell.V
+        lam = np.sqrt(volume)
+        coupling_dt = self.stride * self.dt
+        kbt = Constants.kb * self.temp
+        diffusion = kbt * self.compressibility / (4.0 * self.tau)
+        delta_lambda = (
+            diffusion * lambda_force * coupling_dt / kbt
+            + np.sqrt(2.0 * diffusion * coupling_dt) * self.prng.g
+        )
+        new_lambda = lam + delta_lambda
+
+        if not np.isfinite(new_lambda) or new_lambda <= 0.0:
+            raise ValueError(
+                "Stochastic cell rescaling proposed a non-positive or non-finite "
+                "sqrt(volume). Increase tau, reduce stride or the MD time step, "
+                "and check the compressibility."
+            )
+
+        delta_log_lambda = np.log1p(delta_lambda / lam)
+        scale = np.exp((2.0 / 3.0) * delta_log_lambda)
+        if scale < 0.99 or scale > 1.01:
+            warning(
+                "Stochastic cell rescaling changed a cell length by more than "
+                "1%. Consider increasing tau or reducing stride.",
+                verbosity.low,
+            )
+
+        self._scr_state = {
+            "volume": volume,
+            "lambda": lam,
+            "lambda_force": lambda_force,
+            "delta_lambda": delta_lambda,
+            "delta_log_lambda": delta_log_lambda,
+            "diffusion": diffusion,
+            "coupling_dt": coupling_dt,
+        }
+        return scale
+
+    def qcstep(self):
+        """Propagates coordinates, momenta, and cell using the Trotter map."""
+
+        scale = self.prepare()
+        inverse_scale = 1.0 / scale
+        drift_scale = 0.5 * (scale + inverse_scale)
+        masses = dstrip(self.nm.dynm3)[0]
+        positions = dstrip(self.nm.qnm)[0]
+        momenta = dstrip(self.nm.pnm)[0]
+
+        self.nm.qnm[0, :] = scale * positions + drift_scale * momenta * self.dt / masses
+        self.nm.pnm[0, :] = inverse_scale * momenta
+        self.cell.h *= scale
+
+    def finalize(self):
+        """Accumulates the reversible effective-energy correction."""
+
+        if self._scr_state is None:
+            raise RuntimeError(
+                "Stochastic cell-rescaling finalize called without a pending move."
+            )
+
+        state = self._scr_state
+        new_volume = self.cell.V
+        new_lambda_force = self.get_lambda_force()
+        kbt = Constants.kb * self.temp
+
+        correction = self.pext * (new_volume - state["volume"])
+        correction -= kbt * state["delta_log_lambda"]
+        correction += (
+            0.5 * state["delta_lambda"] * (state["lambda_force"] + new_lambda_force)
+        )
+        correction += (
+            state["diffusion"]
+            * state["coupling_dt"]
+            / (4.0 * kbt)
+            * (new_lambda_force**2 - state["lambda_force"] ** 2)
+        )
+        self.ebaro += correction
+        self._scr_state = None
+
+
+dproperties(BaroSCR, ["compressibility"])
 
 
 class BaroBZP(Barostat):
