@@ -6,7 +6,6 @@
 
 
 from ipi.utils import units
-import numpy as np
 
 
 def test_case_insensitive():
