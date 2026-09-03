@@ -17,6 +17,7 @@ from ipi.pes.extmace import (
     coerce_epsilon_infinity,
     proper_dipole,
 )
+from ipi.utils.units import unit_to_internal, unit_to_user
 
 
 def test_extmace_acknowledges_applied_electric_field(monkeypatch):
@@ -160,6 +161,34 @@ def test_extmace_constant_d_energy_is_differentiable(monkeypatch):
 
     assert dipole.grad is not None
     assert torch.isfinite(dipole.grad).all()
+
+
+def test_extmace_constant_d_uses_mace_field_units_and_returns_ipi_forces():
+    """The fixed-D gradient matches the server-side BEC times field force."""
+    calculator = object.__new__(ExtendedMACECalculator)
+    dfield_atomic = np.array([0.0, 0.0, 0.1])
+    calculator.extras = {"Dfield": dfield_atomic.tolist()}
+    calculator.default_epsilon_infinity = np.eye(3)
+
+    dipole = torch.zeros((1, 3), dtype=torch.float64, requires_grad=True)
+    cell = 10.0 * torch.eye(3, dtype=torch.float64).unsqueeze(0)
+    reference = torch.zeros(1, dtype=torch.float64)
+    data = {"energy": reference}
+
+    transmitted_dfield = calculator._electric_displacement(reference)
+    np.testing.assert_allclose(
+        transmitted_dfield.detach().numpy(),
+        unit_to_user("electric-field", "v/ang", dfield_atomic),
+    )
+
+    energy = calculator._constant_d_energy(dipole, data, {"cell": cell})
+    energy.sum().backward()
+
+    # For a unit Born charge the server force is E in atomic units. MACE
+    # returns eV/angstrom, which _ase.post_process converts back to atomic
+    # units using this factor.
+    force_atomic = -dipole.grad.detach().numpy() * unit_to_internal("force", "ev/ang")
+    np.testing.assert_allclose(force_atomic, dfield_atomic, rtol=0.0, atol=1e-14)
 
 
 def test_plain_mace_has_no_electrical_response_implementation():

@@ -492,23 +492,40 @@ class ExtendedMACECalculator(BatchedMACE):
             )
 
         length_to_bohr = unit_to_internal("length", "angstrom")
-        dipole_to_atomic = unit_to_internal("electric-dipole", "eang")
-        energy_to_ev = unit_to_user("energy", "electronvolt")
-        volume_atomic = (volume_angstrom3 * length_to_bohr**3).detach()
-        polarization = dipole * dipole_to_atomic / volume_atomic[:, None]
+        field_to_atomic = unit_to_internal("electric-field", "v/ang")
+        polarization_to_atomic = unit_to_internal("electric-polarization", "e/ang2")
+        force_to_atomic = unit_to_internal("force", "ev/ang")
+
+        # extmace receives both E and D in MACE's V/angstrom units.  A dipole
+        # divided by a volume is naturally in e/angstrom^2, so convert that
+        # polarization through atomic units to the same field units before
+        # forming D - 4 pi P.
+        polarization = dipole / volume_angstrom3.detach()[:, None]
+        polarization = unit_to_user(
+            "electric-field",
+            "v/ang",
+            polarization * polarization_to_atomic,
+        )
         mismatch = dfield - 4.0 * np.pi * polarization
         electric_field = torch.linalg.solve(
             epsilon_infinity, mismatch.unsqueeze(-1)
         ).squeeze(-1)
+
+        # Convert the field-energy density to eV.  The explicit force factor
+        # makes the gradient returned by MACE exactly compatible with the
+        # ev/angstrom -> atomic-unit conversion in _ase.post_process.
+        volume_atomic = volume_angstrom3.detach() * length_to_bohr**3
         energy_atomic = (
             volume_atomic
+            * field_to_atomic**2
             * torch.einsum("bi,bi->b", mismatch, electric_field)
             / (8.0 * np.pi)
         )
-
-        return energy_atomic / energy_to_ev
+        energy_to_ev = 1.0 / (length_to_bohr * force_to_atomic)
+        return energy_atomic * energy_to_ev
 
     def _electric_displacement(self, reference: torch.Tensor) -> torch.Tensor:
+        """Return the i-PI D field in MACE's V/angstrom units."""
         extras = self.extras
         if not extras or "Dfield" not in extras:
             raise ValueError(
@@ -516,8 +533,11 @@ class ExtendedMACECalculator(BatchedMACE):
                 "client-side electric-displacement coupling."
             )
 
+        electric_displacement = unit_to_user(
+            "electric-field", "v/ang", np.asarray(extras["Dfield"])
+        )
         electric_displacement = torch.as_tensor(
-            np.asarray(extras["Dfield"]),
+            electric_displacement,
             device=reference.device,
             dtype=reference.dtype,
         )
