@@ -24,6 +24,8 @@ clients/mace/batched  # covered by .github/workflows/mace.yml
 clients/mace/polar    # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-server            # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-client            # covered by .github/workflows/mace.yml
+features/ffdieletric/mace-polar+D-server            # covered by .github/workflows/mace.yml
+features/ffdieletric/mace-polar+D-client            # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-resonant-server   # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-resonant-client   # covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-client-socket     # requires MACE-POLAR and a socket client

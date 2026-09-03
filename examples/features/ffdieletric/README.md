@@ -5,7 +5,9 @@ This directory contains MACE-POLAR water examples:
 | Folder | Field | Where the coupling is applied |
 |---|---|---|
 | `mace-polar+E-server` | static | i-PI, using response tensors from MACE |
+| `mace-polar+D-server` | static electric displacement | i-PI, using response tensors and ε∞ from MACE/default JSON |
 | `mace-polar+E-client` | static | MACE, after receiving `Efield` from i-PI |
+| `mace-polar+D-client` | static electric displacement | MACE, after receiving `Dfield` from i-PI |
 | `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
 | `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `Efield` from i-PI |
 | `mace-polar+E-client-socket` | static | MACE socket client, after receiving `Efield` through `EXTRADATA` |
@@ -24,6 +26,12 @@ returned extras JSON. For an electric field, return
 
 ```json
 {"applied_fields": ["electric_field"]}
+```
+
+For an electric displacement, return
+
+```json
+{"applied_fields": ["electric_displacement"]}
 ```
 
 i-PI stops with an error if a field it sent is not acknowledged, preventing a
@@ -45,7 +53,18 @@ The default keys, shapes, axes, and units are:
 |---|---:|---|---|
 | `dipole` | `(3,)` | dipole component `i` | `eang` |
 | `BEC` | `(natoms, 3, 3)` | atom `a`, dipole `i`, displacement `j` | `e` |
-| `piezoelectric` | `(3, 3, 3)` | dipole `i`, strain `j`, strain `k` | `e/ang2` |
+| `piezoelectric` | `(3, 3, 3)` or `(3, 6)` | dipole `i`, strain `j`, strain `k` | `e/ang2` |
+| `epsilon_infinity` | `(3, 3)` or `(6,)` | dielectric Cartesian axes | dimensionless |
+
+If a MACE model does not return `epsilon_infinity`, `extmace` can send a
+constant default from its `mace_kwargs` JSON file:
+
+```json
+{"instructions": {"epsilon_infinity": [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]}}
+```
+
+The constant-D example uses a Cartesian `Dfield`; it therefore does not add the
+Maxwell stress associated with Stengel's fixed reduced displacement.
 
 Equivalently,
 
@@ -70,8 +89,11 @@ The last equality follows from i-PI's convention
 e_proper[i, j, k] = e_proper[i, k, j].
 ```
 
-It must be provided as the full Cartesian `(3, 3, 3)` tensor, not in Voigt
-notation.
+It can be supplied either as the full Cartesian `(3, 3, 3)` tensor or in
+Voigt `(3, 6)` form. Cartesian tensors are checked for symmetry in their two
+strain indices. The Voigt columns must be ordered `xx, yy, zz, yz, xz, xy`;
+they are expanded to the corresponding symmetric Cartesian tensor without a
+factor of two on the shear entries.
 
 The default extractors may be written explicitly as
 
@@ -79,6 +101,7 @@ The default extractors may be written explicitly as
 <dipole units="eang"   key="dipole" />
 <bec    units="e"      key="BEC" />
 <piezo  units="e/ang2" key="piezoelectric" />
+<epsilon_infinity units="atomic_unit" key="epsilon_infinity" />
 ```
 
 These lines can be omitted when the driver uses the default keys and units.

@@ -2523,6 +2523,7 @@ class FFDielectric(ForceField):
         electric_fields: list[VectorField],
         electric_displacements: list[VectorField],
         forcefield: ForceField,
+        epsilon_infinity: dict | None = None,
     ):
         super().__init__()
         self.name = name
@@ -2536,8 +2537,21 @@ class FFDielectric(ForceField):
         self.piezo = ArrayFromDict(
             **piezo
         )  # how to read the piezoelectric tensor from the client code
+        if epsilon_infinity is None:
+            epsilon_infinity = {
+                "family": "undefined",
+                "units": "atomic_unit",
+                "key": "epsilon_infinity",
+            }
+        self.epsilon_infinity = ArrayFromDict(**epsilon_infinity)
         self.electric_fields = list(electric_fields)
         self.electric_displacements = list(electric_displacements)
+        if self.electric_fields and self.electric_displacements:
+            raise ValueError(
+                "FFDielectric cannot mix <electric_field> and "
+                "<electric_displacement> entries. Specify only one type of "
+                "electrical boundary condition."
+            )
         self.forcefield = forcefield
         self.template = {}
         self._field_cache_lock = threading.Lock()
@@ -2717,17 +2731,11 @@ class FFDielectric(ForceField):
             )
 
     def apply_ensemble(self, request: dict) -> dict:
-        """
-        Apply fields whose equations of motion are implemented in i-PI.
-
-        Electric displacement is already carried by the request so that a
-        future fixed-D implementation can be added here without changing the
-        input or driver protocol.
-        """
+        """Apply the configured electrical-boundary-condition ensemble."""
         if "Efield" in request:
             request["result"] = self.fixed_E(request)
-        # Deliberately do not apply request["Dfield"] yet: fixed-D equations of
-        # motion have not been implemented. The field is still sent to clients.
+        elif "Dfield" in request:
+            request["result"] = self.fixed_D(request)
         return request
 
     def fixed_E(self, request: dict) -> tuple:
@@ -2742,9 +2750,7 @@ class FFDielectric(ForceField):
         natoms = np.asarray(f).reshape((-1, 3)).shape[0]
         Z = self.bec.get(x)  # Born Effective Charges, with (natoms,3,3)
         Z = Z.reshape((natoms, 3, 3))
-        e = self.piezo.get(
-            x, np.zeros((3, 3, 3))
-        )  # piezoelectric tensor, with shape (3,3,3)
+        e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
 
         # This is the summed field evaluated when this request was queued.
         Efield = np.asarray(request["Efield"])
@@ -2774,5 +2780,126 @@ class FFDielectric(ForceField):
 
         return u, f, v, x
 
+    @staticmethod
+    def _coerce_piezoelectric_tensor(piezoelectric: np.ndarray) -> np.ndarray:
+        """Return a symmetric Cartesian piezoelectric tensor.
+
+        The accepted shapes are the full Cartesian ``(3, 3, 3)`` tensor and
+        the Voigt ``(3, 6)`` form, whose columns are ``xx, yy, zz, yz, xz,
+        xy``. The latter is expanded without a factor of two because its
+        strain components use the usual engineering-shear convention.
+        """
+        piezoelectric = np.asarray(piezoelectric)
+        if piezoelectric.shape == (3, 6):
+            tensor = np.zeros((3, 3, 3), dtype=piezoelectric.dtype)
+            tensor[:, 0, 0] = piezoelectric[:, 0]
+            tensor[:, 1, 1] = piezoelectric[:, 1]
+            tensor[:, 2, 2] = piezoelectric[:, 2]
+            tensor[:, 1, 2] = tensor[:, 2, 1] = piezoelectric[:, 3]
+            tensor[:, 0, 2] = tensor[:, 2, 0] = piezoelectric[:, 4]
+            tensor[:, 0, 1] = tensor[:, 1, 0] = piezoelectric[:, 5]
+        elif piezoelectric.shape == (3, 3, 3):
+            tensor = piezoelectric
+        else:
+            raise ValueError(
+                "The piezoelectric tensor must have shape (3, 3, 3) or "
+                "(3, 6) in Voigt order (xx, yy, zz, yz, xz, xy), got "
+                f"{piezoelectric.shape}."
+            )
+
+        if not np.allclose(tensor, tensor.swapaxes(1, 2)):
+            nonsymmetric_norm = np.linalg.norm(tensor - tensor.swapaxes(1, 2))
+            raise ValueError(
+                "The piezoelectric tensor must be symmetric in its two strain "
+                "indices; the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        return tensor
+
+    @staticmethod
+    def _coerce_epsilon_infinity(epsilon_infinity: np.ndarray) -> np.ndarray:
+        """Return a symmetric dielectric tensor from Cartesian or Voigt data."""
+        epsilon_infinity = np.asarray(epsilon_infinity)
+        if epsilon_infinity.shape == (6,):
+            tensor = np.array(
+                [
+                    [
+                        epsilon_infinity[0],
+                        epsilon_infinity[5],
+                        epsilon_infinity[4],
+                    ],
+                    [
+                        epsilon_infinity[5],
+                        epsilon_infinity[1],
+                        epsilon_infinity[3],
+                    ],
+                    [
+                        epsilon_infinity[4],
+                        epsilon_infinity[3],
+                        epsilon_infinity[2],
+                    ],
+                ]
+            )
+        elif epsilon_infinity.shape == (3, 3):
+            tensor = epsilon_infinity
+        else:
+            raise ValueError(
+                "The epsilon_infinity tensor must have shape (3, 3) or six "
+                "Voigt components in order (xx, yy, zz, yz, xz, xy), got "
+                f"{epsilon_infinity.shape}."
+            )
+
+        if not np.allclose(tensor, tensor.T):
+            nonsymmetric_norm = np.linalg.norm(tensor - tensor.T)
+            raise ValueError(
+                "The epsilon_infinity tensor must be symmetric; the norm of "
+                "its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        return tensor
+
     def fixed_D(self, request: dict):
-        raise ValueError("Not implemented yet")
+        """Apply the constant-Cartesian-electric-displacement ensemble.
+
+        The driver supplies zero-field energy, forces, stress, dipole, Born
+        effective charges, proper piezoelectric tensor, and the clamped-ion
+        dielectric tensor. The latter is assumed to be constant with respect
+        to nuclear positions and strain.
+        """
+        u, f, v, x = request["result"]
+
+        dipole = self.dipole.get(x)
+        natoms = np.asarray(f).reshape((-1, 3)).shape[0]
+        Z = self.bec.get(x).reshape((natoms, 3, 3))
+        e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
+        epsilon_infinity = self._coerce_epsilon_infinity(self.epsilon_infinity.get(x))
+        Dfield = np.asarray(request["Dfield"])
+        if Dfield.shape != (3,):
+            raise ValueError(f"'Dfield' must have shape (3,), got {Dfield.shape}.")
+
+        cell = request["cell"][0]
+        volume = np.linalg.det(cell)
+        polarization = dipole / volume
+        displacement_mismatch = Dfield - 4.0 * np.pi * polarization
+        try:
+            Efield = np.linalg.solve(epsilon_infinity, displacement_mismatch)
+        except np.linalg.LinAlgError as error:
+            raise ValueError(
+                "The epsilon_infinity tensor must be nonsingular for the "
+                "constant-D ensemble."
+            ) from error
+
+        u += volume * displacement_mismatch @ Efield / (8.0 * np.pi)
+        f += np.einsum("ijk,j->ik", Z, Efield).flatten()
+
+        ve = volume * np.einsum("ijk,i->jk", e, Efield)
+        if not np.allclose(ve, ve.T):
+            nonsymmetric_norm = np.linalg.norm(ve - ve.T)
+            raise ValueError(
+                "The electric-displacement-induced virial is not symmetric: "
+                "the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        v += ve
+
+        return u, f, v, x

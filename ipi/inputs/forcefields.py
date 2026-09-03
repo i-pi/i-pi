@@ -1344,6 +1344,9 @@ class InputFFDielectric(InputForceField):
     _piezo_cls = InputValueFromDict.specialize(
         family="electric-polarization", units="e/ang2", key="piezoelectric"
     )
+    _epsilon_infinity_cls = InputValueFromDict.specialize(
+        family="undefined", units="atomic_unit", key="epsilon_infinity"
+    )
     _electric_field_cls = InputPythonVectorField.specialize(
         family="electric-field", units="atomic_unit"
     )
@@ -1396,7 +1399,17 @@ class InputFFDielectric(InputForceField):
         _piezo_cls,
         {
             "default": _piezo_cls().default(),
-            "help": "How to extract the piezoelectric tensor (keyword and units) from the extra information.",
+            "help": "How to extract the piezoelectric tensor (keyword and units) from the extra information. "
+            "Use a symmetric (3,3,3) tensor or Voigt (3,6) order (xx,yy,zz,yz,xz,xy); "
+            "Voigt shear entries need no factor of two.",
+        },
+    )
+    fields["epsilon_infinity"] = (
+        _epsilon_infinity_cls,
+        {
+            "default": _epsilon_infinity_cls().default(),
+            "help": "How to extract the dimensionless electronic dielectric tensor from the extra information. "
+            "Use a symmetric (3,3) tensor or six Voigt components in order (xx,yy,zz,yz,xz,xy).",
         },
     )
 
@@ -1407,8 +1420,8 @@ class InputFFDielectric(InputForceField):
             "options": ["client", "server"],
             "default": "client",
             "help": "Where field-dependent energy, force, and virial contributions are computed. "
-            "If 'server', i-PI applies electric-field contributions using response tensors returned by the driver. "
-            "If 'client', the driver applies them. Electric displacement is forwarded but its equations of motion are not implemented in i-PI yet.",
+            "If 'server', i-PI applies fixed-electric-field or fixed-electric-displacement contributions using response tensors returned by the driver. "
+            "If 'client', the driver applies the selected electrical boundary condition.",
         },
     )
 
@@ -1475,6 +1488,7 @@ class InputFFDielectric(InputForceField):
         self.dipole.store(ff.dipole)
         self.bec.store(ff.bec)
         self.piezo.store(ff.piezo)
+        self.epsilon_infinity.store(ff.epsilon_infinity)
 
     def fetch(self):
         """Fetches all of the FF objects"""
@@ -1500,6 +1514,7 @@ class InputFFDielectric(InputForceField):
             dipole=self.dipole.fetch(),
             bec=self.bec.fetch(),
             piezo=self.piezo.fetch(),
+            epsilon_infinity=self.epsilon_infinity.fetch(),
             electric_fields=electric_fields,
             electric_displacements=electric_displacements,
             forcefield=forcefields[0],
