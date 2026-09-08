@@ -46,7 +46,7 @@ def install_driver(force_install=False):
         if os_path is None or os_path == "":
             path_dirs = []
         else:
-            path_dirs = os_path.split(os.pathsep)
+            path_dirs = list(map(os.path.abspath, os_path.split(os.pathsep)))
 
         for directory in script_dirs:
             # check if the directory is on PATH and writable
