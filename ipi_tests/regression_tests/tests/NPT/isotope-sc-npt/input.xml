@@ -1,6 +1,7 @@
 <simulation verbosity='quiet'>
   <output prefix='simulation'>
     <properties stride='2' filename='out'> [ step, volume, isotope_zetasc(alpha=1.1253;atom=0) ] </properties>
+    <trajectory filename='zetasc' stride='10'> isotope_zetasc(alpha=1.1253) </trajectory>
   </output>
   <total_steps> 30 </total_steps>
   <prng><seed> 12345 </seed></prng>
