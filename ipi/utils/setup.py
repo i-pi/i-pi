@@ -30,8 +30,8 @@ def install_driver(force_install=False):
     """
 
     ipi_path = get_ipi_path()
-    ipi_driver_path = shutil.which("i-pi-driver")
-    if ipi_driver_path is None or force_install:
+    ipi_driver_path = None if force_install else shutil.which("i-pi-driver")
+    if ipi_driver_path is None:
         import sysconfig
 
         # get potential installation locations for the driver
