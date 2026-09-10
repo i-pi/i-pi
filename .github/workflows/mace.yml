@@ -31,8 +31,7 @@ jobs:
       - name: Install i-PI and MACE
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . mace-torch coverage
-          python -m pip install "git+https://github.com/WillBaldwin0/graph_electrostatics.git"
+          python -m pip install -e . coverage -r requirements/mace.txt
 
       - name: Download MACE model for single example
         working-directory: examples/clients/mace/single
