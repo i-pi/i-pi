@@ -1,0 +1,33 @@
+<simulation verbosity='quiet'>
+  <output prefix='simulation'>
+    <properties stride='2' filename='out'> [ step, volume, isotope_zetasc(alpha=1.1253;atom=0) ] </properties>
+    <trajectory filename='zetasc' stride='10'> isotope_zetasc(alpha=1.1253) </trajectory>
+  </output>
+  <total_steps> 10 </total_steps>
+  <prng><seed> 12345 </seed></prng>
+  <ffsocket name='qtip4pf' mode='unix'>
+    <address> localhost </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='manual' units='angstrom'> [ 12.4173, 0.0, 0.0, 0.0, 12.4173, 0.0, 0.0, 0.0, 12.4173 ] </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces><force forcefield='qtip4pf'></force></forces>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+      <pressure units='bar'> 20000.0 </pressure>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 50 </tau>
+          <thermostat mode='langevin'><tau units='femtosecond'> 100 </tau></thermostat>
+        </barostat>
+        <thermostat mode='pile_g'><tau units='femtosecond'> 100 </tau></thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
