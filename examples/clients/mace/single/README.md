@@ -10,7 +10,7 @@ The model is MIT-licensed and approximately 68 MB.
 Install MACE in the same Python environment as i-PI:
 
 ```bash
-python -m pip install mace-torch
+python -m pip install -r ../../../requirements/mace.txt
 ```
 
 See the [MACE installation instructions](https://github.com/ACEsuit/mace#installation)
