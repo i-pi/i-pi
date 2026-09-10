@@ -12,7 +12,7 @@ from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.messages import verbosity
+from ipi.utils.messages import verbosity, warning
 from ipi.engine.smotion import Smotion
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.system import InputSystem, InputSysTemplate
@@ -393,3 +393,31 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
         )
 
         return rsim
+
+    def fetch_checkpoint_state(self):
+        """Fetches the state needed to initialize from a checkpoint.
+
+        Unlike :meth:`fetch`, this intentionally does not construct a complete
+        simulation.  In particular, checkpoint force fields must not be
+        initialized when the checkpoint is used only by an initializer: they
+        are unrelated to the state being copied and can no longer be valid in
+        the current working directory.
+
+        Returns:
+           The beads, cell and motion objects of the first checkpoint system.
+        """
+
+        super(InputSimulation, self).fetch()
+
+        systems = [v for k, v in self.extra if k == "system"]
+        if len(systems) == 0:
+            raise ValueError("Checkpoint does not contain a system.")
+        if len(systems) > 1:
+            warning(
+                "Restart from checkpoint with "
+                + str(len(systems))
+                + " systems will fetch data from the first system."
+            )
+
+        system = systems[0]
+        return system.beads.fetch(), system.cell.fetch(), system.motion.fetch()
