@@ -22,8 +22,11 @@ except Exception:
     raise
 
 import argparse
+from contextlib import contextmanager
 import json
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from time import perf_counter, time
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -62,6 +65,117 @@ _DEFAULT_ASE_LIKE_PROPERTIES = {
 ase_like_properties = _DEFAULT_ASE_LIKE_PROPERTIES
 
 to_ignore_properties = ["interaction_energy", "node_feats", "node_energy"]
+
+
+class _MACEProfiler:
+    """Write opt-in, synchronization-aware timings for batched MACE calls.
+
+    CUDA kernels are asynchronous with respect to Python.  When profiling is
+    enabled, the timings around GPU stages therefore synchronize CUDA at the
+    stage boundaries.  This makes the reported wall times attributable to the
+    stage that launched the work, at the cost of perturbing normal execution.
+    Profiling is deliberately disabled by default.
+    """
+
+    schema_version = 1
+
+    def __init__(
+        self,
+        enabled: bool,
+        output: Optional[str],
+        device: str,
+        synchronize_cuda: bool,
+    ):
+        self.enabled = enabled
+        self.device = device
+        self.synchronize_cuda = synchronize_cuda
+        self._evaluation_id = 0
+        self._stream = None
+        if enabled and output is not None:
+            output_path = Path(output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            self._stream = output_path.open("a", encoding="utf-8", buffering=1)
+        if enabled:
+            device_fields = {
+                "device": device,
+                "synchronize_cuda": synchronize_cuda,
+                "cuda_available": torch.cuda.is_available(),
+                "torch_version": torch.__version__,
+                "torch_cuda_version": torch.version.cuda,
+            }
+            if self.uses_cuda:
+                properties = torch.cuda.get_device_properties(device)
+                device_fields.update(
+                    cuda_device_name=properties.name,
+                    cuda_compute_capability=f"{properties.major}.{properties.minor}",
+                    cuda_total_memory_bytes=properties.total_memory,
+                )
+            self.record(
+                "profile_start",
+                **device_fields,
+            )
+
+    @property
+    def uses_cuda(self) -> bool:
+        return self.device.startswith("cuda") and torch.cuda.is_available()
+
+    def synchronize(self) -> None:
+        if self.enabled and self.synchronize_cuda and self.uses_cuda:
+            torch.cuda.synchronize(self.device)
+
+    def record(self, event: str, **fields) -> None:
+        """Emit one JSONL record, or nothing when profiling is disabled."""
+
+        if not self.enabled:
+            return
+        record = {
+            "schema_version": self.schema_version,
+            "event": event,
+            "timestamp_unix_s": time(),
+            **fields,
+        }
+        line = json.dumps(record, sort_keys=True, default=str)
+        if self._stream is None:
+            print(f"IPI_MACE_PROFILE {line}", flush=True)
+        else:
+            self._stream.write(line + "\n")
+
+    @contextmanager
+    def section(
+        self,
+        stage: str,
+        *,
+        synchronize_cuda: bool = False,
+        **fields,
+    ) -> Iterator[None]:
+        """Measure a named stage and append its elapsed wall time in ms."""
+
+        if not self.enabled:
+            yield
+            return
+        if synchronize_cuda:
+            self.synchronize()
+        start = perf_counter()
+        try:
+            yield
+        finally:
+            if synchronize_cuda:
+                self.synchronize()
+            self.record(
+                "stage",
+                stage=stage,
+                elapsed_ms=(perf_counter() - start) * 1_000.0,
+                **fields,
+            )
+
+    def start_evaluation(self, **fields) -> int:
+        self._evaluation_id += 1
+        evaluation_id = self._evaluation_id
+        self.record("evaluation_start", evaluation_id=evaluation_id, **fields)
+        return evaluation_id
+
+    def end_evaluation(self, evaluation_id: int, **fields) -> None:
+        self.record("evaluation_end", evaluation_id=evaluation_id, **fields)
 
 
 class MACE_driver(ASEDriver):
@@ -150,16 +264,38 @@ class MACE_driver(ASEDriver):
         """
 
         if isinstance(cell, list):
+            profiler = self.batched_calculator.profiler
+            evaluation_id = profiler.start_evaluation(
+                source="i-pi-driver",
+                num_structures=len(cell),
+                atoms_per_structure=[len(p) for p in pos],
+            )
+            profiler.synchronize()
+            start = perf_counter()
             # convert from atomic_unit to angstrom
-            for n, (c, p) in enumerate(zip(cell, pos)):
-                cell[n], pos[n] = self.convert_units(c, p)
+            with profiler.section("driver.convert_units", evaluation_id=evaluation_id):
+                for n, (c, p) in enumerate(zip(cell, pos)):
+                    cell[n], pos[n] = self.convert_units(c, p)
 
             # modify cell and positions, keep the other arrays and info as in the template
-            atoms = self.template2atoms(cell, pos)
-            results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
+            with profiler.section(
+                "driver.template_to_atoms", evaluation_id=evaluation_id
+            ):
+                atoms = self.template2atoms(cell, pos)
+            results = self.batched_calculator.compute_batched(
+                atoms, evaluation_id=evaluation_id
+            )
 
             # convert from angstrom to atomic_unit
-            out = [self.post_process(r, a) for r, a in zip(results, atoms)]
+            with profiler.section("driver.post_process", evaluation_id=evaluation_id):
+                out = [self.post_process(r, a) for r, a in zip(results, atoms)]
+
+            profiler.synchronize()
+            profiler.end_evaluation(
+                evaluation_id,
+                source="i-pi-driver",
+                elapsed_ms=(perf_counter() - start) * 1_000.0,
+            )
 
             return out[0] if len(out) == 1 else out
         else:
@@ -175,7 +311,15 @@ class BatchedMACE(MACECalculator):
 
     ignored_properties = frozenset(to_ignore_properties)
     supported_instruction_keys = frozenset(
-        {"_comments", "batch_size", "forward_kwargs", "ignore"}
+        {
+            "_comments",
+            "batch_size",
+            "forward_kwargs",
+            "ignore",
+            "profile",
+            "profile_output",
+            "profile_sync_cuda",
+        }
     )
 
     def __init__(
@@ -194,6 +338,13 @@ class BatchedMACE(MACECalculator):
                 f"Unsupported {__DRIVER_NAME__} instruction(s): {names}. "
                 f"Supported instructions are: {supported}."
             )
+        self.profile_enabled = bool(self.instructions.pop("profile", False))
+        self.profile_output = self.instructions.pop("profile_output", None)
+        if self.profile_output is not None:
+            if not isinstance(self.profile_output, str):
+                raise TypeError("'profile_output' must be a file path string")
+            self.profile_enabled = True
+        self.profile_sync_cuda = bool(self.instructions.pop("profile_sync_cuda", True))
         if "forward_kwargs" not in self.instructions:
             self.instructions["forward_kwargs"] = {}
 
@@ -230,6 +381,19 @@ class BatchedMACE(MACECalculator):
         if not hasattr(self, "default_dtype"):
             self.default_dtype = next(self.models[0].parameters()).dtype
         self._output_summary_printed = False
+        self.profiler = _MACEProfiler(
+            enabled=self.profile_enabled,
+            output=self.profile_output,
+            device=str(self.device),
+            synchronize_cuda=self.profile_sync_cuda,
+        )
+        self.profiler.record(
+            "calculator_initialized",
+            batch_size=self.batch_size,
+            model_type=self.model_type,
+            num_models=self.num_models,
+            default_dtype=str(self.default_dtype),
+        )
         assert not self.use_compile, "self.use_compile=True is not supported yet."
 
     @staticmethod
@@ -275,27 +439,39 @@ class BatchedMACE(MACECalculator):
 
         return False
 
-    def preprocess(self, atoms: List[Atoms]) -> Tuple[DataLoader, Dict[str, bool]]:
+    def preprocess(
+        self,
+        atoms: List[Atoms],
+        evaluation_id: Optional[int] = None,
+    ) -> Tuple[DataLoader, Dict[str, bool]]:
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
         """
 
+        profiler_fields = {"evaluation_id": evaluation_id}
         keyspec = data.KeySpecification(
             info_keys=self.info_keys, arrays_keys=self.arrays_keys
         )
-        with torch_tools.default_dtype(self.default_dtype):
-            configs = data.config_from_atoms_list(
-                atoms, key_specification=keyspec, head_name=self.head
-            )
-            dataset = [
-                data.AtomicData.from_config(
-                    config,
-                    z_table=self.z_table,
-                    cutoff=self.r_max,
-                    heads=self.available_heads,
-                ).to(self.device)
-                for config in configs
-            ]
+        with self.profiler.section("preprocess.config_from_atoms", **profiler_fields):
+            with torch_tools.default_dtype(self.default_dtype):
+                configs = data.config_from_atoms_list(
+                    atoms, key_specification=keyspec, head_name=self.head
+                )
+        with self.profiler.section(
+            "preprocess.atomic_data_to_device",
+            synchronize_cuda=True,
+            **profiler_fields,
+        ):
+            with torch_tools.default_dtype(self.default_dtype):
+                dataset = [
+                    data.AtomicData.from_config(
+                        config,
+                        z_table=self.z_table,
+                        cutoff=self.r_max,
+                        heads=self.available_heads,
+                    ).to(self.device)
+                    for config in configs
+                ]
 
         training = self.use_compile or self.requires_model_gradients()
 
@@ -326,11 +502,21 @@ class BatchedMACE(MACECalculator):
         batch_size = (
             self.batch_size if self.batch_size is not None else max(len(dataset), 1)
         )
-        data_loader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            drop_last=False,
+        with self.profiler.section("preprocess.create_dataloader", **profiler_fields):
+            data_loader = DataLoader(
+                dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                drop_last=False,
+            )
+
+        self.profiler.record(
+            "preprocess_summary",
+            evaluation_id=evaluation_id,
+            num_structures=len(dataset),
+            atoms_per_structure=[len(atoms_item) for atoms_item in atoms],
+            requested_batch_size=self.batch_size,
+            effective_batch_size=batch_size,
         )
 
         return (
@@ -355,12 +541,26 @@ class BatchedMACE(MACECalculator):
             )[:-1]
         ]
 
-    def compute_batched(self, atoms: List[Atoms]) -> List[Parent]:
+    def compute_batched(
+        self,
+        atoms: List[Atoms],
+        evaluation_id: Optional[int] = None,
+    ) -> List[Parent]:
         """
         Evaluate the model(s) on a list of structures.
         """
 
-        data_loader, options = self.preprocess(atoms)
+        owns_evaluation = evaluation_id is None
+        if owns_evaluation:
+            evaluation_id = self.profiler.start_evaluation(
+                source="compute_batched",
+                num_structures=len(atoms),
+                atoms_per_structure=[len(atoms_item) for atoms_item in atoms],
+            )
+        self.profiler.synchronize()
+        evaluation_start = perf_counter()
+
+        data_loader, options = self.preprocess(atoms, evaluation_id=evaluation_id)
         training = options["training"]
         forward_kwargs = options["forward_kwargs"]
 
@@ -369,38 +569,87 @@ class BatchedMACE(MACECalculator):
             ModelResults(self.ase_like_properties) for _ in range(self.num_models)
         ]
         # loop over models in the committee
-        for batch_base in data_loader:
-            # batch = batch_base.to(self.device)
-            batch = self._clone_batch(batch_base).to_dict()
-            Natoms = self.batch2natoms(batch)
+        data_loader_iterator = iter(data_loader)
+        batch_index = 0
+        while True:
+            # DataLoader collation happens on ``next`` rather than in the loop
+            # body, so time it explicitly instead of hiding it in iteration.
+            with self.profiler.section(
+                "batch.dataloader_next",
+                evaluation_id=evaluation_id,
+                batch_index=batch_index,
+            ):
+                try:
+                    batch_base = next(data_loader_iterator)
+                except StopIteration:
+                    break
+
+            with self.profiler.section(
+                "batch.clone_to_dict",
+                synchronize_cuda=True,
+                evaluation_id=evaluation_id,
+                batch_index=batch_index,
+            ):
+                batch = self._clone_batch(batch_base).to_dict()
+            with self.profiler.section(
+                "batch.count_atoms",
+                synchronize_cuda=True,
+                evaluation_id=evaluation_id,
+                batch_index=batch_index,
+            ):
+                Natoms = self.batch2natoms(batch)
+
+            batch_fields = {
+                "evaluation_id": evaluation_id,
+                "batch_index": batch_index,
+                "num_structures": len(Natoms),
+                "atoms_per_structure": Natoms,
+                "total_atoms": sum(Natoms),
+            }
+            self.profiler.record("batch_start", **batch_fields)
 
             if self.model_type in ["MACE", "EnergyDipoleMACE", "PolarMACE"]:
-                node_heads = batch["head"][batch["batch"]]
-                num_atoms_arange = torch.arange(
-                    batch["positions"].shape[0], device=batch["positions"].device
-                )
-
-                # this try-except is to be compatible with different MACE versions
-                try:
-                    # newer versions of MACE
-                    node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
-                        num_atoms_arange, node_heads
-                    ]
-                except Exception:
-                    # older versions of MACE
-                    node_e0 = self.models[0].atomic_energies_fn(
-                        batch["node_attrs"], node_heads
+                with self.profiler.section(
+                    "batch.atomic_energies",
+                    synchronize_cuda=True,
+                    **batch_fields,
+                ):
+                    node_heads = batch["head"][batch["batch"]]
+                    num_atoms_arange = torch.arange(
+                        batch["positions"].shape[0],
+                        device=batch["positions"].device,
                     )
-                batch["node_e0"] = node_e0
+
+                    # this try-except is to be compatible with different MACE versions
+                    try:
+                        # newer versions of MACE
+                        node_e0 = self.models[0].atomic_energies_fn(
+                            batch["node_attrs"]
+                        )[num_atoms_arange, node_heads]
+                    except Exception:
+                        # older versions of MACE
+                        node_e0 = self.models[0].atomic_energies_fn(
+                            batch["node_attrs"], node_heads
+                        )
+                    batch["node_e0"] = node_e0
 
             for i, model in enumerate(self.models):
-                out: dict[str, torch.Tensor] = model(
-                    batch,
-                    training=training,
-                    **forward_kwargs,
-                )
+                model_fields = {**batch_fields, "model_index": i}
+                with self.profiler.section(
+                    "model.forward", synchronize_cuda=True, **model_fields
+                ):
+                    out: dict[str, torch.Tensor] = model(
+                        batch,
+                        training=training,
+                        **forward_kwargs,
+                    )
 
-                out = self.augment_output(out, batch, training)
+                with self.profiler.section(
+                    "model.augment_output_and_gradients",
+                    synchronize_cuda=True,
+                    **model_fields,
+                ):
+                    out = self.augment_output(out, batch, training)
 
                 # collect the results
                 ignored = set(self.ignored_properties)
@@ -408,21 +657,47 @@ class BatchedMACE(MACECalculator):
                     ignored |= set(self.instructions["ignore"])
 
                 results_tensors = {}
-
-                for key, value in out.items():
-                    if value is None or key in ignored:
-                        continue
-
-                    results_tensors[key] = value.detach().cpu().numpy()
+                transferred_bytes = 0
+                with self.profiler.section(
+                    "model.copy_outputs_to_cpu",
+                    synchronize_cuda=True,
+                    **model_fields,
+                ):
+                    for key, value in out.items():
+                        if value is None or key in ignored:
+                            continue
+                        transferred_bytes += value.numel() * value.element_size()
+                        results_tensors[key] = value.detach().cpu().numpy()
+                self.profiler.record(
+                    "cpu_transfer_summary",
+                    **model_fields,
+                    transferred_bytes=transferred_bytes,
+                    transferred_keys=sorted(results_tensors),
+                )
 
                 if not self._output_summary_printed:
                     self._print_output_summary(out, results_tensors)
                     self._output_summary_printed = True
 
-                model_results[i].store(Natoms, results_tensors)
+                with self.profiler.section("results.store", **model_fields):
+                    model_results[i].store(Natoms, results_tensors)
+
+            self.profiler.record("batch_end", **batch_fields)
+            batch_index += 1
 
         # re-order results
-        return ModelResults.mean(model_results)
+        with self.profiler.section(
+            "results.committee_mean", evaluation_id=evaluation_id
+        ):
+            results = ModelResults.mean(model_results)
+        self.profiler.synchronize()
+        if owns_evaluation:
+            self.profiler.end_evaluation(
+                evaluation_id,
+                source="compute_batched",
+                elapsed_ms=(perf_counter() - evaluation_start) * 1_000.0,
+            )
+        return results
 
     def _print_output_summary(
         self,
@@ -559,6 +834,29 @@ class BatchedMACE(MACECalculator):
 # -----------------------------------------------------------
 # Reusable script entry point
 # -----------------------------------------------------------
+@contextmanager
+def _torch_profiler_trace(trace_output: Optional[str], device: str) -> Iterator[None]:
+    """Optionally collect a Chrome/Perfetto trace of PyTorch CPU and CUDA work."""
+
+    if trace_output is None:
+        yield
+        return
+
+    trace_path = Path(trace_output)
+    trace_path.parent.mkdir(parents=True, exist_ok=True)
+    activities = [torch.profiler.ProfilerActivity.CPU]
+    if device.startswith("cuda") and torch.cuda.is_available():
+        activities.append(torch.profiler.ProfilerActivity.CUDA)
+
+    with torch.profiler.profile(
+        activities=activities,
+        record_shapes=True,
+        profile_memory=True,
+    ) as torch_profiler:
+        yield
+    torch_profiler.export_chrome_trace(str(trace_path))
+
+
 def run_cli(
     calculator_class=BatchedMACE,
     calculator_name="MACECalculator",
@@ -642,8 +940,56 @@ def run_cli(
         ),
         **argv,
     )
+    parser.add_argument(
+        "--profile-output",
+        type=str,
+        default=None,
+        help=(
+            "write detailed JSONL stage timings to this file. CUDA is "
+            "synchronized around GPU stages so the timings are accurate, "
+            "but profiling changes execution behavior."
+        ),
+        **argv,
+    )
+    parser.add_argument(
+        "--profile-no-cuda-sync",
+        action="store_true",
+        help=(
+            "do not synchronize CUDA around profiled stages; lower overhead, "
+            "but GPU timings are not individually attributable."
+        ),
+        **argv,
+    )
+    parser.add_argument(
+        "--profile-warmup",
+        type=int,
+        default=0,
+        help="number of warm-up evaluations before benchmark runs (default: %(default)s).",
+        **argv,
+    )
+    parser.add_argument(
+        "--profile-repeats",
+        type=int,
+        default=1,
+        help="number of evaluations to record (default: %(default)s).",
+        **argv,
+    )
+    parser.add_argument(
+        "--torch-profiler-output",
+        type=str,
+        default=None,
+        help=(
+            "write a PyTorch Chrome/Perfetto trace (CPU operations, CUDA "
+            "operations, shapes, and memory) to this file."
+        ),
+        **argv,
+    )
 
     args = parser.parse_args()
+    if args.profile_warmup < 0:
+        parser.error("--profile-warmup must be non-negative")
+    if args.profile_repeats < 1:
+        parser.error("--profile-repeats must be at least one")
 
     print(f"Loading input structures from '{args.input_structures}'...")
     structures: List[Atoms] = read(args.input_structures, index=":")
@@ -669,6 +1015,16 @@ def run_cli(
             mace_kwargs["ase_like_properties"],
         )
 
+    if args.profile_output is not None or args.profile_no_cuda_sync:
+        instructions = mace_kwargs.setdefault("instructions", {})
+        if not isinstance(instructions, dict):
+            parser.error("'instructions' in --mace_kwargs must be a JSON object")
+        if args.profile_output is not None:
+            instructions["profile_output"] = args.profile_output
+        if args.profile_no_cuda_sync:
+            instructions["profile"] = True
+            instructions["profile_sync_cuda"] = False
+
     print(
         f"Initializing {calculator_name} with model '{args.model}' "
         f"on device '{args.device}'..."
@@ -680,8 +1036,25 @@ def run_cli(
     )
     print("Calculator initialized.")
 
-    print("Evaluating structures with MACE model...")
-    results: List[Parent] = calc.compute_batched(structures)
+    if args.profile_warmup:
+        print(f"Running {args.profile_warmup} warm-up evaluation(s)...")
+        calc.profiler.record("benchmark_warmup_start", count=args.profile_warmup)
+        for _ in range(args.profile_warmup):
+            calc.compute_batched(structures)
+        calc.profiler.synchronize()
+        calc.profiler.record("benchmark_warmup_end", count=args.profile_warmup)
+
+    print(f"Evaluating structures with MACE model ({args.profile_repeats} run(s))...")
+    calc.profiler.record("benchmark_measurement_start", count=args.profile_repeats)
+    calc.profiler.synchronize()
+    trace_context = _torch_profiler_trace(args.torch_profiler_output, args.device)
+    with trace_context:
+        for _ in range(args.profile_repeats):
+            results: List[Parent] = calc.compute_batched(structures)
+    calc.profiler.synchronize()
+    calc.profiler.record("benchmark_measurement_end", count=args.profile_repeats)
+    if args.torch_profiler_output is not None:
+        print(f"Wrote PyTorch trace to '{args.torch_profiler_output}'.")
     assert len(structures) == len(results), "coding error"
     print("Evaluation complete.")
 
