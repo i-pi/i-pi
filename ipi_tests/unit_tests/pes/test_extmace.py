@@ -16,12 +16,12 @@ from ipi.pes.extmace import (
 
 
 def test_extmace_acknowledges_applied_electric_field(monkeypatch):
-    """An Efield request is acknowledged in the returned extras JSON."""
+    """An electric_field request is acknowledged in the returned extras JSON."""
     result = (1.0, "forces", "virial", '{"dipole": [0.0, 0.0, 0.0]}')
     monkeypatch.setattr(MACE_driver, "post_process", lambda *args: result)
 
     driver = object.__new__(Extended_MACE_driver)
-    driver.extra = {"Efield": [0.0, 0.0, 0.1]}
+    driver.extra = {"electric_field": [0.0, 0.0, 0.1]}
 
     _, _, _, extras = driver.post_process({}, None)
 
@@ -57,7 +57,7 @@ def test_extmace_skips_dipole_coupling_for_zero_field(monkeypatch):
     """A transmitted but exactly zero field does not require a model dipole."""
 
     calculator = object.__new__(ExtendedMACECalculator)
-    calculator.extras = {"Efield": [0.0, 0.0, 0.0]}
+    calculator.extras = {"electric_field": [0.0, 0.0, 0.0]}
     calculator.compute_bec_response = False
     data = {"energy": torch.tensor([1.0])}
 

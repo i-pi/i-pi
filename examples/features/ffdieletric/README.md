@@ -5,11 +5,11 @@ This directory contains MACE-POLAR water examples:
 | Folder | Field | Where the coupling is applied |
 |---|---|---|
 | `mace-polar+E-server` | static | i-PI, using response tensors from MACE |
-| `mace-polar+E-client` | static | MACE, after receiving `Efield` from i-PI |
+| `mace-polar+E-client` | static | MACE, after receiving `electric_field` from i-PI |
 | `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
-| `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `Efield` from i-PI |
-| `mace-polar+E-client-socket` | static | MACE socket client, after receiving `Efield` through `EXTRADATA` |
-| `mace-polar+E-resonant-client-socket` | resonant plane wave | MACE socket client, after receiving `Efield` through `EXTRADATA` |
+| `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `electric_field` from i-PI |
+| `mace-polar+E-client-socket` | static | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
+| `mace-polar+E-resonant-client-socket` | resonant plane wave | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
 
 The in-process examples each contain an `input.xml`, water starting
 coordinates, MACE options, a model-download script, and a README. The socket

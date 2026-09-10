@@ -30,7 +30,7 @@ def _completed_request(extras):
         {
             "id": 0,
             "status": "Done",
-            "Efield": [0.0, 0.0, 0.1],
+            "electric_field": [0.0, 0.0, 0.1],
             "result": (0.0, np.zeros(3), np.zeros((3, 3)), extras),
         }
     )

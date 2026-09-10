@@ -161,7 +161,7 @@ class Extended_MACE_driver(MACE_driver):
     def post_process(self, properties, structure):
         """Return normal MACE extras and acknowledge any applied field."""
         energy, forces, virial, extras = super().post_process(properties, structure)
-        if "Efield" not in (self.extra or {}):
+        if "electric_field" not in (self.extra or {}):
             return energy, forces, virial, extras
 
         extras_dict = {} if not extras else json.loads(extras)
@@ -353,7 +353,7 @@ class ExtendedMACECalculator(BatchedMACE):
                 "Electric-displacement coupling is not implemented in extmace yet."
             )
 
-        if "Efield" in self.extras:
+        if "electric_field" in self.extras:
             electric_field = self._electric_field(data["energy"])
             mu = self._response_dipole(data)
             # Differentiating the field-coupled energy supplies the field
@@ -376,13 +376,13 @@ class ExtendedMACECalculator(BatchedMACE):
 
     def _electric_field(self, reference: torch.Tensor) -> torch.Tensor:
         extras = self.extras
-        if not extras or "Efield" not in extras:
+        if not extras or "electric_field" not in extras:
             raise ValueError(
-                "The extra information dictionary must contain 'Efield' for "
+                "The extra information dictionary must contain 'electric_field' for "
                 "client-side electric-field coupling."
             )
 
-        electric_field = np.asarray(extras["Efield"])
+        electric_field = np.asarray(extras["electric_field"])
         electric_field = unit_to_user("electric-field", "v/ang", electric_field)
         electric_field = torch.as_tensor(
             electric_field,
@@ -391,7 +391,8 @@ class ExtendedMACECalculator(BatchedMACE):
         )
         if electric_field.shape != (3,):
             raise ValueError(
-                f"'Efield' must have shape (3,), got {tuple(electric_field.shape)}."
+                "'electric_field' must have shape (3,), got "
+                f"{tuple(electric_field.shape)}."
             )
         return electric_field
 

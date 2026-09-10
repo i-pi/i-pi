@@ -2509,7 +2509,7 @@ class FFCavPhSocket(FFSocket):
 
 class FFDielectric(ForceField):
     _CLIENT_FIELD_ACKNOWLEDGEMENTS = {
-        "Efield": "electric_field",
+        "electric_field": "electric_field",
         "Dfield": "electric_displacement",
     }
 
@@ -2637,9 +2637,9 @@ class FFDielectric(ForceField):
         extra_template = {"time": actual_time}
         if electric_field is not None:
             electric_field = electric_field.tolist()
-            extra_template["Efield"] = electric_field
+            extra_template["electric_field"] = electric_field
             if self.where == "client":
-                driver_extra["Efield"] = electric_field
+                driver_extra["electric_field"] = electric_field
         if electric_displacement is not None:
             electric_displacement = electric_displacement.tolist()
             extra_template["Dfield"] = electric_displacement
@@ -2724,7 +2724,7 @@ class FFDielectric(ForceField):
         future fixed-D implementation can be added here without changing the
         input or driver protocol.
         """
-        if "Efield" in request:
+        if "electric_field" in request:
             request["result"] = self.fixed_E(request)
         # Deliberately do not apply request["Dfield"] yet: fixed-D equations of
         # motion have not been implemented. The field is still sent to clients.
@@ -2747,22 +2747,22 @@ class FFDielectric(ForceField):
         )  # piezoelectric tensor, with shape (3,3,3)
 
         # This is the summed field evaluated when this request was queued.
-        Efield = np.asarray(request["Efield"])
+        electric_field = np.asarray(request["electric_field"])
 
         # Compute the volume of the structure
         cell = request["cell"][0]
         volume = np.linalg.det(cell)
 
         # Update energy, forces and virials
-        u -= dipole @ Efield
+        u -= dipole @ electric_field
         # the order of these indices have been checked and it is correct
-        f += np.einsum("ijk,j->ik", Z, Efield).flatten()
+        f += np.einsum("ijk,j->ik", Z, electric_field).flatten()
 
         # The proper piezoelectric tensor gives the field-induced stress as
         # sigma_E[j, k] = -sum_i e[i, j, k] E[i]. Since i-PI uses the
         # convention v = -volume * sigma, its virial contribution is
         # v_E[j, k] = volume * sum_i e[i, j, k] E[i].
-        ve = volume * np.einsum("ijk,i->jk", e, Efield)
+        ve = volume * np.einsum("ijk,i->jk", e, electric_field)
         if not np.allclose(ve, ve.T):
             nonsymmetric_norm = np.linalg.norm(ve - ve.T)
             raise ValueError(
