@@ -12,14 +12,17 @@ written by `input.xml`.
 
 ## Install
 
-Use one Python environment for MACE and i-PI. MACE-POLAR support requires a
-recent MACE version and its long-range graph dependency:
+Use one Python environment for MACE and i-PI. The repository pins a
+known-compatible MACE-POLAR dependency pair, because the MACE and
+graph-electrostatics APIs evolve independently:
 
 ```bash
-python -m pip install -U 'mace-torch>=0.3.16'
-python -m pip install 'git+https://github.com/WillBaldwin0/graph_electrostatics.git'
+python -m pip install -r ../../../requirements/mace.txt
 python -m pip install -e ../../../..
 ```
+
+The versions are deliberately exact for reproducibility. Update them together
+only after verifying this example and the MACE workflow.
 
 The MACE-POLAR checkpoints use the Academic Software License (ASL). Review and
 accept its terms before downloading a checkpoint.

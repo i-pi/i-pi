@@ -4,7 +4,14 @@ Runs an example of the pretrained [MACE-MP-0b2 small model](https://huggingface.
 
 ## Installation
 
-To be able to run MACE, check out the installation instructions at [https://github.com/ACEsuit/mace/tree/main?tab=readme-ov-file#installation](https://github.com/ACEsuit/mace/tree/main?tab=readme-ov-file#installation).
+Install the compatible MACE dependency set in the same environment as i-PI:
+
+```bash
+python -m pip install -r ../../../requirements/mace.txt
+```
+
+See the [MACE installation instructions](https://github.com/ACEsuit/mace#installation)
+for accelerator-specific options.
 
 ## Running the Example
 
