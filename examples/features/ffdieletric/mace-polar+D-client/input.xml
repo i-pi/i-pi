@@ -1,0 +1,56 @@
+<simulation verbosity='high'>
+  <total_steps>10</total_steps>
+
+  <ffdielectric name='mu+D' where='client'>
+    <!-- i-PI forwards this Cartesian Dfield to extmace in EXTRADATA. -->
+    <electric_displacement name='static' units='atomic_unit'>
+      <parameters>{ "amplitude": [0, 0, 1e-3] }</parameters>
+    </electric_displacement>
+    <ffdirect name='mace' pbc='True'>
+      <pes>extmace</pes>
+      <parameters>{
+        template:start.extxyz,
+        model:MACE-POLAR-1-M.model,
+        device:cpu,
+        mace_kwargs:mace_kwargs.json
+      }</parameters>
+    </ffdirect>
+  </ffdielectric>
+
+  <output prefix='i-pi'>
+    <properties filename='properties.out' stride='1' verbosity='low'>
+      [step, time{femtosecond}, conserved{electronvolt},
+       kinetic_md{electronvolt}, potential{electronvolt},
+       electric_displacement(mu+D){atomic_unit}]
+    </properties>
+    <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'>start.extxyz</file>
+      <velocities mode='thermal' units='kelvin'>300</velocities>
+    </initialize>
+
+    <forces>
+      <force forcefield='mu+D'/>
+    </forces>
+
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

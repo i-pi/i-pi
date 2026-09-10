@@ -541,7 +541,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras", "extras_component_raw", "extras_bias"]:
+        if key in ["extras", "extras_component_raw", "extras_bias", "sent_extra"]:
             if key == "extras_component_raw":
                 stream.write(
                     " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
@@ -608,8 +608,12 @@ class TrajectoryOutput(BaseOutput):
                             )
                         )
                     else:
-                        raise ValueError(
-                            "No specialized writer for arrays of dimension > 2"
+                        flattened = floatarray.flatten()
+                        stream.write(
+                            " ".join(
+                                ipi_global_settings["floatformat"] % el
+                                for el in flattened
+                            )
                         )
                     stream.write("\n")
             if flush:

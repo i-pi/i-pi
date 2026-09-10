@@ -226,7 +226,11 @@ UnitMap = {
         "hertz*rad": 2.4188843e-17,
         "hertz": 1.5198298e-16,
         "hz": 1.5198298e-16,
+        "khz": 1.5198298e-13,
+        "mhz": 1.5198298e-10,
+        "ghz": 1.5198298e-7,
         "thz": 1.5198298e-4,
+        "phz": 1.5198298e-1,
     },
     "electric-field": {  # Hartree/Bohr radius
         # 1Hartree = 27.2113862459 eV
@@ -242,6 +246,12 @@ UnitMap = {
         "atomic_unit": 1.00,
         "eang": 1.8897261,  # electron charge * angstrom
         "debye": 0.3934303,  # https://en.wikipedia.org/wiki/Debye#cite_note-10
+    },
+    "electric-polarization": {  # electron charge * Bohr^2
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "e/ang2": 1.0 / 1.8897261**2,  # electron charge / angstrom^2
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
@@ -301,6 +311,7 @@ UnitMap = {
         "atomic_unit": 1.00,
         "ev/ang^2": 0.010290858,
     },
+    "charge": {"": 1.00, "automatic": 1.00, "e": 1.00, "c": 1.60217663e-19},
 }
 
 # Conditionally includes "ase" units for each quantity

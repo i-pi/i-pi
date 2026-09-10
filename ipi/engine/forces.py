@@ -192,6 +192,7 @@ class ForceBead:
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
+        request = self.ff.post_process(request)
         result = request["result"]
 
         # reduce the reservation count (and wait for all calls to return)
@@ -815,6 +816,7 @@ class Forces:
             # `_refresh` to the parent via `depend_array._parent`, so we
             # only need to install `_func` on the parent.
             newbeads._q._func = make_rpc(newrpc, beads)
+            newbeads.bind(beads.motion)
 
             # makes newbeads.q depend from beads.q
             beads._q.add_dependant(newbeads._q)

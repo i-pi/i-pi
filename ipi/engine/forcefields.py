@@ -17,6 +17,7 @@ from contextlib import nullcontext
 
 import numpy as np
 
+from ipi.engine.motion.driven_dynamics import VectorField
 from ipi.engine.cell import GenericCell
 from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
@@ -28,6 +29,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
+from ipi.utils.inputvalue import ArrayFromDict
 from ipi.pes import load_pes
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
@@ -186,24 +188,26 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
-        fields = {
-            "id": reqid,
-            "pos": pbcpos,
-            "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
-            "pars": par_str,
-            "result": None,
-            "status": "Queued",
-            "start": -1,
-            "t_queued": time.time(),
-            "t_dispatched": 0,
-            "t_finished": 0,
-        }
         if template is None:
-            newreq = ForceRequest(fields)
-        else:
-            template.update(fields)
-            newreq = ForceRequest(template)
+            template = {}
+
+        template.update(
+            {
+                "id": reqid,
+                "pos": pbcpos,
+                "active": self.iactive,
+                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "pars": par_str,
+                "result": None,
+                "status": "Queued",
+                "start": -1,
+                "t_queued": time.time(),
+                "t_dispatched": 0,
+                "t_finished": 0,
+            }
+        )
+
+        newreq = ForceRequest(template)
 
         with self._threadlock:
             self.requests.append(newreq)
@@ -311,6 +315,19 @@ class ForceField:
 
         pass
 
+    def post_process(self, request: dict):
+        """Post-processes the request after it has been evaluated.
+
+        This is called after the request has been evaluated and the result
+        has been stored in the request dictionary. It can be used to perform
+        any additional processing on the results, such as logging or
+        updating internal state.
+        """
+        return request
+
+    def get_extra(self):
+        return {}
+
 
 class FFSocket(ForceField):
     """Interface between the PIMD code and a socket for a single replica.
@@ -367,7 +384,6 @@ class FFSocket(ForceField):
 
     def start(self):
         """Spawns a new thread."""
-
         if self.socket.batch_size > 1 and not self.socket.consolidate_messages:
             raise ValueError(
                 "Batched socket evaluation (batch_size > 1) requires "
@@ -519,7 +535,6 @@ class FFDirect(ForceField):
                 at once in a single batch. NB: program will hang if the number of force
                 evaluations is not a multiple of batch_size, unless threaded is set to
                 True.
-
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -541,7 +556,11 @@ class FFDirect(ForceField):
                 raise ValueError(
                     "You must provide a pes_path for the custom PES driver."
                 )
+            from ipi.pes.dummy import Dummy_driver
+
             self.driver = load_pes(self.pes, self.pes_path)(**pars)
+            if not isinstance(self.driver, Dummy_driver):
+                raise ValueError("coding error")
         except ImportError:
             # specific errors have already been triggered
             raise
@@ -565,7 +584,6 @@ class FFDirect(ForceField):
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
                     new_requests = True
-
             # for batched evaluation, flush incomplete batches
             # if the poll loop has been idle for a few cycles
             if self.batch_size > 1 and len(self.request_batch) > 0:
@@ -605,6 +623,8 @@ class FFDirect(ForceField):
         self._batch_idle_cycles = 0
 
     def evaluate(self, request):
+        if "extra" in request:
+            self.driver.store_extra(request["extra"])
         if self.batch_size == 1:
             results = list(
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
@@ -2485,3 +2505,401 @@ class FFCavPhSocket(FFSocket):
         )
 
         return newreq
+
+
+class FFDielectric(ForceField):
+    _CLIENT_FIELD_ACKNOWLEDGEMENTS = {
+        "Efield": "electric_field",
+        "Dfield": "electric_displacement",
+    }
+
+    def __init__(
+        self,
+        name: str,
+        where: str,
+        dipole: dict,
+        bec: dict,
+        piezo: dict,
+        electric_fields: list[VectorField],
+        electric_displacements: list[VectorField],
+        forcefield: ForceField,
+        epsilon_infinity: dict | None = None,
+    ):
+        super().__init__()
+        self.name = name
+        self.where = where
+        self.dipole = ArrayFromDict(
+            **dipole
+        )  # how to read the dipole from the client code
+        self.bec = ArrayFromDict(
+            **bec
+        )  # how to read the Born Charges from the client code
+        self.piezo = ArrayFromDict(
+            **piezo
+        )  # how to read the piezoelectric tensor from the client code
+        if epsilon_infinity is None:
+            epsilon_infinity = {
+                "family": "undefined",
+                "units": "atomic_unit",
+                "key": "epsilon_infinity",
+            }
+        self.epsilon_infinity = ArrayFromDict(**epsilon_infinity)
+        self.electric_fields = list(electric_fields)
+        self.electric_displacements = list(electric_displacements)
+        if self.electric_fields and self.electric_displacements:
+            raise ValueError(
+                "FFDielectric cannot mix <electric_field> and "
+                "<electric_displacement> entries. Specify only one type of "
+                "electrical boundary condition."
+            )
+        self.forcefield = forcefield
+        self.template = {}
+        self._field_cache_lock = threading.Lock()
+        self._field_cache_time = None
+        self._field_cache = (None, None)
+
+    def bind(self, output_maker=None):
+        """Binds the FF, at present just to allow for
+        managed output"""
+
+        self.output_maker = output_maker
+        self.forcefield.bind(output_maker)
+
+    def start(self):
+        return self.forcefield.start()
+
+    def stop(self):
+        return self.forcefield.stop()
+
+    def update(self):
+        raise NotImplementedError("update should not be called on FFDielectric")
+
+    def poll(self):
+        raise NotImplementedError("poll should not be called on FFDielectric")
+
+    def release(self, request, lock=True):
+        """Releases a request from the forcefield.
+
+        Args:
+            request: The request to be released.
+            lock: Whether to use the thread lock or not.
+        """
+        self.forcefield.release(request, lock)
+
+    def get_extra(self):
+        """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
+        return self.template.copy()
+
+    def _get_cached_vector_field(self, index, label, configured_fields):
+        """Returns a copy of a summed field already evaluated for this step."""
+        if not configured_fields:
+            raise ValueError(f"FFDielectric '{self.name}' has no {label} configured.")
+        with self._field_cache_lock:
+            field = self._field_cache[index]
+            if field is None:
+                raise RuntimeError(
+                    f"The {label} for FFDielectric '{self.name}' has not been "
+                    "evaluated yet."
+                )
+            return field.copy()
+
+    def get_electric_field(self):
+        """Returns the cached, summed electric field in atomic units."""
+        return self._get_cached_vector_field(0, "electric field", self.electric_fields)
+
+    def get_electric_displacement(self):
+        """Returns the cached, summed electric displacement in atomic units."""
+        return self._get_cached_vector_field(
+            1, "electric displacement", self.electric_displacements
+        )
+
+    @staticmethod
+    def _sum_vector_fields(fields, actual_time):
+        """Evaluates and sums one category of user-provided vector fields."""
+        if not fields:
+            return None
+        total = np.zeros(3)
+        for field in fields:
+            value = np.asarray(dstrip(field.get(actual_time)), dtype=float)
+            if value.shape != (3,):
+                raise ValueError(
+                    f"A vector field must have shape (3,), got {value.shape}."
+                )
+            total += value
+        return total
+
+    def _evaluate_fields(self, actual_time):
+        """Evaluates each field once per simulation time, also for many beads."""
+        with self._field_cache_lock:
+            if self._field_cache_time != actual_time:
+                self._field_cache = (
+                    self._sum_vector_fields(self.electric_fields, actual_time),
+                    self._sum_vector_fields(self.electric_displacements, actual_time),
+                )
+                self._field_cache_time = actual_time
+            return tuple(
+                None if value is None else value.copy() for value in self._field_cache
+            )
+
+    def queue(self, atoms, cell, template=None, **kwargs) -> dict:
+        if template is None:
+            template = {}
+
+        actual_time = float(atoms.motion.integrator.actual_time)
+        electric_field, electric_displacement = self._evaluate_fields(actual_time)
+        driver_extra = {"time": actual_time, "where": self.where}
+        extra_template = {"time": actual_time}
+        if electric_field is not None:
+            electric_field = electric_field.tolist()
+            extra_template["Efield"] = electric_field
+            if self.where == "client":
+                driver_extra["Efield"] = electric_field
+        if electric_displacement is not None:
+            electric_displacement = electric_displacement.tolist()
+            extra_template["Dfield"] = electric_displacement
+            if self.where == "client":
+                driver_extra["Dfield"] = electric_displacement
+        extra_template["extra"] = json.dumps(driver_extra)
+        self.template = extra_template.copy()
+
+        assert self.where in ["client", "server"], "coding error"
+
+        # The top-level request retains fields needed by i-PI post-processing.
+        # The serialized driver extras contain fields only for client-side use.
+        template = {**template, **extra_template}
+        return self.forcefield.queue(atoms, cell, template=template, **kwargs)
+
+    def post_process(self, r: dict):
+        """Post-processes the results of the forcefield request."""
+        # This is a no-op for now, but can be overridden in subclasses
+
+        # general safe checks
+        if r["status"] != "Done":
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not done, cannot post-process (this is coding error).",
+            )
+        if r not in self.forcefield.requests:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not in the forcefield's request list (this is coding error).",
+            )
+        if "result" not in r:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
+            )
+
+        if self.where == "server":
+            return self.apply_ensemble(r)
+        elif self.where == "client":
+            self._validate_client_field_application(r)
+            return r
+        else:
+            raise ValueError("coding error")
+
+    def _validate_client_field_application(self, request: dict) -> None:
+        """Require a client to confirm every field sent for this request.
+
+        A client-side field affects the potential energy surface. Silently
+        ignoring it would therefore produce an incorrect trajectory, so the
+        driver must return an ``applied_fields`` list in its extras dictionary.
+        """
+        expected = [
+            acknowledgement
+            for field, acknowledgement in self._CLIENT_FIELD_ACKNOWLEDGEMENTS.items()
+            if field in request
+        ]
+        if not expected:
+            return
+
+        extras = request["result"][3]
+        applied = extras.get("applied_fields") if isinstance(extras, dict) else None
+        if not isinstance(applied, list) or not all(
+            isinstance(field, str) for field in applied
+        ):
+            raise ValueError(
+                "The client-side FFDielectric driver must return an "
+                "'applied_fields' list in its extras dictionary."
+            )
+
+        missing = set(expected).difference(applied)
+        if missing:
+            raise ValueError(
+                "The client-side FFDielectric driver did not confirm that it "
+                f"applied: {', '.join(sorted(missing))}."
+            )
+
+    def apply_ensemble(self, request: dict) -> dict:
+        """Apply the configured electrical-boundary-condition ensemble."""
+        if "Efield" in request:
+            request["result"] = self.fixed_E(request)
+        elif "Dfield" in request:
+            request["result"] = self.fixed_D(request)
+        return request
+
+    def fixed_E(self, request: dict) -> tuple:
+        # Extract  energy, forces, virials and extra information
+        # from the results returned from the driver.
+        u, f, v, x = request["result"]
+
+        # Extract extra information from the driver.
+        # The values returned here will be already in atomic_unit
+        # even though the driver might return them with differnt units
+        dipole = self.dipole.get(x)  # electric dipole, with shape = (3,)
+        natoms = np.asarray(f).reshape((-1, 3)).shape[0]
+        Z = self.bec.get(x)  # Born Effective Charges, with (natoms,3,3)
+        Z = Z.reshape((natoms, 3, 3))
+        e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
+
+        # This is the summed field evaluated when this request was queued.
+        Efield = np.asarray(request["Efield"])
+
+        # Compute the volume of the structure
+        cell = request["cell"][0]
+        volume = np.linalg.det(cell)
+
+        # Update energy, forces and virials
+        u -= dipole @ Efield
+        # the order of these indices have been checked and it is correct
+        f += np.einsum("ijk,j->ik", Z, Efield).flatten()
+
+        # The proper piezoelectric tensor gives the field-induced stress as
+        # sigma_E[j, k] = -sum_i e[i, j, k] E[i]. Since i-PI uses the
+        # convention v = -volume * sigma, its virial contribution is
+        # v_E[j, k] = volume * sum_i e[i, j, k] E[i].
+        ve = volume * np.einsum("ijk,i->jk", e, Efield)
+        if not np.allclose(ve, ve.T):
+            nonsymmetric_norm = np.linalg.norm(ve - ve.T)
+            raise ValueError(
+                "The electric-field-induced virial is not symmetric: "
+                "the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        v += ve
+
+        return u, f, v, x
+
+    @staticmethod
+    def _coerce_piezoelectric_tensor(piezoelectric: np.ndarray) -> np.ndarray:
+        """Return a symmetric Cartesian piezoelectric tensor.
+
+        The accepted shapes are the full Cartesian ``(3, 3, 3)`` tensor and
+        the Voigt ``(3, 6)`` form, whose columns are ``xx, yy, zz, yz, xz,
+        xy``. The latter is expanded without a factor of two because its
+        strain components use the usual engineering-shear convention.
+        """
+        piezoelectric = np.asarray(piezoelectric)
+        if piezoelectric.shape == (3, 6):
+            tensor = np.zeros((3, 3, 3), dtype=piezoelectric.dtype)
+            tensor[:, 0, 0] = piezoelectric[:, 0]
+            tensor[:, 1, 1] = piezoelectric[:, 1]
+            tensor[:, 2, 2] = piezoelectric[:, 2]
+            tensor[:, 1, 2] = tensor[:, 2, 1] = piezoelectric[:, 3]
+            tensor[:, 0, 2] = tensor[:, 2, 0] = piezoelectric[:, 4]
+            tensor[:, 0, 1] = tensor[:, 1, 0] = piezoelectric[:, 5]
+        elif piezoelectric.shape == (3, 3, 3):
+            tensor = piezoelectric
+        else:
+            raise ValueError(
+                "The piezoelectric tensor must have shape (3, 3, 3) or "
+                "(3, 6) in Voigt order (xx, yy, zz, yz, xz, xy), got "
+                f"{piezoelectric.shape}."
+            )
+
+        if not np.allclose(tensor, tensor.swapaxes(1, 2)):
+            nonsymmetric_norm = np.linalg.norm(tensor - tensor.swapaxes(1, 2))
+            raise ValueError(
+                "The piezoelectric tensor must be symmetric in its two strain "
+                "indices; the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        return tensor
+
+    @staticmethod
+    def _coerce_epsilon_infinity(epsilon_infinity: np.ndarray) -> np.ndarray:
+        """Return a symmetric dielectric tensor from Cartesian or Voigt data."""
+        epsilon_infinity = np.asarray(epsilon_infinity)
+        if epsilon_infinity.shape == (6,):
+            tensor = np.array(
+                [
+                    [
+                        epsilon_infinity[0],
+                        epsilon_infinity[5],
+                        epsilon_infinity[4],
+                    ],
+                    [
+                        epsilon_infinity[5],
+                        epsilon_infinity[1],
+                        epsilon_infinity[3],
+                    ],
+                    [
+                        epsilon_infinity[4],
+                        epsilon_infinity[3],
+                        epsilon_infinity[2],
+                    ],
+                ]
+            )
+        elif epsilon_infinity.shape == (3, 3):
+            tensor = epsilon_infinity
+        else:
+            raise ValueError(
+                "The epsilon_infinity tensor must have shape (3, 3) or six "
+                "Voigt components in order (xx, yy, zz, yz, xz, xy), got "
+                f"{epsilon_infinity.shape}."
+            )
+
+        if not np.allclose(tensor, tensor.T):
+            nonsymmetric_norm = np.linalg.norm(tensor - tensor.T)
+            raise ValueError(
+                "The epsilon_infinity tensor must be symmetric; the norm of "
+                "its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        return tensor
+
+    def fixed_D(self, request: dict):
+        """Apply the constant-Cartesian-electric-displacement ensemble.
+
+        The driver supplies zero-field energy, forces, stress, dipole, Born
+        effective charges, proper piezoelectric tensor, and the clamped-ion
+        dielectric tensor. The latter is assumed to be constant with respect
+        to nuclear positions and strain.
+        """
+        u, f, v, x = request["result"]
+
+        dipole = self.dipole.get(x)
+        natoms = np.asarray(f).reshape((-1, 3)).shape[0]
+        Z = self.bec.get(x).reshape((natoms, 3, 3))
+        e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
+        epsilon_infinity = self._coerce_epsilon_infinity(self.epsilon_infinity.get(x))
+        Dfield = np.asarray(request["Dfield"])
+        if Dfield.shape != (3,):
+            raise ValueError(f"'Dfield' must have shape (3,), got {Dfield.shape}.")
+
+        cell = request["cell"][0]
+        volume = np.linalg.det(cell)
+        polarization = dipole / volume
+        displacement_mismatch = Dfield - 4.0 * np.pi * polarization
+        try:
+            Efield = np.linalg.solve(epsilon_infinity, displacement_mismatch)
+        except np.linalg.LinAlgError as error:
+            raise ValueError(
+                "The epsilon_infinity tensor must be nonsingular for the "
+                "constant-D ensemble."
+            ) from error
+
+        u += volume * displacement_mismatch @ Efield / (8.0 * np.pi)
+        f += np.einsum("ijk,j->ik", Z, Efield).flatten()
+
+        ve = volume * np.einsum("ijk,i->jk", e, Efield)
+        if not np.allclose(ve, ve.T):
+            nonsymmetric_norm = np.linalg.norm(ve - ve.T)
+            raise ValueError(
+                "The electric-displacement-induced virial is not symmetric: "
+                "the norm of its nonsymmetric part is "
+                f"{nonsymmetric_norm:.6e}."
+            )
+        v += ve
+
+        return u, f, v, x
