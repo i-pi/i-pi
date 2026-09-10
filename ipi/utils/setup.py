@@ -29,19 +29,28 @@ def install_driver(force_install=False):
     Requires a system with git, gfortran and make.
     """
 
-    ipi_driver_path = shutil.which("i-pi-driver")
-    if ipi_driver_path is None or force_install:
-        # this is where we'll copy the driver - the first writable folder
+    ipi_path = get_ipi_path()
+    ipi_driver_path = None if force_install else shutil.which("i-pi-driver")
+    if ipi_driver_path is None:
+        import sysconfig
+
+        # get potential installation locations for the driver
+        script_dirs = [
+            os.path.join(ipi_path, "bin"),  # preferred choice
+            sysconfig.get_path("scripts"),  # system, conda or virtual environment
+            sysconfig.get_path("scripts", sysconfig.get_preferred_scheme("user")),
+        ]
+
         os_path = os.getenv("PATH")
 
         if os_path is None or os_path == "":
             path_dirs = []
         else:
-            path_dirs = os_path.split(os.pathsep)
+            path_dirs = list(map(os.path.abspath, os_path.split(os.pathsep)))
 
-        for directory in path_dirs:
-            # Check if the directory is writable
-            if os.access(directory, os.W_OK):
+        for directory in script_dirs:
+            # check if the directory is on PATH and writable
+            if directory in path_dirs and os.access(directory, os.W_OK):
                 ipi_driver_path = os.path.join(directory, "i-pi-driver")
                 break
 
@@ -52,7 +61,6 @@ def install_driver(force_install=False):
         info(f"i-pi-driver is already present in {ipi_driver_path} ", verbosity.low)
         return
 
-    ipi_path = get_ipi_path()
     build_dir = os.path.join(ipi_path, "drivers/f90")
 
     if not os.path.exists(build_dir):

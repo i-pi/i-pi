@@ -58,9 +58,9 @@ Use `device:cuda` for a CUDA GPU. For higher-accuracy static checks, change
 `default_dtype` to `float64`.
 
 Born effective charges, piezoelectric tensors, and electric-field coupling are
-provided by the separate `extmace` driver. See
-`examples/features/ffdieletric` for those calculations. The ordinary `mace`
-driver used here remains independent of the electrical-response extension.
+outside the scope of the ordinary `mace` driver. They can be supplied by an
+independent electrical-response extension without making this driver depend on
+it.
 
 `start.extxyz` supplies the global electronic state expected by MACE-POLAR:
 neutral charge, singlet spin multiplicity, and zero external field. Change
