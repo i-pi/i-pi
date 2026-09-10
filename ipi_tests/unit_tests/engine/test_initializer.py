@@ -112,8 +112,7 @@ def test_init_chk_skips_checkpoint_forcefields(tmp_path):
     """Checkpoint initialization reads state without constructing its PES."""
 
     checkpoint = tmp_path / "obsolete-forcefield.chk"
-    checkpoint.write_text(
-        """
+    checkpoint.write_text("""
 <simulation>
   <ffdirect name='obsolete'>
     <pes>custom</pes>
@@ -140,8 +139,7 @@ def test_init_chk_skips_checkpoint_forcefields(tmp_path):
     </cell>
   </system>
 </simulation>
-"""
-    )
+""")
 
     # The same checkpoint remains invalid as a full restart: FFDirect would
     # construct the custom PES and reject the missing pes_path.
