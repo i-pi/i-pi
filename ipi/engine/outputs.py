@@ -9,6 +9,8 @@ and the restart files.
 # See the "licenses" directory for full license information.
 
 import os
+import threading
+from functools import wraps
 
 import numpy as np
 
@@ -33,6 +35,17 @@ __all__ = [
     "OutputMaker",
     "BaseOutput",
 ]
+
+
+def _synchronized_output(method):
+    """Serializes an output operation with stream shutdown."""
+
+    @wraps(method)
+    def synchronized(self, *args, **kwargs):
+        with self._stream_lock:
+            return method(self, *args, **kwargs)
+
+    return synchronized
 
 
 def get_identification_info_xml():
@@ -118,6 +131,7 @@ class BaseOutput(object):
 
         self.close_stream()
 
+    @_synchronized_output
     def close_stream(self):
         """Closes the output stream"""
 
@@ -135,9 +149,11 @@ class BaseOutput(object):
         """Stores a reference to system and registers for exiting"""
 
         self.system = system
+        self._stream_lock = threading.RLock()
         self.open_stream(mode)
         softexit.register_function(self.softexit)
 
+    @_synchronized_output
     def force_flush(self):
         """Tries hard to flush the output stream"""
 
@@ -145,6 +161,7 @@ class BaseOutput(object):
             self.out.flush()
             os.fsync(self.out)
 
+    @_synchronized_output
     def remove(self):
         """Removes (temporary) output"""
 
@@ -152,10 +169,11 @@ class BaseOutput(object):
             self.out.close()
             os.remove(self.filename)
 
+    @_synchronized_output
     def write(self, data):
         """Writes data to file"""
 
-        if self.out is not None:
+        if not softexit.triggered and self.out is not None:
             return self.out.write(data)
 
     def active(self):
@@ -259,6 +277,7 @@ class PropertyOutput(BaseOutput):
                 ohead += ": " + prop["help"]
             self.out.write(ohead + "\n")
 
+    @_synchronized_output
     def write(self):
         """Outputs the required properties of the system.
 
@@ -434,6 +453,7 @@ class TrajectoryOutput(BaseOutput):
                     filename += "." + self.format
             self.out = open_backup(filename, mode)
 
+    @_synchronized_output
     def close_stream(self):
         """Closes the output stream."""
 
@@ -450,6 +470,7 @@ class TrajectoryOutput(BaseOutput):
                 "Exception while closing output stream " + str(self.out), verbosity.low
             )
 
+    @_synchronized_output
     def write(self):
         """Writes out the required trajectories."""
 
