@@ -18,7 +18,7 @@
     <piezo  units="e/ang2" key="piezoelectric" />
     <!-- PES+dipole -->
     <!-- MACE runs in-process; no socket client is needed. -->
-    <ffdirect name='mace' pbc='True'>
+    <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{
         template:start.extxyz,

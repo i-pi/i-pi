@@ -22,6 +22,11 @@ opt-in `NEEDEXTRA` capability.
 All example fields and field-related properties use `V/ang`. The constant-D
 examples use an amplitude of `0.01 V/ang`.
 
+FFDielectric requires unwrapped atomic coordinates and rejects a wrapped force
+field configured with `pbc='True'`. The simulation cell and periodic boundary
+conditions are still supplied to the driver; only i-PI's coordinate-folding
+step is disabled.
+
 ## Client-side field acknowledgement
 
 When `where='client'`, the driver must include its field feedback in the

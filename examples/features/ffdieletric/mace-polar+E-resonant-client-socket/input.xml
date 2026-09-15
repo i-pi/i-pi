@@ -10,7 +10,7 @@
         "phase": 0.0
       }</parameters>
     </electric_field>
-    <ffsocket name='mace' mode='unix' pbc='True'>
+    <ffsocket name='mace' mode='unix'>
       <address>mace-polar-resonant-extra</address>
       <consolidate_messages>False</consolidate_messages>
     </ffsocket>

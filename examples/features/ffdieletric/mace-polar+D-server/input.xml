@@ -12,7 +12,7 @@
     <bec units="e" key="BEC" />
     <piezo units="e/ang2" key="piezoelectric" />
     <epsilon_infinity units="atomic_unit" key="epsilon_infinity" />
-    <ffdirect name='mace' pbc='True'>
+    <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{
         template:start.extxyz,

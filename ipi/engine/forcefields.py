@@ -2552,6 +2552,12 @@ class FFDielectric(ForceField):
                 "electrical boundary condition."
             )
         self.forcefield = forcefield
+        if self.forcefield.dopbc:
+            raise ValueError(
+                "FFDielectric does not support pbc='True' on its wrapped "
+                "forcefield because it must pass unwrapped coordinates to the "
+                "driver."
+            )
         self.template = {}
         self._field_cache_lock = threading.Lock()
         self._field_cache_time = None

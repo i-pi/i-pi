@@ -9,7 +9,7 @@ from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
 def _client_dielectric():
     """Create the minimum FFDielectric object needed for result validation."""
     wrapped = ForceField()
-    return FFDielectric(
+    dielectric = FFDielectric(
         name="dielectric",
         where="client",
         dipole={
@@ -27,6 +27,8 @@ def _client_dielectric():
         electric_displacements=[],
         forcefield=wrapped,
     )
+    assert not dielectric.forcefield.dopbc
+    return dielectric
 
 
 def test_dielectric_rejects_mixed_electric_field_and_displacement():
@@ -48,6 +50,30 @@ def test_dielectric_rejects_mixed_electric_field_and_displacement():
             electric_fields=[object()],
             electric_displacements=[object()],
             forcefield=ForceField(),
+        )
+
+
+def test_dielectric_rejects_wrapping_in_its_wrapped_forcefield():
+    """FFDielectric must reject clients configured to wrap coordinates."""
+    wrapped = ForceField(dopbc=True)
+    with pytest.raises(ValueError, match="does not support pbc='True'"):
+        FFDielectric(
+            name="dielectric",
+            where="client",
+            dipole={
+                "family": "electric-dipole",
+                "units": "atomic_unit",
+                "key": "dipole",
+            },
+            bec={"family": "charge", "units": "e", "key": "BEC"},
+            piezo={
+                "family": "electric-polarization",
+                "units": "atomic_unit",
+                "key": "piezoelectric",
+            },
+            electric_fields=[],
+            electric_displacements=[],
+            forcefield=wrapped,
         )
 
 

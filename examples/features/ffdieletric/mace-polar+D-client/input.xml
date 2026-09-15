@@ -6,7 +6,7 @@
     <electric_displacement name='static' units='V/ang'>
       <parameters>{ "amplitude": [0, 0, 0.01] }</parameters>
     </electric_displacement>
-    <ffdirect name='mace' pbc='True'>
+    <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{
         template:start.extxyz,
