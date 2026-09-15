@@ -17,6 +17,7 @@ import time
 import threading
 
 import numpy as np
+import json
 
 from multiprocessing import shared_memory
 
@@ -56,6 +57,8 @@ MESSAGE = {
         "posdata",
         "getforce",
         "forceready",
+        "needextra",
+        "extradata",
     ]
 }
 
@@ -106,6 +109,7 @@ class Status(object):
     HasData = 8
     Busy = 16
     Timeout = 32
+    NeedExtra = 64
 
 
 class DriverSocket(socket.socket):
@@ -298,6 +302,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -338,6 +344,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -427,38 +435,78 @@ class Driver(DriverSocket):
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
 
-    def _recv_forceready(self):
-        """Receives the FORCEREADY header after GETFORCE has been sent.
+    def sendextra(self, extra: str):
+        """Sends the extra string to the client.
+
+        Args:
+           extra: a JSON-formatted string.
 
         Raises:
-           Disconnected: Raised if the driver has disconnected.
+           InvalidStatus: Raised if the status is not Ready.
         """
-        reply = ""
-        while True:
-            try:
-                reply = self.recv_msg()
-            except socket.timeout:
-                warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
-                continue
-            except:
-                warning(
-                    " @SOCKET:   Error while receiving message: %s" % (reply),
-                    verbosity.low,
-                )
-                raise Disconnected()
-            if reply == MESSAGE["forceready"]:
-                return
-            else:
-                warning(
-                    " @SOCKET:   Unexpected getforce reply: %s" % (reply),
-                    verbosity.low,
-                )
-            if reply == "":
-                raise Disconnected()
+        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
 
-    def _recv_force_data(self):
-        """Receives the [potential, force, virial, extra] payload that follows
-        the FORCEREADY header."""
+        if self.status & Status.NeedExtra:
+            try:
+                payload = extra.encode("utf-8")
+                # reduces latency by combining all messages in one
+                self.sendall(
+                    MESSAGE["extradata"] + np.int32(len(payload)).tobytes() + payload
+                )  # header  # extras
+                self.status = Status.Up | Status.Busy
+            except socket.timeout:
+                warning(
+                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                    verbosity.quiet,
+                )
+                self.status = Status.Timeout
+                TIMEOUT *= 2
+                return
+            except Exception as exc:
+                warning(f"Other exception during extra receive: {exc}", verbosity.quiet)
+                raise exc
+        else:
+            raise InvalidStatus("Status in sendextra was " + self.status)
+
+    def getforce(self):
+        """Gets the potential energy, force and virial from the driver.
+
+        Raises:
+           InvalidStatus: Raised if the status is not HasData.
+           Disconnected: Raised if the driver has disconnected.
+
+        Returns:
+           A list of the form [potential, force, virial, extra].
+        """
+
+        if self.status & Status.HasData:
+            self.send_msg("getforce")
+            reply = ""
+            while True:
+                try:
+                    reply = self.recv_msg()
+                except socket.timeout:
+                    warning(
+                        " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
+                    )
+                    continue
+                except:
+                    warning(
+                        " @SOCKET:   Error while receiving message: %s" % (reply),
+                        verbosity.low,
+                    )
+                    raise Disconnected()
+                if reply == MESSAGE["forceready"]:
+                    break
+                else:
+                    warning(
+                        " @SOCKET:   Unexpected getforce reply: %s" % (reply),
+                        verbosity.low,
+                    )
+                if reply == "":
+                    raise Disconnected()
+        else:
+            raise InvalidStatus("Status in getforce was " + str(self.status))
 
         mu = np.float64()
         mu = self.recvall(mu)
@@ -483,26 +531,30 @@ class Driver(DriverSocket):
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
             mxtra = ""
-        return [mu, mf, mvir, parse_extra(mxtra)]
+        mxtradict = {}
+        if mxtra:
+            try:
+                mxtradict = json.loads(mxtra)
+                info(
+                    "@driver.getforce: Extra string JSON has been loaded.",
+                    verbosity.debug,
+                )
+            except:
+                # if we can't parse it as a dict, issue a warning and carry on
+                info(
+                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
+                    + mxtra,
+                    verbosity.debug,
+                )
+                mxtradict = {}
+                pass
+            if "raw" in mxtradict:
+                raise ValueError(
+                    "'raw' cannot be used as a field in a JSON-formatted extra string"
+                )
 
-    def getforce(self):
-        """Gets the potential energy, force and virial from the driver.
-
-        Raises:
-           InvalidStatus: Raised if the status is not HasData.
-           Disconnected: Raised if the driver has disconnected.
-
-        Returns:
-           A list of the form [potential, force, virial, extra].
-        """
-
-        if self.status & Status.HasData:
-            self.send_msg("getforce")
-            self._recv_forceready()
-        else:
-            raise InvalidStatus("Status in getforce was " + str(self.status))
-
-        return self._recv_force_data()
+            mxtradict["raw"] = mxtra
+        return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
         """Dispatches a request r and looks after it setting results
@@ -519,20 +571,46 @@ class Driver(DriverSocket):
             return
 
         r["t_dispatched"] = time.time()
+
         self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
                 verbosity.low,
             )
             return
 
+        # From now on self.status can be only one among Status.Ready and Status.NeedExtra:
+        # not both, nor neither of both, but only and only one of these.
+
         r["start"] = time.time()
-        self.sendpos(r["pos"][r["active"]], r["cell"])
+
+        if (self.status & Status.Ready) and (self.status & Status.NeedExtra):
+            warning(
+                " @SOCKET:   Keep calm: set Ready and NeedExtra once at a time.",
+                verbosity.high,
+            )
+            raise InvalidStatus
+
+        if self.status & Status.NeedExtra:
+            if "extra" not in r:
+                warning(
+                    " @SOCKET:   'extra' is empty.",
+                    verbosity.high,
+                )
+                r["extra"] = ""
+
+            self.sendextra(r["extra"])
+            self.get_status()
+
+        if self.status & Status.Ready:
+            self.sendpos(r["pos"][r["active"]], r["cell"])
+        else:
+            raise InvalidStatus
 
         self.get_status()
         if not (self.status & Status.HasData):
@@ -588,15 +666,29 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch_send! (II)",
+                verbosity.low,
+            )
+            return False
+
+        if self.status & Status.NeedExtra:
+            if "extra" not in r:
+                warning(" @SOCKET:   'extra' is empty.", verbosity.high)
+                r["extra"] = ""
+            self.sendextra(r["extra"])
+            self.get_status()
+
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch_send! (III)",
                 verbosity.low,
             )
             return False
@@ -1683,7 +1775,10 @@ class InterfaceSocket(object):
             return False
         if fc.status & Status.HasData:
             return False
-        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
+        if not (
+            fc.status
+            & (Status.Ready | Status.NeedsInit | Status.Busy | Status.NeedExtra)
+        ):
             warning(
                 " @SOCKET: Client "
                 + str(fc.peername)

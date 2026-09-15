@@ -1,0 +1,176 @@
+name: MACE examples
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: mace-examples-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  mace-examples:
+    name: MACE examples
+    runs-on: ubuntu-22.04
+    env:
+      COVERAGE_FILE: ${{ github.workspace }}/.coverage-mace
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install i-PI and MACE
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . coverage -r requirements/mace.txt
+
+      - name: Download MACE model for single example
+        working-directory: examples/clients/mace/single
+        run: bash getmodel.sh
+
+      - name: Run single MACE example
+        working-directory: examples/clients/mace/single
+        run: python -m coverage run --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Download MACE model for batched example
+        working-directory: examples/clients/mace/batched
+        run: bash getmodel.sh
+
+      - name: Run batched MACE example
+        working-directory: examples/clients/mace/batched
+        run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Cache MACE-POLAR-1-M model
+        uses: actions/cache@v4
+        with:
+          path: examples/clients/mace/polar/MACE-POLAR-1-M.model
+          key: mace-polar-1-m-${{ hashFiles('examples/clients/mace/polar/download_mace_polar.sh') }}
+
+      - name: Download MACE-POLAR model
+        working-directory: examples/clients/mace/polar
+        run: bash download_mace_polar.sh
+
+      - name: Run polar MACE example
+        working-directory: examples/clients/mace/polar
+        run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run static FFDielectric example (field applied by i-PI)
+        working-directory: examples/features/ffdieletric/mace-polar+E-server
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run static FFDielectric example (field applied by MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-client
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run static constant-D FFDielectric example (applied by i-PI)
+        working-directory: examples/features/ffdieletric/mace-polar+D-server
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run static constant-D FFDielectric example (applied by MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+D-client
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Check static FFDielectric server and client trajectories agree
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          import numpy as np
+          from ase.io import iread
+
+          trajectory_root = Path("examples/features/ffdieletric")
+          for field in ("E", "D"):
+              server = list(
+                  iread(
+                      trajectory_root
+                      / f"mace-polar+{field}-server/i-pi.positions_0.extxyz"
+                  )
+              )
+              client = list(
+                  iread(
+                      trajectory_root
+                      / f"mace-polar+{field}-client/i-pi.positions_0.extxyz"
+                  )
+              )
+
+              if len(server) != len(client):
+                  raise AssertionError(
+                      f"{field}: server produced {len(server)} frames; "
+                      f"client produced {len(client)}"
+                  )
+
+              for frame, (server_atoms, client_atoms) in enumerate(zip(server, client)):
+                  if server_atoms.get_chemical_symbols() != client_atoms.get_chemical_symbols():
+                      raise AssertionError(
+                          f"{field}: different species in trajectory frame {frame}"
+                      )
+                  np.testing.assert_allclose(
+                      server_atoms.positions, client_atoms.positions, rtol=0.0, atol=2e-8,
+                      err_msg=f"{field}: positions differ in trajectory frame {frame}",
+                  )
+                  np.testing.assert_allclose(
+                      server_atoms.cell.array, client_atoms.cell.array, rtol=0.0, atol=2e-8,
+                      err_msg=f"{field}: cell differs in trajectory frame {frame}",
+                  )
+          PY
+
+      - name: Run resonant FFDielectric example (field applied by i-PI)
+        working-directory: examples/features/ffdieletric/mace-polar+E-resonant-server
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run resonant FFDielectric example (field applied by MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-resonant-client
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run static FFDielectric socket example (field sent to MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-client-socket
+        run: |
+          assets_dir=../mace-polar+E-client
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" "$assets_dir/"
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml > log.i-pi 2>&1 &
+          ipi_pid=$!
+          sleep 2
+          i-pi-py_driver -u -a mace-polar-static-extra -m extmace -o "template=$assets_dir/start.extxyz,model=$assets_dir/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=$assets_dir/mace_kwargs.json,requires_extra=true" > log.driver 2>&1
+          wait "$ipi_pid"
+
+      - name: Run resonant FFDielectric socket example (field sent to MACE)
+        working-directory: examples/features/ffdieletric/mace-polar+E-resonant-client-socket
+        run: |
+          assets_dir=../mace-polar+E-resonant-client
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" "$assets_dir/"
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml > log.i-pi 2>&1 &
+          ipi_pid=$!
+          sleep 2
+          i-pi-py_driver -u -a mace-polar-resonant-extra -m extmace -o "template=$assets_dir/start.extxyz,model=$assets_dir/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=$assets_dir/mace_kwargs.json,requires_extra=true" > log.driver 2>&1
+          wait "$ipi_pid"
+
+      - name: Generate coverage report
+        run: python -m coverage xml -o coverage-mace.xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-mace.xml
+          fail_ci_if_error: true

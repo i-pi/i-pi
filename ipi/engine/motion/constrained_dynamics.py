@@ -399,6 +399,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
     def step_A(self):
         """Unconstrained A-step (coordinate integration)"""
         self.beads.q[0] += self.beads.p[0] / dstrip(self.beads.m3)[0] * self.qdt
+        self.update_actual_time(self.qdt)
 
     def step_B(self, level=0):
         """Unconstrained B-step (momentum integration)"""
