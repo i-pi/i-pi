@@ -86,7 +86,7 @@ def test_model_results_mean_averages_models():
     np.testing.assert_allclose(mean[0]["energy"], 3.0)
     np.testing.assert_allclose(mean[0]["forces"], [[2.0], [4.0]])
 
-   
+
 def test_structure_results_stores_scalar_and_atomic_properties():
     """Checks scalar storage and expansion of per-atom result shapes."""
 
