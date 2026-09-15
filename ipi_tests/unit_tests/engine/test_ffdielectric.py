@@ -209,15 +209,19 @@ def test_client_field_requires_an_applied_field_acknowledgement():
         dielectric.post_process(request)
 
 
-def test_client_field_warns_when_diagnostics_are_missing(capsys):
+def test_client_field_warns_when_diagnostics_are_missing(monkeypatch):
     dielectric = _client_dielectric()
     request = _completed_request({"applied_fields": {"electric_field": [0, 0, 0.1]}})
     dielectric.forcefield.requests.append(request)
+    warnings = []
+    monkeypatch.setattr(
+        "ipi.engine.forcefields.warning",
+        lambda text, show: warnings.append((text, show)),
+    )
 
     assert dielectric.post_process(request) is request
-    assert "Please provide this value so that i-PI can verify" in (
-        capsys.readouterr().out
-    )
+    assert len(warnings) == 1
+    assert "Please provide this value so that i-PI can verify" in warnings[0][0]
 
 
 def test_client_field_rejects_missing_field_feedback():
