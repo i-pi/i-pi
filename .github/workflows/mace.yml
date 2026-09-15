@@ -115,6 +115,12 @@ jobs:
           cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
           python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
 
+      - name: Run ramp FFDielectric example (field applied by i-PI)
+        working-directory: examples/features/ffdieletric/mace-polar+E-ramp-server
+        run: |
+          cp "${{ github.workspace }}/examples/clients/mace/polar/MACE-POLAR-1-M.model" .
+          python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
       - name: Run resonant FFDielectric example (field applied by MACE)
         working-directory: examples/features/ffdieletric/mace-polar+E-resonant-client
         run: |

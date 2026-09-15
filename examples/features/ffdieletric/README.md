@@ -8,6 +8,7 @@ This directory contains MACE-POLAR water examples:
 | `mace-polar+E-client` | static | MACE, after receiving `electric_field` from i-PI |
 | `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
 | `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `electric_field` from i-PI |
+| `mace-polar+E-ramp-server` | periodic triangular ramp | i-PI, using response tensors from MACE |
 | `mace-polar+E-client-socket` | static | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
 | `mace-polar+E-resonant-client-socket` | resonant plane wave | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
 
@@ -36,6 +37,11 @@ must return the dipole, Born effective charges (BECs), and proper piezoelectric
 tensor in its `extras` dictionary. The Cartesian order is always `x, y, z`.
 Fields can use a built-in function from `ipi.pes.electric_field`, or a custom
 Python function selected with the optional `file` attribute.
+
+The built-in `ramp` field accepts `amplitude`, `period`, and `period_units`
+(default: `atomic_unit`). In every period it follows a linear
+`0 -> +amplitude -> 0 -> -amplitude -> 0` profile (up, down, down, up).
+`phase` is accepted but ignored.
 
 ## Expected data
 

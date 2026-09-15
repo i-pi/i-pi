@@ -47,7 +47,31 @@ def plane_wave(
     specified by the enclosing ``<electric_field units="...">`` element.
     """
     omega = unit_to_internal("frequency", omega_units, omega)
-    return np.asarray(amplitude) * np.cos(omega * time + phase)
+    return np.asarray(amplitude) * np.sin(omega * time + phase)
+
+
+def ramp(
+    time,
+    amplitude,
+    period,
+    phase=0.0,
+    period_units="atomic_unit",
+):
+    """Return a periodic triangular ramp with a prescribed period.
+
+    Over one cycle the scalar profile follows ``0 -> 1 -> 0 -> -1 -> 0``:
+    it ramps up during the first quarter-cycle, down during the next two, and
+    up during the final quarter-cycle. ``period`` is the duration of one
+    cycle, interpreted in ``period_units``. ``phase`` is accepted but does
+    not affect the ramp.
+    """
+    del phase
+    period = unit_to_internal("time", period_units, period)
+    if period <= 0:
+        raise ValueError("The ramp period must be positive.")
+    angle = 2.0 * np.pi * time / period
+    profile = 2.0 / np.pi * np.arcsin(np.sin(angle))
+    return np.asarray(amplitude) * profile
 
 
 def gaussian(
