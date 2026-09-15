@@ -2508,10 +2508,9 @@ class FFCavPhSocket(FFSocket):
 
 
 class FFDielectric(ForceField):
-    _CLIENT_FIELD_ACKNOWLEDGEMENTS = {
-        "Efield": "electric_field",
-        "Dfield": "electric_displacement",
-    }
+    _CLIENT_FIELD_FEEDBACK_KEYS = frozenset(
+        {"electric_field", "displacement_field", "effective_electric_field"}
+    )
 
     def __init__(
         self,
@@ -2557,6 +2556,8 @@ class FFDielectric(ForceField):
         self._field_cache_lock = threading.Lock()
         self._field_cache_time = None
         self._field_cache = (None, None)
+        self._displacement_field_cache = None
+        self._electric_field_request_cache = None
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2604,11 +2605,18 @@ class FFDielectric(ForceField):
             return field.copy()
 
     def get_electric_field(self):
-        """Returns the cached, summed electric field in atomic units."""
+        """Return the configured field, or ``D - 4 pi mu / Omega`` at fixed D."""
+        with self._field_cache_lock:
+            if self._displacement_field_cache is not None:
+                return self._displacement_field_cache.copy()
         return self._get_cached_vector_field(0, "electric field", self.electric_fields)
 
     def get_electric_displacement(self):
-        """Returns the cached, summed electric displacement in atomic units."""
+        """Return the configured displacement, or derive it from a fixed field."""
+        with self._field_cache_lock:
+            electric_field_request = self._electric_field_request_cache
+        if electric_field_request is not None:
+            return self._electric_displacement_from_field(electric_field_request)
         return self._get_cached_vector_field(
             1, "electric displacement", self.electric_displacements
         )
@@ -2636,6 +2644,8 @@ class FFDielectric(ForceField):
                     self._sum_vector_fields(self.electric_fields, actual_time),
                     self._sum_vector_fields(self.electric_displacements, actual_time),
                 )
+                self._displacement_field_cache = None
+                self._electric_field_request_cache = None
                 self._field_cache_time = actual_time
             return tuple(
                 None if value is None else value.copy() for value in self._field_cache
@@ -2693,42 +2703,84 @@ class FFDielectric(ForceField):
         if self.where == "server":
             return self.apply_ensemble(r)
         elif self.where == "client":
-            self._validate_client_field_application(r)
+            if self._validate_client_field_application(r):
+                if "Dfield" in r:
+                    self._cache_displacement_field(r)
+                if "Efield" in r:
+                    self._cache_electric_field_request(r)
             return r
         else:
             raise ValueError("coding error")
 
-    def _validate_client_field_application(self, request: dict) -> None:
+    def _validate_client_field_application(self, request: dict) -> bool:
         """Require a client to confirm every field sent for this request.
 
         A client-side field affects the potential energy surface. Silently
         ignoring it would therefore produce an incorrect trajectory, so the
-        driver must return an ``applied_fields`` list in its extras dictionary.
+        driver must return an ``applied_fields`` feedback dictionary in its
+        extras. Missing diagnostic data does not stop client-side dynamics.
         """
-        expected = [
-            acknowledgement
-            for field, acknowledgement in self._CLIENT_FIELD_ACKNOWLEDGEMENTS.items()
-            if field in request
-        ]
-        if not expected:
-            return
+        if "Efield" not in request and "Dfield" not in request:
+            return False
 
         extras = request["result"][3]
-        applied = extras.get("applied_fields") if isinstance(extras, dict) else None
-        if not isinstance(applied, list) or not all(
-            isinstance(field, str) for field in applied
-        ):
+        if not isinstance(extras, dict):
             raise ValueError(
                 "The client-side FFDielectric driver must return an "
-                "'applied_fields' list in its extras dictionary."
+                "'applied_fields' dictionary in its extras dictionary."
+            )
+        applied = extras.get("applied_fields")
+        if not isinstance(applied, dict):
+            raise ValueError(
+                "The client-side FFDielectric driver must return an "
+                "'applied_fields' dictionary in its extras dictionary."
             )
 
-        missing = set(expected).difference(applied)
+        missing_diagnostics = [self.dipole.key]
+        if "Dfield" in request:
+            missing_diagnostics.append(self.epsilon_infinity.key)
+        missing_diagnostics = [key for key in missing_diagnostics if key not in extras]
+        if missing_diagnostics:
+            warning(
+                "The client-side FFDielectric driver did not return "
+                f"{', '.join(repr(key) for key in missing_diagnostics)}. "
+                "Please provide this value so that i-PI can verify that the "
+                "client applied the requested electrical boundary condition "
+                "correctly.",
+                verbosity.low,
+            )
+            return False
+
+        missing = self._CLIENT_FIELD_FEEDBACK_KEYS.difference(applied)
         if missing:
             raise ValueError(
-                "The client-side FFDielectric driver did not confirm that it "
-                f"applied: {', '.join(sorted(missing))}."
+                "The client-side FFDielectric driver did not return: "
+                f"{', '.join(sorted(missing))}."
             )
+
+        for key in self._CLIENT_FIELD_FEEDBACK_KEYS:
+            try:
+                value = np.asarray(applied[key], dtype=float)
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    "The client-side FFDielectric driver returned a nonnumeric "
+                    f"'{key}' field."
+                ) from error
+            if value.shape != (3,):
+                raise ValueError(
+                    "The client-side FFDielectric driver must return a three-"
+                    f"component '{key}' field, got {value.shape}."
+                )
+
+        expected_fields = self._expected_client_field_feedback(request)
+        for key, expected_value in expected_fields.items():
+            returned_value = np.asarray(applied[key], dtype=float)
+            if not np.allclose(returned_value, expected_value, rtol=1e-10, atol=1e-12):
+                raise ValueError(
+                    "The client-side FFDielectric driver returned an inconsistent "
+                    f"'{key}' field."
+                )
+        return True
 
     def apply_ensemble(self, request: dict) -> dict:
         """Apply the configured electrical-boundary-condition ensemble."""
@@ -2777,6 +2829,8 @@ class FFDielectric(ForceField):
                 f"{nonsymmetric_norm:.6e}."
             )
         v += ve
+
+        self._cache_electric_field_request(request)
 
         return u, f, v, x
 
@@ -2873,14 +2927,10 @@ class FFDielectric(ForceField):
         Z = self.bec.get(x).reshape((natoms, 3, 3))
         e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
         epsilon_infinity = self._coerce_epsilon_infinity(self.epsilon_infinity.get(x))
-        Dfield = np.asarray(request["Dfield"])
-        if Dfield.shape != (3,):
-            raise ValueError(f"'Dfield' must have shape (3,), got {Dfield.shape}.")
-
         cell = request["cell"][0]
         volume = np.linalg.det(cell)
-        polarization = dipole / volume
-        displacement_mismatch = Dfield - 4.0 * np.pi * polarization
+        displacement_mismatch = self._displacement_field(request, dipole)
+        self._cache_displacement_field(request, dipole)
         try:
             Efield = np.linalg.solve(epsilon_infinity, displacement_mismatch)
         except np.linalg.LinAlgError as error:
@@ -2903,3 +2953,83 @@ class FFDielectric(ForceField):
         v += ve
 
         return u, f, v, x
+
+    def _displacement_field(self, request: dict, dipole=None) -> np.ndarray:
+        """Return the fixed-D field quantity ``D - 4 pi mu / Omega``."""
+        Dfield = np.asarray(request["Dfield"])
+        if Dfield.shape != (3,):
+            raise ValueError(f"'Dfield' must have shape (3,), got {Dfield.shape}.")
+
+        if dipole is None:
+            dipole = self.dipole.get(request["result"][3])
+        cell = request["cell"][0]
+        volume = np.linalg.det(cell)
+        return Dfield - 4.0 * np.pi * dipole / volume
+
+    def _cache_displacement_field(self, request: dict, dipole=None) -> None:
+        """Save the fixed-D field quantity for the ``electric_field`` property."""
+        extras = request["result"][3]
+        applied_fields = extras.get("applied_fields", {})
+        displacement_field = (
+            applied_fields.get("electric_field")
+            if isinstance(applied_fields, dict)
+            else None
+        )
+        if displacement_field is None:
+            displacement_field = self._displacement_field(request, dipole)
+        else:
+            displacement_field = np.asarray(displacement_field)
+        with self._field_cache_lock:
+            self._displacement_field_cache = displacement_field.copy()
+
+    def _electric_displacement_from_field(self, request: dict) -> np.ndarray:
+        """Return the displacement ``E + 4 pi mu / Omega``."""
+        extras = request["result"][3]
+        applied_fields = extras.get("applied_fields", {})
+        electric_displacement = (
+            applied_fields.get("displacement_field")
+            if isinstance(applied_fields, dict)
+            else None
+        )
+        if electric_displacement is not None:
+            return np.asarray(electric_displacement)
+
+        electric_field = np.asarray(request["Efield"])
+        if electric_field.shape != (3,):
+            raise ValueError(
+                f"'Efield' must have shape (3,), got {electric_field.shape}."
+            )
+
+        dipole = self.dipole.get(extras)
+        volume = np.linalg.det(request["cell"][0])
+        return electric_field + 4.0 * np.pi * dipole / volume
+
+    def _cache_electric_field_request(self, request: dict) -> None:
+        """Remember a fixed-E result for the electric-displacement property."""
+        with self._field_cache_lock:
+            self._electric_field_request_cache = request
+
+    def _expected_client_field_feedback(self, request: dict) -> dict:
+        """Calculate the i-PI field feedback expected for a client request."""
+        extras = request["result"][3]
+        dipole = self.dipole.get(extras)
+        volume = np.linalg.det(request["cell"][0])
+        polarization = 4.0 * np.pi * dipole / volume
+
+        if "Efield" in request:
+            electric_field = np.asarray(request["Efield"])
+            displacement_field = electric_field + polarization
+            effective_electric_field = electric_field
+        else:
+            displacement_field = np.asarray(request["Dfield"])
+            electric_field = displacement_field - polarization
+            epsilon_infinity = self._coerce_epsilon_infinity(
+                self.epsilon_infinity.get(extras)
+            )
+            effective_electric_field = np.linalg.solve(epsilon_infinity, electric_field)
+
+        return {
+            "electric_field": electric_field,
+            "displacement_field": displacement_field,
+            "effective_electric_field": effective_electric_field,
+        }

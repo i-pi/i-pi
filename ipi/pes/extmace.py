@@ -209,19 +209,76 @@ class Extended_MACE_driver(MACE_driver):
             extras_dict["epsilon_infinity"] = coerce_epsilon_infinity(
                 epsilon_infinity
             ).tolist()
-        applied_fields = []
-        if "Efield" in (self.extra or {}):
-            applied_fields.append("electric_field")
-        if "Dfield" in (self.extra or {}):
-            applied_fields.append("electric_displacement")
-        if applied_fields:
-            extras_dict["applied_fields"] = applied_fields
+        if "Efield" in (self.extra or {}) or "Dfield" in (self.extra or {}):
+            field_feedback = self._client_field_feedback(extras_dict, structure)
+            extras_dict["applied_fields"] = (
+                field_feedback
+                if field_feedback is not None
+                else self._client_field_acknowledgement()
+            )
         return (
             energy,
             forces,
             virial,
             json.dumps(extras_dict) if extras_dict else extras,
         )
+
+    def _client_field_feedback(self, extras_dict, structure) -> Optional[dict]:
+        """Return i-PI electric-boundary-condition quantities in atomic units."""
+        dipole = extras_dict.get("dipole")
+        if dipole is None:
+            return None
+
+        dipole = np.asarray(dipole)
+        if dipole.shape != (3,):
+            raise ValueError(
+                "The returned MACE dipole must have shape (3,) for client-side "
+                f"electric-field feedback, got {dipole.shape}."
+            )
+        volume = structure.get_volume()
+        if volume <= 0.0:
+            raise ValueError(
+                "The structure volume must be positive for client-side "
+                "electric-field feedback."
+            )
+
+        polarization = dipole / volume
+        polarization *= unit_to_internal("electric-polarization", "e/ang2")
+        extras = self.extra or {}
+        if "Efield" in extras:
+            electric_field = np.asarray(extras["Efield"])
+            if electric_field.shape != (3,):
+                raise ValueError(
+                    "'Efield' must have shape (3,), got " f"{electric_field.shape}."
+                )
+            displacement_field = electric_field + 4.0 * np.pi * polarization
+            effective_electric_field = electric_field.copy()
+        else:
+            displacement_field = np.asarray(extras["Dfield"])
+            if displacement_field.shape != (3,):
+                raise ValueError(
+                    "'Dfield' must have shape (3,), got " f"{displacement_field.shape}."
+                )
+            electric_field = displacement_field - 4.0 * np.pi * polarization
+            epsilon_infinity = extras_dict.get("epsilon_infinity")
+            if epsilon_infinity is None:
+                return None
+            effective_electric_field = np.linalg.solve(
+                coerce_epsilon_infinity(epsilon_infinity), electric_field
+            )
+
+        return {
+            "electric_field": electric_field.tolist(),
+            "displacement_field": displacement_field.tolist(),
+            "effective_electric_field": effective_electric_field.tolist(),
+        }
+
+    def _client_field_acknowledgement(self) -> dict:
+        """Acknowledge client coupling when diagnostic outputs are unavailable."""
+        extras = self.extra or {}
+        if "Efield" in extras:
+            return {"electric_field": np.asarray(extras["Efield"]).tolist()}
+        return {"displacement_field": np.asarray(extras["Dfield"]).tolist()}
 
 
 class ExtendedMACECalculator(BatchedMACE):

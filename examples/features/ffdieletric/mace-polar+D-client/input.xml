@@ -3,8 +3,8 @@
 
   <ffdielectric name='mu+D' where='client'>
     <!-- i-PI forwards this Cartesian Dfield to extmace in EXTRADATA. -->
-    <electric_displacement name='static' units='atomic_unit'>
-      <parameters>{ "amplitude": [0, 0, 1e-3] }</parameters>
+    <electric_displacement name='static' units='V/ang'>
+      <parameters>{ "amplitude": [0, 0, 0.01] }</parameters>
     </electric_displacement>
     <ffdirect name='mace' pbc='True'>
       <pes>extmace</pes>
@@ -21,7 +21,8 @@
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
        kinetic_md{electronvolt}, potential{electronvolt},
-       electric_displacement(mu+D){atomic_unit}]
+       electric_displacement(mu+D){V/ang},
+       electric_field(mu+D){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>

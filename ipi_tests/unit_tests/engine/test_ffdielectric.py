@@ -127,6 +127,38 @@ def test_dielectric_applies_constant_displacement_ensemble():
     assert energy == pytest.approx(1.0 / (2.0 * np.pi))
     np.testing.assert_array_equal(forces, [2.0, 0.0, 0.0])
     np.testing.assert_array_equal(virial, np.zeros((3, 3)))
+    np.testing.assert_array_equal(dielectric.get_electric_field(), [2.0, 0.0, 0.0])
+
+
+def test_dielectric_reports_displacement_for_constant_electric_field():
+    """Fixed E exposes E + 4 pi mu / Omega as displacement."""
+    dielectric = _client_dielectric()
+    volume = 2.0
+    dipole = np.array([0.1, 0.0, 0.0])
+    electric_field = np.array([2.0, 0.0, 0.0])
+    request = ForceRequest(
+        {
+            "Efield": electric_field,
+            "cell": (np.diag([volume, 1.0, 1.0]), np.eye(3)),
+            "result": (
+                0.0,
+                np.zeros(3),
+                np.zeros((3, 3)),
+                {
+                    "dipole": dipole,
+                    "BEC": np.zeros((1, 3, 3)),
+                    "piezoelectric": np.zeros((3, 3, 3)),
+                },
+            ),
+        }
+    )
+
+    dielectric.fixed_E(request)
+
+    np.testing.assert_allclose(
+        dielectric.get_electric_displacement(),
+        [2.0 + 4.0 * np.pi * dipole[0] / volume, 0.0, 0.0],
+    )
 
 
 def _completed_request(extras):
@@ -135,13 +167,14 @@ def _completed_request(extras):
             "id": 0,
             "status": "Done",
             "Efield": [0.0, 0.0, 0.1],
+            "cell": (np.eye(3), np.eye(3)),
             "result": (0.0, np.zeros(3), np.zeros((3, 3)), extras),
         }
     )
     return request
 
 
-def test_client_field_requires_driver_acknowledgement():
+def test_client_field_requires_an_applied_field_acknowledgement():
     dielectric = _client_dielectric()
     request = _completed_request({})
     dielectric.forcefield.requests.append(request)
@@ -150,9 +183,75 @@ def test_client_field_requires_driver_acknowledgement():
         dielectric.post_process(request)
 
 
-def test_client_field_accepts_driver_acknowledgement():
+def test_client_field_warns_when_diagnostics_are_missing(capsys):
     dielectric = _client_dielectric()
-    request = _completed_request({"applied_fields": ["electric_field"]})
+    request = _completed_request({"applied_fields": {"electric_field": [0, 0, 0.1]}})
     dielectric.forcefield.requests.append(request)
 
     assert dielectric.post_process(request) is request
+    assert "Please provide this value so that i-PI can verify" in (
+        capsys.readouterr().out
+    )
+
+
+def test_client_field_rejects_missing_field_feedback():
+    dielectric = _client_dielectric()
+    request = _completed_request({"dipole": [0.0, 0.0, 0.0]})
+    dielectric.forcefield.requests.append(request)
+
+    with pytest.raises(ValueError, match="applied_fields"):
+        dielectric.post_process(request)
+
+
+def test_client_field_accepts_driver_acknowledgement():
+    dielectric = _client_dielectric()
+    request = _completed_request(
+        {
+            "dipole": [0.0, 0.0, 0.0],
+            "applied_fields": {
+                "electric_field": [0.0, 0.0, 0.1],
+                "displacement_field": [0.0, 0.0, 0.1],
+                "effective_electric_field": [0.0, 0.0, 0.1],
+            },
+        }
+    )
+    dielectric.forcefield.requests.append(request)
+
+    assert dielectric.post_process(request) is request
+
+
+def test_client_displacement_caches_field_quantity_for_properties():
+    """Client-side fixed D exposes D - 4 pi mu / Omega as electric_field."""
+    dielectric = _client_dielectric()
+    volume = 2.0
+    dipole = np.array([0.1, 0.0, 0.0])
+    request = ForceRequest(
+        {
+            "id": 0,
+            "status": "Done",
+            "Dfield": [4.0 * np.pi * dipole[0] / volume + 2.0, 0.0, 0.0],
+            "cell": (np.diag([volume, 1.0, 1.0]), np.eye(3)),
+            "result": (
+                0.0,
+                np.zeros(3),
+                np.zeros((3, 3)),
+                {
+                    "dipole": dipole,
+                    "epsilon_infinity": np.eye(3),
+                    "applied_fields": {
+                        "electric_field": [2.0, 0.0, 0.0],
+                        "displacement_field": [
+                            4.0 * np.pi * dipole[0] / volume + 2.0,
+                            0.0,
+                            0.0,
+                        ],
+                        "effective_electric_field": [2.0, 0.0, 0.0],
+                    },
+                },
+            ),
+        }
+    )
+    dielectric.forcefield.requests.append(request)
+
+    assert dielectric.post_process(request) is request
+    np.testing.assert_array_equal(dielectric.get_electric_field(), [2.0, 0.0, 0.0])

@@ -19,23 +19,38 @@ examples reuse the corresponding client example's model assets and launch
 `i-pi-py_driver`; its `requires_extra=true` parameter makes it advertise the
 opt-in `NEEDEXTRA` capability.
 
+All example fields and field-related properties use `V/ang`. The constant-D
+examples use an amplitude of `0.01 V/ang`.
+
 ## Client-side field acknowledgement
 
-When `where='client'`, the driver must include every field it applied in its
-returned extras JSON. For an electric field, return
+When `where='client'`, the driver must include its field feedback in the
+returned extras JSON. The `applied_fields` dictionary itself is mandatory:
+without it i-PI stops, because it cannot tell whether the client used the
+field. All vectors are in atomic units:
 
 ```json
-{"applied_fields": ["electric_field"]}
+{
+  "dipole": [0.0, 0.0, 0.0],
+  "applied_fields": {
+    "electric_field": [0.0, 0.0, 0.0],
+    "displacement_field": [0.0, 0.0, 0.0],
+    "effective_electric_field": [0.0, 0.0, 0.0]
+  }
+}
 ```
 
-For an electric displacement, return
-
-```json
-{"applied_fields": ["electric_displacement"]}
-```
-
-i-PI stops with an error if a field it sent is not acknowledged, preventing a
-driver that silently ignores the field from producing an incorrect trajectory.
+Here electric_field is D - 4 pi mu / Omega for fixed D and the applied E for
+fixed E. displacement_field is D for fixed D and E + 4 pi mu / Omega for
+fixed E. effective_electric_field is the field used in the force:
+epsilon_infinity^-1 @ electric_field for fixed D and E for fixed E. Fixed-D
+clients should also return epsilon_infinity. When the dipole, and (for fixed
+D) epsilon_infinity, are available, i-PI recalculates and validates all three
+vectors and stops with an error if they are incomplete or inconsistent. If
+these diagnostic values are absent, client-side dynamics continues but i-PI
+prints a warning requesting them for validation; the mandatory
+`applied_fields` dictionary may then contain only the field the client
+received.
 
 ## Response tensors
 
@@ -105,6 +120,15 @@ The default extractors may be written explicitly as
 ```
 
 These lines can be omitted when the driver uses the default keys and units.
+
+For a fixed-displacement calculation, the `electric_field(ffdielectric_name)`
+property reports the unscreened field quantity `D - 4 pi mu / Omega`, in the
+requested electric-field units. The field entering the Born-charge force is
+obtained afterwards as `epsilon_infinity^-1 @ electric_field`.
+
+Conversely, with a fixed electric field,
+`electric_displacement(ffdielectric_name)` reports
+`E + 4 pi mu / Omega`.
 
 ## Comparison with driven dynamics
 

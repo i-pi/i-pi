@@ -2,9 +2,9 @@
   <total_steps>10</total_steps>
 
   <ffdielectric name='mu+D' where='server'>
-    <!-- A Cartesian electric displacement in atomic units. -->
-    <electric_displacement name='static' units='atomic_unit'>
-      <parameters>{ "amplitude": [0, 0, 1e-3] }</parameters>
+    <!-- A Cartesian electric displacement in V/angstrom. -->
+    <electric_displacement name='static' units='V/ang'>
+      <parameters>{ "amplitude": [0, 0, 0.01] }</parameters>
     </electric_displacement>
     <!-- These are the FFDielectric defaults; they are shown to document the
          response tensors required for the server-side constant-D ensemble. -->
@@ -27,7 +27,8 @@
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
        kinetic_md{electronvolt}, potential{electronvolt},
-       electric_displacement(mu+D){atomic_unit}]
+       electric_displacement(mu+D){V/ang},
+       electric_field(mu+D){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>

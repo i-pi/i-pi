@@ -21,7 +21,7 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 
 
 def test_extmace_acknowledges_applied_electric_field(monkeypatch):
-    """An Efield request is acknowledged in the returned extras JSON."""
+    """An Efield request returns atomic-unit electric-boundary feedback."""
     result = (1.0, "forces", "virial", '{"dipole": [0.0, 0.0, 0.0]}')
     monkeypatch.setattr(MACE_driver, "post_process", lambda *args: result)
 
@@ -29,23 +29,31 @@ def test_extmace_acknowledges_applied_electric_field(monkeypatch):
     driver.extra = {"Efield": [0.0, 0.0, 0.1]}
     driver.batched_calculator = SimpleNamespace(default_epsilon_infinity=None)
 
-    _, _, _, extras = driver.post_process({}, None)
+    _, _, _, extras = driver.post_process({}, SimpleNamespace(get_volume=lambda: 1.0))
 
-    assert json.loads(extras)["applied_fields"] == ["electric_field"]
+    assert json.loads(extras)["applied_fields"] == {
+        "electric_field": [0.0, 0.0, 0.1],
+        "displacement_field": [0.0, 0.0, 0.1],
+        "effective_electric_field": [0.0, 0.0, 0.1],
+    }
 
 
 def test_extmace_acknowledges_applied_electric_displacement(monkeypatch):
-    """A Dfield request is acknowledged in the returned extras JSON."""
+    """A Dfield request returns atomic-unit electric-boundary feedback."""
     result = (1.0, "forces", "virial", '{"dipole": [0.0, 0.0, 0.0]}')
     monkeypatch.setattr(MACE_driver, "post_process", lambda *args: result)
 
     driver = object.__new__(Extended_MACE_driver)
     driver.extra = {"Dfield": [0.0, 0.0, 0.1]}
-    driver.batched_calculator = SimpleNamespace(default_epsilon_infinity=None)
+    driver.batched_calculator = SimpleNamespace(default_epsilon_infinity=np.eye(3))
 
-    _, _, _, extras = driver.post_process({}, None)
+    _, _, _, extras = driver.post_process({}, SimpleNamespace(get_volume=lambda: 1.0))
 
-    assert json.loads(extras)["applied_fields"] == ["electric_displacement"]
+    assert json.loads(extras)["applied_fields"] == {
+        "electric_field": [0.0, 0.0, 0.1],
+        "displacement_field": [0.0, 0.0, 0.1],
+        "effective_electric_field": [0.0, 0.0, 0.1],
+    }
 
 
 def test_extmace_sends_default_epsilon_infinity(monkeypatch):

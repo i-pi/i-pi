@@ -252,6 +252,9 @@ UnitMap = {
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "e/ang2": 1.0 / 1.8897261**2,  # electron charge / angstrom^2
+        # In Gaussian units, electric displacement has the same dimensions as
+        # electric field. This alias is used by FFDielectric D fields.
+        "v/ang": 0.019446903811441516,
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,

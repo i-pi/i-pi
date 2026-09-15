@@ -251,13 +251,13 @@ class Properties:
             "electric_field": {
                 "dimension": "electric-field",
                 "size": 3,
-                "help": "The cached total electric field applied by an FFDielectric force field. Takes the force-field name as its argument.",
+                "help": "The cached total electric field applied by an FFDielectric force field. With fixed electric displacement, returns D - 4 pi mu / Omega. Takes the force-field name as its argument.",
                 "func": self.get_electric_field,
             },
             "electric_displacement": {
                 "dimension": "electric-polarization",
                 "size": 3,
-                "help": "The cached total electric displacement defined by an FFDielectric force field. Takes the force-field name as its argument.",
+                "help": "The cached total electric displacement defined by an FFDielectric force field. With fixed electric field, returns E + 4 pi mu / Omega. Takes the force-field name as its argument.",
                 "func": self.get_electric_displacement,
             },
             "temperature": {
@@ -2965,11 +2965,11 @@ class Properties:
         return getattr(forcefield, getter)()
 
     def get_electric_field(self, forcefield_name):
-        """Returns the cached total electric field from an FFDielectric."""
+        """Return the configured field or fixed-D field quantity from an FFDielectric."""
         return self._get_ffdielectric_field(forcefield_name, "get_electric_field")
 
     def get_electric_displacement(self, forcefield_name):
-        """Returns the cached total electric displacement from an FFDielectric."""
+        """Return configured or fixed-E-derived displacement from an FFDielectric."""
         return self._get_ffdielectric_field(
             forcefield_name, "get_electric_displacement"
         )
