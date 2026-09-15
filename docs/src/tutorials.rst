@@ -925,6 +925,23 @@ with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as 
 Note that in a *NPT* simulation, we have two thermostats, one applied to the nuclear degrees of freedom and one 
 applied to the volume degrees of freedom.
 
+For classical simulations of liquids, the Bernetti--Bussi stochastic
+cell-rescaling barostat :cite:`bern-buss20jcp` is available as an alternative.
+It requires an estimate of the isothermal compressibility but does not use a
+separate cell thermostat:
+
+.. code-block:: xml
+
+   <barostat mode='stochastic-rescaling'>
+      <tau units='femtosecond'> 1000 </tau>
+      <compressibility units='bar^-1'> 4.5e-5 </compressibility>
+   </barostat>
+
+The implementation uses the standard NPT Trotter integrator with instantaneous
+kinetic pressure. It currently supports classical, one-bead simulations. The
+compressibility controls the relaxation rate and must be supplied for the
+material and thermodynamic state being simulated.
+
 Initialization from RESTART
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

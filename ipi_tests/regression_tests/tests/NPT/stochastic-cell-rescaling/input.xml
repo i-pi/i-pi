@@ -1,0 +1,40 @@
+<simulation verbosity="low">
+  <output prefix="simulation">
+    <properties stride="1" filename="out"> [ step, conserved, temperature{kelvin}, potential{electronvolt}, pressure_md{bar}, volume{angstrom3} ] </properties>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffdirect name="harmonic">
+    <pes> harmonic </pes>
+    <parameters> { k1: 0.12356216778762334 } </parameters>
+  </ffdirect>
+  <system>
+    <initialize nbeads="1">
+      <file mode="xyz"> init.xyz </file>
+      <cell mode="abc" units="angstrom"> [10, 10, 10] </cell>
+      <velocities mode="thermal" units="kelvin"> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield="harmonic"> </force>
+    </forces>
+    <ensemble>
+      <temperature units="kelvin"> 300 </temperature>
+      <pressure units="bar"> 1 </pressure>
+    </ensemble>
+    <motion mode="dynamics">
+      <fixcom> False </fixcom>
+      <dynamics mode="npt">
+        <timestep units="femtosecond"> 0.5 </timestep>
+        <barostat mode="stochastic-rescaling">
+          <tau units="femtosecond"> 1000 </tau>
+          <compressibility units="bar^-1"> 4.5e-5 </compressibility>
+        </barostat>
+        <thermostat mode="langevin">
+          <tau units="femtosecond"> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

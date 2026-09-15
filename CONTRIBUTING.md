@@ -4,7 +4,7 @@ Contributing
 i-PI is an open source project, and everyone is welcome to contribute
 with bug fixes, documentation, examples, new features, regression tests, etc.
 
-Your contribution should be based on the master branch. We kindly ask you to first fork the project,
+Your contribution should be based on the main branch. We kindly ask you to first fork the project,
 make your changes, make sure you comply with all items in our checklist below, and finally create a pull request (PR).
 
 Checklist to create a pull request:
