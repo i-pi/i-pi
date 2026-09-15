@@ -33,7 +33,6 @@ class InputBaro(Input):
        tau: The time constant associated with the dynamics of the piston.
        compressibility: The isothermal compressibility used by stochastic
           cell rescaling.
-       stride: The number of MD steps between stochastic cell-rescaling moves.
        ebaro: The accumulated stochastic cell-rescaling effective-energy
           correction.
        p: The conjugate momentum to the volume degree of freedom.
@@ -81,14 +80,6 @@ class InputBaro(Input):
                 "dtype": float,
                 "dimension": "inverse-pressure",
                 "help": "The isothermal compressibility used by stochastic cell rescaling. This estimate controls the size of volume fluctuations and must be specified explicitly for the 'stochastic-rescaling' mode.",
-            },
-        ),
-        "stride": (
-            InputValue,
-            {
-                "default": 1,
-                "dtype": int,
-                "help": "Number of MD steps between stochastic cell-rescaling moves.",
             },
         ),
         "ebaro": (
@@ -152,7 +143,6 @@ class InputBaro(Input):
         if type(baro) is BaroSCR:
             self.mode.store("stochastic-rescaling")
             self.compressibility.store(baro.compressibility)
-            self.stride.store(baro.stride)
             self.ebaro.store(baro.ebaro)
         elif type(baro) is BaroBZP:
             self.mode.store("isotropic")
@@ -224,15 +214,10 @@ class InputBaro(Input):
                 raise ValueError(
                     "The stochastic cell-rescaling relaxation time must be positive."
                 )
-            if self.stride.fetch() <= 0:
-                raise ValueError(
-                    "The stochastic cell-rescaling stride must be a positive integer."
-                )
             baro = BaroSCR(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
                 compressibility=compressibility,
-                stride=self.stride.fetch(),
                 ebaro=self.ebaro.fetch(),
             )
         elif self.mode.fetch() == "isotropic":

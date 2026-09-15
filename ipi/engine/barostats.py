@@ -436,10 +436,9 @@ class BaroSCR(Barostat):
     [doi:10.1063/5.0020514]. Positions and cell vectors are scaled by the
     same factor, while momenta are scaled by its inverse.
 
-    This first implementation is restricted to classical, single-time-step
-    dynamics. The particle thermostat remains responsible for temperature
-    control; stochastic cell rescaling does not have a separate piston or
-    cell thermostat.
+    This implementation is restricted to classical dynamics. The particle
+    thermostat remains responsible for temperature control; stochastic cell
+    rescaling does not have a separate piston or cell thermostat.
     """
 
     def __init__(
@@ -451,7 +450,6 @@ class BaroSCR(Barostat):
         thermostat=None,
         pext=None,
         compressibility=None,
-        stride=1,
     ):
         """Initializes the stochastic cell-rescaling barostat.
 
@@ -464,7 +462,6 @@ class BaroSCR(Barostat):
                 compatibility with other barostats.
             pext: Optional external pressure.
             compressibility: Estimate of the isothermal compressibility.
-            stride: Number of MD steps between cell-rescaling moves.
         """
 
         super(BaroSCR, self).__init__(dt, temp, tau, ebaro, thermostat)
@@ -473,11 +470,6 @@ class BaroSCR(Barostat):
             name="compressibility",
             value=-1.0 if compressibility is None else compressibility,
         )
-        self.stride = int(stride)
-        if self.stride != stride or self.stride <= 0:
-            raise ValueError(
-                "The stochastic cell-rescaling stride must be a positive integer."
-            )
         self.prng = None
         self._scr_state = None
 
@@ -496,6 +488,11 @@ class BaroSCR(Barostat):
         if self.compressibility <= 0.0:
             raise ValueError(
                 "The stochastic cell-rescaling compressibility must be positive."
+            )
+        if self.beads.nbeads != 1:
+            raise ValueError(
+                "Stochastic cell rescaling currently supports classical "
+                "dynamics only (nbeads=1)."
             )
         if type(self.thermostat) is not Thermostat:
             raise ValueError(
@@ -536,7 +533,10 @@ class BaroSCR(Barostat):
                 "Stochastic cell rescaling encountered a non-positive or "
                 "non-finite volume."
             )
-        pressure = np.trace(self.stress_mts(0)) / 3.0
+        pressure = (
+            sum(np.trace(self.stress_mts(level)) for level in range(self.nmtslevels))
+            / 3.0
+        )
         if not np.isfinite(pressure):
             raise ValueError(
                 "Stochastic cell rescaling encountered a non-finite internal "
@@ -556,7 +556,7 @@ class BaroSCR(Barostat):
         lambda_force = self.get_lambda_force()
         volume = self.cell.V
         lam = np.sqrt(volume)
-        coupling_dt = self.stride * self.dt
+        coupling_dt = 2.0 * self.qdt
         kbt = Constants.kb * self.temp
         diffusion = kbt * self.compressibility / (4.0 * self.tau)
         delta_lambda = (
@@ -593,18 +593,33 @@ class BaroSCR(Barostat):
         return scale
 
     def qcstep(self):
-        """Propagates coordinates, momenta, and cell using the Trotter map."""
+        """Propagates one half of the reversible cell-rescaling map.
 
-        scale = self.prepare()
-        inverse_scale = 1.0 / scale
-        drift_scale = 0.5 * (scale + inverse_scale)
+        The standard NPT integrator calls this method twice around the free
+        ring-polymer propagation. The first call draws the stochastic cell
+        move and applies drift--rescale; the second applies rescale--drift and
+        closes the effective-energy bookkeeping.
+        """
+
         masses = dstrip(self.nm.dynm3)[0]
-        positions = dstrip(self.nm.qnm)[0]
-        momenta = dstrip(self.nm.pnm)[0]
 
-        self.nm.qnm[0, :] = scale * positions + drift_scale * momenta * self.dt / masses
-        self.nm.pnm[0, :] = inverse_scale * momenta
-        self.cell.h *= scale
+        if self._scr_state is None:
+            scale = self.prepare()
+            half_scale = np.sqrt(scale)
+            self._scr_state["half_scale"] = half_scale
+
+            self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0] * self.qdt / masses
+            self.nm.qnm[0, :] *= half_scale
+            self.nm.pnm[0, :] *= 1.0 / half_scale
+            self.cell.h *= half_scale
+        else:
+            half_scale = self._scr_state["half_scale"]
+
+            self.nm.qnm[0, :] *= half_scale
+            self.nm.pnm[0, :] *= 1.0 / half_scale
+            self.cell.h *= half_scale
+            self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0] * self.qdt / masses
+            self.finalize()
 
     def finalize(self):
         """Accumulates the reversible effective-energy correction."""

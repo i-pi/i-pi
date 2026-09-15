@@ -935,14 +935,11 @@ separate cell thermostat:
    <barostat mode='stochastic-rescaling'>
       <tau units='femtosecond'> 1000 </tau>
       <compressibility units='bar^-1'> 4.5e-5 </compressibility>
-      <stride> 1 </stride>
    </barostat>
 
-The implementation uses the reversible Trotter integrator with instantaneous
-kinetic pressure. It currently supports one bead, the OBABO thermostat
-splitting, and a single force time step. ``stride`` defaults to one; when it is
-larger, the barostat uses ``stride`` times the MD time step for each cell move.
-The compressibility controls the relaxation rate and must be supplied for the
+The implementation uses the standard NPT Trotter integrator with instantaneous
+kinetic pressure. It currently supports classical, one-bead simulations. The
+compressibility controls the relaxation rate and must be supplied for the
 material and thermodynamic state being simulated.
 
 Initialization from RESTART

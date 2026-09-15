@@ -30,7 +30,6 @@
         <barostat mode="stochastic-rescaling">
           <tau units="femtosecond"> 1000 </tau>
           <compressibility units="bar^-1"> 4.5e-5 </compressibility>
-          <stride> 2 </stride>
         </barostat>
         <thermostat mode="langevin">
           <tau units="femtosecond"> 100 </tau>

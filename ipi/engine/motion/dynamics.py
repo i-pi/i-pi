@@ -15,7 +15,7 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
-from ipi.engine.barostats import Barostat, BaroRGB, BaroSCR
+from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
 
 
@@ -99,10 +99,7 @@ class Dynamics(Motion):
         elif self.enstype == "nvt-cc":
             self.integrator = NVTCCIntegrator()
         elif self.enstype == "npt":
-            if type(self.barostat) is BaroSCR:
-                self.integrator = SCRNPTIntegrator()
-            else:
-                self.integrator = NPTIntegrator()
+            self.integrator = NPTIntegrator()
         elif self.enstype == "nst":
             self.integrator = NSTIntegrator()
         elif self.enstype == "sc":
@@ -660,72 +657,6 @@ class NPTIntegrator(NVTIntegrator):
         self.thermostat.step()
         self.barostat.thermostat.step()
         # self.pconstraints()
-
-
-class SCRNPTIntegrator(NVTIntegrator):
-    """Classical NPT integrator for stochastic cell rescaling."""
-
-    def bind(self, motion):
-        """Binds and validates the supported integration settings."""
-
-        super(SCRNPTIntegrator, self).bind(motion)
-        if self.beads.nbeads != 1:
-            raise ValueError(
-                "Stochastic cell rescaling currently supports classical "
-                "dynamics only (nbeads=1)."
-            )
-        if self.splitting != "obabo":
-            raise ValueError(
-                "Stochastic cell rescaling currently supports only the OBABO "
-                "thermostat splitting."
-            )
-        if len(self.nmts) != 1 or self.nmts[0] != 1:
-            raise ValueError(
-                "Stochastic cell rescaling currently supports only a single "
-                "time step (nmts=[1])."
-            )
-        if len(self.fixatoms_dof) > 0:
-            raise ValueError(
-                "Stochastic cell rescaling does not currently support fixed "
-                "atomic degrees of freedom."
-            )
-
-    def _check_stress(self):
-        """Warns once if the force field returns no virial."""
-
-        if self._stresscheck and np.array_equiv(
-            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
-        ):
-            warning(
-                "Forcefield returned a zero stress tensor. NPT simulation will "
-                "likely make no sense",
-                verbosity.low,
-            )
-        self._stresscheck = False
-
-    def step(self, step=None):
-        """Advances one reversible stochastic cell-rescaling step."""
-
-        self.tstep()
-        self.pconstraints()
-
-        self.pstep(0)
-        self.pconstraints()
-
-        if step is None or step % self.barostat.stride == 0:
-            self._check_stress()
-            self.barostat.qcstep()
-            self.barostat.finalize()
-        else:
-            self.nm.qnm[0, :] += (
-                dstrip(self.nm.pnm)[0, :] * self.dt / dstrip(self.nm.dynm3)[0, :]
-            )
-
-        self.pstep(0)
-        self.pconstraints()
-
-        self.tstep()
-        self.pconstraints()
 
 
 class NSTIntegrator(NPTIntegrator):

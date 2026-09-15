@@ -12,10 +12,11 @@ import numpy as np
 import pytest
 
 from ipi.engine.barostats import BaroSCR
-from ipi.engine.motion.dynamics import Dynamics, SCRNPTIntegrator
+from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
 from ipi.scripting import InteractiveSimulation
+from ipi.utils.depend import depend_value
 from ipi.utils.softexit import softexit
 from ipi.utils.units import unit_to_internal
 
@@ -65,7 +66,6 @@ def scr_simulation_xml():
         <barostat mode="stochastic-rescaling">
           <tau units="femtosecond">1000</tau>
           <compressibility units="bar^-1">4.5e-5</compressibility>
-          <stride>2</stride>
         </barostat>
         <thermostat mode="langevin">
           <tau units="femtosecond">100</tau>
@@ -105,7 +105,6 @@ def test_scr_input_roundtrip_preserves_restart_state():
     original = BaroSCR(
         tau=100.0,
         compressibility=compressibility,
-        stride=5,
         ebaro=3.25,
     )
 
@@ -116,7 +115,6 @@ def test_scr_input_roundtrip_preserves_restart_state():
     assert type(restored) is BaroSCR
     assert restored.tau == pytest.approx(original.tau)
     assert restored.compressibility == pytest.approx(original.compressibility)
-    assert restored.stride == original.stride
     assert restored.ebaro == pytest.approx(original.ebaro)
 
 
@@ -195,50 +193,24 @@ def test_scr_rejects_a_separate_cell_thermostat():
         input_baro.fetch()
 
 
-@pytest.mark.parametrize(
-    ("xml", "message"),
-    [
-        (
-            scr_simulation_xml().replace(
-                '<dynamics mode="npt">',
-                '<dynamics mode="npt" splitting="baoab">',
-            ),
-            "only the OBABO thermostat splitting",
-        ),
-        (
-            scr_simulation_xml().replace(
-                '<timestep units="femtosecond">0.5</timestep>',
-                '<timestep units="femtosecond">0.5</timestep><nmts>[2]</nmts>',
-            ),
-            "only a single time step",
-        ),
-        (
-            scr_simulation_xml().replace(
-                "</motion>", "<fixatoms_dof>[0]</fixatoms_dof></motion>"
-            ),
-            "does not currently support fixed atomic degrees of freedom",
-        ),
-        (
-            scr_simulation_xml()
-            .replace('nbeads="1"', 'nbeads="2"')
-            .replace(
-                '<q shape="(1,3)">[0.1,0,0]</q>',
-                '<q shape="(2,3)">[0.1,0,0,0.1,0,0]</q>',
-            )
-            .replace(
-                '<p shape="(1,3)">[1,0.2,-0.1]</p>',
-                '<p shape="(2,3)">[1,0.2,-0.1,1,0.2,-0.1]</p>',
-            ),
-            "classical dynamics only",
-        ),
-    ],
-    ids=("baoab", "mts", "fixed-dof", "pimd"),
-)
-def test_scr_rejects_unsupported_integrator_settings(xml, message):
-    """Unsupported dynamics modes fail during binding with clear errors."""
+def test_scr_rejects_path_integral_dynamics():
+    """The classical SCR equations reject path-integral dynamics."""
+
+    xml = (
+        scr_simulation_xml()
+        .replace('nbeads="1"', 'nbeads="2"')
+        .replace(
+            '<q shape="(1,3)">[0.1,0,0]</q>',
+            '<q shape="(2,3)">[0.1,0,0,0.1,0,0]</q>',
+        )
+        .replace(
+            '<p shape="(1,3)">[1,0.2,-0.1]</p>',
+            '<p shape="(2,3)">[1,0.2,-0.1,1,0.2,-0.1]</p>',
+        )
+    )
 
     try:
-        with pytest.raises(ValueError, match=message):
+        with pytest.raises(ValueError, match="classical dynamics only"):
             InteractiveSimulation(io.StringIO(xml))
     finally:
         softexit.reset()
@@ -252,7 +224,6 @@ def test_scr_trotter_map_and_effective_energy():
         temp=2.0,
         tau=4.0,
         compressibility=0.3,
-        stride=2,
         pext=0.7,
         ebaro=1.25,
     )
@@ -266,6 +237,7 @@ def test_scr_trotter_map_and_effective_energy():
         pnm=momenta.copy(),
         dynm3=masses,
     )
+    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     old_volume = barostat.cell.V
     old_lambda = np.sqrt(old_volume)
@@ -274,7 +246,7 @@ def test_scr_trotter_map_and_effective_energy():
     forces = iter((old_force, new_force))
     barostat.get_lambda_force = lambda: next(forces)
 
-    coupling_dt = barostat.stride * barostat.dt
+    coupling_dt = 2.0 * barostat.qdt
     diffusion = barostat.temp * barostat.compressibility / (4.0 * barostat.tau)
     delta_lambda = (
         diffusion * old_force * coupling_dt / barostat.temp
@@ -284,6 +256,8 @@ def test_scr_trotter_map_and_effective_energy():
     inverse_scale = 1.0 / scale
     drift_scale = 0.5 * (scale + inverse_scale)
 
+    barostat.qcstep()
+    assert barostat._scr_state is not None
     barostat.qcstep()
 
     np.testing.assert_allclose(
@@ -300,7 +274,6 @@ def test_scr_trotter_map_and_effective_energy():
         diffusion * coupling_dt / (4.0 * barostat.temp) * (new_force**2 - old_force**2)
     )
 
-    barostat.finalize()
     assert barostat.ebaro == pytest.approx(1.25 + expected_correction)
     assert barostat._scr_state is None
 
@@ -318,25 +291,58 @@ def test_scr_rejects_nonpositive_proposed_volume():
     barostat.cell = OrthorhombicCell([1.0, 1.0, 1.0])
     barostat.prng = FixedGaussian(-10.0)
     barostat.get_lambda_force = lambda: 0.0
+    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     with pytest.raises(ValueError, match="non-positive or non-finite sqrt"):
         barostat.prepare()
 
 
-@pytest.mark.parametrize("stride", [0, -1, 1.5])
-def test_scr_requires_positive_integer_stride(stride):
-    """The pressure-coupling interval cannot be zero or fractional."""
-
-    with pytest.raises(ValueError, match="stride must be a positive integer"):
-        BaroSCR(tau=100.0, compressibility=1.0, stride=stride)
-
-
-def test_dynamics_selects_scr_integrator():
-    """The SCR barostat selects its dedicated reversible integrator."""
+def test_dynamics_uses_standard_npt_integrator_for_scr():
+    """SCR uses the same NPT integrator as other isotropic barostats."""
 
     dynamics = Dynamics(
         timestep=0.5,
         mode="npt",
         barostat=BaroSCR(tau=100.0, compressibility=1.0),
     )
-    assert type(dynamics.integrator) is SCRNPTIntegrator
+    assert type(dynamics.integrator) is NPTIntegrator
+
+
+@pytest.mark.parametrize("splitting", ["obabo", "baoab"])
+def test_scr_uses_standard_npt_splittings(splitting):
+    """Both standard NPT thermostat splittings complete an SCR move."""
+
+    xml = scr_simulation_xml().replace(
+        '<dynamics mode="npt">',
+        f'<dynamics mode="npt" splitting="{splitting}">',
+    )
+
+    try:
+        simulation = InteractiveSimulation(io.StringIO(xml))
+        simulation.run(steps=2, write_outputs=False)
+        assert type(simulation.syslist[0].motion.integrator) is NPTIntegrator
+        assert simulation.syslist[0].motion.barostat._scr_state is None
+        simulation.stop()
+    finally:
+        softexit.reset()
+
+
+def test_scr_uses_standard_multiple_time_stepping():
+    """The shared NPT integrator can apply SCR with multiple force levels."""
+
+    xml = scr_simulation_xml().replace(
+        '<force forcefield="harmonic"/>',
+        '<force forcefield="harmonic"><mts_weights>[1,1]</mts_weights></force>',
+    )
+    xml = xml.replace(
+        '<timestep units="femtosecond">0.5</timestep>',
+        '<timestep units="femtosecond">0.5</timestep><nmts>[1,2]</nmts>',
+    )
+
+    try:
+        simulation = InteractiveSimulation(io.StringIO(xml))
+        simulation.run(steps=2, write_outputs=False)
+        assert simulation.syslist[0].motion.barostat._scr_state is None
+        simulation.stop()
+    finally:
+        softexit.reset()
