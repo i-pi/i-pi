@@ -2564,6 +2564,7 @@ class Properties:
         q = dstrip(self.beads.q)
         v0 = self.forces.pot
         self.dbeads.q = q
+        self.dcell.h = self.cell.h
 
         for i in range(self.beads.natoms):
             # selects only the atoms we care about
@@ -2765,6 +2766,7 @@ class Properties:
         f = dstrip(self.forces.f)
         v0 = self.forces.pot
         pots = self.forces.pots
+        self.dcell.h = self.cell.h
 
         for i in range(self.beads.natoms):
             # selects only the atoms we care about
@@ -3340,6 +3342,7 @@ class Trajectories:
         q = dstrip(self.system.beads.q)
         v0 = self.system.forces.pot / nb
         self.dbeads.q = q
+        self.dcell.h = self.system.cell.h
 
         for i in range(nat):
             # selects only the atoms we care about
