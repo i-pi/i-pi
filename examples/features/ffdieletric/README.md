@@ -121,7 +121,7 @@ The default extractors may be written explicitly as
 <dipole units="eang"   key="dipole" />
 <bec    units="e"      key="BEC" />
 <piezo  units="e/ang2" key="piezoelectric" />
-<epsilon_infinity units="atomic_unit" key="epsilon_infinity" />
+<epsilon_infinity key="epsilon_infinity" />
 ```
 
 These lines can be omitted when the driver uses the default keys and units.

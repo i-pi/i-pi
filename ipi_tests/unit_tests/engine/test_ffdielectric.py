@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 
 from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
+from ipi.engine.properties import Properties
+from ipi.inputs.forcefields import InputFFDielectric
 
 
 def _client_dielectric():
@@ -29,6 +31,21 @@ def _client_dielectric():
     )
     assert not dielectric.forcefield.dopbc
     return dielectric
+
+
+def test_dielectric_unit_families():
+    """D is field-like, while epsilon-infinity is dimensionless."""
+    assert InputFFDielectric._electric_displacement_cls._family == "electric-field"
+
+    epsilon_input = InputFFDielectric._epsilon_infinity_cls()
+    assert epsilon_input.family.fetch() == "dimensionless"
+    assert epsilon_input.units.fetch() == ""
+
+    dielectric = _client_dielectric()
+    assert dielectric.epsilon_infinity.family == "dimensionless"
+    assert Properties().property_dict["electric_displacement"]["dimension"] == (
+        "electric-field"
+    )
 
 
 def test_dielectric_rejects_mixed_electric_field_and_displacement():

@@ -202,6 +202,7 @@ class Elements(dict):
 # these are the conversion FROM the unit stated to internal (atomic) units
 UnitMap = {
     "undefined": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
+    "dimensionless": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
     "energy": {
         "": 1.00,
         "automatic": 1.00,
@@ -247,14 +248,11 @@ UnitMap = {
         "eang": 1.8897261,  # electron charge * angstrom
         "debye": 0.3934303,  # https://en.wikipedia.org/wiki/Debye#cite_note-10
     },
-    "electric-polarization": {  # electron charge * Bohr^2
+    "electric-polarization": {  # electron charge / Bohr^2
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "e/ang2": 1.0 / 1.8897261**2,  # electron charge / angstrom^2
-        # In Gaussian units, electric displacement has the same dimensions as
-        # electric field. This alias is used by FFDielectric D fields.
-        "v/ang": 0.019446903811441516,
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,

@@ -2538,8 +2538,8 @@ class FFDielectric(ForceField):
         )  # how to read the piezoelectric tensor from the client code
         if epsilon_infinity is None:
             epsilon_infinity = {
-                "family": "undefined",
-                "units": "atomic_unit",
+                "family": "dimensionless",
+                "units": "",
                 "key": "epsilon_infinity",
             }
         self.epsilon_infinity = ArrayFromDict(**epsilon_infinity)

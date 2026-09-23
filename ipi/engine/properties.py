@@ -255,7 +255,7 @@ class Properties:
                 "func": self.get_electric_field,
             },
             "electric_displacement": {
-                "dimension": "electric-polarization",
+                "dimension": "electric-field",
                 "size": 3,
                 "help": "The cached total electric displacement defined by an FFDielectric force field. With fixed electric field, returns E + 4 pi mu / Omega. Takes the force-field name as its argument.",
                 "func": self.get_electric_displacement,

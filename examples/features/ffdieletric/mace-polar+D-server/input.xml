@@ -11,7 +11,7 @@
     <dipole units="eang" key="dipole" />
     <bec units="e" key="BEC" />
     <piezo units="e/ang2" key="piezoelectric" />
-    <epsilon_infinity units="atomic_unit" key="epsilon_infinity" />
+    <epsilon_infinity key="epsilon_infinity" />
     <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{

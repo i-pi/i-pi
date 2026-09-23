@@ -1345,13 +1345,13 @@ class InputFFDielectric(InputForceField):
         family="electric-polarization", units="e/ang2", key="piezoelectric"
     )
     _epsilon_infinity_cls = InputValueFromDict.specialize(
-        family="undefined", units="atomic_unit", key="epsilon_infinity"
+        family="dimensionless", units="", key="epsilon_infinity"
     )
     _electric_field_cls = InputPythonVectorField.specialize(
         family="electric-field", units="atomic_unit"
     )
     _electric_displacement_cls = InputPythonVectorField.specialize(
-        family="electric-polarization", units="atomic_unit"
+        family="electric-field", units="atomic_unit"
     )
 
     dynamic = {

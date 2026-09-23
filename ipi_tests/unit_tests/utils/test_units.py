@@ -15,8 +15,7 @@ def test_case_insensitive():
         raise ValueError("angstrom != Angstrom")
 
 
-def test_electric_displacement_accepts_electric_field_units():
-    """Gaussian electric displacement and field share the same V/angstrom unit."""
-    assert units.unit_to_internal(
-        "electric-polarization", "v/ang", 1.0
-    ) == units.unit_to_internal("electric-field", "v/ang", 1.0)
+def test_dimensionless_units_are_unchanged():
+    """Dimensionless quantities pass through the unit converter unchanged."""
+    assert units.unit_to_internal("dimensionless", "", 2.5) == 2.5
+    assert units.unit_to_internal("dimensionless", "atomic_unit", 2.5) == 2.5
