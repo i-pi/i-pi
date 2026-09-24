@@ -18,12 +18,14 @@ bad data types, and failure to input required fields.
 # See the "licenses" directory for full license information.
 
 
-from copy import copy
+from copy import copy, deepcopy
 
 import numpy as np
 
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
+from ipi.utils.softexit import softexit
+from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "Input",
@@ -33,6 +35,7 @@ __all__ = [
     "InputAttribute",
     "InputArray",
     "input_default",
+    "InputValueFromDict",
 ]
 
 
@@ -1317,3 +1320,139 @@ class InputArray(InputValue):
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
             self.shape.store((len(self.value),))
+
+
+class InputValueFromDict(Input):
+
+    # The user can not provide the 'family', but only 'units' and 'key'.
+    # The 'family' is provided by the developer.
+
+    family: InputAttribute  # str
+    units: InputAttribute  # str
+    key: InputAttribute  # str
+
+    attribs = {
+        "units": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "Help message for 'units'",
+                "options": None,
+            },
+        ),
+        "key": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "Help message for 'key'",
+                "options": None,
+            },
+        ),
+    }
+
+    # Some comments:
+    # - this is a really bad hack, but it should be robust
+    # - The new attribute will not be saved to file because it will always have the default value (this is the default in i-PI)
+    # - the user can not specify 'family': the code will raise an exception.
+    @classmethod
+    def specialize(cls, family: str, units: str, key: str):
+        assert family in UnitMap, "coding error"
+        assert units in UnitMap[family], "coding error"
+        options = list(UnitMap[family].keys())
+        assert units in options, "coding error"
+
+        # Create a deep copy of the original fields
+        new_attribs = deepcopy(cls.attribs)
+
+        new_attribs["family"] = (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": family,
+                "help": "Help message for 'family'",
+                "options": list(UnitMap.keys()),
+            },
+        )
+
+        new_attribs["units"][1]["options"] = options
+        new_attribs["units"][1]["default"] = units
+
+        new_attribs["key"][1]["default"] = key
+
+        # Dynamically create a new subclass with updated fields
+        return type(
+            f"{cls.__name__}", (cls,), {"attribs": new_attribs}  # name of new class
+        )
+
+    def store(self, value: dict):
+        for k in value.keys():
+            self.__dict__[k].store(value[k])
+        pass
+
+    def fetch(self):
+        self.check()
+        rdic = {}
+        for f, v in self.attribs.items():
+            rdic[f] = self.__dict__[f].fetch()
+        return rdic
+
+    def default(self):
+        """Return the (hard-coded) default value."""
+        return input_default(
+            factory=ArrayFromDict,
+            kwargs={
+                "family": self.family.fetch(),
+                "units": self.units.fetch(),
+                "key": self.key.fetch(),
+            },
+        )
+
+
+class ArrayFromDict:
+    def __init__(self, family: str, units: str, key: str):
+        self.family = family
+        self.units = units
+        self.key = key
+        # self.shape = shape
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"family={self.family!r}, "
+            f"units={self.units!r}, "
+            f"key={self.key!r}, "
+            # f"shape={self.shape!r})"
+        )
+
+    def get(self, dictionary: dict, default=None) -> np.ndarray:
+        if not isinstance(dictionary, dict):
+            softexit.trigger(
+                status="bad",
+                message=f"The input variable was supposed to be a python dictionary but it is {type(dictionary)}.",
+            )
+        if self.key not in dictionary:
+            if default is None:
+                softexit.trigger(
+                    status="bad",
+                    message=f"The key '{self.key}' is not in the provided dictionary.",
+                )
+            else:
+                warning(
+                    f"The key '{self.key}' is not in the provided dictionary but the default value {str(default)} will be used.",
+                    verbosity,
+                )
+                value = default
+        else:
+            value = dictionary[self.key]
+        value = np.asarray(value)
+        # if self.shape is not None:
+        #     value = np.reshape(value,self.shape)
+        return unit_to_internal(self.family, self.units, value)
+
+    def __getitem__(self, name):
+        return self.__getattribute__(name)
+
+    def keys(self):
+        return ["family", "units", "key"]

@@ -4,10 +4,17 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import hashlib
+import importlib
+import importlib.util
+from pathlib import Path
+import sys
+
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.utils.units import Constants
+from ipi.utils.messages import warning
+from ipi.utils.units import Constants, unit_to_internal
 from ipi.engine.motion.dynamics import (
     NVEIntegrator,
     DummyIntegrator,
@@ -84,6 +91,13 @@ class DrivenDynamics(Dynamics):
         self.Electric_Dipole.bind(ens)
         self.Electric_Field.bind(self, self.enstype)
         self.Born_Charges.bind(ens, self.enstype, self._asr_threshold)
+
+    def step(self, *argc, **kwargs):
+        warning(
+            "DrivenDynamics is deprecated. Use the FFDielectric instead.\n"
+            + "You can find several examples in examples/features/ffdieletric."
+        )
+        super().step(*argc, **kwargs)
 
 
 dproperties(
@@ -265,6 +279,18 @@ class BEC:
         Z = np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
         for n in range(self.nbeads):
             bec = np.asarray(self.forces.extras["BEC"][n])
+
+            if bec.shape[1] == 9:
+                warning(
+                    "The BEC tensors are returned in a flattened form (9 components per atom).\n"
+                    + "i-PI expects your driver to return the BEC tensors in the shape of (3xNatoms,3).\n"
+                    + "i-PI will reshape the BEC tensors automatically, assuming that once reshaped as (Natoms,3,3) "
+                    + "the second axis corresponds to the cartesian components of the dipole.\n"
+                    + "If this is not the case, please change your driver to return the BEC tensors in the correct shape."
+                )
+                bec = np.moveaxis(bec.reshape((self.natoms, 3, 3)), 1, 2).reshape(
+                    (3 * self.natoms, 3)
+                )
 
             if bec.shape[0] != 3 * self.natoms:
                 raise ValueError(
@@ -464,3 +490,91 @@ dproperties(
     ElectricField,
     ["amp", "phase", "peak", "sigma", "freq"],
 )
+
+
+class VectorField:
+    """Base class for vector fields in driven dynamics."""
+
+    def get(self, time: float):
+        """Get the value of the vector field at a given time."""
+        raise NotImplementedError("This method should be implemented in subclasses.")
+
+
+class PythonVectorField(VectorField):
+    """A vector field evaluated by a user-provided Python callable.
+
+    The callable is imported once and called as ``function(time, **parameters)``
+    with ``time`` in atomic units. The returned vector is interpreted in
+    ``units`` and converted back to i-PI atomic units.
+    """
+
+    def __init__(
+        self,
+        file,
+        name,
+        family,
+        units="atomic_unit",
+        parameters=None,
+    ):
+        self.file = str(file)
+        self.name = str(name)
+        self.family = str(family)
+        self.units = str(units)
+        self.parameters = {} if parameters is None else dict(parameters)
+        unit_to_internal(self.family, self.units, 1.0)
+        self._function = self._load_function()
+
+    def _load_function(self):
+        if self.file == "":
+            module = importlib.import_module("ipi.pes.electric_field")
+            source = "the built-in ipi.pes.electric_field module"
+            return self._get_function(module, source)
+
+        path = Path(self.file).expanduser().resolve()
+        if not path.is_file():
+            raise ValueError(f"Vector-field Python file does not exist: {path}")
+
+        digest = hashlib.sha256(str(path).encode()).hexdigest()[:16]
+        module_name = f"ipi_user_vector_field_{digest}"
+        module = sys.modules.get(module_name)
+        if module is None:
+            spec = importlib.util.spec_from_file_location(module_name, path)
+            if spec is None or spec.loader is None:
+                raise ValueError(f"Cannot import vector-field Python file: {path}")
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            try:
+                spec.loader.exec_module(module)
+            except Exception:
+                sys.modules.pop(module_name, None)
+                raise
+
+        return self._get_function(module, f"Python file '{path}'")
+
+    def _get_function(self, module, source):
+        try:
+            function = getattr(module, self.name)
+        except AttributeError as exc:
+            raise ValueError(f"{source} does not define '{self.name}'.") from exc
+        if not callable(function):
+            raise ValueError(f"'{self.name}' in {source} is not callable.")
+        return function
+
+    def get(self, actual_time: float):
+        value = np.asarray(self._function(float(actual_time), **self.parameters))
+        if value.shape != (3,):
+            raise ValueError(
+                f"Vector-field function '{self.name}' must return shape (3,), "
+                f"got {value.shape}."
+            )
+        if not np.issubdtype(value.dtype, np.number) or np.iscomplexobj(value):
+            raise ValueError(
+                f"Vector-field function '{self.name}' must return three real numbers."
+            )
+        value = value.astype(float, copy=False)
+        if not np.all(np.isfinite(value)):
+            raise ValueError(
+                f"Vector-field function '{self.name}' returned non-finite values."
+            )
+        return unit_to_internal(self.family, self.units, value)

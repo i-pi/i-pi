@@ -97,7 +97,7 @@ class Atoms:
           Depends on p and m.
     """
 
-    def __init__(self, natoms, _prebind=None):
+    def __init__(self, natoms, _prebind=None, motion=None):
         """Initialises Atoms.
 
         Each replica and the centroid coordinate are all held as Atoms objects,
@@ -140,6 +140,10 @@ class Atoms:
         self._kstress = depend_value(
             name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
         )
+        self.motion = motion
+
+    def bind(self, motion):
+        self.motion = motion
 
     def clone(self):
         """Creates a new Atoms object.
@@ -153,6 +157,7 @@ class Atoms:
         newat.p[:] = dstrip(self.p)
         newat.m[:] = dstrip(self.m)
         newat.names[:] = self.names
+        newat.motion = self.motion
         return newat
 
     def __len__(self):
