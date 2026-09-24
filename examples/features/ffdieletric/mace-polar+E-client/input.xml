@@ -18,7 +18,7 @@
     <piezo  units="e/ang2" key="piezoelectric" />
     <!-- PES+dipole -->
     <!-- MACE runs in-process; no socket client is needed. -->
-    <ffdirect name='mace' pbc='True'>
+    <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{
         template:start.extxyz,
@@ -33,7 +33,8 @@
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
        kinetic_md{electronvolt}, potential{electronvolt},
-       electric_field(mu+E){V/ang}]
+       electric_field(mu+E){V/ang},
+       electric_displacement(mu+E){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>

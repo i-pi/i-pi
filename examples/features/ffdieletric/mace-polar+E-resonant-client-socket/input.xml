@@ -10,7 +10,7 @@
         "phase": 0.0
       }</parameters>
     </electric_field>
-    <ffsocket name='mace' mode='unix' pbc='True'>
+    <ffsocket name='mace' mode='unix'>
       <address>mace-polar-resonant-extra</address>
       <consolidate_messages>False</consolidate_messages>
     </ffsocket>
@@ -20,7 +20,8 @@
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
        kinetic_md{electronvolt}, potential{electronvolt},
-       electric_field(mu+E){V/ang}]
+       electric_field(mu+E){V/ang},
+       electric_displacement(mu+E){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>

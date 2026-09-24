@@ -202,6 +202,7 @@ class Elements(dict):
 # these are the conversion FROM the unit stated to internal (atomic) units
 UnitMap = {
     "undefined": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
+    "dimensionless": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
     "energy": {
         "": 1.00,
         "automatic": 1.00,
@@ -247,7 +248,7 @@ UnitMap = {
         "eang": 1.8897261,  # electron charge * angstrom
         "debye": 0.3934303,  # https://en.wikipedia.org/wiki/Debye#cite_note-10
     },
-    "electric-polarization": {  # electron charge * Bohr^2
+    "electric-polarization": {  # electron charge / Bohr^2
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,

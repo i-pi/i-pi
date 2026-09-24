@@ -1,20 +1,11 @@
 <simulation verbosity='high'>
-  <total_steps>20</total_steps>
+  <total_steps>10</total_steps>
 
-  <ffdielectric name='mu+E' where='client'>
-    <electric_field name='plane_wave' units='V/ang'>
-      <parameters>{
-        "amplitude": [0, 0, 0.1],
-        "omega": 23994.0,
-        "omega_units": "inversecm",
-        "phase": 0.0
-      }</parameters>
-    </electric_field>
-    <!-- These entries reproduce the FFDielectric defaults and are included
-         only to show how the driver keys and units can be customized. -->
-    <dipole units="eang"   key="dipole" />
-    <bec    units="e"      key="BEC" />
-    <piezo  units="e/ang2" key="piezoelectric" />
+  <ffdielectric name='mu+D' where='client'>
+    <!-- i-PI forwards this Cartesian Dfield to extmace in EXTRADATA. -->
+    <electric_displacement name='static' units='V/ang'>
+      <parameters>{ "amplitude": [0, 0, 0.01] }</parameters>
+    </electric_displacement>
     <ffdirect name='mace'>
       <pes>extmace</pes>
       <parameters>{
@@ -30,8 +21,8 @@
     <properties filename='properties.out' stride='1' verbosity='low'>
       [step, time{femtosecond}, conserved{electronvolt},
        kinetic_md{electronvolt}, potential{electronvolt},
-       electric_field(mu+E){V/ang},
-       electric_displacement(mu+E){V/ang}]
+       electric_displacement(mu+D){V/ang},
+       electric_field(mu+D){V/ang}]
     </properties>
     <trajectory filename='positions' stride='1' format='ase'> positions </trajectory>
   </output>
@@ -45,12 +36,15 @@
       <file mode='ase'>start.extxyz</file>
       <velocities mode='thermal' units='kelvin'>300</velocities>
     </initialize>
+
     <forces>
-      <force forcefield='mu+E'/>
+      <force forcefield='mu+D'/>
     </forces>
+
     <ensemble>
       <temperature units='kelvin'>300</temperature>
     </ensemble>
+
     <motion mode='dynamics'>
       <dynamics mode='nvt'>
         <timestep units='femtosecond'>0.5</timestep>

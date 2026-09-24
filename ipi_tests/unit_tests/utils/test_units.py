@@ -13,3 +13,9 @@ def test_case_insensitive():
     Angstrom = units.unit_to_internal("length", "Angstrom", 1.0)
     if angstrom != Angstrom:
         raise ValueError("angstrom != Angstrom")
+
+
+def test_dimensionless_units_are_unchanged():
+    """Dimensionless quantities pass through the unit converter unchanged."""
+    assert units.unit_to_internal("dimensionless", "", 2.5) == 2.5
+    assert units.unit_to_internal("dimensionless", "atomic_unit", 2.5) == 2.5
