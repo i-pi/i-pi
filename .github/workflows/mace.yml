@@ -31,7 +31,7 @@ jobs:
       - name: Install i-PI and MACE
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . coverage -r requirements/mace.txt
+          python -m pip install -e . coverage pytest -r requirements/mace.txt
 
       - name: Download MACE model for single example
         working-directory: examples/clients/mace/single
@@ -62,6 +62,9 @@ jobs:
       - name: Run polar MACE example
         working-directory: examples/clients/mace/polar
         run: python -m coverage run --append --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run MACE unit tests
+        run: python -m coverage run --append --source=ipi -m pytest ipi_tests/unit_tests/pes/test_mace.py
 
       - name: Generate coverage report
         run: python -m coverage xml -o coverage-mace.xml

@@ -49,6 +49,13 @@ def test_unknown_mace_outputs_suggest_shapes_and_ignore_entries():
     assert '"ignore": [' in message
 
 
+def test_model_results_rejects_an_unknown_output_before_storing_results():
+    """Unknown outputs always take the descriptive error path."""
+
+    with pytest.raises(ValueError, match="Unknown model properties"):
+        ModelResults({}).store([1], {"unknown": np.zeros((1, 3))})
+
+
 def test_unknown_mace_output_reports_ambiguous_shape():
     results = ModelResults({})
 
