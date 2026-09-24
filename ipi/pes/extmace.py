@@ -278,9 +278,7 @@ class Extended_MACE_driver(MACE_driver):
         """Acknowledge client coupling when diagnostic outputs are unavailable."""
         extras = self.extra or {}
         if "electric_field" in extras:
-            return {
-                "electric_field": np.asarray(extras["electric_field"]).tolist()
-            }
+            return {"electric_field": np.asarray(extras["electric_field"]).tolist()}
         return {"displacement_field": np.asarray(extras["Dfield"]).tolist()}
 
 

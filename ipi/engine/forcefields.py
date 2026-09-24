@@ -3009,8 +3009,7 @@ class FFDielectric(ForceField):
         electric_field = np.asarray(request["electric_field"])
         if electric_field.shape != (3,):
             raise ValueError(
-                "'electric_field' must have shape (3,), got "
-                f"{electric_field.shape}."
+                "'electric_field' must have shape (3,), got " f"{electric_field.shape}."
             )
 
         dipole = self.dipole.get(extras)
