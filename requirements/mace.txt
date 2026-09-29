@@ -1,0 +1,8 @@
+# Known-compatible dependencies for the i-PI MACE examples.
+#
+# MACE-POLAR 0.3.16 calls graph-longrange's ``force_pbc_evaluator`` API.
+# graph_electrostatics removed that API in 2c1a80b, so retain the last
+# compatible revision until the two upstream projects publish a compatible
+# release pair.
+mace-torch==0.3.16
+graph-longrange @ git+https://github.com/WillBaldwin0/graph_electrostatics.git@1fd8c4548d44db93c1f0182761799383cfec382b
