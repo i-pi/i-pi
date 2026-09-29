@@ -78,6 +78,8 @@ def run_driver(
 
     f_init = False
     f_data = False
+    f_extra = False  # whether the driver has extra data
+    requires_extra = getattr(driver, "requires_extra", False)
 
     # batched evaluation: batch_n>1 is announced by i-PI in the INIT string
     batch_n = 1
@@ -105,8 +107,11 @@ def run_driver(
             # responds to a status request
             if not f_init:
                 sock.sendall(Message("NEEDINIT"))
+            elif not f_extra and requires_extra:  # this goes before f_data
+                sock.sendall(Message("NEEDEXTRA"))
             elif f_data:
                 sock.sendall(Message("HAVEDATA"))
+                f_extra = False
             else:
                 sock.sendall(Message("READY"))
         elif header == Message("INIT"):
@@ -202,6 +207,26 @@ def run_driver(
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
+        elif header == Message("EXTRADATA"):
+            if not requires_extra:
+                raise ValueError("The driver does not support EXTRADATA.")
+
+            # The following code has been roughly copied and pasted from 'ipi/interfaces/sockets.py'
+
+            # read how many charater are gonne be sent
+            nchar = recv_data(sock, np.int32())
+            # allocate an array of characters of the right size
+            extra = np.zeros(nchar, dtype="S1")
+            # read the extra string
+            extra = recv_data(sock, extra)
+            # convert to ... something
+            extra = bytearray(extra).decode("utf-8")
+            # store extra data
+            driver.store_extra(extra)
+
+            f_extra = True  # yes, the driver has extra data
+            # sock.sendall(Message("READY"))
+
         elif header == Message("GETFORCE") and shm:
             # write the batch_n results into shared memory BEFORE the FORCEREADY
             # ack, so i-PI never reads a stale buffer; only the per-structure
