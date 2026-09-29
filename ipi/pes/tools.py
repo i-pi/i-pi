@@ -1,4 +1,5 @@
 import json
+import warnings
 import numpy as np
 from typing import Any, Dict, Tuple, List, Union
 
@@ -84,7 +85,14 @@ class ModelResults:
             key: value for key, value in results.items() if key not in self._shapes
         }
         if unknown:
-            raise ValueError(self._unknown_properties_message(unknown, natoms))
+            warnings.warn(
+                self._unknown_properties_message(unknown, natoms),
+                UserWarning,
+                stacklevel=2,
+            )
+            results = {
+                key: value for key, value in results.items() if key in self._shapes
+            }
 
         ptr = np.cumsum([0] + natoms)
         new_structs = [StructureResults(n, self._shapes) for n in natoms]

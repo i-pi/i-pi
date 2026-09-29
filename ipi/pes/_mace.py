@@ -564,7 +564,7 @@ class BatchedMACE(MACECalculator):
             print(
                 "  Register an output under 'ase_like_properties' in the MACE "
                 "settings JSON, or skip it with 'instructions.ignore'. If i-PI "
-                "cannot infer the registration automatically, the error below "
+                "cannot infer the registration automatically, the warning below "
                 "will show the observed shape and suggested JSON."
             )
         print("-----------------------------------")

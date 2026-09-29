@@ -25,7 +25,7 @@ def test_model_results_stores_per_structure_and_per_atom_outputs():
 def test_unknown_mace_outputs_suggest_shapes_and_ignore_entries():
     results = ModelResults({})
 
-    with pytest.raises(ValueError) as error:
+    with pytest.warns(UserWarning) as warning:
         results.store(
             [2, 3],
             {
@@ -35,7 +35,7 @@ def test_unknown_mace_outputs_suggest_shapes_and_ignore_entries():
             },
         )
 
-    message = str(error.value)
+    message = str(warning[0].message)
     assert (
         "'atomwise': raw shape (5, 4); inferred per-atom shape [\"natoms\", 4]"
         in message
@@ -49,20 +49,24 @@ def test_unknown_mace_outputs_suggest_shapes_and_ignore_entries():
     assert '"ignore": [' in message
 
 
-def test_model_results_rejects_an_unknown_output_before_storing_results():
-    """Unknown outputs always take the descriptive error path."""
+def test_model_results_warns_and_skips_an_unknown_output():
+    """Unknown outputs are reported but do not abort an evaluation."""
 
-    with pytest.raises(ValueError, match="Unknown model properties"):
-        ModelResults({}).store([1], {"unknown": np.zeros((1, 3))})
+    results = ModelResults({})
+    with pytest.warns(UserWarning, match="Unknown model properties"):
+        results.store([1], {"unknown": np.zeros((1, 3))})
+
+    assert len(results) == 1
+    assert results[0] == {}
 
 
 def test_unknown_mace_output_reports_ambiguous_shape():
     results = ModelResults({})
 
-    with pytest.raises(ValueError) as error:
+    with pytest.warns(UserWarning) as warning:
         results.store([1, 1], {"ambiguous": np.zeros((2, 3))})
 
-    message = str(error.value)
+    message = str(warning[0].message)
     assert "'ambiguous': raw shape (2, 3); ambiguous shape" in message
     assert '["natoms", 3] or [3]' in message
     assert "Ambiguous properties are omitted" in message
