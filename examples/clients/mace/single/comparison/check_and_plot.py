@@ -11,7 +11,6 @@ from ase.io import read
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-
 RESULTS = Path("results")
 RELATIVE_TOLERANCE = 1e-9
 ABSOLUTE_TOLERANCE = 1e-9
@@ -106,10 +105,7 @@ def check_case(
 
 def load_timings():
     with open(RESULTS / "timings.csv", newline="", encoding="utf-8") as handle:
-        timings = {
-            row["case"]: float(row["seconds"])
-            for row in csv.DictReader(handle)
-        }
+        timings = {row["case"]: float(row["seconds"]) for row in csv.DictReader(handle)}
     missing = set(CASES) - set(timings)
     if missing:
         raise ValueError(f"missing timings for: {', '.join(sorted(missing))}")
