@@ -1,0 +1,7 @@
+mace.model
+RESTART
+__pycache__/
+*.log
+*.pos_*.xyz
+simulation.pos_*.extxyz
+timings.csv

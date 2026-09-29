@@ -1,11 +1,9 @@
-# MACE Example
+# MACE example
 
-Runs a ten-step molecular dynamics simulation of a water molecule at 300 K
-using the pretrained
-[MACE-MP-0b2 small model](https://huggingface.co/mace-foundations/mace-mp-0/blob/main/mace-mp-0b2-small.model).
-The model is MIT-licensed and approximately 68 MB.
+This example runs a ten-step molecular dynamics simulation of a water molecule
+using the pretrained MACE-MP-0b2 small model.
 
-## Installation
+## Run
 
 Install MACE in the same Python environment as i-PI:
 
@@ -13,38 +11,23 @@ Install MACE in the same Python environment as i-PI:
 python -m pip install -r ../../../requirements/mace.txt
 ```
 
-See the [MACE installation instructions](https://github.com/ACEsuit/mace#installation)
-for other installation methods and accelerator-specific options.
-
-## Running the Example
-
-Download the pretrained model as `mace.model`:
+Then download the model and run the basic in-process example:
 
 ```bash
 bash getmodel.sh
-```
-
-Then start the simulation from this directory:
-
-```bash
 i-pi input.xml
 ```
 
-The `<ffdirect>` force field loads MACE directly inside the i-PI process, so no
-separate `i-pi-py_driver` process is required:
+## Execution-path comparison
 
-```xml
-<ffdirect name='driver' pbc='False'>
-  <pes>mace</pes>
-  <parameters>{template:init.xyz,model:mace.model,device:cpu}</parameters>
-</ffdirect>
+The [`comparison`](comparison) folder compares three equivalent NVE
+trajectories: ASE `MACECalculator` over `ffsocket`, the bundled
+`i-pi-py_driver` over `ffsocket`, and native `ffdirect`. It also checks the
+trajectories and plots end-to-end timings.
+
+```bash
+cd comparison
+./run.sh
 ```
 
-The parameters select:
-
-- `template:init.xyz`, which supplies the atomic species expected by MACE;
-- `model:mace.model`, the model downloaded by `getmodel.sh`; and
-- `device:cpu`, which runs the calculation on the CPU.
-
-For an example that evaluates multiple ring-polymer beads in one MACE batch,
-see [`../mace-batched`](../mace-batched/README.md).
+The comparison runner downloads `../mace.model` automatically if necessary.
