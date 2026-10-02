@@ -478,6 +478,10 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.step(step)
 
+        # update linearly-varying force weights (no-op if vary_weight=False)
+        for s in self.syslist:
+            s.forces.update_weights()
+
     def stop(self):
         for k, f in self.fflist.items():
             f.stop()

@@ -41,7 +41,16 @@ class System:
     """
 
     def __init__(
-        self, init, beads, nm, cell, fcomponents, ensemble=None, motion=None, prefix=""
+        self,
+        init,
+        beads,
+        nm,
+        cell,
+        fcomponents,
+        vary_weight="",
+        ensemble=None,
+        motion=None,
+        prefix="",
     ):
         """Initialises System class.
 
@@ -70,6 +79,7 @@ class System:
         self.nm = nm
 
         self.fcomp = fcomponents
+        self.vary_weight = vary_weight
         self.forces = Forces()
 
         self.properties = Properties()
@@ -89,6 +99,8 @@ class System:
             self.simul.fflist,
             open_paths=self.nm.open_paths,
             output_maker=simul.output_maker,
+            vary_weight=self.vary_weight,
+            tsteps=simul.tsteps,
         )
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
         self.ensemble.bind(
