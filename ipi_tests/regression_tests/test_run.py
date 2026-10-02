@@ -27,7 +27,7 @@ def test_regtest(regtest):
     """
     t0 = time.time()
     nid = reg_tests.index(regtest)
-    runner = Runner_regression(Path("."))
+    runner = Runner_regression(Path("."), run_ipi_in_process=True)
     error_msg = runner.run(regtest, nid)
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
 

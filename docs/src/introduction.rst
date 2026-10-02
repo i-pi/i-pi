@@ -67,7 +67,16 @@ is transferred between the client and the server; the position of the
 atoms and cell parameters in one direction, and the forces, virial and
 potential in the other.
 
-For more details about sockets and communication, see
+Internet and Unix domain sockets are the most general transports, but
+they are not the only ones. On a single node a *shared-memory* socket
+(``mode="shm"``) can move the bulk position/force arrays through POSIX
+shared memory; many cheap evaluations can be *batched* into a single
+exchange (``batch_size``); the ``ffmpi`` forcefield communicates over MPI
+for clients co-launched with i-PI in one MPMD job; and ``ffdirect``
+evaluates a Python potential in-process, with no inter-process
+communication at all.
+
+For more details about all of these, and how to choose between them, see
 :ref:`distrib`.
 
 

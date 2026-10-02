@@ -8,12 +8,16 @@ import os
 import numpy as np
 import tempfile as tmp
 import numpy.testing as npt
+from types import SimpleNamespace
 
 import ipi.engine.initializer as initializer
 import ipi.utils.mathtools as mt
 
-from ipi.utils.units import Elements
+from ipi.inputs.simulation import InputSimulation
+from ipi.utils.io.inputs.io_xml import xml_parse_string
+from ipi.utils.units import Elements, unit_to_internal
 from ipi.engine.atoms import Atoms
+from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 
 
@@ -102,3 +106,72 @@ def test_init_file(create_xyz_sample_file):
         npt.assert_array_almost_equal(expected_ratoms[_ii].m, atoms.m, 5)
 
     npt.assert_array_almost_equal(expected_cell.h, ret[1].h, 5)
+
+
+def test_init_chk_skips_checkpoint_forcefields(tmp_path):
+    """Checkpoint initialization reads state without constructing its PES."""
+
+    checkpoint = tmp_path / "obsolete-forcefield.chk"
+    checkpoint.write_text("""
+<simulation>
+  <ffdirect name='obsolete'>
+    <pes>custom</pes>
+  </ffdirect>
+  <system>
+    <forces><force forcefield='obsolete'/></forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'>0.5</timestep>
+      </dynamics>
+    </motion>
+    <beads natoms='2' nbeads='2'>
+      <q shape='(2, 6)' units='angstrom'>
+        [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1]
+      </q>
+      <p shape='(2, 6)'>
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      </p>
+      <m shape='(2)'>[1, 2]</m>
+      <names shape='(2)'>[H, He]</names>
+    </beads>
+    <cell shape='(3, 3)' units='angstrom'>
+      [2, 0, 0, 0, 3, 0, 0, 0, 4]
+    </cell>
+  </system>
+</simulation>
+""")
+
+    # The same checkpoint remains invalid as a full restart: FFDirect would
+    # construct the custom PES and reject the missing pes_path.
+    xmlchk = xml_parse_string(checkpoint.read_text())
+    full_restart = InputSimulation()
+    full_restart.parse(xmlchk.fields[0][1])
+    with pytest.raises(ValueError, match="pes_path"):
+        full_restart.fetch()
+
+    beads, cell, motion = initializer.init_chk(checkpoint)
+    q = np.arange(12, dtype=float).reshape(2, 6) / 10.0
+    npt.assert_allclose(beads.q, q * unit_to_internal("length", "angstrom"))
+    npt.assert_allclose(beads.p, np.arange(1, 13, dtype=float).reshape(2, 6))
+    npt.assert_allclose(
+        cell.h,
+        np.diag([2.0, 3.0, 4.0]) * unit_to_internal("length", "angstrom"),
+    )
+    assert motion.dt == pytest.approx(unit_to_internal("time", "femtosecond", 0.5))
+
+    # Exercise the regular <initialize> checkpoint code path as well.
+    target = SimpleNamespace(beads=Beads(0, 0), cell=Cell())
+    init = initializer.Initializer(
+        nbeads=2,
+        queue=[
+            ("positions", initializer.InitIndexed(value=str(checkpoint), mode="chk")),
+            ("masses", initializer.InitIndexed(value=str(checkpoint), mode="chk")),
+            ("labels", initializer.InitIndexed(value=str(checkpoint), mode="chk")),
+            ("momenta", initializer.InitIndexed(value=str(checkpoint), mode="chk")),
+            ("cell", initializer.InitFile(value=str(checkpoint), mode="chk")),
+        ],
+    )
+    init.init_stage1(target)
+    npt.assert_allclose(target.beads.q, beads.q)
+    npt.assert_allclose(target.beads.p, beads.p)
+    npt.assert_allclose(target.cell.h, cell.h)

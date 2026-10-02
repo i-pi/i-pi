@@ -139,8 +139,28 @@
                        readbuffer_dv, readbuffer_d, &
                        readbuffer_i
 
-   END INTERFACE 
+   END INTERFACE
    CONTAINS
+
+   ! The pure-Fortran build has no C helper, so the shared-memory transport is
+   ! unavailable; these stubs keep the same interface as fsockets.f90 so the
+   ! shared driver object links, and error out only if --shm is actually used.
+   FUNCTION shm_attach(name, nbytes) RESULT(ptr)
+      IMPLICIT NONE
+      CHARACTER(KIND=C_CHAR), DIMENSION(*) :: name
+      INTEGER(KIND=C_LONG) :: nbytes
+      TYPE(C_PTR) :: ptr
+      WRITE(*,*) " Shared-memory transport (--shm) is not supported in the "
+      WRITE(*,*) " pure-Fortran driver build (driver_pure.x). Use driver.x."
+      STOP "ENDED"
+      ptr = C_NULL_PTR
+   END FUNCTION
+
+   SUBROUTINE shm_detach(ptr, nbytes)
+      IMPLICIT NONE
+      TYPE(C_PTR), VALUE :: ptr
+      INTEGER(KIND=C_LONG) :: nbytes
+   END SUBROUTINE
 
    SUBROUTINE fstr2cstr(fstr, cstr, plen)
       IMPLICIT NONE
@@ -202,7 +222,6 @@
          ENDIF
 
          CALL memcpy(c_loc(res), ptr, sizeof(res))
-         WRITE(6,*) "pointer", res
          psockfd = socket_make(res%ai_family, res%ai_socktype, res%ai_protocol)
          IF (psockfd < 0)  THEN 
             WRITE(6,*) "Error opening socket"

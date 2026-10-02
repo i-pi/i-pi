@@ -3,6 +3,64 @@
 Distributed execution
 =====================
 
+.. _transports:
+
+Choosing how to talk to the driver
+----------------------------------------
+
+i-PI delegates the evaluation of energy, forces and virial to a *driver* 
+(effectively connected as a *client* to the i-PI server). 
+Several transport mechanisms are available, selected by the
+type of ``<forcefield>`` block in the input and, for sockets, by its ``mode``
+attribute. They all provide the same information to the rest of i-PI and differ
+only in *how* the data is moved between the server and the driver.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 20 52
+
+   * - Forcefield block
+     - Where the driver runs
+     - Typical use
+   * - :ref:`ffdirect`
+     - in-process (same Python interpreter)
+     - Python potentials from ``ipi/pes`` (e.g. ML potentials); no inter-process
+       communication, lowest overhead for inexpensive potentials.
+   * - ``<ffsocket mode="unix">``
+     - same machine
+     - empirical/fast potentials run locally; low-latency UNIX-domain socket.
+   * - ``<ffsocket mode="shm">``
+     - same machine
+     - as ``unix``, but the bulk position/force payload travels through shared
+       memory — preferable for large systems.
+   * - ``<ffsocket mode="inet">``
+     - any machine on the network
+     - *ab initio* clients, possibly on a different host or HPC cluster.
+   * - :ref:`ffmpi`
+     - co-launched MPI ranks
+     - HPC runs that launch i-PI and the drivers in a single MPI job, or drivers
+       that are themselves MPI-parallel.
+
+Two further options apply on top of the socket and MPI transports:
+
+* **Multiple clients** — several drivers can connect to the same i-PI server and
+  evaluate different replicas (path-integral beads, or systems) in parallel; see
+  :ref:`parallelization`.
+* **Batching** (``batch_size``) — a single driver can evaluate several queued
+  structures in one request, reducing the per-message overhead; see
+  :ref:`batching`.
+
+.. note::
+
+   The transport only matters when the force evaluation itself is cheap (toy
+   potentials, some ML models, or very large bead counts). For *ab initio*
+   clients the cost of the force calculation dwarfs any communication overhead,
+   and the choice should be driven by convenience (network reachability, how the
+   job is launched) rather than by performance. As a rough guide in the cheap-PES
+   regime: ``shm`` is the best socket transport for large systems, ``batch_size``
+   helps whenever many replicas are queued, and ``ffdirect`` avoids communication
+   altogether for Python potentials.
+
 .. _communication-protocol-1:
 
 Communication protocol
@@ -83,11 +141,22 @@ follows:
    :width: 90.0%
 
    A schematic simplified representation of the communication protocol.
-   We note that most of the clients do not make use of the 'NEEDINIT' option, 
+   We note that most of the clients do not make use of the 'NEEDINIT' option,
    The communication is *asynchronous* but we have omitted the 'waiting' blocks
    for simplicity.
 
-   
+The description above is the *base* protocol. Two variants extend it: when
+``batch_size`` is larger than one (see :ref:`batching`) the POSDATA and FORCEREADY
+messages carry several structures at once; and in the ``shm`` mode (see
+:ref:`shm-sockets`) the bulk arrays travel through shared memory rather than the
+socket. The ``extras`` string returned after the forces can be any text, and is
+most useful as a JSON dictionary (for example ``{"dipole": [...]}``), from which
+individual fields can be selected for output (see :ref:`trajectories`). The
+bundled Python driver, ``drivers/py/driver.py``, is a compact reference
+implementation of all these variants and the best starting point for writing a
+custom client.
+
+.. _parallelization:
 
 Parallelization
 ---------------
@@ -194,6 +263,155 @@ determining that something is going wrong, and will just wait forever.
 One can specify a parameter “timeout”, that corresponds to the maximum
 time – in seconds – that i-PI should wait before deciding that one of
 the clients has become unresponsive and should be discarded.
+
+.. _shm-sockets:
+
+Shared-memory sockets (``mode="shm"``)
+--------------------------------------------
+
+When the driver runs on the same node as i-PI, the ``shm`` mode reduces the cost
+of moving large position and force arrays. A UNIX-domain socket is still used for
+the control handshake (status queries, the INIT string, the ``extras`` string),
+but the bulk communication — positions, cell, forces and virial — is exchanged
+through POSIX shared-memory segments owned by i-PI, avoiding a copy through the
+socket. On the i-PI side this only requires choosing the mode::
+
+   <ffsocket mode="shm">
+      <address> driver </address>
+   </ffsocket>
+
+The client must be started in shared-memory mode: the bundled Python and Fortran
+drivers both accept the ``--shm`` flag (see :ref:`runningclients`). Because it
+relies on shared memory, ``shm`` only works when the server and the client run on
+the same node; it is the recommended local transport for large systems, where the
+position/force arrays dominate the communication cost.
+
+.. _batching:
+
+Batching and message consolidation
+----------------------------------------
+
+By default i-PI dispatches one structure per request and, for path-integral or
+multiple-system runs, relies on several clients to evaluate the replicas in
+parallel. An alternative is to let a *single* client evaluate several queued
+structures at once, by setting ``batch_size`` greater than one::
+
+   <ffsocket mode="unix">
+      <address> driver </address>
+      <batch_size> 8 </batch_size>
+   </ffsocket>
+
+i-PI then collects up to ``batch_size`` queued structures and sends them together;
+the client evaluates them in a single call and returns all the results at once.
+The batch size is announced to the client in the INIT string (as ``batch_size:N``),
+and the bundled drivers pass the structures to the potential through the
+``driver(cell_list, pos_list)`` interface. Batching removes most of the
+per-message and per-request overhead, which is the dominant cost when the potential
+is inexpensive; for expensive potentials it makes little difference. If fewer than
+``batch_size`` structures are queued, the socket transport pads the batch by
+replicating the last structure, so the run never stalls. The in-process
+``ffdirect`` backend does not pad; instead, when run with ``threaded='True'`` it
+flushes an incomplete final batch (evaluating fewer than ``batch_size`` structures)
+once its poll loop goes idle. Without threading there is no idle flush, so the
+number of structures evaluated must be a multiple of ``batch_size`` or the run
+hangs.
+
+Batching requires ``consolidate_messages`` (the default) and is incompatible with
+``matching="lock"`` and with stateful clients that rely on receiving a continuous
+trajectory for a given replica. ``consolidate_messages`` itself fuses the
+STATUS/POSDATA/GETFORCE exchange into a single send and uses one thread to collect
+the replies, lowering latency; it assumes clients follow the protocol strictly, so
+turn it off only for clients that deviate from it.
+
+Whether to use *many clients* or *one batched client* depends on the setup. Many
+independent clients give true parallelism and resilience — i-PI keeps advancing the
+simulation if one of them dies — and are the natural choice for *ab initio* codes
+run as separate jobs. A single batched client minimises communication overhead and
+is convenient for fast Python or compiled potentials, especially with large bead
+counts.
+
+.. _ffmpi-transport:
+
+MPI transport (``ffmpi``)
+-------------------------------
+
+On HPC systems it is often more convenient to exchange data over MPI than over a
+socket: there is no address or port to manage, the native high-speed interconnect
+is used, and the drivers are launched by the same job scheduler as i-PI. The
+:ref:`ffmpi` forcefield does exactly this::
+
+   <ffmpi mode="mpi">
+      <batch_size> 8 </batch_size>
+   </ffmpi>
+
+i-PI and the drivers are launched **together in a single MPI job**, with i-PI as
+rank 0 of ``MPI_COMM_WORLD`` and the remaining ranks acting as drivers. With a
+plain MPMD ``mpirun`` this reads::
+
+   mpirun -n 1 i-pi input.xml : -n 4 i-pi-py_driver --mpi -m harmonic -o 1
+
+How the processes are co-launched is left to the submit script — the colon syntax
+above, ``srun --multi-prog``, heterogeneous-job steps, and so on — so that
+platform-specific MPI quirks stay out of the i-PI input. i-PI discovers the driver
+ranks automatically at start-up, and the number of drivers is set purely by the
+launch command.
+
+Everything that works over sockets works over MPI: multiple drivers evaluate
+replicas in parallel, ``batch_size`` bundles several structures per request, and
+the ``extras`` string (e.g. a dipole) is returned in the same way. In addition,
+each driver may itself be an MPI-parallel program: passing ``--group-size G``
+(``-g``) to the driver splits the driver ranks into groups of ``G`` ranks, where
+only the root of each group communicates with i-PI and broadcasts the work to its
+group.
+
+The Python driver supports MPI out of the box (``i-pi-py_driver --mpi``); the
+Fortran driver must be built with MPI support (``make -C drivers/f90 MPI=1``) and
+then accepts ``--mpi``. Worked examples are in
+``examples/clients/communication/mpi/harmonic`` and
+``examples/clients/communication/mpi/water-dipole``.
+
+Several ``<ffmpi>`` forcefields can run in the same MPMD job. Give each one a
+distinct ``name`` and launch its drivers with the matching ``--mpi-name``; i-PI
+routes the ranks to the right forcefield automatically::
+
+   mpirun -n 1 i-pi input.xml \
+     : -n 4 i-pi-py_driver --mpi --mpi-name solvent -m pesA \
+     : -n 2 i-pi-py_driver --mpi --mpi-name solute  -m pesB
+
+A single, unnamed ``<ffmpi>`` still works with untagged drivers (no
+``--mpi-name``). When several forcefields each wrap an *MPI-parallel* driver
+(``--group-size>1``), also pass a distinct ``--mpi-id`` per forcefield so a
+multi-rank group never crosses a forcefield boundary. See
+``examples/clients/communication/mpi/two-drivers``. As with sockets, i-PI sends an INIT string
+(the ``<parameters>`` plus the batch size) to each driver, so a custom MPI client
+can receive initialization data the same way a socket client does.
+
+.. note::
+
+   MPI ranks waiting for work typically *busy-wait*, so launching more driver
+   ranks than there are cores available on a node can badly degrade performance
+   (the idle drivers starve i-PI and one another). Keep the total number of ranks
+   within the core count, or use ``batch_size`` with a single driver rank instead
+   of one rank per bead, if the driver can evaluate multiple structures in parallel.
+
+.. _ffdirect-eval:
+
+In-process evaluation (``ffdirect``)
+------------------------------------------
+
+When the potential is implemented in Python it can be evaluated directly inside the
+i-PI process, with no socket or MPI communication at all, using the :ref:`ffdirect`
+forcefield::
+
+   <ffdirect>
+      <pes> harmonic </pes>
+      <parameters> { k1: 1.0 } </parameters>
+   </ffdirect>
+
+The ``pes`` field selects one of the potentials in ``ipi/pes`` (the same classes
+used by the Python driver, see :ref:`runningclients`), or ``custom`` together with
+``pes_path`` pointing to your own ``.py`` file. ``ffdirect`` also supports
+``batch_size``.
 
 Running i-PI over the network
 -----------------------------

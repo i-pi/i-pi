@@ -56,7 +56,8 @@ class NormalModes:
           between the replicas. Depends on the simulation temperature.
        omegan2: omegan**2.
        omegak: The normal mode frequencies for the free ring polymer.
-          Depends on omegan.
+          Trotter values, or economised ("eco") values fitted to reproduce
+          harmonic radii of gyration. Depends on omegan, mode and nm_freqs.
        prop_pq: An array holding the exact normal mode propagator for the
           free ring polymer, using mass scaled coordinates.
           See J. Chem. Phys. 133, 124101 (2010). Depends on the bead masses
@@ -171,6 +172,15 @@ class NormalModes:
 
         self.bosons = self.resolve_bosons()
 
+        # eco springs are only defined for closed, distinguishable paths
+        if self.mode == "eco":
+            if len(self.bosons) > 0 or len(self.open_paths) > 0:
+                raise ValueError("ECO mode cannot be used with bosons or open paths.")
+            if len(self.nm_freqs) != 1:
+                raise ValueError(
+                    "ECO mode requires one frequency, the maximum physical frequency to be reproduced."
+                )
+
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
         dpipe(motion._dt, self._dt)
@@ -263,7 +273,7 @@ class NormalModes:
             name="omegak",
             value=np.zeros(self.beads.nbeads, float),
             func=self.get_omegak,
-            dependencies=[self._omegan],
+            dependencies=[self._omegan, self._nm_freqs, self._mode],
         )
         self._omegak2 = depend_array(
             name="omegak2",
@@ -454,8 +464,28 @@ class NormalModes:
         Returns:
            A list of the normal mode frequencies for the free ring polymer.
            The first element is the centroid frequency (0.0).
+           For mode="eco", returns economised frequencies optimized to
+           reproduce the radii of gyration of harmonic oscillators with
+           frequencies up to nm_freqs[0].
         """
 
+        if self.mode == "eco":
+            if len(self.nm_freqs) != 1:
+                raise ValueError(
+                    "ECO mode requires one frequency, the maximum physical frequency to be reproduced."
+                )
+            # xmax = beta*hbar*omega_max, given that omegan = nbeads/(beta*hbar)
+            xmax = self.nm_freqs[0] * self.nbeads / self.omegan
+            # seeds the fit with the previous solution (the stale value held in
+            # the depend array), which speeds up re-fits when temperature changes
+            y0 = (
+                dstrip(self._omegak)[1 : self.nbeads // 2 + 1]
+                * self.nbeads
+                / self.omegan
+            )
+            if not np.all(y0 > 0):  # zeros before the first evaluation
+                y0 = None
+            return self.omegan * nmtransform.eco_eva(self.nbeads, xmax, y0)
         return self.omegan * nmtransform.nm_eva(self.nbeads)
 
     def get_o_omegak(self):
@@ -592,6 +622,9 @@ class NormalModes:
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
                 warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
+        elif self.mode == "eco":
+            # eco changes the spring frequencies (statics), not the dynamical masses
+            pass
         elif self.mode == "manual":
             if len(self.nm_freqs) != self.nbeads - 1:
                 raise ValueError(

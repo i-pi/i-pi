@@ -76,6 +76,14 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
+        if self.triggered:
+            return
+        self.cleanup(status, message)
+        self.kill()
+
+    def cleanup(self, status="restartable", message=""):
+        """Runs registered cleanup functions without exiting the process."""
+
         print(
             " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
             threading.currentThread(),
@@ -122,7 +130,17 @@ class Softexit(object):
             ):
                 t.join()
 
+    def kill(self):
+        """Terminates the current thread/process."""
+
         sys.exit()
+
+    def reset(self):
+        """Resets the soft-exit state and restores intercepted signals."""
+
+        for signum, handler in self._kill.items():
+            signal.signal(signum, handler)
+        self.__init__()
 
     def start(self, timeout=0.0):
         """Starts the softexit monitoring loop.

@@ -34,13 +34,30 @@ PES=pes/zundel.f pes/morse.f pes/qtip4pf.f pes/utility.f pes/ch52008.f pes/h2o_d
 OBJECTS=$(MODULES:%.f90=%.o) $(PES:%.f=%.o)
 FC=gfortran
 CC=gcc
+
+# `make MPI=1` compiles the ffmpi MPI transport into driver.x using the MPI
+# Fortran wrapper. The default build needs no MPI compiler (the MPI code is
+# guarded by the __MPI preprocessor macro and stripped out).
+ifdef MPI
+  FC = mpif90
+  CPPMPI = -D__MPI
+  MPIOBJ = fmpi.o
+endif
+
+# shm_open lives in libc on glibc>=2.34 and on macOS, but in librt on older
+# glibc; link librt on Linux (always present, harmless otherwise).
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+  LDLIBS += -lrt
+endif
+
 all: install
 
 sockets.o: sockets.c
 	$(CC) $(CFLAGS) -c -o sockets.o sockets.c
 
-driver.x: $(OBJECTS) sockets.o fsockets.o driver.o | $(OBJECTS)
-	$(FC) $(FFLAGS) -o driver.x $^
+driver.x: $(OBJECTS) sockets.o fsockets.o $(MPIOBJ) driver.o | $(OBJECTS)
+	$(FC) $(FFLAGS) -o driver.x $^ $(LDLIBS)
 
 install: driver.x
 	ln -fs ../drivers/f90/driver.x ../../bin/i-pi-driver
@@ -57,7 +74,14 @@ driver_pure.x: $(OBJECTS) fsockets_pure.o driver.o | $(OBJECTS)
 LJ.o: distance.o
 LJPolymer.o: distance.o
 SG.o: distance.o
-driver.o: LJ.o LJPolymer.o SG.o pes/pswater.o fsockets.o distance.o
+
+# driver.o is preprocessed (-cpp) so the __MPI guards are honoured; fmpi.o (the
+# MPI transport module) is only built and linked in an MPI build.
+fmpi.o: fmpi.f90
+	$(FC) $(FFLAGS) -c fmpi.f90 -o fmpi.o
+
+driver.o: driver.f90 LJ.o LJPolymer.o SG.o pes/pswater.o fsockets.o distance.o $(MPIOBJ)
+	$(FC) $(FFLAGS) -cpp $(CPPMPI) -c driver.f90 -o driver.o
 
 clean:
 	rm -f *.o *.mod *.x */*.mod */*.o ../../bin/i-pi-driver

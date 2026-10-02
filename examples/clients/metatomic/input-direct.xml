@@ -13,7 +13,7 @@
 
 <ffdirect name='driver'>
     <pes> metatomic </pes>
-    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu } </parameters>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,skin:2.0} </parameters>
 </ffdirect>
 
 <system>

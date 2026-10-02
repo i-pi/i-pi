@@ -146,30 +146,21 @@ def init_chk(filename):
        filename: A string giving the name of the checkpoint file to be read from.
 
     Returns:
-       A Beads object, Cell object and Thermostat object as read from the
+       A Beads object, Cell object and Motion object as read from the
        checkpoint file.
     """
 
-    # reads configuration from a checkpoint file
-    rfile = open(filename, "r")
-    xmlchk = xml_parse_file(rfile)  # Parses the file.
+    # Parse only the state required by the initializer.  A full checkpoint
+    # restart still uses InputSimulation.fetch(), which intentionally restores
+    # its force fields as well.
+    with open(filename, "r") as rfile:
+        xmlchk = xml_parse_file(rfile)
 
     from ipi.inputs.simulation import InputSimulation
 
     simchk = InputSimulation()
     simchk.parse(xmlchk.fields[0][1])
-    sim = simchk.fetch()
-    if len(sim.syslist) > 1:
-        warning(
-            "Restart from checkpoint with "
-            + str(len(sim.syslist))
-            + " systems will fetch data from the first system."
-        )
-    rcell = sim.syslist[0].cell
-    rbeads = sim.syslist[0].beads
-    rmotion = sim.syslist[0].motion
-
-    return (rbeads, rcell, rmotion)
+    return simchk.fetch_checkpoint_state()
 
 
 def init_beads(

@@ -120,6 +120,27 @@ isotope.
 | DOI: `10.1063/1.4904293 <http://dx.doi.org/10.1063/1.4904293>`__ —
   BibTeX: `fetch <http://www.doi2bib.org/bib/10.1063%2F1.4904293>`__
 
+Economised Path Integrals
+-------------------------
+
+Path integral molecular dynamics with "economised" (Eco) ring-polymer
+springs: the free ring-polymer normal-mode frequencies are replaced by
+optimised values, fitted to reproduce the exact radii of gyration of
+harmonic oscillators with frequencies up to the maximum physical
+frequency of the problem. This accelerates the convergence of static
+observables with the number of beads (roughly half the beads of a
+standard Trotter calculation for comparable accuracy), while the bead
+masses remain the physical ones and the standard Trotter estimators
+remain valid. Activated by setting
+``<frequencies style='eco'> [ omega_max ] </frequencies>`` within the
+``<normal_modes>`` block.
+
+| **Main contributors:** Michele Ceriotti
+| **Theory:**
+| Z. Zeng and D. E. Manolopoulos, *“Economised path integrals”*,
+  arXiv:2607.06414 (2026)
+| URL: `arxiv.org/abs/2607.06414 <https://arxiv.org/abs/2607.06414>`__
+
 Fast-Forward Langevin Thermostat
 --------------------------------
 

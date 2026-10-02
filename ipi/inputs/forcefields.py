@@ -12,6 +12,7 @@ from ipi.engine.forcefields import (
     ForceField,
     FFSocket,
     FFDirect,
+    FFMPI,
     FFLennardJones,
     FFDebye,
     FFPlumed,
@@ -34,6 +35,7 @@ from ipi.inputs.prng import InputRandom
 __all__ = [
     "InputFFSocket",
     "InputFFDirect",
+    "InputFFMPI",
     "InputFFLennardJones",
     "InputFFDebye",
     "InputFFPlumed",
@@ -235,9 +237,21 @@ class InputFFSocket(InputForceField):
             {
                 "dtype": bool,
                 "default": True,
-                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses 
-                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients 
+                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses
+                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients
                 strictly follow the base protocol.""",
+            },
+        ),
+        "batch_size": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """If greater than 1, each client evaluates up to this many queued structures in a
+                single batched request, reusing the driver(cell_list, pos_list) calculator interface. The
+                batch size is announced to the driver in the INIT string. Batches are padded to batch_size by
+                replicating the last structure when fewer requests are queued. Requires consolidate_messages
+                and drops per-replica client matching (do not combine with stateful/matching='lock' drivers).""",
             },
         ),
     }
@@ -246,9 +260,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["unix", "inet"],
+                "options": ["unix", "inet", "shm"],
                 "default": "inet",
-                "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
+                "help": "Specifies whether the driver interface will listen onto a internet socket [inet], a unix socket [unix], or a unix socket whose bulk position/force payload is exchanged through shared memory [shm].",
             },
         ),
         "matching": (
@@ -301,6 +315,7 @@ class InputFFSocket(InputForceField):
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
         self.max_workers.store(ff.socket.max_workers)
         self.consolidate_messages.store(ff.socket.consolidate_messages)
+        self.batch_size.store(ff.socket.batch_size)
         self.threaded.store(True)  # hard-coded
 
     def fetch(self):
@@ -340,6 +355,7 @@ class InputFFSocket(InputForceField):
                 max_workers=self.max_workers.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
                 consolidate_messages=self.consolidate_messages.fetch(),
+                batch_size=self.batch_size.fetch(),
             ),
         )
 
@@ -393,8 +409,9 @@ class InputFFDirect(InputForceField):
                 "default": 1,
                 "help": (
                     "The number of structures that should be batched in a single evaluation."
-                    + " The total number of structures computed at each step should be a multiple "
-                    + "of `batch_size` or the calculation will hang forever."
+                    + " With `threaded='True'` an incomplete final batch is flushed once the poll "
+                    + "loop goes idle; without threading the total number of structures computed at "
+                    + "each step must be a multiple of `batch_size` or the calculation will hang forever."
                 ),
             },
         ),
@@ -430,6 +447,75 @@ class InputFFDirect(InputForceField):
             threaded=self.threaded.fetch(),
             pes=self.pes.fetch(),
             pes_path=self.pes_path.fetch(),
+            batch_size=self.batch_size.fetch(),
+        )
+
+
+class InputFFMPI(InputForceField):
+    fields = {
+        "batch_size": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The number of structures bundled into a single request per "
+                "driver group root.",
+            },
+        ),
+    }
+    fields.update(InputForceField.fields)
+
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "mpi",
+                "options": ["mpi"],
+                "help": "Communication mode. Only 'mpi' is supported: i-PI and the "
+                "driver ranks are launched together in a single MPI job (i-PI is rank "
+                "0 of MPI_COMM_WORLD, the other ranks are drivers). How that job is "
+                "launched (mpirun MPMD, srun --multi-prog, ...) is left to the submit "
+                "script, so i-PI does not need to know about the local MPI dialect.",
+            },
+        ),
+    }
+    attribs.update(InputForceField.attribs)
+    # the polling mechanism requires threaded execution
+    attribs["threaded"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": True,
+            "help": "Whether the forcefield should use a thread loop to evaluate. "
+            "Must be True for FFMPI.",
+        },
+    )
+
+    default_help = """Forcefield that communicates with co-launched driver ranks over MPI.
+    i-PI runs as rank 0 of MPI_COMM_WORLD and each driver it talks to is the root of a
+    (possibly multi-rank) group, so a driver can wrap an MPI-parallel code. Positions and
+    forces are exchanged as plain typed buffers, so compiled drivers interoperate too.
+    """
+    default_label = "FFMPI"
+
+    def store(self, ff):
+        super().store(ff)
+        self.mode.store(ff.mode)
+        self.batch_size.store(ff.interface.batch_size)
+
+    def fetch(self):
+        super().fetch()
+
+        return FFMPI(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            mode=self.mode.fetch(),
             batch_size=self.batch_size.fetch(),
         )
 

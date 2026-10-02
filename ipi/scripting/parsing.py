@@ -237,12 +237,13 @@ def read_trajectory(
                     # positions is the right place to store, and we just need to convert
                     frame.positions *= unit_to_user("length", "ase")
                 else:
-                    # if we have another type of value, set positions to zero
-                    # (that data is missing!) and set an array instead
-                    frame.positions *= 0.0
+                    # if we have another type of value, store it in a named array
+                    # and zero the positions (that data is missing!). The array must
+                    # be filled before zeroing, as ASE's positions can alias q.
                     frame.arrays[what] = ret["atoms"].q.reshape((-1, 3)) * unit_to_user(
                         traj_types[what]["dimension"], "ase"
                     )
+                    frame.positions *= 0.0
 
                 frames.append(frame)
         except EOFError:

@@ -233,6 +233,11 @@ class InstantonMotion(Motion):
         prng: The random number generator object which controls random number generation.
         """
 
+        if nm.mode == "eco":
+            raise ValueError(
+                "Instanton calculations assume Trotter springs and cannot be used with mode='eco'."
+            )
+
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Redefine normal modes

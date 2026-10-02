@@ -42,6 +42,12 @@ The options (after `-o`) are as follow:
   the model) an ensemble of energy predictions
 - `force_virial_ensemble` is a bool specifying whether to also compute
   an ensemble of force predictions
+- `skin` is a float indicating that the neighbor list should use a Verlet skin
+  to avoid unnecessary re-calculations
+
+NB: the model nickel-lj.pt pre-build model should be compatible with modern torch and 
+metatomic APIs. If it is not, you can try to build a version based on your 
+environment running `python create-model.py`.
 
 ## Running with FFDirect
 
@@ -86,6 +92,18 @@ and, for ensembles
 
 ```bash
 i-pi input-batched-ensemble.xml
+```
+
+The examples above batch the structures inside i-PI through a `<ffdirect>`
+clause. The same batching is also available over a socket, using the
+`i-pi-py_driver` path: set `<batch_size>` on the `<ffsocket>` clause and i-PI
+will send a batch of structures (e.g. all beads of the ring polymer) to the
+client in a single request. The driver command is unchanged — batching is
+announced to it through the INIT string:
+
+```bash
+i-pi input-batched-socket.xml & sleep 1
+i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
 ```
 
 ## Model variants

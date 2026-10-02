@@ -106,7 +106,8 @@ def get_model(instructions, parameters: str):
         pass  # print("\tCannot count parameters")
 
     # Load the parameters from the saved file
-    checkpoint = torch.load(parameters)
+    # weights_only=True prevents arbitrary code execution via pickle (CWE-502)
+    checkpoint = torch.load(parameters, weights_only=True)
 
     # Update the model's state dictionary with the loaded parameters
     model.load_state_dict(checkpoint)
