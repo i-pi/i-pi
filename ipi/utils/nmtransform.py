@@ -501,15 +501,15 @@ class nm_fft(
             import pyfftw
 
             info("Import of PyFFTW successful", verbosity.medium)
-            self.qdummy = pyfftw.n_byte_align_empty(
+            self.qdummy = pyfftw.empty_aligned(
                 (nbeads, 3 * natoms),
-                16,
-                "float32" if self.single_precision else "float64",
+                dtype="float32" if self.single_precision else "float64",
+                n=16,
             )
-            self.qnmdummy = pyfftw.n_byte_align_empty(
+            self.qnmdummy = pyfftw.empty_aligned(
                 (nbeads // 2 + 1, 3 * natoms),
-                16,
-                "complex64" if self.single_precision else "complex128",
+                dtype="complex64" if self.single_precision else "complex128",
+                n=16,
             )
 
             pyfftw.config.NUM_THREADS = self.n_threads
