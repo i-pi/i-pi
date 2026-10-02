@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from ipi.scripting import forcefield_xml, motion_nvt_xml, simulation_xml
+from ipi.inputs.motion import InputMotion
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 
 
@@ -57,6 +58,27 @@ def test_forcefield_xml_unix_has_address_no_port():
     _parse(xml)
 
 
+@pytest.mark.parametrize("mode", ["unix", "inet"])
+def test_forcefield_xml_socket_sets_mode(mode):
+    # without the mode attribute, i-PI silently falls back to inet sockets
+    xml = forcefield_xml(name="s", mode=mode, address="localhost", port=31415)
+    ffsocket = _parse(xml).fields[0][1].fields[0][1]
+    assert ffsocket.attribs["mode"] == mode
+
+
+def test_forcefield_xml_socket_latency_timeout():
+    xml = forcefield_xml(name="s", mode="unix", address="sock")
+    # defaults match the i-PI ones, so they never need to be set explicitly
+    assert "<latency> 0.0001 </latency>" in xml
+    assert "<timeout> 0.0 </timeout>" in xml
+    xml = forcefield_xml(
+        name="s", mode="unix", address="sock", latency=1e-3, timeout=60
+    )
+    assert "<latency> 0.001 </latency>" in xml
+    assert "<timeout> 60 </timeout>" in xml
+    _parse(xml)
+
+
 def test_forcefield_xml_inet_requires_port():
     with pytest.raises(ValueError):
         forcefield_xml(name="s", mode="inet", address="localhost")
@@ -88,6 +110,34 @@ def test_motion_nvt_xml_path_integrals_uses_pile_g():
     assert "mode='pile_g'" in xml
     assert "pile_lambda" in xml
     _parse(xml)
+
+
+def test_motion_nvt_xml_thermostat_mode_and_tau():
+    xml = motion_nvt_xml(timestep=0.5, thermostat="langevin", tau=100)
+    assert "mode='langevin'" in xml
+    assert "<tau units='ase'> 100 </tau>" in xml
+    assert "pile_lambda" not in xml
+    _parse(xml)
+
+
+def test_motion_nvt_xml_thermostat_xml_block():
+    thermostat = "<thermostat mode='pile_l'><tau units='ase'> 42 </tau></thermostat>"
+    xml = motion_nvt_xml(timestep=0.5, thermostat=thermostat)
+    assert thermostat in xml
+    assert "mode='svr'" not in xml
+    _parse(xml)
+
+
+def test_motion_nvt_xml_fixcom_fixatoms():
+    # i-PI defaults are kept unless explicitly requested
+    xml = motion_nvt_xml(timestep=0.5)
+    assert "fixcom" not in xml and "fixatoms" not in xml
+
+    xml = motion_nvt_xml(timestep=0.5, fixcom=False, fixatoms=np.array([0, 2]))
+    input_motion = InputMotion()
+    input_motion.parse(xml_parse_string(xml).fields[0][1])
+    assert input_motion.fixcom.fetch() is False
+    assert list(input_motion.fixatoms.fetch()) == [0, 2]
 
 
 def _basic_blocks():
