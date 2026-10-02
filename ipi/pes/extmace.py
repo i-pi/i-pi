@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-"""MACE calculator extensions for electric fields and dielectric response.
+"""MACE calculator extensions for electrical boundary conditions and response.
 
 The standard batching, model evaluation, force/stress calculation, output
 handling, and command-line interface live in :mod:`ipi.pes._mace`.  This module
-only adds electric-field coupling and the associated response tensors.
+adds fixed-electric-field and fixed-Cartesian-displacement coupling together
+with the associated response tensors. As a standalone script, fields can be
+read from arbitrary per-frame ``Atoms.info`` keys in an extxyz file; run
+``python -m ipi.pes.extmace --help`` for the key-selection options.
 
 Runnable static-field and resonant-field examples for both client-side and
 server-side coupling are provided under ``examples/features/ffdieletric``.
@@ -22,7 +25,7 @@ from ipi.pes._mace import (
     ase_like_properties as mace_ase_like_properties,
     run_cli,
 )
-from ipi.utils.units import unit_to_user
+from ipi.utils.units import unit_to_internal, unit_to_user
 
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
@@ -41,6 +44,7 @@ _EXTENDED_ASE_LIKE_PROPERTIES = {
     "BECy": ("natoms", 3),
     "BECz": ("natoms", 3),
     "piezoelectric": (3, 3, 3),
+    "epsilon_infinity": (3, 3),
 }
 
 # Keep these public module-level names for backwards compatibility.
@@ -55,6 +59,48 @@ def add_bec_inplace(data: Dict[str, torch.Tensor], bec: torch.Tensor) -> None:
     data["BECx"] = bec[0, :, :]
     data["BECy"] = bec[1, :, :]
     data["BECz"] = bec[2, :, :]
+
+
+def coerce_epsilon_infinity(epsilon_infinity) -> np.ndarray:
+    """Return a symmetric dielectric tensor from Cartesian or Voigt data."""
+
+    epsilon_infinity = np.asarray(epsilon_infinity)
+    if epsilon_infinity.shape == (6,):
+        tensor = np.array(
+            [
+                [epsilon_infinity[0], epsilon_infinity[5], epsilon_infinity[4]],
+                [epsilon_infinity[5], epsilon_infinity[1], epsilon_infinity[3]],
+                [epsilon_infinity[4], epsilon_infinity[3], epsilon_infinity[2]],
+            ]
+        )
+    elif epsilon_infinity.shape == (3, 3):
+        tensor = epsilon_infinity
+    else:
+        raise ValueError(
+            "'epsilon_infinity' must have shape (3, 3) or six Voigt components "
+            "in order (xx, yy, zz, yz, xz, xy), got "
+            f"{epsilon_infinity.shape}."
+        )
+
+    if not np.allclose(tensor, tensor.T):
+        nonsymmetric_norm = np.linalg.norm(tensor - tensor.T)
+        raise ValueError(
+            "'epsilon_infinity' must be symmetric; the norm of its nonsymmetric "
+            f"part is {nonsymmetric_norm:.6e}."
+        )
+    if not np.isfinite(tensor).all():
+        raise ValueError("'epsilon_infinity' must contain only finite values.")
+    return tensor
+
+
+def check_electric_boundary_condition(extras: dict) -> None:
+    """Disallow simultaneous fixed-field and fixed-displacement input."""
+
+    if "electric_field" in extras and "Dfield" in extras:
+        raise ValueError(
+            "extmace cannot mix 'electric_field' and 'Dfield'. Specify only "
+            "one electrical boundary condition."
+        )
 
 
 def _normalize_dipole_shape(mu: torch.Tensor, strain: torch.Tensor) -> torch.Tensor:
@@ -156,25 +202,32 @@ class Extended_MACE_driver(MACE_driver):
         """Evaluate using the extra information attached to this request."""
 
         self.batched_calculator.extras = self.extra or {}
+        check_electric_boundary_condition(self.batched_calculator.extras)
         return super().compute(cell, pos)
 
     def post_process(self, properties, structure):
         """Return normal MACE extras and acknowledge any applied field."""
         energy, forces, virial, extras = super().post_process(properties, structure)
-        if "electric_field" not in (self.extra or {}):
+        applied_fields = []
+        if "electric_field" in (self.extra or {}):
+            applied_fields.append("electric_field")
+        if "Dfield" in (self.extra or {}):
+            applied_fields.append("electric_displacement")
+        if not applied_fields:
             return energy, forces, virial, extras
 
         extras_dict = {} if not extras else json.loads(extras)
-        extras_dict["applied_fields"] = ["electric_field"]
+        extras_dict["applied_fields"] = applied_fields
         return energy, forces, virial, json.dumps(extras_dict)
 
 
 class ExtendedMACECalculator(BatchedMACE):
-    """Batched MACE calculator extended with electric-field coupling."""
+    """Batched MACE calculator with fixed-E and fixed-D coupling."""
 
     ignored_properties = frozenset(to_ignore_properties)
     supported_instruction_keys = BatchedMACE.supported_instruction_keys | {
-        "compute_BEC"
+        "compute_BEC",
+        "epsilon_infinity",
     }
 
     def __init__(
@@ -182,6 +235,7 @@ class ExtendedMACECalculator(BatchedMACE):
         instructions: Optional[dict] = None,
         ase_like_properties: Optional[Dict[str, Tuple]] = None,
         use_proper_dipole: bool = True,
+        epsilon_infinity=None,
         *args,
         **kwargs,
     ):
@@ -198,12 +252,25 @@ class ExtendedMACECalculator(BatchedMACE):
             )
 
         compute_bec = instructions.get("compute_BEC", False)
+        instruction_epsilon_infinity = instructions.pop("epsilon_infinity", None)
+        if epsilon_infinity is not None and instruction_epsilon_infinity is not None:
+            raise ValueError(
+                "Specify 'epsilon_infinity' either directly or in 'instructions', "
+                "not both."
+            )
+        if epsilon_infinity is None:
+            epsilon_infinity = instruction_epsilon_infinity
         if not isinstance(compute_bec, bool):
             raise TypeError("'instructions.compute_BEC' must be a boolean")
         if not isinstance(use_proper_dipole, bool):
             raise TypeError("'use_proper_dipole' must be a boolean")
 
         self.extras = {}
+        self.default_epsilon_infinity = (
+            None
+            if epsilon_infinity is None
+            else coerce_epsilon_infinity(epsilon_infinity)
+        )
 
         properties = _EXTENDED_ASE_LIKE_PROPERTIES.copy()
         if ase_like_properties is not None:
@@ -348,17 +415,19 @@ class ExtendedMACECalculator(BatchedMACE):
     ) -> Dict[str, torch.Tensor]:
         """Add electric-field contributions and dielectric response tensors."""
 
-        if "Dfield" in self.extras:
-            raise NotImplementedError(
-                "Electric-displacement coupling is not implemented in extmace yet."
-            )
+        check_electric_boundary_condition(self.extras)
 
         if "electric_field" in self.extras:
             electric_field = self._electric_field(data["energy"])
+            if torch.any(electric_field != 0.0):
+                mu = self._response_dipole(data)
+                # Differentiating the field-coupled energy supplies the field
+                # contributions to forces and stress automatically.
+                data["energy"] -= mu @ electric_field
+            data = self.get_forces_stress(data, batch, training)
+        elif "Dfield" in self.extras:
             mu = self._response_dipole(data)
-            # Differentiating the field-coupled energy supplies the field
-            # contributions to forces and stress automatically.
-            data["energy"] -= mu @ electric_field
+            data["energy"] += self._constant_d_energy(mu, data, batch)
             data = self.get_forces_stress(data, batch, training)
         else:
             data = self.get_forces_stress(data, batch, training)
@@ -396,9 +465,228 @@ class ExtendedMACECalculator(BatchedMACE):
             )
         return electric_field
 
+    def _constant_d_energy(
+        self,
+        dipole: torch.Tensor,
+        data: Dict[str, torch.Tensor],
+        batch: Dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        """Return the differentiable fixed-Cartesian-D energy in electronvolt.
+
+        The volume is detached from autograd. Consequently the stress follows
+        the fixed-Cartesian-D convention implemented by i-PI: the proper-dipole
+        derivative contributes, while the Maxwell stress associated with a
+        fixed reduced displacement is not included.
+        """
+
+        cell = batch.get("cell")
+        if not isinstance(cell, torch.Tensor):
+            raise ValueError("The MACE batch does not contain a tensor cell.")
+
+        reference = data["energy"]
+        dfield = self._electric_displacement(reference)
+        epsilon_infinity = self._epsilon_infinity_tensor(data, reference)
+        volume_angstrom3 = torch.linalg.det(cell.view(-1, 3, 3)).abs()
+        if volume_angstrom3.shape[0] != dipole.shape[0]:
+            raise ValueError(
+                "The number of cell volumes does not match the number of dipoles."
+            )
+        if torch.any(volume_angstrom3 <= 0.0):
+            raise ValueError("Fixed-D coupling requires a positive cell volume.")
+
+        length_to_bohr = unit_to_internal("length", "angstrom")
+        field_to_atomic = unit_to_internal("electric-field", "v/ang")
+        polarization_to_atomic = unit_to_internal("electric-polarization", "e/ang2")
+        force_to_atomic = unit_to_internal("force", "ev/ang")
+
+        # D and E have the same dimensions in the Gaussian atomic-unit
+        # convention used here. Convert mu/Omega from e/angstrom^2 to V/angstrom
+        # before constructing D - 4*pi*P.
+        polarization = dipole / volume_angstrom3.detach()[:, None]
+        polarization = unit_to_user(
+            "electric-field",
+            "v/ang",
+            polarization * polarization_to_atomic,
+        )
+        mismatch = dfield - 4.0 * np.pi * polarization
+        try:
+            electric_field = torch.linalg.solve(
+                epsilon_infinity, mismatch.unsqueeze(-1)
+            ).squeeze(-1)
+        except RuntimeError as error:
+            raise ValueError(
+                "'epsilon_infinity' must be nonsingular for fixed-D coupling."
+            ) from error
+
+        volume_atomic = volume_angstrom3.detach() * length_to_bohr**3
+        energy_atomic = (
+            volume_atomic
+            * field_to_atomic**2
+            * torch.einsum("bi,bi->b", mismatch, electric_field)
+            / (8.0 * np.pi)
+        )
+        energy_to_ev = 1.0 / (length_to_bohr * force_to_atomic)
+        return energy_atomic * energy_to_ev
+
+    def _electric_displacement(self, reference: torch.Tensor) -> torch.Tensor:
+        """Return the i-PI displacement field in MACE's V/angstrom units."""
+
+        extras = self.extras
+        if not extras or "Dfield" not in extras:
+            raise ValueError(
+                "The extra information dictionary must contain 'Dfield' for "
+                "client-side electric-displacement coupling."
+            )
+
+        electric_displacement = unit_to_user(
+            "electric-field", "v/ang", np.asarray(extras["Dfield"])
+        )
+        electric_displacement = torch.as_tensor(
+            electric_displacement,
+            device=reference.device,
+            dtype=reference.dtype,
+        )
+        if electric_displacement.shape != (3,):
+            raise ValueError(
+                "'Dfield' must have shape (3,), got "
+                f"{tuple(electric_displacement.shape)}."
+            )
+        return electric_displacement
+
+    def _epsilon_infinity_tensor(
+        self,
+        data: Dict[str, torch.Tensor],
+        reference: torch.Tensor,
+    ) -> torch.Tensor:
+        """Return a batch of symmetric dielectric tensors for fixed-D energy."""
+
+        epsilon_infinity = data.get("epsilon_infinity")
+        if epsilon_infinity is None:
+            epsilon_infinity = self.default_epsilon_infinity
+        if epsilon_infinity is None:
+            raise ValueError(
+                "Fixed-D coupling requires an 'epsilon_infinity' model output "
+                "or a default in the extmace settings."
+            )
+
+        epsilon_infinity = torch.as_tensor(
+            epsilon_infinity,
+            device=reference.device,
+            dtype=reference.dtype,
+        )
+        if epsilon_infinity.shape == (3, 3):
+            epsilon_infinity = epsilon_infinity.expand(reference.shape[0], -1, -1)
+        elif epsilon_infinity.shape != (reference.shape[0], 3, 3):
+            raise ValueError(
+                "'epsilon_infinity' must have shape (3, 3) or "
+                f"({reference.shape[0]}, 3, 3), got "
+                f"{tuple(epsilon_infinity.shape)}."
+            )
+        if not torch.isfinite(epsilon_infinity).all():
+            raise ValueError("'epsilon_infinity' must contain only finite values.")
+        if not torch.allclose(epsilon_infinity, epsilon_infinity.transpose(-1, -2)):
+            raise ValueError("'epsilon_infinity' must be symmetric.")
+        return epsilon_infinity
+
+
+def add_extmace_cli_arguments(parser) -> None:
+    """Add per-structure electrical-boundary-condition CLI arguments."""
+
+    field_group = parser.add_mutually_exclusive_group()
+    field_group.add_argument(
+        "--electric-field-key",
+        metavar="KEY",
+        help=(
+            "Atoms.info key containing a Cartesian electric-field vector for "
+            "each input structure."
+        ),
+    )
+    field_group.add_argument(
+        "--electric-displacement-key",
+        metavar="KEY",
+        help=(
+            "Atoms.info key containing a Cartesian electric-displacement vector "
+            "for each input structure. Fixed-D calculations additionally require "
+            "epsilon_infinity from the model or MACE settings."
+        ),
+    )
+    parser.add_argument(
+        "--field-units",
+        default="v/ang",
+        metavar="UNIT",
+        help=(
+            "Units of the vectors selected by either field-key option "
+            "(default: %(default)s)."
+        ),
+    )
+
+
+def _field_extra_from_structure(atoms, frame_index: int, args) -> dict:
+    """Convert one structure's selected field to an i-PI extras dictionary."""
+
+    if args.electric_field_key is not None:
+        info_key = args.electric_field_key
+        extra_key = "electric_field"
+    elif args.electric_displacement_key is not None:
+        info_key = args.electric_displacement_key
+        extra_key = "Dfield"
+    else:
+        return {}
+
+    if info_key not in atoms.info:
+        raise ValueError(
+            f"Input structure {frame_index} has no Atoms.info['{info_key}'] value."
+        )
+    try:
+        field = np.asarray(atoms.info[info_key], dtype=float)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"Atoms.info['{info_key}'] in input structure {frame_index} must "
+            "contain three numeric values."
+        ) from error
+    if field.shape != (3,):
+        raise ValueError(
+            f"Atoms.info['{info_key}'] in input structure {frame_index} must "
+            f"have shape (3,), got {field.shape}."
+        )
+    if not np.isfinite(field).all():
+        raise ValueError(
+            f"Atoms.info['{info_key}'] in input structure {frame_index} must "
+            "contain only finite values."
+        )
+
+    field = unit_to_internal("electric-field", args.field_units, field)
+    return {extra_key: field.tolist()}
+
+
+def evaluate_extmace_structures(calculator, structures, args):
+    """Evaluate structures using their frame-local electric boundary condition."""
+
+    uses_fields = (
+        args.electric_field_key is not None
+        or args.electric_displacement_key is not None
+    )
+    if not uses_fields:
+        return calculator.compute_batched(structures)
+
+    # ExtendedMACECalculator.extras applies to a whole batch. Evaluate frames
+    # separately so every extxyz frame may specify a different field.
+    results = []
+    original_extras = calculator.extras
+    try:
+        for frame_index, atoms in enumerate(structures):
+            calculator.extras = _field_extra_from_structure(atoms, frame_index, args)
+            check_electric_boundary_condition(calculator.extras)
+            results.extend(calculator.compute_batched([atoms]))
+    finally:
+        calculator.extras = original_extras
+    return results
+
 
 if __name__ == "__main__":
     run_cli(
         calculator_class=ExtendedMACECalculator,
         calculator_name="ExtendedMACECalculator",
+        add_arguments=add_extmace_cli_arguments,
+        evaluate_structures=evaluate_extmace_structures,
     )

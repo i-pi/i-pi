@@ -23,7 +23,7 @@ except Exception:
 
 import argparse
 import json
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -562,8 +562,15 @@ class BatchedMACE(MACECalculator):
 def run_cli(
     calculator_class=BatchedMACE,
     calculator_name="MACECalculator",
+    add_arguments: Optional[Callable] = None,
+    evaluate_structures: Optional[Callable] = None,
 ):
-    """Run the standalone MACE structure-evaluation command-line interface."""
+    """Run the standalone MACE structure-evaluation command-line interface.
+
+    ``add_arguments`` and ``evaluate_structures`` let calculator extensions add
+    command-line inputs and customize evaluation without duplicating the common
+    MACE file-reading and result-writing implementation.
+    """
 
     argv = {
         "metavar": "\b",
@@ -643,6 +650,9 @@ def run_cli(
         **argv,
     )
 
+    if add_arguments is not None:
+        add_arguments(parser)
+
     args = parser.parse_args()
 
     print(f"Loading input structures from '{args.input_structures}'...")
@@ -681,7 +691,10 @@ def run_cli(
     print("Calculator initialized.")
 
     print("Evaluating structures with MACE model...")
-    results: List[Parent] = calc.compute_batched(structures)
+    if evaluate_structures is None:
+        results: List[Parent] = calc.compute_batched(structures)
+    else:
+        results = evaluate_structures(calc, structures, args)
     assert len(structures) == len(results), "coding error"
     print("Evaluation complete.")
 

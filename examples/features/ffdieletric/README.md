@@ -12,6 +12,65 @@ This directory contains MACE-POLAR water examples:
 | `mace-polar+E-client-socket` | static | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
 | `mace-polar+E-resonant-client-socket` | resonant plane wave | MACE socket client, after receiving `electric_field` through `EXTRADATA` |
 
+## Standalone extxyz evaluation
+
+`ipi.pes.extmace` can also calculate field-dependent energies, forces, and
+full stress tensors without starting an i-PI simulation. Store one Cartesian
+field vector in the `Atoms.info` dictionary of every extxyz frame, for example:
+
+```text
+applied_E="_JSON [0.0, 0.0, 0.1]"
+```
+
+Then select that key on the command line:
+
+```bash
+python -m ipi.pes.extmace \
+  -m MACE-POLAR-1-M.model \
+  -mk mace_kwargs.json \
+  -i input.extxyz \
+  -o output.extxyz \
+  --electric-field-key applied_E \
+  --field-units V/ang
+```
+
+The output contains total `MACE_energy` (eV), `MACE_forces` (eV/angstrom), and
+`MACE_stress` (eV/angstrom^3); the input metadata is retained. Each frame may
+specify a different field.
+
+For a fixed Cartesian electric displacement, use
+`--electric-displacement-key applied_D` instead. The displacement is expressed
+in the units selected by `--field-units` (also `V/ang` by default in the
+Gaussian convention used here). Fixed-D evaluation additionally needs a
+symmetric, nonsingular clamped-ion dielectric tensor, either returned by the
+model as `epsilon_infinity` or configured in `mace_kwargs.json`:
+
+```json
+{
+  "instructions": {
+    "epsilon_infinity": [
+      [2.0, 0.0, 0.0],
+      [0.0, 2.0, 0.0],
+      [0.0, 0.0, 2.0]
+    ]
+  }
+}
+```
+
+The fixed-D functional is
+
+```text
+U_D = U_0 + Omega/(8 pi) (D - 4 pi P)^T epsilon_infinity^-1 (D - 4 pi P),
+P = mu/Omega.
+```
+
+This is fixed Cartesian D. The volume used by the correction is held constant
+when differentiating strain, so the result does not include the Maxwell-stress
+term associated with fixed reduced D.
+
+The two key-selection options are mutually exclusive. If neither is present,
+the script retains its original zero-field batched behavior.
+
 The in-process examples each contain an `input.xml`, water starting
 coordinates, MACE options, a model-download script, and a README. The socket
 examples reuse the corresponding client example's model assets and launch
