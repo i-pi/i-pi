@@ -60,7 +60,9 @@ class DoubleWell_driver(Dummy_driver):
         force3 = np.zeros(pos.shape)
 
         # DW
-        pot += self.A * (pos3[:, 0] - self.delta) ** 2 + self.B * (pos3[:, 0] ** 4)
+        pot += (
+            self.A * (pos3[:, 0] - self.delta) ** 2 + self.B * (pos3[:, 0] ** 4)
+        ).sum()
         force3[:, 0] = -2.0 * self.A * (pos3[:, 0] - self.delta) - 4.0 * self.B * (
             pos3[:, 0] ** 3
         )
