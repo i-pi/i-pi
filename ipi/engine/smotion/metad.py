@@ -88,14 +88,10 @@ class MetaDyn(Smotion):
                     mtd_work * s.beads.nbeads
                 )  # apply ring polymer contraction!
 
-                if mtd_work != 0:
-                    # hacky but cannot think of a better way: we must manually taint *just* that component.
-                    # we also use the fact that the bias force from a hill is zero when it's added so we
-                    # don't need changes to the forces, only to the bias
-                    for fc in s.ensemble.bias.mforces:
-                        if fc.ffield == k:
-                            for fb in fc._forces:
-                                # this open-heart surgery on a depend object is fugly
-                                # but can't se a better way
-                                fb._ufvx._value[0] -= mtd_work
-                                fb._ufvx.taint(taintme=False)
+                # Adaptive biases can change forces even when their scalar work
+                # is zero. Invalidate only this component; recompute lazily on
+                # the next read and leave the physical force caches untouched.
+                for fc in s.ensemble.bias.mforces:
+                    if fc.ffield == k:
+                        for fb in fc._forces:
+                            fb._ufvx.taint()
