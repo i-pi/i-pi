@@ -258,12 +258,13 @@ class MetatomicDriver(Dummy_driver):
                     )
                 )
 
-        if self.energy_ensemble or self.uncertainty_threshold > 0.0:
+        if self.uncertainty_threshold > 0.0:
             outputs[f"energy_uncertainty{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=True,
             )
+        if self.energy_ensemble:
             outputs[f"energy_ensemble{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
