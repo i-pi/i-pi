@@ -132,10 +132,30 @@ def simulation_xml(
 
 
 def forcefield_xml(
-    name, mode="direct", parameters=None, pes=None, address=None, port=None
+    name,
+    mode="direct",
+    parameters=None,
+    pes=None,
+    address=None,
+    port=None,
+    latency=1e-4,
+    timeout=0.0,
 ):
     """
     A helper function to generate an XML string for a forcefield block.
+
+    param name: str The name of the forcefield, used to reference it
+    param mode: str One of 'direct' (a Python PES evaluated within i-PI),
+        'unix' or 'inet' (a socket that an external driver connects to)
+    param parameters: Optional(str|dict) Parameters for a 'direct' PES
+    param pes: Optional(str) The name of the PES for a 'direct' forcefield
+    param address: Optional(str) The socket address for 'unix' or 'inet'
+        forcefields (a host name for 'inet', a socket name for 'unix')
+    param port: Optional(int) The port number for 'inet' forcefields
+    param latency: Optional(float), default 1e-4. Seconds between polls
+        of the socket for 'unix' or 'inet' forcefields
+    param timeout: Optional(float), default 0.0. Seconds after which a
+        socket client is assumed to have died; 0 means no timeout
     """
 
     if mode == "direct":
@@ -158,14 +178,15 @@ def forcefield_xml(
 """
     elif mode == "unix" or mode == "inet":
         if address is None:
-            raise ValueError("Must specify address for {mode} forcefields")
+            raise ValueError(f"Must specify address for {mode} forcefields")
         if mode == "inet" and port is None:
-            raise ValueError("Must specify port for {mode} forcefields")
+            raise ValueError(f"Must specify port for {mode} forcefields")
         xml_ff = f"""
-<ffsocket name='{name}'>
+<ffsocket name='{name}' mode='{mode}'>
 <address>{address}</address>
 {f"<port>{port}</port>" if mode=="inet" else ""}
-<latency> 1e-4 </latency>
+<latency> {latency} </latency>
+<timeout> {timeout} </timeout>
 </ffsocket>
 """
     else:
@@ -176,32 +197,56 @@ def forcefield_xml(
     return xml_ff
 
 
-def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
+def motion_nvt_xml(
+    timestep,
+    thermostat=None,
+    path_integrals=False,
+    tau=None,
+    fixcom=None,
+    fixatoms=None,
+):
     """
     A helper function to generate an XML string for a MD simulation input.
+
+    param timestep: float The time step, in ASE units
+    param thermostat: Optional(str) Either a full XML-formatted
+        <thermostat> block, or the name of a thermostat mode that only
+        needs a relaxation time (e.g. 'svr', 'langevin', 'pile_l', 'pile_g').
+        Defaults to 'pile_g' if path_integrals is True, 'svr' otherwise.
+    param path_integrals: Optional(bool), default False. Selects the
+        default thermostat for path integral simulations
+    param tau: Optional(float) The thermostat relaxation time, in ASE units.
+        Defaults to 10*timestep. Ignored if thermostat is an XML block.
+    param fixcom: Optional(bool) Whether the centre of mass is kept fixed.
+        If not specified, the i-PI default (True) is used.
+    param fixatoms: Optional(list(int)) Indices of atoms that are held fixed
     """
 
-    # sets up thermostat
     if thermostat is None:
-        if path_integrals:
-            # defaults to pile_g
-            xml_thermostat = f"""
-<thermostat mode='pile_g'>
-    <tau units='ase'> {10*timestep} </tau>
-    <pile_lambda> 0.5 </pile_lambda>
+        thermostat = "pile_g" if path_integrals else "svr"
+    if tau is None:
+        tau = 10 * timestep
+
+    # sets up thermostat
+    if thermostat.lstrip().startswith("<"):
+        xml_thermostat = thermostat
+    else:
+        xml_thermostat = f"""
+<thermostat mode='{thermostat}'>
+    <tau units='ase'> {tau} </tau>
+    {"<pile_lambda> 0.5 </pile_lambda>" if thermostat == "pile_g" else ""}
 </thermostat>
 """
-        else:
-            # defaults to svr
-            xml_thermostat = f"""
-<thermostat mode='svr'>
-    <tau units='ase'> {10*timestep} </tau>
-</thermostat>
-"""
+
+    xml_fixed = ""
+    if fixcom is not None:
+        xml_fixed += f"<fixcom> {fixcom} </fixcom>\n"
+    if fixatoms is not None:
+        xml_fixed += f"<fixatoms> {[int(i) for i in fixatoms]} </fixatoms>\n"
 
     return f"""
 <motion mode="dynamics">
-<dynamics mode="nvt">
+{xml_fixed}<dynamics mode="nvt">
 <timestep units="ase"> {timestep} </timestep>
 {xml_thermostat}
 </dynamics>
