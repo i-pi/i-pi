@@ -118,8 +118,8 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
     if not spec or not spec.origin or not spec.origin.endswith(".py"):
         continue
 
-    if os.path.basename(spec.origin) == "tools.py":
-        continue  # skip private modules
+    if os.path.basename(spec.origin) in {"tools.py", "electric_field.py"}:
+        continue  # skip helper modules that are not PES drivers
 
     driver_class, driver_name = scan_pes_file(spec.origin)
     if not (driver_class and driver_name):

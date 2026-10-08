@@ -4,10 +4,17 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC
+import json
+
+from ipi.engine.motion.driven_dynamics import (
+    ElectricField,
+    BEC,
+    PythonVectorField,
+)
 from ipi.utils.inputvalue import (
     input_default,
 )
+from ipi.utils.units import UnitMap
 from ipi.inputs.motion.dynamics import InputDynamics
 import numpy as np
 
@@ -16,8 +23,115 @@ from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.cell import *
 from copy import copy
+from copy import deepcopy
 
-__all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC"]
+__all__ = [
+    "InputDrivenDynamics",
+    "InputElectricField",
+    "InputBEC",
+    "InputPythonVectorField",
+]
+
+
+class InputFieldParameters(InputValue):
+    """A JSON dictionary of keyword arguments for a field function."""
+
+    def __init__(self, help=None, default=None):
+        if default is None:
+            default = {}
+        super().__init__(help=help, default=json.dumps(default), dtype=str)
+
+    def store(self, value, units=""):
+        if isinstance(value, str):
+            encoded = value
+        else:
+            encoded = json.dumps(value)
+        super().store(encoded, units=units)
+
+    def fetch(self):
+        value = json.loads(super().fetch())
+        if not isinstance(value, dict):
+            raise ValueError("Vector-field parameters must be a JSON dictionary.")
+        return value
+
+
+class InputPythonVectorField(Input):
+    """Input for a vector field returned by a user Python callable."""
+
+    fields = {
+        "parameters": (
+            InputFieldParameters,
+            {
+                "default": {},
+                "help": "JSON dictionary of keyword arguments passed to the vector-field callable.",
+            },
+        ),
+    }
+
+    attribs = {
+        "file": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "Optional Python file containing the callable. If omitted, the function is read from ipi.pes.electric_field.",
+            },
+        ),
+        "name": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "help": "Name of a callable that accepts the simulation time.",
+            },
+        ),
+        "units": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "atomic_unit",
+                "help": "Units of the three-vector returned by the callable.",
+            },
+        ),
+    }
+    _family = None
+
+    @classmethod
+    def specialize(cls, family, units="atomic_unit"):
+        if family not in UnitMap:
+            raise ValueError(f"Unknown unit family '{family}'.")
+        if units not in UnitMap[family]:
+            raise ValueError(f"Unknown units '{units}' for family '{family}'.")
+        attribs = deepcopy(cls.attribs)
+        attribs["units"][1]["default"] = units
+        return type(
+            f"{cls.__name__}_{family.replace('-', '_')}",
+            (cls,),
+            {"attribs": attribs, "_family": family},
+        )
+
+    def fetch(self):
+        super().fetch()
+        return PythonVectorField(
+            file=self.file.fetch(),
+            name=self.name.fetch(),
+            family=self._family,
+            units=self.units.fetch(),
+            parameters=self.parameters.fetch(),
+        )
+
+    def store(self, field):
+        if not isinstance(field, PythonVectorField) or field.family != self._family:
+            raise TypeError(
+                f"Expected a PythonVectorField with family '{self._family}'."
+            )
+        super().store(field)
+        self.file.store(field.file)
+        self.name.store(field.name)
+        self.units.store(field.units)
+        self.parameters.store(field.parameters)
+
+
+# Here come the old classes
 
 
 class InputElectricField(Input):
