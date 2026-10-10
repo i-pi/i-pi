@@ -44,6 +44,10 @@ class Softexit(object):
         self.triggered = False
         self.exiting = False
         self._doloop = [False]
+        # when True, the process is ended with os._exit() after the cleanup,
+        # skipping the interpreter finalization (see kill())
+        self.hard_exit = False
+        self._cleanup_done = threading.Event()
 
     def register_function(self, func, *args, **kwargs):
         """Adds another function to flist.
@@ -77,6 +81,10 @@ class Softexit(object):
         """
 
         if self.triggered:
+            # the cleanup is being done by another thread (e.g. the soft-exit
+            # monitor): wait for it to complete rather than racing with it
+            self._cleanup_done.wait()
+            self.kill()
             return
         self.cleanup(status, message)
         self.kill()
@@ -130,9 +138,27 @@ class Softexit(object):
             ):
                 t.join()
 
-    def kill(self):
-        """Terminates the current thread/process."""
+        self._cleanup_done.set()
 
+    def kill(self):
+        """Terminates the current thread/process.
+
+        With ``hard_exit`` set, the whole process is terminated with
+        ``os._exit()``, from whichever thread completed the cleanup. This skips
+        the finalization of the interpreter: at that point cleanup() has already
+        written the checkpoint, closed all the outputs and joined the registered
+        threads, so nothing is lost. What is avoided is (i) a crash at exit that
+        happens when extension libraries (e.g. libtorch worker threads) run
+        thread-local destructors that need the GIL after the interpreter has
+        started to finalize, and (ii) having the main thread carry on with a
+        step using force fields that have been finalized, when the exit was
+        requested from the monitor thread (EXIT file, wall-clock limit).
+        """
+
+        if self.hard_exit:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
         sys.exit()
 
     def reset(self):
