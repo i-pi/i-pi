@@ -1,0 +1,8 @@
+figcaption {
+    font-style: italic; /* makes text italic */
+    font-size: 0.9em; /* reduces font size to 90% of the surrounding text */
+}
+
+img.white-background {
+    background-color: white;
+}
