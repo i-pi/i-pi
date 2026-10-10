@@ -21,13 +21,31 @@ except Exception:
     print(msg)
     raise
 
+try:
+    import ase  # noqa: F401
+
+except Exception:
+    msg = (
+        "You are trying to use the MACE client of i-PI, "
+        "but it seems that you have not installed ASE.\n"
+        "Please install ASE via:\n"
+        "    pip install ase\n"
+        "For more information, visit:\n"
+        "    https://wiki.fysik.dtu.dk/ase/"
+    )
+
+    print(msg)
+    raise
+
 import argparse
 import json
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 from ase import Atoms
+from ase import units as ase_units
 from ase.io import read, write
 from mace import data
 from mace.calculators import MACECalculator
@@ -38,6 +56,7 @@ from mace.tools.torch_geometric.dataloader import DataLoader
 
 from ipi.pes._ase import ASEDriver
 from ipi.pes.tools import ModelResults, Parent
+from ipi.utils.units import unit_to_internal
 
 # --------------------------------------- #
 __DRIVER_NAME__ = "mace"
@@ -111,6 +130,48 @@ class MACE_driver(ASEDriver):
             model_paths=self.model,
             device=self.device,
             **self.mace_kwargs,
+        )
+
+    def convert_units(self, cell: np.ndarray, pos: np.ndarray):
+        """Convert i-PI units using the same constants as ASE SocketClient.
+
+        The ASE and i-PI conversion constants are numerically very close and
+        their difference is physically negligible.  For the Bohr-to-Angstrom
+        conversion, ASE uses 0.529177210563841 Angstrom while i-PI's rounded
+        constant gives 0.529177217798918 Angstrom, a relative difference of
+        about 1.37e-8.  We deliberately use the ASE constants here, however,
+        because ASE SocketClient uses them when exchanging data with i-PI.
+        Using one set of constants keeps the MACE driver numerically consistent
+        between the ASE socket, i-pi-py_driver, and native ffdirect execution
+        paths.
+        """
+
+        return cell.T * ase_units.Bohr, pos * ase_units.Bohr
+
+    def post_process(self, properties, structure: Atoms):
+        """Return results using ASE's Hartree and Bohr conversion constants.
+
+        This mirrors :meth:`convert_units`.  ASE uses
+        27.211386024367243 eV/Hartree while i-PI's rounded constant gives
+        27.211383414215543 eV/Hartree, a relative difference of about 9.59e-8.
+        Although the constants are effectively equivalent, mixing them
+        introduces a small path-dependent offset.  A driver should return the
+        same values whether it is reached through ASE or through i-PI's native
+        MACE path.
+        """
+
+        potential, forces, virial, extras = super().post_process(properties, structure)
+        energy_scale = (1.0 / ase_units.Ha) / unit_to_internal(
+            "energy", "electronvolt", 1.0
+        )
+        force_scale = (ase_units.Bohr / ase_units.Ha) / unit_to_internal(
+            "force", "ev/ang", 1.0
+        )
+        return (
+            potential * energy_scale,
+            forces * force_scale,
+            virial * energy_scale,
+            extras,
         )
 
     def template2atoms(
@@ -419,10 +480,39 @@ class BatchedMACE(MACECalculator):
                     self._print_output_summary(out, results_tensors)
                     self._output_summary_printed = True
 
-                model_results[i].store(Natoms, results_tensors)
+                self._store_registered_results(
+                    model_results[i], Natoms, results_tensors
+                )
 
         # re-order results
         return ModelResults.mean(model_results)
+
+    def _store_registered_results(
+        self,
+        model_results: ModelResults,
+        natoms: List[int],
+        results: Dict[str, np.ndarray],
+    ) -> None:
+        """Warn about unregistered MACE outputs and store the known ones."""
+
+        unknown = {
+            key: value
+            for key, value in results.items()
+            if key not in self.ase_like_properties
+        }
+        if unknown:
+            warnings.warn(
+                ModelResults._unknown_properties_message(unknown, natoms),
+                UserWarning,
+                stacklevel=2,
+            )
+
+        registered = {
+            key: value
+            for key, value in results.items()
+            if key in self.ase_like_properties
+        }
+        model_results.store(natoms, registered)
 
     def _print_output_summary(
         self,
@@ -504,7 +594,7 @@ class BatchedMACE(MACECalculator):
             print(
                 "  Register an output under 'ase_like_properties' in the MACE "
                 "settings JSON, or skip it with 'instructions.ignore'. If i-PI "
-                "cannot infer the registration automatically, the error below "
+                "cannot infer the registration automatically, the warning below "
                 "will show the observed shape and suggested JSON."
             )
         print("-----------------------------------")
