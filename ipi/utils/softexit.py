@@ -36,6 +36,8 @@ class Softexit(object):
        lock: Held while running the callback functions. A thread can also hold
           it to delay them until it has reached a consistent state: it must
           then check if a soft exit was triggered, and stop if this is the case.
+       hard_exit: If True, the process is ended with os._exit() once the
+          cleanup is complete, skipping the finalization of the interpreter.
     """
 
     def __init__(self):
@@ -50,6 +52,7 @@ class Softexit(object):
         self._doloop = [False]
         self._killed = False
         self.lock = threading.RLock()
+        self.hard_exit = False
 
     def register_function(self, func, *args, **kwargs):
         """Adds another function to flist.
@@ -143,8 +146,21 @@ class Softexit(object):
                 t.join()
 
     def kill(self):
-        """Terminates the current thread/process."""
+        """Terminates the current thread/process.
 
+        With hard_exit set, and once the cleanup functions have run, the whole
+        process is terminated from whichever thread gets here. Outputs and
+        RESTART have been written at that point, so nothing is lost by skipping
+        the finalization of the interpreter, which can crash when extension
+        libraries (e.g. libtorch worker threads) release thread-local state.
+        This also stops the main thread from carrying on with a step that uses
+        force fields that have been shut down.
+        """
+
+        if self.hard_exit and self.triggered and not (self.flist or self.exiting):
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
         sys.exit()
 
     def reset(self):
@@ -231,6 +247,8 @@ class Softexit(object):
             with self.lock:  # waits for a cleanup in progress
                 if self.flist:
                     self.cleanup()
+            if self.hard_exit:
+                self.kill()
 
 
 softexit = Softexit()

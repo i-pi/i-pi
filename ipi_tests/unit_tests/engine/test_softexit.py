@@ -260,11 +260,15 @@ def test_pending_exit_runs_callbacks_once(workdir):
     assert calls == [True]
 
 
-def test_process_waits_for_cleanup(workdir):
-    """The interpreter does not terminate in the middle of a soft exit."""
+def run_script(script):
+    """Runs a script that uses the soft exit in a separate interpreter."""
 
-    script = """
-import threading, time
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [os.path.dirname(os.path.dirname(ipi.__file__)), env.get("PYTHONPATH", "")]
+    )
+    header = """
+import atexit, threading, time
 from ipi.utils.softexit import softexit
 
 def slow():
@@ -272,17 +276,55 @@ def slow():
     open("done", "w").close()
 
 softexit.register_function(slow)
+atexit.register(lambda: open("finalized", "w").close())
+"""
+    return subprocess.run([sys.executable, "-c", header + script], env=env, timeout=60)
+
+
+@pytest.mark.parametrize("hard_exit", [False, True])
+def test_process_waits_for_cleanup(workdir, hard_exit):
+    """The interpreter does not terminate in the middle of a soft exit."""
+
+    process = run_script(f"""
+softexit.hard_exit = {hard_exit}
 threading.Thread(target=softexit.trigger, daemon=True).start()
 deadline = time.time() + 10
 while not softexit.exiting and time.time() < deadline:
     time.sleep(0.001)
 # the end of bin/i-pi
 softexit.trigger()
-"""
-    env = dict(os.environ)
-    env["PYTHONPATH"] = os.pathsep.join(
-        [os.path.dirname(os.path.dirname(ipi.__file__)), env.get("PYTHONPATH", "")]
-    )
-    subprocess.run([sys.executable, "-c", script], env=env, timeout=60)
+""")
 
+    assert process.returncode == 0
     assert os.path.exists("done")
+
+
+def test_hard_exit_skips_finalization(workdir):
+    """A hard exit ends the process right after the cleanup."""
+
+    process = run_script("""
+softexit.hard_exit = True
+softexit.trigger()
+""")
+
+    assert process.returncode == 0
+    assert os.path.exists("done")
+    assert not os.path.exists("finalized")
+
+
+def test_hard_exit_from_another_thread_stops_the_run(workdir):
+    """The main thread does not carry on after another thread cleaned up."""
+
+    start = time.time()
+    process = run_script("""
+softexit.hard_exit = True
+threading.Thread(target=softexit.trigger, daemon=True).start()
+# a step that would take a long time to notice the exit
+time.sleep(30)
+open("carried_on", "w").close()
+""")
+
+    assert process.returncode == 0
+    assert os.path.exists("done")
+    assert not os.path.exists("carried_on")
+    assert time.time() - start < 20

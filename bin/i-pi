@@ -60,8 +60,18 @@ def main(fn_input, options):
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
+    # when running as a standalone program, ends the process as soon as the
+    # soft exit cleanup is complete (see Softexit.kill)
+    softexit.hard_exit = True
+
     # run the simulation
-    simulation.run()
+    try:
+        simulation.run()
+    except Exception:
+        # an exit requested from another thread shuts down the force fields
+        # while a step may still be running: errors that follow are ignored
+        if not softexit.triggered:
+            raise
 
     # It seems that checkpoints are written by the following.
     # TODO: Have them written when simulation.run() finishes instead.
