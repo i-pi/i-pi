@@ -1180,6 +1180,7 @@ class FFYaff(FFEval):
         logf = open(yafflog, "w")
         # Tell Python to close the file when the script exits
         atexit.register(logf.close)
+        softexit.register_function(logf.close)  # also with a hard exit
 
         # Redirect Yaff log to file
         log._file = codecs.getwriter(locale.getpreferredencoding())(logf)
