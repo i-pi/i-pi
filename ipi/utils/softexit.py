@@ -158,6 +158,10 @@ class Softexit(object):
         """
 
         if self.hard_exit and self.triggered and not (self.flist or self.exiting):
+            # MPI is otherwise finalized when the interpreter terminates
+            mpi = sys.modules.get("mpi4py.MPI")
+            if mpi is not None and mpi.Is_initialized() and not mpi.Is_finalized():
+                mpi.Finalize()
             sys.stdout.flush()
             sys.stderr.flush()
             os._exit(0)
