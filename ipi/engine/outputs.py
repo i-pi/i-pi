@@ -12,7 +12,7 @@ import os
 
 import numpy as np
 
-from ipi.utils.messages import verbosity, info, warning
+from ipi.utils.messages import verbosity, warning
 from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit
 from ipi.utils.depend import *
@@ -117,6 +117,7 @@ class BaseOutput(object):
         """Emergency call when i-pi must exit quickly"""
 
         self.close_stream()
+        self.out = None  # anything written later is discarded
 
     def close_stream(self):
         """Closes the output stream"""
@@ -269,9 +270,6 @@ class PropertyOutput(BaseOutput):
            KeyError: Raised if one of the properties specified in the output list
               are not contained in the property_dict member of properties.
         """
-
-        if softexit.triggered:
-            return  # don't write if we are about to exit!
 
         if not self.active():
             return
@@ -453,8 +451,6 @@ class TrajectoryOutput(BaseOutput):
     def write(self):
         """Writes out the required trajectories."""
 
-        if softexit.triggered:
-            return  # don't write if we are about to exit!
         if not self.active():
             return
 
@@ -693,7 +689,6 @@ class CheckpointOutput:
         self.stride = stride
         self._step = depend_value(name="step", value=step)
         self.overwrite = overwrite
-        self._storing = False
         self._continued = False
 
     def bind(self, simul):
@@ -723,9 +718,7 @@ class CheckpointOutput:
         positions would have been consistent.
         """
 
-        self._storing = True
         self.status.store(self.simul)
-        self._storing = False
 
     def write(self, store=True):
         """Writes out the required trajectories.
@@ -743,13 +736,6 @@ class CheckpointOutput:
            store: A boolean saying whether the state of the system should be
               stored before writing the checkpoint file.
         """
-
-        if self._storing:
-            info(
-                "@ CHECKPOINT: Write called while storing. Force re-storing",
-                verbosity.low,
-            )
-            self.store()
 
         if not self.active():
             return

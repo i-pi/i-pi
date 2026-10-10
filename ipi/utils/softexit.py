@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+import atexit
 import sys
 import os
 import time
@@ -32,6 +33,9 @@ class Softexit(object):
     Attributes:
        flist: A list of callback functions used to clean up and exit gracefully.
        tlist: A list of threads registered for monitoring
+       lock: Held while running the callback functions. A thread can also hold
+          it to delay them until it has reached a consistent state: it must
+          then check if a soft exit was triggered, and stop if this is the case.
     """
 
     def __init__(self):
@@ -44,6 +48,8 @@ class Softexit(object):
         self.triggered = False
         self.exiting = False
         self._doloop = [False]
+        self._killed = False
+        self.lock = threading.RLock()
 
     def register_function(self, func, *args, **kwargs):
         """Adds another function to flist.
@@ -76,13 +82,15 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        if self.triggered:
-            return
         self.cleanup(status, message)
         self.kill()
 
     def cleanup(self, status="restartable", message=""):
-        """Runs registered cleanup functions without exiting the process."""
+        """Runs registered cleanup functions without exiting the process.
+
+        The functions are called only once. If another thread holds the lock,
+        they are left pending, and run the next time this is called.
+        """
 
         print(
             " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
@@ -90,7 +98,6 @@ class Softexit(object):
             message,
         )
         if not self.triggered:  # avoid double calls from different threads
-            self.exiting = True
             self.triggered = True
 
             if status == "restartable":
@@ -109,18 +116,23 @@ class Softexit(object):
                 verbosity.low,
             )
 
+        if not self.lock.acquire(blocking=False):
+            return
+        try:
+            self.exiting = True
             # calls all the registered emergency softexit procedures
-            for f, a, ka in self.flist:
+            while self.flist:
+                f, a, ka = self.flist.pop(0)
                 try:
                     f(*a, **ka)
                 except RuntimeError as err:
                     print("Error running emergency softexit, ", err)
-                    pass
-
+        finally:
             self.exiting = False  # emergency is over, signal we can be relaxed
+            self.lock.release()
 
-            for t, dl in self.tlist:  # set thread exit flag
-                dl[0] = False
+        for t, dl in self.tlist:  # set thread exit flag
+            dl[0] = False
 
         # wait for all (other) threads to finish
         for t, dl in self.tlist:
@@ -178,20 +190,27 @@ class Softexit(object):
             " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
         )
 
-        self.trigger(status="restartable", message=" @SOFTEXIT: Kill signal received")
-
-        try:
-            self.__del__()
-        except AttributeError:
-            pass
-        if signal in self._kill:
+        if not self._killed:
+            # the handler runs on top of whatever the main thread was doing,
+            # so the soft exit is left to the monitoring thread
+            self._killed = True
+        elif callable(self._kill.get(signal)):
+            # a second signal falls back to the original handler
             self._kill[signal](signal, frame)
+        else:
+            self.kill()
 
     def _softexit_monitor(self):
         """Keeps checking for soft exit conditions."""
 
         while self._doloop[0]:
             time.sleep(SOFTEXITLATENCY)
+            if self._killed:
+                self.trigger(
+                    status="restartable", message=" @SOFTEXIT: Kill signal received"
+                )
+                break
+
             if os.path.exists("EXIT"):
                 self.trigger(
                     status="restartable", message=" @SOFTEXIT: EXIT file detected."
@@ -205,5 +224,14 @@ class Softexit(object):
                 )
                 break
 
+    def _finish(self):
+        """Completes a soft exit before the interpreter terminates."""
+
+        if self.triggered:
+            with self.lock:  # waits for a cleanup in progress
+                if self.flist:
+                    self.cleanup()
+
 
 softexit = Softexit()
+atexit.register(softexit._finish)
