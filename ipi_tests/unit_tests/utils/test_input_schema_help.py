@@ -46,7 +46,8 @@ class ExampleInput(Input):
 @pytest.mark.parametrize("format", ["xml", "latex", "rst"])
 def test_input_reference_includes_nested_fields_defaults_and_choices(format):
     schema = ExampleInput()
-    text = getattr(schema, "help_" + format)(name="example")
+    render = getattr(schema, "help_" + format)
+    text = render(name="example")
     for required in [
         "distance",
         "length",
@@ -69,15 +70,10 @@ def test_input_reference_includes_nested_fields_defaults_and_choices(format):
     else:
         assert "ATTRIBUTES" in text and "FIELDS" in text
 
-
-@pytest.mark.parametrize("format", ["xml", "latex", "rst"])
-def test_reference_depth_limit_omits_grandchildren(format):
-    schema = ExampleInput()
-    render = getattr(schema, "help_" + format)
     assert render(name="example", level=2, stop_level=1) == ""
-    text = render(name="example", stop_level=0)
-    assert "Repeated measurements" not in text
-    assert "Distance value" not in text
+    limited = render(name="example", stop_level=0)
+    assert "Repeated measurements" not in limited
+    assert "Distance value" not in limited
 
 
 @pytest.mark.parametrize(

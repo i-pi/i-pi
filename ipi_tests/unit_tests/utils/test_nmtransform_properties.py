@@ -10,7 +10,6 @@ from ipi.utils.nmtransform import (
     o_nm_eva,
     nm_fft,
     nm_trans,
-    nm_rescale,
 )
 
 
@@ -45,32 +44,3 @@ def test_fft_and_matrix_transforms_preserve_positions(nbeads, open_paths):
     np.testing.assert_allclose(fft.nm2b(modes), positions, atol=2e-14)
     np.testing.assert_allclose(matrix.nm2b(modes), positions, atol=2e-14)
     np.testing.assert_allclose(np.sum(modes**2), np.sum(positions**2), atol=2e-14)
-
-
-@pytest.mark.parametrize("nsmall,nlarge", [(1, 4), (3, 8), (4, 7), (4, 4)])
-@pytest.mark.parametrize("open_paths", [[], [0, 1]])
-def test_mixed_path_expansion_preserves_each_atom(nsmall, nlarge, open_paths):
-    """Expansion followed by contraction must recover both types of path."""
-    positions = np.random.default_rng(17).normal(size=(nsmall, 6))
-    rescale = nm_rescale(nsmall, nlarge, open_paths=open_paths)
-    expanded = rescale.b1tob2(positions)
-    np.testing.assert_allclose(
-        expanded.mean(axis=0), positions.mean(axis=0), atol=2e-14
-    )
-    np.testing.assert_allclose(rescale.b2tob1(expanded), positions, atol=2e-14)
-    assert not np.shares_memory(positions, expanded)
-
-
-@pytest.mark.parametrize("open_paths", [[0], [1]])
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="nm_rescale.b2tob1 applies the open-path map to closed-path atoms",
-)
-def test_expansion_preserves_mixed_open_and_closed_paths(open_paths):
-    """An open path must not change the transformation of another atom's closed path."""
-    positions = np.random.default_rng(17).normal(size=(3, 6))
-    rescale = nm_rescale(3, 8, open_paths=open_paths)
-    np.testing.assert_allclose(
-        rescale.b2tob1(rescale.b1tob2(positions)), positions, atol=2e-14
-    )

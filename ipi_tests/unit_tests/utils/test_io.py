@@ -1,220 +1,167 @@
-"""Deals with testing the io system.
-
-Note that this will only run if you have Python version 2.5 or later.
-Otherwise, replace all the with statements with f = filestream.
-"""
+"""Configuration, trajectory, and property-file input/output checks."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import filecmp
-import os
+import io
 
 import numpy as np
+import pytest
 from numpy.testing import assert_equal
 
 from ..common.folder import local
-from ipi.utils.units import unit_to_internal
-from ipi.utils.io import iter_file, read_file, print_file
+from ipi.engine.beads import Beads
+from ipi.engine.cell import Cell
+from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.io import (
+    iter_file,
+    read_file,
+    print_file,
+    print_file_path,
+    netstring_encoded_savez,
+    netstring_encoded_loadz,
+)
 from ipi.scripting import read_output
 
-pos_xyz = np.array([i for i in range(3 * 3)])
+pos_xyz = np.arange(9)
 pos_pdb = unit_to_internal("length", "angstrom", pos_xyz)
 
+# The two legacy groups used identical inputs. Retain both executions and IDs.
+FORMATS = [
+    pytest.param(mode, positions, id=f"{mode}{suffix}")
+    for suffix in ["", "2"]
+    for mode, positions in [("xyz", pos_xyz), ("pdb", pos_pdb)]
+]
 
-def test_read_xyz():
-    """Tests that xyz files are read correctly."""
 
-    with open(local("test.pos_0.xyz"), "r") as f:
-        ret = read_file("xyz", f)
-        atoms = ret["atoms"]
+@pytest.mark.parametrize("mode,positions", FORMATS)
+def test_read_configuration(mode, positions):
+    with open(local(f"test.pos_0.{mode}")) as stream:
+        atoms = read_file(mode, stream)["atoms"]
         assert len(atoms) == 3
-        assert_equal(pos_xyz, atoms.q)
+        assert_equal(positions, atoms.q)
 
 
-def test_iter_xyz():
-    """Tests that xyz files with multiple frames are read correctly."""
+@pytest.mark.parametrize("mode,positions", FORMATS)
+def test_iter_configurations(mode, positions):
+    with open(local(f"test.pos_0.{mode}")) as stream:
+        for index, frame in enumerate(iter_file(mode, stream)):
+            assert len(frame["atoms"]) == 3
+            assert_equal(positions * (index + 1), frame["atoms"].q)
 
-    with open(local("test.pos_0.xyz"), "r") as f:
-        for num, ret in enumerate(iter_file("xyz", f)):
-            atoms = ret["atoms"]
+
+@pytest.mark.parametrize("mode,positions", FORMATS)
+def test_print_configurations(tmp_path, mode, positions):
+    source = local(f"test.pos_0.{mode}")
+    destination = tmp_path / f"test.pos_1.{mode}"
+    with open(source) as stream, destination.open("w") as output:
+        for index, frame in enumerate(iter_file(mode, stream)):
+            atoms = frame["atoms"]
             assert len(atoms) == 3
-            assert_equal(pos_xyz * (num + 1), atoms.q)
+            assert_equal(positions * (index + 1), atoms.q)
+            print_file(mode, atoms, frame["cell"], filedesc=output)
+    assert filecmp.cmp(source, destination)
 
 
-def test_read_pdb():
-    """Tests that pdb files are read correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        ret = read_file("pdb", f)
-        atoms = ret["atoms"]
-        assert len(atoms) == 3
-        assert_equal(pos_pdb, atoms.q)
-        # TODO: test cell
-
-
-def test_iter_pdb():
-    """Tests that pdb files with multiple frames are read correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        for num, ret in enumerate(iter_file("pdb", f)):
-            atoms = ret["atoms"]
-            assert len(atoms) == 3
-            assert_equal(pos_pdb * (num + 1), atoms.q)
-
-
-def test_print_pdb():
-    """Tests that pdb files are printed correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        with open(local("test.pos_1.pdb"), "w") as out:
-            for num, ret in enumerate(iter_file("pdb", f)):
-                atoms = ret["atoms"]
-                assert len(atoms) == 3
-                assert_equal(pos_pdb * (num + 1), atoms.q)
-                print_file("pdb", atoms, ret["cell"], filedesc=out)
-
-    assert filecmp.cmp(local("test.pos_0.pdb"), local("test.pos_1.pdb"))
-    os.unlink(local("test.pos_1.pdb"))
+@pytest.mark.parametrize(
+    "verbosity,dipoles",
+    [
+        pytest.param("low", ["dipole"], id="low"),
+        pytest.param("high", ["dipole(0)", "dipole(1)"], id="high"),
+    ],
+)
+def test_read_output(verbosity, dipoles):
+    data, metadata = read_output(local(f"prop.{verbosity}.out"))
+    assert data is not None, "Expected property data"
+    assert metadata is not None, "Expected property metadata"
+    assert data.keys() == metadata.keys(), "Keys should be the same"
+    assert (
+        list(data)
+        == [
+            "step",
+            "time",
+            "conserved",
+            "kinetic_md",
+            "potential",
+            "Efield",
+            "Eenvelope",
+        ]
+        + dipoles
+    ), "wrong keys"
+    for key, values in data.items():
+        assert len(values) == 3, f"{key} has the wrong size: {len(values)}"
 
 
-def test_print_xyz():
-    """Tests that xyz files are printed correctly."""
-
-    with open(local("test.pos_0.xyz"), "r") as f:
-        with open(local("test.pos_1.xyz"), "w") as out:
-            for num, ret in enumerate(iter_file("xyz", f)):
-                atoms = ret["atoms"]
-                assert len(atoms) == 3
-                assert_equal(pos_xyz * (num + 1), atoms.q)
-                print_file("xyz", atoms, ret["cell"], filedesc=out)
-
-    assert filecmp.cmp(local("test.pos_0.xyz"), local("test.pos_1.xyz"))
-    os.unlink(local("test.pos_1.xyz"))
-
-
-def test_read_xyz2():
-    """Tests that mode/xyz files are read correctly."""
-
-    with open(local("test.pos_0.xyz"), "r") as f:
-        ret = read_file("xyz", f)
-        atoms = ret["atoms"]
-        assert len(atoms) == 3
-        assert_equal(pos_xyz, atoms.q)
-
-
-def test_iter_xyz2():
-    """Tests that mode/xyz files with multiple frames are read correctly."""
-
-    with open(local("test.pos_0.xyz"), "r") as f:
-        for num, ret in enumerate(iter_file("xyz", f)):
-            atoms = ret["atoms"]
-            assert len(atoms) == 3
-            assert_equal(pos_xyz * (num + 1), atoms.q)
-
-
-def test_read_pdb2():
-    """Tests that mode/pdb files are read correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        ret = read_file("pdb", f)
-        atoms = ret["atoms"]
-        assert len(atoms) == 3
-        assert_equal(pos_pdb, atoms.q)
-        # TODO: test cell
+@pytest.mark.parametrize("mode", ["xyz", "pdb"])
+@pytest.mark.parametrize("units", ["atomic_unit", "angstrom"])
+def test_path_output_roundtrip(mode, units):
+    beads = Beads(2, 3)
+    beads.names[:] = ["H", "O"]
+    beads.q[:] = np.arange(18).reshape(3, 6) / 10
+    cell = Cell(np.diag([10.0, 12.0, 14.0]))
+    stream = io.StringIO()
+    print_file_path(
+        mode, beads, cell, stream, key="positions", units=units, cell_units=units
+    )
+    stream.seek(0)
+    if mode == "pdb":
+        lines = stream.getvalue().splitlines()
+        atoms = [line for line in lines if line.startswith("ATOM")]
+        positions = np.array(
+            [
+                [float(line[a:b]) for a, b in [(30, 38), (38, 46), (46, 54)]]
+                for line in atoms
+            ]
+        )
+        np.testing.assert_allclose(
+            positions,
+            beads.q.reshape(-1, 3) * unit_to_user("length", units, 1),
+            atol=0.00051,
+        )
+        connections = {
+            tuple(map(int, line.split()[1:]))
+            for line in lines
+            if line.startswith("CONECT")
+        }
+        assert connections == {(1, 5), (2, 6), (1, 3), (2, 4), (3, 5), (4, 6)}
+        return
+    frames = list(
+        iter_file(mode, stream, dimension="length", units=units, cell_units=units)
+    )
+    assert len(frames) == 3
+    for index, frame in enumerate(frames):
+        np.testing.assert_allclose(frame["atoms"].q, beads.q[index], atol=0.001)
+        np.testing.assert_allclose(frame["cell"].h, cell.h, atol=0.001)
+        np.testing.assert_array_equal(frame["atoms"].names, beads.names)
 
 
-def test_iter_pdb2():
-    """Tests that mode/pdb files with multiple frames are read correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        for num, ret in enumerate(iter_file("pdb", f)):
-            atoms = ret["atoms"]
-            assert len(atoms) == 3
-            assert_equal(pos_pdb * (num + 1), atoms.q)
+def test_pdb_path_rejects_force_dimensions():
+    with pytest.raises(ValueError, match="positions"):
+        print_file_path("pdb", Beads(1, 2), Cell(), io.StringIO(), dimension="force")
 
 
-def test_print_pdb2():
-    """Tests that mode/pdb files are printed correctly."""
-
-    with open(local("test.pos_0.pdb"), "r") as f:
-        with open(local("test.pos_1.pdb"), "w") as out:
-            for num, ret in enumerate(iter_file("pdb", f)):
-                atoms = ret["atoms"]
-                assert len(atoms) == 3
-                assert_equal(pos_pdb * (num + 1), atoms.q)
-                print_file("pdb", atoms, ret["cell"], filedesc=out)
-
-    assert filecmp.cmp(local("test.pos_0.pdb"), local("test.pos_1.pdb"))
-    os.unlink(local("test.pos_1.pdb"))
+@pytest.mark.parametrize(
+    "encoded,match",
+    [("0:,", "empty"), ("3;abc,", "delimiter"), ("3:abc;", "delimiter")],
+)
+def test_corrupt_netstrings_are_rejected(encoded, match):
+    with pytest.raises(ValueError, match=match):
+        netstring_encoded_loadz(io.StringIO(encoded))
 
 
-def test_print_xyz2():
-    """Tests that mode/xyz files are printed correctly."""
-
-    with open(local("test.pos_0.xyz"), "r") as f:
-        with open(local("test.pos_1.xyz"), "w") as out:
-            for num, ret in enumerate(iter_file("xyz", f)):
-                atoms = ret["atoms"]
-                assert len(atoms) == 3
-                assert_equal(pos_xyz * (num + 1), atoms.q)
-                print_file("xyz", atoms, ret["cell"], filedesc=out)
-
-    assert filecmp.cmp(local("test.pos_0.xyz"), local("test.pos_1.xyz"))
-    os.unlink(local("test.pos_1.xyz"))
-
-
-def test_read_output_low_verbosity():
-    """Test the read_output function with low verbosity output."""
-    # run locally with: python -m pytest test_io.py::test_read_output_low_verbosity -v -s
-    file = local("prop.low.out")
-    a, b = read_output(file)
-
-    assert a is not None, "Expected non-None result for 'a'"
-    assert b is not None, "Expected non-None result for 'b'"
-    assert a.keys() == b.keys(), "Keys should be the same"
-    keys = list(a.keys())
-    assert keys == [
-        "step",
-        "time",
-        "conserved",
-        "kinetic_md",
-        "potential",
-        "Efield",
-        "Eenvelope",
-        "dipole",
-    ], "wrong keys"
-    for k, v in a.items():
-        assert len(v) == 3, f"`{k}` has the wrong size: {len(v)}"
-
-
-def test_read_output_high_verbosity():
-    """Test the read_output function with high verbosity output."""
-    # run locally with: python -m pytest test_io.py::test_read_output_high_verbosity -v -s
-    file = local("prop.high.out")
-    a, b = read_output(file)
-
-    assert a is not None, "Expected non-None result for 'a'"
-    assert b is not None, "Expected non-None result for 'b'"
-    assert a.keys() == b.keys(), "Keys should be the same"
-    keys = list(a.keys())
-    assert keys == [
-        "step",
-        "time",
-        "conserved",
-        "kinetic_md",
-        "potential",
-        "Efield",
-        "Eenvelope",
-        "dipole(0)",
-        "dipole(1)",
-    ], "wrong keys"
-    for k, v in a.items():
-        assert len(v) == 3, f"`{k}` has the wrong size: {len(v)}"
-
-
-if __name__ == "__main__":
-    test_read_output_low_verbosity()
-    test_read_output_low_verbosity()
+@pytest.mark.parametrize("compressed", [False, True])
+@pytest.mark.xfail(
+    strict=True,
+    raises=TypeError,
+    reason="netstring NPZ writer uses text StringIO for binary NumPy data",
+)
+def test_netstring_roundtrip_preserves_multiple_matrices(compressed):
+    stream = io.StringIO()
+    expected = np.arange(9).reshape(3, 3)
+    netstring_encoded_savez(stream, compressed=compressed, matrix=expected)
+    netstring_encoded_savez(stream, compressed=compressed, matrix=expected.T)
+    stream.seek(0)
+    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected)
+    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected.T)

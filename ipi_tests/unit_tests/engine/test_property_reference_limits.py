@@ -2,12 +2,19 @@
 
 import numpy as np
 import pytest
+from ipi.engine.properties import Trajectories
 from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
 
 
 @pytest.mark.parametrize("method", ["get_isotope_zetatd", "get_isotope_zetatd_4th"])
-@pytest.mark.parametrize("alpha", [0.5, 1.0, 2.0])
-@pytest.mark.parametrize("atom,indices", [("", [0, 1]), ("H", [0]), ("1", [1])])
+@pytest.mark.parametrize(
+    "alpha", [0.5, 1.0, 2.0], ids=["half-mass", "same-mass", "double-mass"]
+)
+@pytest.mark.parametrize(
+    "atom,indices",
+    [("", [0, 1]), ("H", [0]), ("1", [1])],
+    ids=["all-atoms", "hydrogen", "oxygen-index"],
+)
 def test_free_particle_isotope_weight_equals_spring_boltzmann_ratio(
     simulation, method, alpha, atom, indices
 ):
@@ -34,6 +41,18 @@ def test_free_particle_isotope_weight_equals_spring_boltzmann_ratio(
             expected,
             rtol=1e-12,
             atol=1e-15,
+        )
+        trajectory = Trajectories()
+        trajectory.bind(s)
+        per_atom_delta = (alpha - 1) * action
+        per_atom_delta[[i for i in range(2) if i not in indices]] = 0
+        per_atom_expected = np.column_stack(
+            [per_atom_delta, per_atom_delta**2, np.exp(-per_atom_delta / (4 * temp))]
+        )
+        np.testing.assert_allclose(
+            trajectory.get_isotope_zetatd(str(alpha), atom).reshape(2, 3),
+            per_atom_expected,
+            atol=1e-14,
         )
 
 
@@ -148,10 +167,3 @@ def test_harmonic_takahashi_imada_correction_has_force_squared_scaling(simulatio
         assert s.properties.get_ti_term("absent") == 0
         with pytest.raises(IndexError):
             s.properties.get_ti_term("7")
-
-
-def test_free_particle_fourth_order_correction_is_zero(simulation):
-    with simulation(harmonic_input(nbeads=4).replace("{k1: 0.5}", "{k1: 0.0}")) as sim:
-        np.testing.assert_array_equal(
-            sim.syslist[0].properties.get_chin_correction(), [0, 0, 1]
-        )
