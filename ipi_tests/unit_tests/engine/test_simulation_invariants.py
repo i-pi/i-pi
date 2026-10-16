@@ -55,32 +55,27 @@ def test_nve_tracks_exact_harmonic_motion(simulation, threading):
 @pytest.mark.parametrize("nbeads", [1, 4])
 @pytest.mark.parametrize("thermostat", [None, "langevin", "svr", "pile_l", "pile_g"])
 def test_restart_preserves_next_positions_momenta_and_heat(
-    simulation, nbeads, thermostat
+    restart_states, nbeads, thermostat
 ):
     """Continuous and restarted dynamics must use the same state and random draws."""
     xml = harmonic_input(nbeads=nbeads, thermostat=thermostat)
-    with simulation(xml) as continuous:
-        continuous.run(steps=8, write_outputs=False)
-        system = continuous.syslist[0]
-        expected_q = system.beads.q.copy()
-        expected_p = system.beads.p.copy()
-        expected_heat = system.motion.thermostat.ethermo
-        expected_time = system.ensemble.time
-    with simulation(xml) as interrupted:
-        interrupted.run(steps=3, write_outputs=False)
-    with open("RESTART") as checkpoint:
-        restart = checkpoint.read()
-    with simulation(restart) as resumed:
-        assert resumed.step == 3
-        resumed.run(steps=5, write_outputs=False)
-        system = resumed.syslist[0]
-        np.testing.assert_allclose(system.beads.q, expected_q, rtol=1e-12, atol=1e-12)
-        np.testing.assert_allclose(system.beads.p, expected_p, rtol=1e-12, atol=1e-12)
-        assert system.motion.thermostat.ethermo == pytest.approx(
-            expected_heat, rel=1e-12, abs=1e-12
+
+    def snapshot(sim):
+        system = sim.syslist[0]
+        return dict(
+            q=system.beads.q.copy(),
+            p=system.beads.p.copy(),
+            heat=system.motion.thermostat.ethermo,
+            time=system.ensemble.time,
+            step=sim.step,
         )
-        assert system.ensemble.time == pytest.approx(expected_time)
-        assert resumed.step == 8
+
+    expected, actual = restart_states(xml, snapshot, steps=(3, 5))
+    for key in ["q", "p"]:
+        np.testing.assert_allclose(actual[key], expected[key], rtol=1e-12, atol=1e-12)
+    assert actual["heat"] == pytest.approx(expected["heat"], rel=1e-12, abs=1e-12)
+    assert actual["time"] == pytest.approx(expected["time"])
+    assert actual["step"] == 8
 
 
 @pytest.mark.parametrize("nbeads", [1, 4])
@@ -148,21 +143,46 @@ def test_properties_reject_out_of_range_and_conflicting_selections(simulation):
 @pytest.mark.parametrize(
     "method", ["sd", "cg", "bfgs", "bfgstrm", "lbfgs", "damped_bfgs"]
 )
-def test_geometry_optimization_finds_known_harmonic_minimum(simulation, method):
-    """Each optimizer must reach q=0 for an unconstrained positive quadratic potential."""
+@pytest.mark.parametrize("selection", [None, "fixatoms", "fixatoms_dof"])
+def test_geometry_optimization_finds_known_harmonic_minimum(
+    simulation, method, selection, request
+):
+    """Minimize free coordinates while preserving any fixed atoms or coordinates."""
     import xml.etree.ElementTree as ET
 
+    if method == "damped_bfgs" and selection == "fixatoms_dof":
+        request.node.add_marker(
+            pytest.mark.xfail(
+                strict=True,
+                raises=ValueError,
+                reason="Damped_BFGS reshapes five free coordinates into triples",
+            )
+        )
     root = ET.fromstring(harmonic_input())
     motion = root.find("system/motion")
     motion.clear()
     motion.set("mode", "minimize")
     ET.SubElement(motion, "fixcom").text = "False"
+    if selection:
+        ET.SubElement(motion, selection, shape="(1)").text = "[0]"
     optimizer = ET.SubElement(motion, "optimizer", mode=method)
     ET.SubElement(optimizer, "exit_on_convergence").text = "False"
+    fixed = {None: [], "fixatoms": [0, 1, 2], "fixatoms_dof": [0]}[selection]
+    free = sorted(set(range(6)) - set(fixed))
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
-        sim.run(steps=20, write_outputs=False)
-        np.testing.assert_allclose(sim.syslist[0].beads.q, 0, atol=1e-5)
-        assert sim.syslist[0].forces.pot < 1e-10
+        system = sim.syslist[0]
+        initial = system.beads.q.copy()
+        sim.run(steps=150 if selection else 20, write_outputs=False)
+        np.testing.assert_array_equal(system.beads.q[:, fixed], initial[:, fixed])
+        np.testing.assert_allclose(
+            system.beads.q[:, free], 0, atol=2e-4 if selection else 1e-5
+        )
+        if selection:
+            assert system.forces.pot == pytest.approx(
+                0.25 * np.sum(initial[:, fixed] ** 2), abs=1e-7
+            )
+        else:
+            assert system.forces.pot < 1e-10
 
 
 @pytest.mark.parametrize("threading", [False, True])

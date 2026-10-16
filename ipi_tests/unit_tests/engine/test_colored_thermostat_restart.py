@@ -36,7 +36,7 @@ def thermostat_input(mode, explicit_covariance=False):
     [(m, c) for m in ["gle", "nm_gle", "nm_gle_g"] for c in [False, True]]
     + [(m, False) for m in ["multi", "cl", "ffl"]],
 )
-def test_restart_preserves_thermostat_state(simulation, mode, explicit_covariance):
+def test_restart_preserves_thermostat_state(restart_states, mode, explicit_covariance):
     xml = thermostat_input(mode, explicit_covariance)
 
     def snapshot(sim):
@@ -47,15 +47,6 @@ def test_restart_preserves_thermostat_state(simulation, mode, explicit_covarianc
             values.append(bath.s.copy())
         return values
 
-    with simulation(xml) as sim:
-        sim.run(steps=6, write_outputs=False)
-        expected = snapshot(sim)
-    with simulation(xml) as sim:
-        sim.run(steps=3, write_outputs=False)
-    with open("RESTART") as f:
-        restart = f.read()
-    with simulation(restart) as sim:
-        sim.run(steps=3, write_outputs=False)
-        actual = snapshot(sim)
+    expected, actual = restart_states(xml, snapshot, steps=(3, 3))
     for value, reference in zip(actual, expected):
         np.testing.assert_allclose(value, reference, rtol=1e-11, atol=1e-12)

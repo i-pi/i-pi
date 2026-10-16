@@ -45,19 +45,10 @@ def state(sim):
 @pytest.mark.parametrize("barostat", ["isotropic", "flexible", "anisotropic"])
 @pytest.mark.parametrize("nbeads", [1, 4])
 def test_pressure_restart_preserves_cell_momenta_and_energy(
-    simulation, barostat, nbeads
+    restart_states, barostat, nbeads
 ):
     xml = pressure_input(barostat, nbeads)
-    with simulation(xml) as sim:
-        sim.run(steps=6, write_outputs=False)
-        expected = state(sim)
-    with simulation(xml) as sim:
-        sim.run(steps=2, write_outputs=False)
-    with open("RESTART") as f:
-        restart = f.read()
-    with simulation(restart) as sim:
-        sim.run(steps=4, write_outputs=False)
-        actual = state(sim)
+    expected, actual = restart_states(xml, state)
     for a, b in zip(actual, expected):
         np.testing.assert_allclose(a, b, rtol=1e-10, atol=1e-12)
     assert np.linalg.det(actual[2]) > 0
