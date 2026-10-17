@@ -216,7 +216,10 @@ def motion_nvt_xml(
     param path_integrals: Optional(bool), default False. Selects the
         default thermostat for path integral simulations
     param tau: Optional(float) The thermostat relaxation time, in ASE units.
-        Defaults to 10*timestep. Ignored if thermostat is an XML block.
+        Defaults to 10*timestep for the global 'svr' and 'pile_g'
+        thermostats, and to 1000*timestep otherwise, to avoid overdamping
+        the dynamics with local thermostats. Ignored if thermostat is an
+        XML block.
     param fixcom: Optional(bool) Whether the centre of mass is kept fixed.
         If not specified, the i-PI default (True) is used.
     param fixatoms: Optional(list(int)) Indices of atoms that are held fixed
@@ -225,7 +228,8 @@ def motion_nvt_xml(
     if thermostat is None:
         thermostat = "pile_g" if path_integrals else "svr"
     if tau is None:
-        tau = 10 * timestep
+        # global thermostats can be aggressive, local ones would overdamp
+        tau = (10 if thermostat in ["svr", "pile_g"] else 1000) * timestep
 
     # sets up thermostat
     if thermostat.lstrip().startswith("<"):

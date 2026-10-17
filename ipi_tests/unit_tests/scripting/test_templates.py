@@ -120,6 +120,18 @@ def test_motion_nvt_xml_thermostat_mode_and_tau():
     _parse(xml)
 
 
+@pytest.mark.parametrize(
+    "thermostat, factor",
+    [("svr", 10), ("pile_g", 10), ("langevin", 1000), ("pile_l", 1000)],
+)
+def test_motion_nvt_xml_default_tau(thermostat, factor):
+    # global thermostats get a short tau, local ones a long one to avoid
+    # overdamping the dynamics
+    xml = motion_nvt_xml(timestep=0.5, thermostat=thermostat)
+    assert f"<tau units='ase'> {factor * 0.5} </tau>" in xml
+    _parse(xml)
+
+
 def test_motion_nvt_xml_thermostat_xml_block():
     thermostat = "<thermostat mode='pile_l'><tau units='ase'> 42 </tau></thermostat>"
     xml = motion_nvt_xml(timestep=0.5, thermostat=thermostat)
