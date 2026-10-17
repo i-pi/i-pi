@@ -23,6 +23,12 @@ def simulation(tmp_path, monkeypatch):
         finally:
             if sim is not None:
                 sim.stop()
+            # Stop monitors before reset replaces the shared loop controls.
+            for thread, loop_control in softexit.tlist:
+                if loop_control is not None:
+                    loop_control[0] = False
+            for thread, _ in softexit.tlist:
+                thread.join()
             softexit.reset()
 
     try:
