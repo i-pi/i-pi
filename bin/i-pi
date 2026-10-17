@@ -60,6 +60,10 @@ def main(fn_input, options):
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
+    # when running as a standalone program, ends the process as soon as the
+    # soft exit cleanup is complete (see Softexit.kill)
+    softexit.hard_exit = True
+
     # run the simulation
     simulation.run()
 
