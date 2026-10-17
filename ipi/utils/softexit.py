@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+import atexit
 import sys
 import os
 import time
@@ -32,6 +33,13 @@ class Softexit(object):
     Attributes:
        flist: A list of callback functions used to clean up and exit gracefully.
        tlist: A list of threads registered for monitoring
+       lock: Held while running the callback functions. The main thread can also
+          hold it to delay them until it has reached a consistent state: it must
+          then check if a soft exit was triggered, and stop if this is the case.
+          It is not reentrant, so the callbacks are delayed also when the soft
+          exit is requested by the thread holding it.
+       hard_exit: If True, the process is ended with os._exit() once the
+          cleanup is complete, skipping the finalization of the interpreter.
     """
 
     def __init__(self):
@@ -44,6 +52,9 @@ class Softexit(object):
         self.triggered = False
         self.exiting = False
         self._doloop = [False]
+        self._killed = False
+        self.lock = threading.Lock()
+        self.hard_exit = False
 
     def register_function(self, func, *args, **kwargs):
         """Adds another function to flist.
@@ -76,13 +87,15 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        if self.triggered:
-            return
         self.cleanup(status, message)
         self.kill()
 
     def cleanup(self, status="restartable", message=""):
-        """Runs registered cleanup functions without exiting the process."""
+        """Runs registered cleanup functions without exiting the process.
+
+        The functions are called only once. If another thread holds the lock,
+        they are left pending, and run the next time this is called.
+        """
 
         print(
             " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
@@ -90,7 +103,6 @@ class Softexit(object):
             message,
         )
         if not self.triggered:  # avoid double calls from different threads
-            self.exiting = True
             self.triggered = True
 
             if status == "restartable":
@@ -109,18 +121,23 @@ class Softexit(object):
                 verbosity.low,
             )
 
+        if not self.lock.acquire(blocking=False):
+            return
+        try:
+            self.exiting = True
             # calls all the registered emergency softexit procedures
-            for f, a, ka in self.flist:
+            while self.flist:
+                f, a, ka = self.flist.pop(0)
                 try:
                     f(*a, **ka)
                 except RuntimeError as err:
                     print("Error running emergency softexit, ", err)
-                    pass
-
+        finally:
             self.exiting = False  # emergency is over, signal we can be relaxed
+            self.lock.release()
 
-            for t, dl in self.tlist:  # set thread exit flag
-                dl[0] = False
+        for t, dl in self.tlist:  # set thread exit flag
+            dl[0] = False
 
         # wait for all (other) threads to finish
         for t, dl in self.tlist:
@@ -131,8 +148,25 @@ class Softexit(object):
                 t.join()
 
     def kill(self):
-        """Terminates the current thread/process."""
+        """Terminates the current thread/process.
 
+        With hard_exit set, and once the cleanup functions have run, the whole
+        process is terminated from whichever thread gets here. Outputs and
+        RESTART have been written at that point, so nothing is lost by skipping
+        the finalization of the interpreter, which can crash when extension
+        libraries (e.g. libtorch worker threads) release thread-local state.
+        This also stops the main thread from carrying on with a step that uses
+        force fields that have been shut down.
+        """
+
+        if self.hard_exit and self.triggered and not (self.flist or self.exiting):
+            # MPI is otherwise finalized when the interpreter terminates
+            mpi = sys.modules.get("mpi4py.MPI")
+            if mpi is not None and mpi.Is_initialized() and not mpi.Is_finalized():
+                mpi.Finalize()
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
         sys.exit()
 
     def reset(self):
@@ -157,8 +191,10 @@ class Softexit(object):
         self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
         self._thread.daemon = True
         self._doloop[0] = True
-        self._kill[signal.SIGINT] = signal.signal(signal.SIGINT, self._kill_handler)
-        self._kill[signal.SIGTERM] = signal.signal(signal.SIGTERM, self._kill_handler)
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            handler = signal.signal(signum, self._kill_handler)
+            # keeps the original handler when started more than once
+            self._kill.setdefault(signum, handler)
         self._thread.start()
         self.register_thread(self._thread, self._doloop)
 
@@ -178,20 +214,27 @@ class Softexit(object):
             " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
         )
 
-        self.trigger(status="restartable", message=" @SOFTEXIT: Kill signal received")
-
-        try:
-            self.__del__()
-        except AttributeError:
-            pass
-        if signal in self._kill:
+        if not self._killed:
+            # the handler runs on top of whatever the main thread was doing,
+            # so the soft exit is left to the monitoring thread
+            self._killed = True
+        elif callable(self._kill.get(signal)):
+            # a second signal falls back to the original handler
             self._kill[signal](signal, frame)
+        else:
+            self.kill()
 
     def _softexit_monitor(self):
         """Keeps checking for soft exit conditions."""
 
         while self._doloop[0]:
             time.sleep(SOFTEXITLATENCY)
+            if self._killed:
+                self.trigger(
+                    status="restartable", message=" @SOFTEXIT: Kill signal received"
+                )
+                break
+
             if os.path.exists("EXIT"):
                 self.trigger(
                     status="restartable", message=" @SOFTEXIT: EXIT file detected."
@@ -205,5 +248,17 @@ class Softexit(object):
                 )
                 break
 
+    def _finish(self):
+        """Completes a soft exit before the interpreter terminates."""
+
+        if self.triggered:
+            with self.lock:  # waits for a cleanup in progress
+                pass
+            if self.flist:
+                self.cleanup()
+            if self.hard_exit:
+                self.kill()
+
 
 softexit = Softexit()
+atexit.register(softexit._finish)
