@@ -735,6 +735,7 @@ class Forces:
         self.dforces = None
         self.dbeads = None
         self.dcell = None
+        self.vary_weight = ""
 
     def add_component(self, nbeads, nrpc, nforces):
         self.mrpc.append(nrpc)
@@ -746,7 +747,17 @@ class Forces:
         self._virs.add_dependency(nforces._virs)
         self._extras.add_dependency(nforces._extras)
 
-    def bind(self, beads, cell, fcomponents, fflist, open_paths, output_maker):
+    def bind(
+        self,
+        beads,
+        cell,
+        fcomponents,
+        fflist,
+        open_paths,
+        output_maker,
+        vary_weight=False,
+        tsteps=None,
+    ):
         """Binds beads, cell and forces to the forcefield.
 
 
@@ -995,6 +1006,73 @@ class Forces:
             self._f.add_dependency(fc._weight)
             self._pots.add_dependency(fc._weight)
             self._virs.add_dependency(fc._weight)
+
+        # Set up linearly-varying weight mode
+        # vary_weight is the ffield name of the component that should decrease 1→0;
+        # an empty string means the feature is disabled.
+        self.vary_weight = vary_weight
+        if vary_weight:
+            if len(self.mforces) != 2:
+                raise ValueError(
+                    "vary_weight mode requires exactly two force components, "
+                    "but %d were provided." % len(self.mforces)
+                )
+            if tsteps is None or tsteps <= 0:
+                raise ValueError(
+                    "vary_weight mode requires a positive total number of steps (tsteps)."
+                )
+            self._vary_rate = 1.0 / tsteps
+            # Identify the decreasing component by its ffield name — explicit and
+            # restart-safe regardless of the current weight values.
+            dec_ffield = vary_weight
+            dec_indices = [k for k in range(2) if self.mforces[k].ffield == dec_ffield]
+            if len(dec_indices) != 1:
+                raise ValueError(
+                    "vary_weight: could not find a unique force component with "
+                    "forcefield name '%s'. Available: %s"
+                    % (dec_ffield, [ff.ffield for ff in self.mforces])
+                )
+            self._vary_dec_idx = dec_indices[0]
+            self._vary_inc_idx = 1 - self._vary_dec_idx
+            dec = self.mforces[self._vary_dec_idx]
+            inc = self.mforces[self._vary_inc_idx]
+            info(
+                " @forces: vary_weight mode enabled. rate=%.6e, "
+                "decreasing component: '%s' (w=%.4f), "
+                "increasing component: '%s' (w=%.4f)"
+                % (
+                    self._vary_rate,
+                    dec.name if dec.name else dec.ffield,
+                    dec.weight,
+                    inc.name if inc.name else inc.ffield,
+                    inc.weight,
+                ),
+                verbosity.low,
+            )
+
+    def update_weights(self):
+        """Updates the force component weights by one rate step.
+
+        Only active when vary_weight=True. Call this once per simulation step
+        (after the motion step) to linearly transfer weight from the decreasing
+        component to the increasing component.
+        Updates both mforces (active computation) and fcomp (checkpoint serialization).
+        """
+        if not self.vary_weight:
+            return
+        self.mforces[self._vary_dec_idx].weight -= self._vary_rate
+        self.mforces[self._vary_inc_idx].weight += self._vary_rate
+        # keep fcomp in sync so checkpoints store the current weights
+        self.fcomp[self._vary_dec_idx].weight -= self._vary_rate
+        self.fcomp[self._vary_inc_idx].weight += self._vary_rate
+        info(
+            " @forces: vary_weight updated: "
+            + ", ".join(
+                "'%s' w=%.6f" % (ff.name if ff.name else ff.ffield, ff.weight)
+                for ff in self.mforces
+            ),
+            verbosity.high,
+        )
 
     def clone(self, beads, cell):
         """Duplicates the force object, so that it can be used to compute forces
