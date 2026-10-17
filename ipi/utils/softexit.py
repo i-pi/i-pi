@@ -33,9 +33,11 @@ class Softexit(object):
     Attributes:
        flist: A list of callback functions used to clean up and exit gracefully.
        tlist: A list of threads registered for monitoring
-       lock: Held while running the callback functions. A thread can also hold
-          it to delay them until it has reached a consistent state: it must
+       lock: Held while running the callback functions. The main thread can also
+          hold it to delay them until it has reached a consistent state: it must
           then check if a soft exit was triggered, and stop if this is the case.
+          It is not reentrant, so the callbacks are delayed also when the soft
+          exit is requested by the thread holding it.
        hard_exit: If True, the process is ended with os._exit() once the
           cleanup is complete, skipping the finalization of the interpreter.
     """
@@ -51,7 +53,7 @@ class Softexit(object):
         self.exiting = False
         self._doloop = [False]
         self._killed = False
-        self.lock = threading.RLock()
+        self.lock = threading.Lock()
         self.hard_exit = False
 
     def register_function(self, func, *args, **kwargs):
@@ -189,8 +191,10 @@ class Softexit(object):
         self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
         self._thread.daemon = True
         self._doloop[0] = True
-        self._kill[signal.SIGINT] = signal.signal(signal.SIGINT, self._kill_handler)
-        self._kill[signal.SIGTERM] = signal.signal(signal.SIGTERM, self._kill_handler)
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            handler = signal.signal(signum, self._kill_handler)
+            # keeps the original handler when started more than once
+            self._kill.setdefault(signum, handler)
         self._thread.start()
         self.register_thread(self._thread, self._doloop)
 
@@ -249,8 +253,9 @@ class Softexit(object):
 
         if self.triggered:
             with self.lock:  # waits for a cleanup in progress
-                if self.flist:
-                    self.cleanup()
+                pass
+            if self.flist:
+                self.cleanup()
             if self.hard_exit:
                 self.kill()
 

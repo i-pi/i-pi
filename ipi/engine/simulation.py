@@ -308,12 +308,12 @@ class Simulation:
         written out.
         """
 
+        if self.step < self.tsteps:
+            self.step += 1
         if not self.rollback:
             info(
                 " @simulation.softexit: Saving the latest status at the end of the step"
             )
-            if self.step < self.tsteps:
-                self.step += 1
             self.chk.store()
 
         self.chk.write(store=False)
@@ -349,18 +349,7 @@ class Simulation:
             # prints inital configuration -- only if we are not restarting
             if self.step == 0 and write_outputs and not softexit.triggered:
                 self.step = -1
-                # must use multi-threading to avoid blocking in multi-system runs with WTE
-                if self.threading:
-                    stepthreads = []
-                    for o in self.outputs:
-                        st = self.executor.submit(o.write)
-                        stepthreads.append(st)
-
-                    for st in stepthreads:
-                        st.result()
-                else:
-                    for o in self.outputs:
-                        o.write()
+                self.write_outputs()
                 self.step = 0
 
             # saves the state to go back to if a step gets interrupted by a (soft) exit
@@ -395,18 +384,7 @@ class Simulation:
                     break
 
                 if write_outputs:
-                    if self.threading:
-                        stepthreads = []
-                        for o in self.outputs:
-                            if o.active():  # don't start a thread if it's not needed
-                                st = self.executor.submit(o.write)
-                                stepthreads.append(st)
-
-                        for st in stepthreads:
-                            st.result()
-                    else:
-                        for o in self.outputs:
-                            o.write()
+                    self.write_outputs()
 
                 # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
                 if (self.step + 1) % self.safe_stride == 0:
@@ -453,6 +431,27 @@ class Simulation:
 
         # if the run was not interrupted, the current state is the one to restart from
         self.rollback = softexit.triggered
+
+    def write_outputs(self):
+        """Writes all the outputs that are active at this step.
+
+        A soft exit requested by one of them does not stop the others, so
+        the outputs of the step are complete apart from the one that asked.
+        """
+
+        if self.threading:
+            # must use multi-threading to avoid blocking in multi-system runs with WTE
+            writes = [
+                self.executor.submit(o.write).result for o in self.outputs if o.active()
+            ]
+        else:
+            writes = [o.write for o in self.outputs]
+        for write in writes:
+            try:
+                write()
+            except SystemExit:
+                if not softexit.triggered:
+                    raise
 
     def run_step(self, step):
         if len(self.syslist) > 0 and self.threading:

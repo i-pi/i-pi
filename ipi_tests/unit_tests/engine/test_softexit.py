@@ -19,6 +19,7 @@ import pytest
 
 import ipi
 import ipi.utils.softexit as softexit_module
+from ipi.engine.outputs import BaseOutput
 from ipi.engine.simulation import Simulation
 from ipi.utils.softexit import softexit
 
@@ -172,6 +173,11 @@ def assert_continuous():
         restarted = Simulation.load_from_xml(restart_file)
     assert restarted.step < NSTEPS
     finish(restarted)
+    assert_outputs_continuous()
+
+
+def assert_outputs_continuous():
+    """Checks the outputs of a completed run have every step once."""
 
     steps = np.loadtxt("sim.out")[:, 0]
     np.testing.assert_array_equal(steps, np.arange(NSTEPS + 1))
@@ -230,6 +236,22 @@ def test_exit_during_write_completes_the_row(workdir, threading_mode):
     assert_continuous()
 
 
+@pytest.mark.parametrize("threading_mode", ["false", "true"])
+def test_exit_requested_by_an_output_completes_the_step(workdir, threading_mode):
+    """An output that triggers the exit itself does not abort the others."""
+
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    inject_after(
+        simulation.outputs[0],
+        "write",
+        once_at_exit_step(simulation, softexit.trigger),
+    )
+    finish(simulation)
+
+    assert restart_step() == EXIT_STEP + 1
+    assert_continuous()
+
+
 def test_signal_during_outputs_completes_the_step(workdir):
     """A kill signal does not run the cleanup on top of an output write."""
 
@@ -258,6 +280,30 @@ def test_pending_exit_runs_callbacks_once(workdir):
     softexit.cleanup()
     softexit.cleanup()
     assert calls == [True]
+
+
+def test_second_signal_forces_the_exit(workdir):
+    """The first Ctrl-C asks for a soft exit, the second one interrupts."""
+
+    # as when several simulations are created in the same process
+    softexit.start()
+    softexit.start()
+    signal.raise_signal(signal.SIGINT)
+    with pytest.raises(KeyboardInterrupt):
+        signal.raise_signal(signal.SIGINT)
+
+
+def test_output_written_after_the_exit_is_discarded(workdir):
+    """Outputs written in the middle of a step do not hit a closed file."""
+
+    output = BaseOutput("floating")
+    output.bind()
+    output.write("before\n")
+    softexit.cleanup()
+    output.write("after\n")
+
+    with open("floating") as stream:
+        assert stream.read() == "before\n"
 
 
 def run_script(script):

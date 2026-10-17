@@ -380,7 +380,7 @@ class FFSocket(ForceField):
         """Closes the socket and the thread."""
 
         super(FFSocket, self).stop()
-        if self._thread is not None:
+        if self._thread not in (None, threading.current_thread()):
             # must wait until loop has ended before closing the socket
             self._thread.join()
         self.socket.close()
@@ -481,7 +481,7 @@ class FFMPI(ForceField):
         """Stops the poll thread and tells every driver root to exit."""
 
         super().stop()
-        if self._thread is not None:
+        if self._thread not in (None, threading.current_thread()):
             # must wait until the poll loop has ended before signalling exit
             self._thread.join()
         self.interface.close()

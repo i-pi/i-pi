@@ -65,13 +65,7 @@ def main(fn_input, options):
     softexit.hard_exit = True
 
     # run the simulation
-    try:
-        simulation.run()
-    except Exception:
-        # an exit requested from another thread shuts down the force fields
-        # while a step may still be running: errors that follow are ignored
-        if not softexit.triggered:
-            raise
+    simulation.run()
 
     # It seems that checkpoints are written by the following.
     # TODO: Have them written when simulation.run() finishes instead.
