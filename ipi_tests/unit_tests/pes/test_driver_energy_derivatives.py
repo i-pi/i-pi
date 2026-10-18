@@ -77,11 +77,6 @@ def test_explicit_bath_coupling_derivative_and_forces(cutoff):
     assert np.all(energy >= 0)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="DoubleWell driver returns an energy array, which FFDirect cannot combine into bead potentials",
-)
 def test_double_well_returns_scalar_total_energy():
     from ipi.pes.doublewell import DoubleWell_driver
 
