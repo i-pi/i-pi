@@ -9,7 +9,9 @@ Any valid XML input file can also be used.
 
 This example uses a simple `<ffdirect>` PES, but it is also possible 
 to run with an external driver, that has to be launched after the 
-simulation is initialized, but before it is run. 
+simulation is initialized, but before it is run. `run-socket.py` shows
+how to do this with the Python driver and a UNIX socket; call
+`sim.stop()` at the end to close the socket and shut down the driver.
 
 The class outputs files if required in the XML file, and unless it is
 disabled in the `run` method,  but also provides a way to dump the 
