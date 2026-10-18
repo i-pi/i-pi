@@ -52,6 +52,8 @@ class InputMetaDyn(InputDictionary):
 Transfer the potential energy value to PLUMED to use as a collective variable. 
 Can only be used with classical simulations because it requires a rather hacky 
 mechanism to transfer the energy of the system to the forcefield.
+Physical forces and virial are supplied to PLUMED for energy derivatives;
+only the bias energy, force correction and virial correction are returned.
 """,
             },
         ),
