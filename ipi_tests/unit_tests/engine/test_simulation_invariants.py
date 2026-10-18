@@ -345,3 +345,103 @@ def test_constrained_dynamics_preserves_bond_and_tangent_velocities(
                 0, abs=1e-11
             )
         assert np.linalg.norm(beads.q - initial) > 1e-4
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=ValueError,
+    reason="GLE initializer looks for the thermostat on Ensemble instead of Motion",
+)
+def test_gle_auxiliary_momenta_can_be_initialized_from_input(simulation):
+    xml = harmonic_input(thermostat="gle").replace(
+        "<tau>0.5</tau>", "<A shape='(2,2)'>[1,0,0,1]</A>"
+    )
+    xml = xml.replace(
+        "<system>",
+        "<system><initialize nbeads='1'><gle mode='manual'>[1,2,3,4,5,6,7,8,9,10,11,12]</gle></initialize>",
+    )
+    try:
+        with simulation(xml) as sim:
+            np.testing.assert_array_equal(
+                sim.syslist[0].motion.thermostat.s.ravel(), np.arange(1, 13)
+            )
+    except ValueError as error:
+        assert str(error) == "Ensemble does not have a thermostat to initialize"
+        raise
+
+
+@pytest.mark.parametrize("source", ["string", "file"])
+def test_read_only_initialization_binds_state_without_starting_services(
+    tmp_path, monkeypatch, source
+):
+    import io
+    from ipi.engine.simulation import Simulation
+
+    monkeypatch.chdir(tmp_path)
+    xml = harmonic_input()
+    observed = []
+
+    def initialize(sim):
+        observed.append(sim.chk)
+        sim.syslist[0].beads.q[:] = 2
+
+    sim = Simulation.load_from_xml(
+        xml if source == "string" else io.StringIO(xml),
+        read_only=True,
+        post_init_hook=initialize,
+        custom_verbosity="quiet",
+        sockets_prefix="/tmp/initialization-test-",
+    )
+    assert observed == [None]
+    assert sim.chk is None
+    assert sim.sockets_prefix == "/tmp/initialization-test-"
+    assert not list(tmp_path.iterdir())
+    assert all(field._thread is None for field in sim.fflist.values())
+    np.testing.assert_array_equal(sim.syslist[0].beads.q, 2)
+    # Forces are bound to the modified coordinates even in read-only mode.
+    assert sim.syslist[0].forces.pot == pytest.approx(6.0)
+    np.testing.assert_allclose(sim.syslist[0].forces.f, -1.0)
+
+
+@pytest.mark.parametrize(
+    "xml,message",
+    [
+        ("not an input file", "neither valid JSON nor valid XML"),
+        (harmonic_input().replace("<total_steps>100", "<total_steps>0"), "already run"),
+    ],
+)
+def test_invalid_or_finished_simulation_does_not_start(
+    tmp_path, monkeypatch, xml, message
+):
+    from ipi.engine.simulation import Simulation
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match=message):
+        Simulation.load_from_xml(xml, read_only=True)
+    assert not list(tmp_path.iterdir())
+
+
+def test_multiple_systems_initialize_independent_state_and_outputs(simulation):
+    import copy
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(harmonic_input())
+    first = root.find("system")
+    first.set("prefix", "first")
+    second = copy.deepcopy(first)
+    second.set("prefix", "second")
+    second.find("beads/q").text = "[1,1,1,1,1,1]"
+    root.append(second)
+    output = ET.SubElement(root, "output", prefix="initial")
+    ET.SubElement(output, "properties", filename="energy").text = "[potential]"
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        first, second = sim.syslist
+        assert first.beads is not second.beads
+        assert first.forces.pot == pytest.approx(0.25 * 0.43)
+        assert second.forces.pot == pytest.approx(1.5)
+        first.beads.q[:] = 0
+        np.testing.assert_array_equal(second.beads.q, 1)
+        assert {out.filename for out in sim.outputs} == {
+            "first_initial.energy",
+            "second_initial.energy",
+        }

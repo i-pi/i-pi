@@ -54,3 +54,16 @@ def test_single_bead_center_of_mass_velocity(simulation):
         s = sim.syslist[0]
         expected = s.beads.p[2].reshape(2, 3).sum(axis=0) / 5
         np.testing.assert_allclose(s.properties.get_vcom(bead=2), expected)
+
+
+@pytest.mark.parametrize("text", ["potential{electronvolt", "potential}"])
+@pytest.mark.xfail(
+    strict=True,
+    raises=pytest.fail.Exception,
+    reason="Property parser accepts unmatched unit braces",
+)
+def test_property_parser_rejects_unmatched_unit_braces(text):
+    from ipi.engine.properties import getall
+
+    with pytest.raises(ValueError):
+        getall(text)

@@ -107,3 +107,167 @@ def test_committee_force_differentiates_combined_energy(baseline):
         np.testing.assert_allclose(force, -2 * q)
     assert extras["committee_uncertainty"] > 0
     assert all(len(member.requests) == 0 for member in members)
+
+
+@pytest.mark.parametrize(
+    "options,message",
+    [
+        ({"fflist": []}, "empty list"),
+        ({"ffweights": [1]}, "weights"),
+        ({"baseline_name": "base"}, "simultaneously"),
+        ({"baseline_uncertainty": 1}, "simultaneously"),
+        (
+            {"baseline_name": "base", "baseline_uncertainty": 1, "ffweights": [1, 1]},
+            "weights",
+        ),
+    ],
+)
+def test_committee_rejects_inconsistent_configuration(options, message):
+    from ipi.engine.forcefields import FFCommittee, ForceField
+
+    defaults = dict(fflist=[ForceField(name="base"), ForceField(name="member")])
+    with pytest.raises(ValueError, match=message):
+        FFCommittee(**(defaults | options))
+
+
+@pytest.mark.parametrize(
+    "H,xref,message",
+    [
+        (np.eye(6), np.zeros(6), "Hessian"),
+        (np.eye(3), np.zeros(6), "Reference"),
+    ],
+)
+def test_debye_rejects_request_with_incompatible_dimensions(H, xref, message):
+    ff = FFDebye(H=H, xref=xref)
+    with pytest.raises(ValueError, match=message):
+        evaluate(ff, np.zeros(3), np.eye(3))
+
+
+@pytest.mark.parametrize("components", ["both", "force", "virial", "neither"])
+def test_committee_json_ensemble_preserves_means_and_uncertainty(components):
+    """A serialized two-model ensemble has known mean and sample variance."""
+    from ipi.engine.forcefields import FFCommittee, ForceField
+
+    extras = {"committee_pot": [1.0, 3.0], "raw": "two models"}
+    if components in ("both", "force"):
+        extras["committee_force"] = [[1, 2, 3], [3, 4, 5]]
+    if components in ("both", "virial"):
+        extras["committee_virial"] = [np.eye(3), 3 * np.eye(3)]
+    member = ForceField()
+    ff = FFCommittee(fflist=[member], parse_json=True, alpha=2)
+    request = ForceRequest(
+        pos=np.zeros(3),
+        ff_handles=[
+            ForceRequest(result=[2.0, np.array([2, 3, 4]), 2 * np.eye(3), extras])
+        ],
+    )
+    ff.gather(request)
+    energy, force, virial, combined = request["result"]
+    assert energy == 2
+    np.testing.assert_array_equal(force, [2, 3, 4])
+    np.testing.assert_array_equal(virial, 2 * np.eye(3))
+    np.testing.assert_array_equal(combined["committee_pot"], [0, 4])
+    assert combined["committee_uncertainty"] == pytest.approx(np.sqrt(8))
+    assert ("committee_force" in combined) == (components in ("both", "force"))
+    assert ("committee_virial" in combined) == (components in ("both", "virial"))
+    if components in ("both", "force"):
+        np.testing.assert_array_equal(
+            combined["committee_force"], [[0, 1, 2], [4, 5, 6]]
+        )
+
+
+@pytest.mark.parametrize(
+    "problem,message",
+    [
+        ("force", "all.*components"),
+        ("virial", "all.*components"),
+        ("baseline", "force ensemble"),
+        ("collision", "Name clash"),
+    ],
+)
+def test_committee_rejects_ambiguous_member_results(problem, message):
+    from ipi.engine.forcefields import FFCommittee, ForceField
+
+    def result(extra):
+        return ForceRequest(result=[0.0, np.zeros(3), np.zeros((3, 3)), extra])
+
+    extras = {"committee_pot": [1.0, 3.0]}
+    if problem == "virial":
+        extras["committee_force"] = [np.zeros(3), np.zeros(3)]
+    handles = [result(extras), result({"raw": ""})]
+    options = {}
+    if problem == "baseline":
+        options = dict(baseline_name="base", baseline_uncertainty=1.0)
+        handles.reverse()
+    elif problem == "collision":
+        handles = [result({}), result({"pot": 2})]
+    ff = FFCommittee(
+        fflist=[ForceField(name="base"), ForceField(name="model")],
+        parse_json=True,
+        **options
+    )
+    with pytest.raises(ValueError, match=message):
+        ff.gather(ForceRequest(pos=np.zeros(3), ff_handles=handles))
+
+
+def test_committee_saves_uncertain_structures(tmp_path):
+    import json
+    from ipi.engine.atoms import Atoms
+    from ipi.engine.cell import Cell
+    from ipi.engine.forcefields import FFCommittee
+    from ipi.engine.outputs import OutputMaker
+
+    members = [FFDebye(H=np.eye(3) * k, xref=np.zeros(3)) for k in [1.0, 3.0]]
+    ff = FFCommittee(fflist=members, active_thresh=0.1)
+    with pytest.raises(ValueError, match="output file"):
+        ff.bind(OutputMaker())
+    ff.active_out = str(tmp_path / "uncertain.json")
+    ff.bind(OutputMaker())
+    try:
+        atoms = Atoms(1)
+        atoms.q[:] = [1, 0, 0]
+        request = ff.queue(atoms, Cell(np.eye(3) * 10))
+        ff.poll()
+        ff.active_file.force_flush()
+        saved = json.loads((tmp_path / "uncertain.json").read_text())
+        assert saved["position"] == [1, 0, 0]
+        assert saved["cell"] == (np.eye(3) * 10).ravel().tolist()
+        assert saved["uncertainty"] == pytest.approx(np.sqrt(0.5))
+        assert request._event_done.is_set()
+        assert all(not member.requests for member in members)
+    finally:
+        ff.active_file.close_stream()
+
+
+@pytest.mark.parametrize("missing", ["coupling", "freq", "dtdmd"])
+def test_dmd_requires_couplings_frequency_and_timestep(missing):
+    options = dict(coupling=np.array([1.0]), freq=0.5, dtdmd=0.1)
+    options[missing] = None
+    with pytest.raises(ValueError, match="Must provide"):
+        FFdmd(**options)
+
+
+def test_dmd_rejects_wrong_number_of_pair_couplings():
+    ff = FFdmd(coupling=np.ones(2), freq=0.5, dtdmd=0.1)
+    with pytest.raises(ValueError, match="Coupling matrix size"):
+        evaluate(ff, np.zeros((3, 3)), np.eye(3))
+
+
+def test_committee_waits_for_every_member():
+    from ipi.engine.atoms import Atoms
+    from ipi.engine.cell import Cell
+    from ipi.engine.forcefields import FFCommittee, ForceField
+
+    members = [ForceField(threaded=True), ForceField(threaded=True)]
+    ff = FFCommittee(fflist=members)
+    request = ff.queue(Atoms(1), Cell(np.eye(3)))
+    members[0].poll()
+    ff.poll()
+    assert request["result"] is None
+    assert not request._event_done.is_set()
+    members[1].poll()
+    ff.poll()
+    assert request._event_done.is_set()
+    assert request["result"][0] == 0
+    assert request["result"][3]["committee_uncertainty"] == 0
+    assert all(not member.requests for member in members)

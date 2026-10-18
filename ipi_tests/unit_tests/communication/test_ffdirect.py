@@ -65,3 +65,35 @@ def test_ffdirect_harmonic_batched_requests():
     for req, q in zip(reqs, positions):
         assert req["status"] == "Done"
         _assert_harmonic_result(req, q)
+
+
+def test_ffdirect_flushes_incomplete_batch_after_idle_polls():
+    """A final short batch must finish even if no more structures arrive."""
+    ff = FFDirect(pes="harmonic", pars={"k1": K}, batch_size=3, threaded=True)
+    q = np.array([0.1, -0.2, 0.3])
+    request = ff.queue(_make_atoms(q), Cell(np.eye(3) * 10))
+    ff.poll()
+    assert request["status"] == "Running"
+    assert not request._event_done.is_set()
+    for _ in range(3):
+        ff.poll()
+    assert request._event_done.is_set()
+    _assert_harmonic_result(request, q)
+    assert not ff.request_batch
+    ff.release(request)
+
+
+def test_ffdirect_requires_custom_driver_path():
+    import pytest
+
+    with pytest.raises(ValueError, match="pes_path"):
+        FFDirect(pes="custom")
+
+
+def test_ffdirect_preserves_driver_import_error(tmp_path):
+    import pytest
+
+    path = tmp_path / "unavailable_driver.py"
+    path.write_text("raise ImportError('required model library is unavailable')\n")
+    with pytest.raises(ImportError, match="required model library"):
+        FFDirect(pes="custom", pes_path=str(path))
