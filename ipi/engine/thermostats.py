@@ -257,6 +257,9 @@ dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
 class ThermoPILE_L(Thermostat):
     """Represents a PILE thermostat with a local centroid thermostat.
 
+    With fixed beads, uses the constrained spring modes instead. All these
+    modes have nonzero spring frequencies; no centroid thermostat is needed.
+
     Attributes:
        _thermos: The list of the different thermostats for all the ring polymer
           normal modes.
@@ -344,6 +347,11 @@ class ThermoPILE_L(Thermostat):
             raise TypeError(
                 "ThermoPILE_L.bind expects a NormalModes argument to bind to"
             )
+        if len(nm.fixbeads):
+            if not bindcentroid:
+                raise ValueError("Fixed beads require PILE-L, not PILE-G")
+            if self.pilect != 0.0:
+                raise ValueError("Fixed-bead PILE-L has no centroid temperature")
         if prng is None:
             self.prng = Random()
         else:
@@ -352,7 +360,14 @@ class ThermoPILE_L(Thermostat):
         prev_ethermo = self.ethermo
 
         # creates a set of thermostats to be applied to individual normal modes
-        self._thermos = [ThermoLangevin(temp=1, dt=1, tau=1) for b in range(nm.nbeads)]
+        self._thermos = [
+            ThermoLangevin(temp=1, dt=1, tau=1)
+            for b in range(len(nm.freebeads) if len(nm.fixbeads) else nm.nbeads)
+        ]
+        if len(nm.fixbeads):
+            self._pnm = depend_array(
+                name="pnm", value=np.zeros((len(nm.freebeads), 3 * nm.natoms))
+            )
         # optionally does not bind the centroid, so we can re-use all of this
         # in the PILE_G case
         if not bindcentroid:
@@ -362,15 +377,18 @@ class ThermoPILE_L(Thermostat):
 
         self._tauk = depend_array(
             name="tauk",
-            value=np.zeros(nm.nbeads - 1, float),
+            value=np.zeros(len(self._thermos) if len(nm.fixbeads) else nm.nbeads - 1),
             func=self.get_tauk,
-            dependencies=[self._pilescale, nm._dynomegak],
+            dependencies=[
+                self._pilescale,
+                nm._omegan if len(nm.fixbeads) else nm._dynomegak,
+            ],
         )
 
         # must pipe all the dependencies in such a way that values for the nm thermostats
         # are automatically updated based on the "main" thermostat
         def make_taugetter(k):
-            return lambda: self.tauk[k - 1]
+            return lambda: self.tauk[k if len(nm.fixbeads) else k - 1]
 
         it = 0
         for t in self._thermos:
@@ -382,8 +400,13 @@ class ThermoPILE_L(Thermostat):
 
             # bind thermostat t to the it-th bead
 
-            t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
-            if it == 0:
+            if len(nm.fixbeads):
+                t.bind(pm=(self._pnm[it, :], nm.beads.m3[0, :]), prng=self.prng)
+            else:
+                t.bind(
+                    pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof
+                )
+            if it == 0 and not len(nm.fixbeads):
                 # the following lines pipe a different temperature to the centroid, if requested
                 if self.pilect > 0.0:
                     dpipe(self._npilect, t._temp)
@@ -396,7 +419,7 @@ class ThermoPILE_L(Thermostat):
             dpipe(self._dt, t._dt)
 
             # for tau it is slightly more complex
-            if it == 0:
+            if it == 0 and not len(nm.fixbeads):
                 dpipe(self._tau, t._tau)
             else:
                 # Here we manually connect _thermos[i].tau to tauk[i].
@@ -411,8 +434,9 @@ class ThermoPILE_L(Thermostat):
         # any previously-stored value between the sub-thermostats
         if bindcentroid:
             for t in self._thermos:
-                t.ethermo = prev_ethermo / nm.nbeads
-            self._ethermo._func = self.get_ethermo
+                t.ethermo = prev_ethermo / len(self._thermos)
+            if self._thermos:
+                self._ethermo._func = self.get_ethermo
             # if we are not binding the centroid just yet, this bit of the piping
             # is delegated to the function which is actually calling this
 
@@ -423,6 +447,11 @@ class ThermoPILE_L(Thermostat):
         Returns:
            An array with the damping time scales for the non-centroid modes.
         """
+
+        if len(self.nm.fixbeads):
+            return 1.0 / (
+                2 * self.pilescale * self.nm.omegan * np.sqrt(self.nm.fixed_eva)
+            )
 
         # Also include an optional scaling factor to reduce the intensity of NM thermostats
         return np.array(
@@ -449,9 +478,17 @@ class ThermoPILE_L(Thermostat):
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
 
+        if len(self.nm.fixbeads):
+            self._pnm[:] = (
+                self.nm.fixed_transform.T @ dstrip(self.nm.beads.p)[self.nm.freebeads]
+            )
         # super-cool! just loop over the thermostats! it's as easy as that!
         for t in self._thermos:
             t.step()
+        if len(self.nm.fixbeads):
+            self.nm.beads.p[self.nm.freebeads] = self.nm.fixed_transform @ dstrip(
+                self._pnm
+            )
 
 
 dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])

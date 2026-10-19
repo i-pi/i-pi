@@ -14,7 +14,7 @@ import numpy as np
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.engine.thermostats import Thermostat, ThermoLangevin
+from ipi.engine.thermostats import Thermostat, ThermoLangevin, ThermoPILE_L
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
 
@@ -164,8 +164,11 @@ class Dynamics(Motion):
                 )
 
         if len(self.fixbeads):
-            if self.enstype == "nvt" and type(self.thermostat) is not ThermoLangevin:
-                raise ValueError("Fixed beads require a Cartesian Langevin thermostat")
+            if self.enstype == "nvt" and type(self.thermostat) not in (
+                ThermoLangevin,
+                ThermoPILE_L,
+            ):
+                raise ValueError("Fixed beads require Cartesian Langevin or PILE-L")
         if self.fixcentroid:
             if len(self.nm.bosons):
                 raise ValueError("Centroid constraints do not support bosonic exchange")

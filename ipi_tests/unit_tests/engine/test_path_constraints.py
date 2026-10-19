@@ -242,6 +242,7 @@ def test_motion_input_roundtrip_preserves_options(simulations, constraints):
         ("<fixcentroid>True</fixcentroid>", "langevin"),
         ("<fixcentroid>True</fixcentroid>", "pile_g"),
         ("<fixbeads>[0,2]</fixbeads>", "langevin"),
+        ("<fixbeads>[0,2]</fixbeads>", "pile_l"),
     ],
 )
 def test_restart_matches_continuous_nvt(simulations, tmp_path, constraints, thermostat):
@@ -327,9 +328,9 @@ def test_one_replica_with_fixed_centroid_and_pile_g_is_fully_frozen(simulations)
             {
                 "constraints": "<fixbeads>[0]</fixbeads>",
                 "mode": "nvt",
-                "thermostat": "pile_l",
+                "thermostat": "pile_g",
             },
-            "Cartesian Langevin",
+            "Cartesian Langevin or PILE-L",
         ),
         (
             {
@@ -420,7 +421,8 @@ def test_temperature_restores_only_missing_kinetic_directions(
 
 
 @pytest.mark.parametrize(
-    "centroid,thermostat", [(False, "langevin"), (True, "langevin"), (True, "pile_g")]
+    "centroid,thermostat",
+    [(False, "langevin"), (False, "pile_l"), (True, "langevin"), (True, "pile_g")],
 )
 def test_harmonic_conditional_statistics(simulations, centroid, thermostat):
     """Sample mean and variance match the constrained harmonic density."""

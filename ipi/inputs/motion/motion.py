@@ -148,7 +148,7 @@ class InputMotionBase(Input):
             {
                 "dtype": int,
                 "default": np.zeros(0, int),
-                "help": "Zero-based replica indices held at their initial positions. Requires NVE or NVT dynamics; NVT uses a Cartesian Langevin thermostat. Cannot be combined with fixcentroid.",
+                "help": "Zero-based replica indices held at their initial positions. Requires NVE or NVT dynamics; NVT uses Cartesian Langevin or PILE-L on the constrained spring modes. Cannot be combined with fixcentroid.",
             },
         ),
         "fixcentroid": (
