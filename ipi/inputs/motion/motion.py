@@ -143,6 +143,22 @@ class InputMotionBase(Input):
                 "help": "Indices of the degrees of freedom that should be held fixed.",
             },
         ),
+        "fixbeads": (
+            InputArray,
+            {
+                "dtype": int,
+                "default": np.zeros(0, int),
+                "help": "Zero-based replica indices held at their initial positions. Requires NVE or NVT dynamics; NVT uses a Cartesian Langevin thermostat. Cannot be combined with fixcentroid.",
+            },
+        ),
+        "fixcentroid": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Hold every atomic centroid at its initial position. Requires NVE or NVT dynamics. Cannot be combined with fixbeads.",
+            },
+        ),
         "optimizer": (
             InputGeop,
             {"default": {}, "help": "Option for geometry optimization"},
@@ -321,6 +337,8 @@ class InputMotionBase(Input):
         elif tsc > 0:
             self.fixcom.store(sc.fixcom)
             self.fixatoms_dof.store(sc.fixatoms_dof)
+            self.fixbeads.store(getattr(sc, "fixbeads", np.zeros(0, int)))
+            self.fixcentroid.store(getattr(sc, "fixcentroid", False))
 
     def fetch(self):
         """Creates a motion calculator object.
@@ -335,10 +353,19 @@ class InputMotionBase(Input):
         fixcom = self.fixcom.fetch()
         fixatoms = self.fixatoms.fetch()
         fixatoms_dof = self.fixatoms_dof.fetch()
+        fixbeads = np.unique(self.fixbeads.fetch().flatten())
+        fixcentroid = self.fixcentroid.fetch()
+        if (fixcentroid or len(fixbeads)) and self.mode.fetch() != "dynamics":
+            raise ValueError("fixcentroid and fixbeads require motion mode='dynamics'")
 
-        if (fixcom is True) and ((len(fixatoms) > 0) or (len(fixatoms_dof) > 0)):
+        if (fixcom is True) and (
+            (len(fixatoms) > 0)
+            or (len(fixatoms_dof) > 0)
+            or (len(fixbeads) > 0)
+            or fixcentroid
+        ):
             warning(
-                "The flag fixcom is true by default but you have chosen to fix some atoms (or degree of freedom) explicitly. Because the two cannot be used together, we are overriding the fixcom setting and making it False.",
+                "Explicit atom, centroid, or bead constraints override fixcom; setting it to False.",
                 verbosity.low,
             )
             fixcom = False
@@ -389,7 +416,11 @@ class InputMotionBase(Input):
             )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
-                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.dynamics.fetch()
+                fixcom=fixcom,
+                fixatoms_dof=fixatoms_dof,
+                fixcentroid=fixcentroid,
+                fixbeads=fixbeads,
+                **self.dynamics.fetch()
             )
         elif self.mode.fetch() == "constrained_dynamics":
             sc = ConstrainedDynamics(
@@ -475,6 +506,10 @@ class InputMotion(InputMotionBase):
 
     def fetch(self):
         if self.mode.fetch() == "multi":
+            if self.fixcentroid.fetch() or len(self.fixbeads.fetch()):
+                raise ValueError(
+                    "Set centroid or bead constraints on each dynamics motion inside multi"
+                )
             mlist = []
             for k, m in self.extra:
                 mlist.append(m.fetch())

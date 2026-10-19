@@ -52,7 +52,6 @@ class InputDynamics(InputDictionary):
                 nve: constant-energy-volume; nvt: constant-temperature-volume;
                 npt: constant-temperature-pressure(isotropic); nst: constant-temperature-stress(anisotropic);
                 sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT;
-                nvt-cc: constrained-centroid NVT;
                  """,
                 "options": [
                     "nve",
@@ -61,7 +60,6 @@ class InputDynamics(InputDictionary):
                     "nst",
                     "sc",
                     "scnpt",
-                    "nvt-cc",
                 ],
             },
         ),

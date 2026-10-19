@@ -14,7 +14,7 @@ import numpy as np
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.engine.thermostats import Thermostat
+from ipi.engine.thermostats import Thermostat, ThermoLangevin
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
 
@@ -56,6 +56,8 @@ class Dynamics(Motion):
         nmts=None,
         efield=None,
         bec=None,
+        fixcentroid=False,
+        fixbeads=None,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -65,8 +67,12 @@ class Dynamics(Motion):
                 motion will be constrained or not. Defaults to False.
         """
 
-        super(Dynamics, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
-
+        super(Dynamics, self).__init__(
+            fixcom=fixcom,
+            fixatoms_dof=fixatoms_dof,
+            fixcentroid=fixcentroid,
+            fixbeads=fixbeads,
+        )
         # initialize time step. this is the main time step that covers a full time step
         self._dt = depend_value(name="dt", value=timestep)
 
@@ -74,7 +80,7 @@ class Dynamics(Motion):
             self.thermostat = Thermostat()
         else:
             if (thermostat.__class__.__name__ == "ThermoNMGLEG") and (
-                len(fixatoms_dof) > 0
+                len(self.fixatoms_dof) > 0
             ):
                 raise ValueError(
                     "Fixed atoms and global thermostat on the centroid with NMGLE "
@@ -96,8 +102,6 @@ class Dynamics(Motion):
             self.integrator = NVEIntegrator()
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator()
-        elif self.enstype == "nvt-cc":
-            self.integrator = NVTCCIntegrator()
         elif self.enstype == "npt":
             self.integrator = NPTIntegrator()
         elif self.enstype == "nst":
@@ -112,19 +116,15 @@ class Dynamics(Motion):
         # splitting mode for the integrators
         self._splitting = depend_value(name="splitting", value=splitting)
 
-        # constraints
-        self.fixcom = fixcom
-        if fixatoms_dof is None:
-            self.fixatoms_dof = np.zeros(0, int)
-        else:
-            self.fixatoms_dof = fixatoms_dof
-
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
         temperature and pressure calculations.
         """
 
         fixdof = len(self.fixatoms_dof) * self.beads.nbeads
+        fixdof += (3 * self.beads.natoms - len(self.fixatoms_dof)) * (
+            len(self.fixbeads) + int(self.fixcentroid)
+        )
         if self.fixcom:
             fixdof += 3
         return fixdof
@@ -150,6 +150,25 @@ class Dynamics(Motion):
         """
 
         super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+        if self.fixcentroid or len(self.fixbeads):
+            if self.enstype in ("npt", "nst", "scnpt"):
+                raise NotImplementedError(
+                    "Centroid and bead constraints are not implemented for NPT/NST dynamics. "
+                    "The barostat position scaling and constrained pressure terms require "
+                    "additional treatment. Use NVE or NVT dynamics."
+                )
+            if self.enstype not in ("nve", "nvt"):
+                raise ValueError(
+                    "Centroid and bead constraints require NVE or NVT dynamics"
+                )
+
+        if len(self.fixbeads):
+            if self.enstype == "nvt" and type(self.thermostat) is not ThermoLangevin:
+                raise ValueError("Fixed beads require a Cartesian Langevin thermostat")
+        if self.fixcentroid:
+            if len(self.nm.bosons):
+                raise ValueError("Centroid constraints do not support bosonic exchange")
 
         # Checks if the number of mts levels is equal to the dimensionality of the mts weights.
         if len(self.nmts) != self.forces.nmtslevels:
@@ -202,12 +221,7 @@ class Dynamics(Motion):
         self.integrator.pconstraints()
 
         # TODO THOROUGH CLEAN-UP AND CHECK
-        if (
-            self.enstype == "nvt"
-            or self.enstype == "nvt-cc"
-            or self.enstype == "npt"
-            or self.enstype == "nst"
-        ):
+        if self.enstype == "nvt" or self.enstype == "npt" or self.enstype == "nst":
             if self.ensemble.temp < 0:
                 raise ValueError(
                     "Negative or unspecified temperature for a constant-T integrator"
@@ -286,6 +300,8 @@ class DummyIntegrator:
         self.barostat = motion.barostat
         self.fixcom = motion.fixcom
         self.fixatoms_dof = motion.fixatoms_dof
+        self.fixbeads = motion.fixbeads
+        self.fixcentroid = motion.fixcentroid
         self.enstype = motion.enstype
 
         # no need to dpipe these are really just references
@@ -365,6 +381,16 @@ class DummyIntegrator:
         """Dummy simulation time step which does nothing."""
         pass
 
+    def free_qstep(self):
+        """Propagates free springs, respecting any fixed replicas."""
+
+        if len(self.fixbeads) > 0:
+            self.nm.free_qstep_fixed_beads()
+        else:
+            if not self.fixcentroid:
+                self.qcstep()
+            self.nm.free_qstep()
+
     def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
 
@@ -399,6 +425,20 @@ class DummyIntegrator:
                 pnm[:, self.fixatoms_dof] ** 2 / dynm3[:, self.fixatoms_dof]
             )
             self.nm.pnm[:, self.fixatoms_dof] = 0.0
+
+        if len(self.fixbeads) > 0:
+            m3 = dstrip(beads.m3)
+            p = dstrip(beads.p)
+            self.ensemble.eens += 0.5 * np.sum(
+                p[self.fixbeads] ** 2 / m3[self.fixbeads]
+            )
+            beads.p[self.fixbeads] = 0.0
+
+        if self.fixcentroid:
+            self.ensemble.eens += 0.5 * np.sum(
+                dstrip(self.nm.pnm)[0] ** 2 / dstrip(self.nm.dynm3)[0]
+            )
+            self.nm.pnm[0] = 0.0
 
 
 dproperties(
@@ -442,6 +482,13 @@ class NVEIntegrator(DummyIntegrator):
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
                 self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
+        # Constraint forces cancel these kicks without doing work. Only
+        # momentum removed after a thermostat step contributes to eens.
+        if len(self.fixbeads):
+            self.beads.p[self.fixbeads] = 0.0
+        if self.fixcentroid:
+            self.nm.pnm[0] = 0.0
+
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
@@ -460,10 +507,8 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-                self.qcstep()
-                self.nm.free_qstep()
+                self.free_qstep()
+                self.free_qstep()
 
             else:
                 self.mtsprop(index + 1)
@@ -477,8 +522,7 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
+                self.free_qstep()
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -488,8 +532,7 @@ class NVEIntegrator(DummyIntegrator):
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
+                self.free_qstep()
             else:
                 self.mtsprop_ab(index + 1)
 
@@ -502,10 +545,8 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-                self.qcstep()
-                self.nm.free_qstep()
+                self.free_qstep()
+                self.free_qstep()
             else:
                 self.mtsprop(index + 1)
 
@@ -560,58 +601,6 @@ class NVTIntegrator(NVEIntegrator):
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
-
-
-class NVTCCIntegrator(NVTIntegrator):
-    """Integrator object for constant temperature simulations with constrained centroid.
-
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant temperature ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant.
-
-    Attributes:
-        thermostat: A thermostat object to keep the temperature constant.
-    """
-
-    def pstep(self):
-        """Velocity Verlet momenta propagator."""
-
-        # propagates in NM coordinates
-        self.nm.pnm += dstrip(self.nm.fnm) * (self.dt * 0.5)
-        # self.beads.p += dstrip(self.forces.f)*(self.dt*0.5)
-        # also adds the bias force
-        # self.beads.p += dstrip(self.bias.f)*(self.dt*0.5)
-
-    def step(self, step=None):
-        """Does one simulation time step."""
-
-        self.thermostat.step()
-        self.pconstraints()
-        # NB we only have to take into account the energy balance of zeroing centroid velocity when we had added energy through the thermostat
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
-        self.nm.pnm[0, :] = 0.0
-
-        self.pstep()
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
-
-        # The centroid is constrained, so qcstep is skipped, but the internal
-        # ring-polymer modes still need the two half-step free propagations.
-        self.nm.free_qstep()
-        self.nm.free_qstep()
-
-        self.pstep()
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
-
-        self.thermostat.step()
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
 
 
 class NPTIntegrator(NVTIntegrator):
