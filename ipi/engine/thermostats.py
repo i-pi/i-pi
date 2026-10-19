@@ -259,6 +259,7 @@ class ThermoPILE_L(Thermostat):
 
     With fixed beads, uses the constrained spring modes instead. All these
     modes have nonzero spring frequencies; no centroid thermostat is needed.
+    Their damping is pilescale * omega_k, bounded below by 1 / tau.
 
     Attributes:
        _thermos: The list of the different thermostats for all the ring polymer
@@ -268,8 +269,8 @@ class ThermoPILE_L(Thermostat):
           algorithms.
 
     Depend objects:
-       tau: Centroid thermostat damping time scale. Larger values give a
-          less strongly coupled centroid thermostat.
+       tau: Centroid thermostat damping time scale, or maximum mode damping
+          time scale with fixed beads.
        tauk: Thermostat damping time scale for the non-centroid normal modes.
           Depends on the ring polymer spring constant, and thus the simulation
           temperature.
@@ -283,7 +284,8 @@ class ThermoPILE_L(Thermostat):
         Args:
            temp: The simulation temperature. Defaults to 1.0.
            dt: The simulation time step. Defaults to 1.0.
-           tau: The centroid thermostat damping timescale. Defaults to 1.0.
+           tau: The centroid thermostat damping timescale, or maximum mode
+              damping timescale with fixed beads. Defaults to 1.0.
            ethermo: The initial conserved energy quantity. Defaults to 0.0. Will
               be non-zero if the thermostat is initialised from a checkpoint file.
            scale: A float used to reduce the intensity of the PILE thermostat if
@@ -384,6 +386,8 @@ class ThermoPILE_L(Thermostat):
                 nm._omegan if len(nm.fixbeads) else nm._dynomegak,
             ],
         )
+        if len(nm.fixbeads):
+            self._tauk.add_dependency(self._tau)
 
         # must pipe all the dependencies in such a way that values for the nm thermostats
         # are automatically updated based on the "main" thermostat
@@ -449,8 +453,9 @@ class ThermoPILE_L(Thermostat):
         """
 
         if len(self.nm.fixbeads):
-            return 1.0 / (
-                2 * self.pilescale * self.nm.omegan * np.sqrt(self.nm.fixed_eva)
+            return 1.0 / np.maximum(
+                self.pilescale * self.nm.omegan * np.sqrt(self.nm.fixed_eva),
+                1.0 / self.tau,
             )
 
         # Also include an optional scaling factor to reduce the intensity of NM thermostats

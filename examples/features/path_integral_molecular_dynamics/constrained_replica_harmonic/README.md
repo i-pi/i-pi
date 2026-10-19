@@ -25,12 +25,13 @@ Fixed replicas require ordinary closed, distinguishable-particle Trotter
 springs, RPMD dynamical masses, the exact spring propagator, and (for NVT)
 Cartesian Langevin or PILE-L. With fixed beads, PILE-L thermostats the free
 spring modes at frequencies `omega_P * sqrt(lambda_k)`, where `lambda_k`
-are eigenvalues of the free-bead spring matrix. Its damping is
-`2 * pile_lambda * omega_k`, at the usual bead temperature `P * T`.
-There is no centroid mode: `tau` is unused and a nonzero
-`pile_centroid_t` is rejected. Select it with
-`<thermostat mode="pile_l"><tau>1</tau></thermostat>` (the input schema
-still requires a positive `tau`).
+are eigenvalues of the free-bead spring matrix. Its damping time is
+`min(1 / (pile_lambda * omega_k), tau)`, at the usual bead temperature `P * T`.
+For `pile_lambda = 1`, the uncapped damping minimizes the autocorrelation time
+of the squared displacement of a free constrained spring mode. The input
+`tau` caps the damping time of slow modes. There is no centroid mode, so a
+nonzero `pile_centroid_t` is rejected. Select it, for example, with
+`<thermostat mode="pile_l"><tau units="femtosecond">100</tau></thermostat>`.
 Fixed centroids retain the thermostat
 options of the former `nvt-cc` mode and do not support bosonic exchange. Unsupported
 combinations raise an error before integration.

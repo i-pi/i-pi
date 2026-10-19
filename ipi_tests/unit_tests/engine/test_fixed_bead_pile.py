@@ -82,21 +82,27 @@ def test_fixed_pile_preserves_conditional_spring_density_and_heat(fixed):
     np.testing.assert_array_equal(nm.beads.p[fixed], 0)
 
 
-def test_fixed_pile_exact_ou_update_and_dependency_changes():
+@pytest.mark.parametrize("tau", [0.01, 1.0, 57.0])
+def test_fixed_pile_exact_ou_update_and_dependency_changes(tau):
     """One fixed endpoint has the known sine-mode spectrum, not ring modes."""
     nm = make_nm(
         np.zeros((4, 6)), np.arange(24.0).reshape(4, 6), [1.0, 3.0], 1.7, 0.2, [0]
     )
-    thermostat = ThermoPILE_L(temp=10000, dt=0.13, scale=0.6, tau=57)
+    thermostat = ThermoPILE_L(temp=10000, dt=0.003, scale=0.6, tau=tau)
     thermostat.bind(nm=nm, prng=Random(seed=385), fixdof=0, fixcom=False)
     reference = Random(seed=385)
     # A fixed replica cuts the ring into a chain with two fixed endpoints.
     frequencies = 2 * nm.omegan * np.sin(np.arange(1, 4) * np.pi / 8)
-    np.testing.assert_allclose(1 / thermostat.tauk, 2 * 0.6 * frequencies)
+    np.testing.assert_allclose(
+        1 / thermostat.tauk, np.maximum(0.6 * frequencies, 1 / tau)
+    )
     for _ in range(2):
         initial = dstrip(nm.beads.p).copy()
         expected = nm.fixed_transform.T @ initial[nm.freebeads]
-        damping = np.exp(-2 * thermostat.pilescale * frequencies * thermostat.dt)
+        damping = np.exp(
+            -np.maximum(thermostat.pilescale * frequencies, 1 / thermostat.tau)
+            * thermostat.dt
+        )
         for k in range(3):
             expected[k] = damping[k] * expected[k] + reference.gvec(6) * np.sqrt(
                 nm.beads.m3[0] * Constants.kb * thermostat.temp * (1 - damping[k] ** 2)
@@ -113,7 +119,32 @@ def test_fixed_pile_exact_ou_update_and_dependency_changes():
         thermostat.temp *= 1.2
         thermostat.dt *= 0.8
         thermostat.pilescale *= 0.7
+        thermostat.tau *= 1.5
         nm.beads.m *= 1.4
+
+
+def test_fixed_pile_tau_cap_updates_without_changing_other_parameters():
+    nm = make_nm(np.zeros((4, 3)), np.ones((4, 3)), [1.0], 1.7, 0.2, [0])
+    thermostat = ThermoPILE_L(tau=100, scale=1)
+    thermostat.bind(nm=nm, prng=Random(seed=274))
+    frequencies = 2 * nm.omegan * np.sin(np.arange(1, 4) * np.pi / 8)
+    np.testing.assert_allclose(thermostat.tauk, 1 / frequencies)
+    thermostat.tau = 0.4
+    np.testing.assert_allclose(thermostat.tauk, np.minimum(1 / frequencies, 0.4))
+    np.testing.assert_allclose(
+        [t.tau for t in thermostat._thermos], np.minimum(1 / frequencies, 0.4)
+    )
+    thermostat.tau = 0.1
+    np.testing.assert_allclose(thermostat.tauk, 0.1)
+    thermostat.tau = 100
+    np.testing.assert_allclose(thermostat.tauk, 1 / frequencies)
+
+
+def test_fixed_pile_zero_spring_frequency_uses_supplied_tau():
+    nm = make_nm(np.zeros((4, 3)), np.ones((4, 3)), [1.0], 0.0, 0.2, [0])
+    thermostat = ThermoPILE_L(tau=0.5)
+    thermostat.bind(nm=nm, prng=Random(seed=274))
+    np.testing.assert_allclose(thermostat.tauk, 0.5)
 
 
 @pytest.mark.parametrize("thermostat_class", [ThermoPILE_L, ThermoPILE_G])
