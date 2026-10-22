@@ -187,22 +187,27 @@ def test_geometry_optimization_finds_known_harmonic_minimum(
 
 @pytest.mark.parametrize("threading", [False, True])
 def test_properties_output_stride_matches_completed_steps(simulation, threading):
-    """A real output file contains step zero and exactly the requested subsequent steps."""
+    """Check output steps and energies against the state at each recorded step."""
     xml = harmonic_input(threading=threading).replace(
         "<system>",
         '<output prefix="sample"><properties filename="properties" stride="2">'
         "[step, potential, kinetic_md]</properties></output><system>",
     )
+    expected_energies = []
     with simulation(xml) as sim:
-        sim.run(steps=4)
         system = sim.syslist[0]
-        expected_potential = 0.25 * np.sum(system.beads.q**2)
-        expected_kinetic = np.sum(system.beads.p**2 / (2 * system.beads.m3))
+        for completed_steps in [0, 2, 4]:
+            if completed_steps:
+                sim.run(steps=2)
+            expected_energies.append(
+                [
+                    0.25 * np.sum(system.beads.q**2),
+                    np.sum(system.beads.p**2 / (2 * system.beads.m3)),
+                ]
+            )
     rows = np.loadtxt("sample.properties")
     np.testing.assert_array_equal(rows[:, 0], [0, 2, 4])
-    np.testing.assert_allclose(
-        rows[-1, 1:], [expected_potential, expected_kinetic], rtol=1e-12
-    )
+    np.testing.assert_allclose(rows[:, 1:], expected_energies, rtol=1e-12)
 
 
 @pytest.mark.parametrize("estimator", ["get_isotope_yama", "get_isotope_thermo"])
@@ -329,7 +334,7 @@ def test_changed_isotope_mass_summary_outputs(
 @pytest.mark.xfail(
     strict=True,
     raises=ValueError,
-    reason="GLE initializer looks for the thermostat on Ensemble instead of Motion",
+    reason="BUG: GLE state initialization uses ensemble.thermostat instead of motion.thermostat",
 )
 def test_gle_auxiliary_momenta_can_be_initialized_from_input(simulation):
     xml = harmonic_input(thermostat="gle").replace(
