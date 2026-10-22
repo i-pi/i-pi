@@ -7,7 +7,6 @@ import pytest
 from scipy.linalg import expm
 from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
 
-
 MODE_SETTINGS = [
     ("rpmd", []),
     ("manual", [0.02, 0.03, 0.04]),
@@ -71,7 +70,9 @@ def test_open_and_closed_frequencies_and_mass_factors_match_input(
                 expected_factors[1:] = (
                     expected_spring[1:] ** 2 + wmax**2
                 ) / common_frequency**2
-            np.testing.assert_allclose(factors, expected_factors, rtol=1e-12, atol=1e-14)
+            np.testing.assert_allclose(
+                factors, expected_factors, rtol=1e-12, atol=1e-14
+            )
 
 
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)

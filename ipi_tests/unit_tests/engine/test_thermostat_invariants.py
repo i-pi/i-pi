@@ -75,9 +75,10 @@ def test_finite_temperature_langevin_matches_published_update(monkeypatch):
     thermostat = ThermoLangevin(temp=temperature, dt=timestep, tau=tau)
     thermostat.bind(atoms=atoms, prng=prng)
     damping = np.exp(-timestep / tau)
-    expected = damping * initial + np.sqrt(
-        np.repeat(masses, 3) * temperature * (1 - damping**2)
-    ) * draws
+    expected = (
+        damping * initial
+        + np.sqrt(np.repeat(masses, 3) * temperature * (1 - damping**2)) * draws
+    )
     thermostat.step()
     np.testing.assert_allclose(atoms.p, expected, rtol=1e-12, atol=1e-14)
 
