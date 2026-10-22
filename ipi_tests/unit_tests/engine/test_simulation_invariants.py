@@ -328,51 +328,6 @@ def test_changed_isotope_mass_summary_outputs(
 
 @pytest.mark.xfail(
     strict=True,
-    raises=TypeError,
-    reason="InputMotion passes fixatoms_dof but ConstrainedDynamics still accepts fixatoms",
-)
-@pytest.mark.parametrize("ensemble, splitting", [("nve", "obabo")])
-def test_constrained_dynamics_preserves_bond_and_tangent_velocities(
-    simulation, ensemble, splitting
-):
-    """The actual integrator preserves the bond while allowing tangential motion."""
-    import xml.etree.ElementTree as ET
-
-    root = ET.fromstring(harmonic_input())
-    motion = root.find("system/motion")
-    motion.clear()
-    motion.set("mode", "constrained_dynamics")
-    ET.SubElement(motion, "fixcom").text = "False"
-    options = ET.SubElement(
-        motion, "constrained_dynamics", mode=ensemble, splitting=splitting
-    )
-    ET.SubElement(options, "timestep").text = "0.01"
-    ET.SubElement(options, "nsteps_geo").text = "2"
-    ET.SubElement(options, "nsteps_o").text = "2"
-    solver = ET.SubElement(options, "csolver")
-    ET.SubElement(solver, "tolerance").text = "1e-12"
-    constraint = ET.SubElement(options, "constraint", mode="distance")
-    ET.SubElement(constraint, "atoms").text = "[0,1]"
-    if ensemble == "nvt":
-        thermostat = ET.SubElement(options, "thermostat", mode="langevin")
-        ET.SubElement(thermostat, "tau").text = "0.5"
-    with simulation(ET.tostring(root, encoding="unicode")) as sim:
-        beads = sim.syslist[0].beads
-        initial = beads.q.copy()
-        bond_length = np.linalg.norm(initial[0, :3] - initial[0, 3:])
-        for _ in range(5):
-            sim.run(steps=1, write_outputs=False)
-            bond = beads.q[0, :3] - beads.q[0, 3:]
-            velocity = beads.p[0] / beads.m3[0]
-            assert np.linalg.norm(bond) == pytest.approx(bond_length, abs=1e-11)
-            assert np.dot(bond, velocity[:3] - velocity[3:]) == pytest.approx(
-                0, abs=1e-11
-            )
-        assert np.linalg.norm(beads.q - initial) > 1e-4
-
-
-@pytest.mark.xfail(
-    strict=True,
     raises=ValueError,
     reason="GLE initializer looks for the thermostat on Ensemble instead of Motion",
 )

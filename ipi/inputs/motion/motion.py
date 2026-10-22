@@ -392,6 +392,10 @@ class InputMotionBase(Input):
                 fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.dynamics.fetch()
             )
         elif self.mode.fetch() == "constrained_dynamics":
+            # The constructor currently rejects fixatoms_dof before its body runs.
+            warning(
+                "Constrained dynamics: This feature is not maintained and can have bugs."
+            )
             sc = ConstrainedDynamics(
                 fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
