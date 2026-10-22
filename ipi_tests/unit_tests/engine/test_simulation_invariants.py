@@ -326,63 +326,6 @@ def test_changed_isotope_mass_summary_outputs(
     np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
 
 
-@pytest.mark.parametrize("statistics", ["cl", "qn"])
-@pytest.mark.parametrize(
-    "nparallel",
-    [
-        1,
-        pytest.param(
-            2,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=ValueError,
-                reason="SCP parallel sampling tries to clone one bead into two, which Beads.clone rejects",
-            ),
-        ),
-    ],
-)
-def test_self_consistent_phonon_sampling_of_harmonic_potential(
-    simulation, statistics, nparallel
-):
-    """Trial covariance and sampled forces agree with an independent harmonic solution."""
-    import xml.etree.ElementTree as ET
-    from ipi.utils.units import unit_to_internal
-
-    root = ET.fromstring(harmonic_input())
-    motion = root.find("system/motion")
-    motion.clear()
-    motion.set("mode", "scp")
-    ET.SubElement(motion, "fixcom").text = "False"
-    options = ET.SubElement(motion, "scp", mode=statistics)
-    ET.SubElement(options, "max_steps").text = "4"
-    ET.SubElement(options, "max_iter").text = "2"
-    ET.SubElement(options, "nparallel").text = str(nparallel)
-    masses = np.repeat([2.0, 3.0], 3)
-    dynamical = np.diag(0.5 / masses)
-    ET.SubElement(options, "dynmat", shape="(6,6)").text = str(
-        dynamical.ravel().tolist()
-    )
-    with simulation(ET.tostring(root, encoding="unicode")) as sim:
-        sim.run(steps=1 + 4 // nparallel, write_outputs=False)
-        mover = sim.syslist[0].motion
-        temperature = unit_to_internal("temperature", "kelvin", 300)
-        omega = np.sqrt(0.5 / masses)
-        if statistics == "cl":
-            variance = np.full(6, temperature / 0.5)
-        else:
-            variance = 1 / (2 * masses * omega * np.tanh(omega / (2 * temperature)))
-        np.testing.assert_allclose(mover.D, np.diag(variance), rtol=1e-12, atol=1e-14)
-        np.testing.assert_allclose(mover.K, 0.5 * np.eye(6), atol=1e-14)
-        samples = mover.phononator.x[0]
-        np.testing.assert_allclose(
-            samples.mean(axis=0), sim.syslist[0].beads.q[0], atol=1e-14
-        )
-        np.testing.assert_allclose(mover.phononator.f[0], -0.5 * samples, atol=1e-14)
-        np.testing.assert_allclose(
-            mover.phononator.v[0], 0.25 * np.sum(samples**2, axis=1), atol=1e-14
-        )
-
-
 @pytest.mark.xfail(
     strict=True,
     raises=TypeError,

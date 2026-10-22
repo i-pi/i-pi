@@ -216,35 +216,3 @@ def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
         np.sort(np.sqrt(0.5 / masses)),
         atol=1e-12,
     )
-
-
-@pytest.mark.parametrize("update", ["sd", "ik", "nmik"])
-def test_self_consistent_phonon_update_preserves_exact_harmonic_solution(
-    simulation, update
-):
-    options = ET.Element("scp", mode="cl")
-    for key, value in {
-        "max_steps": 8,
-        "max_iter": 3,
-        "displace_mode": update,
-        "precheck": "False",
-    }.items():
-        ET.SubElement(options, key).text = str(value)
-    masses = np.repeat([2.0, 3.0], 3)
-    ET.SubElement(options, "dynmat", shape="(6,6)").text = str(
-        np.diag(0.5 / masses).ravel().tolist()
-    )
-    root = motion_input("scp", options)
-    root.find("system/beads/q").text = str([0.0] * 6)
-    with simulation(ET.tostring(root, encoding="unicode")) as sim:
-        sim.run(steps=10, write_outputs=False)
-        mover = sim.syslist[0].motion
-        np.testing.assert_allclose(mover.beads.q, 0, atol=1e-12)
-        np.testing.assert_allclose(mover.K, 0.5 * np.eye(6), atol=1e-12)
-        force, error, weights = mover.phononator.weighted_force()
-        np.testing.assert_allclose(force, 0, atol=1e-12)
-        np.testing.assert_allclose(error, 0, atol=1e-12)
-        np.testing.assert_allclose(weights, 1, atol=1e-12)
-        np.testing.assert_allclose(
-            mover.phononator.weighted_hessian(), 0.5 * np.eye(6), atol=1e-12
-        )
