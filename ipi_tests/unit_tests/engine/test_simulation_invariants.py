@@ -245,6 +245,87 @@ def test_identical_isotope_weights_recover_mean_kinetic_estimator(
         np.testing.assert_array_equal(system.beads.q, original_positions)
 
 
+@pytest.fixture
+def changed_isotope_mass_case(simulation, estimator, alpha):
+    """A convex quadratic gives explicit per-atom weights and kinetic estimates."""
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(harmonic_input(nbeads=4))
+    temperature = root.find("system/ensemble/temperature")
+    temperature.attrib.clear()
+    temperature.text = "0.2"
+    positions = np.zeros((4, 6))
+    positions[:, 0] = [-0.2, -0.1, 0.1, 0.2]
+    positions[:, 3] = [-0.4, -0.2, 0.2, 0.4]
+
+    # Atomic units: k_B = hbar = 1, T = 0.2, P = 4, k = 0.5, m = [2, 3].
+    # The x variances are [0.025, 0.1]; the sums of squared adjacent-bead
+    # differences, including ring closure, are [0.22, 0.88]. Both centroids
+    # are zero. These constants come from the positions specified above.
+    variance = np.array([0.025, 0.1])
+    if estimator == "get_isotope_yama":
+        # Scaling x by 1/sqrt(alpha) scales its variance by 1/alpha.
+        # The per-bead potential change is k/2 * (1/alpha - 1) * Var(x).
+        kinetic = 0.3 + 0.25 * variance / alpha
+        log_ratio = 0.25 * (1 / alpha - 1) * variance / 0.2
+    else:
+        # The spring action is m*(P*T)^2/2 * sum((x_b-x_(b-1))^2).
+        # A mass change multiplies that action by alpha without moving x.
+        kinetic = 0.3 + 0.25 * variance
+        spring_energy = 0.5 * np.array([2.0, 3.0]) * 0.8**2 * [0.22, 0.88]
+        log_ratio = (alpha - 1) * spring_energy / 0.8
+    weights = np.exp(-log_ratio)
+
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        system = sim.syslist[0]
+        system.beads.q[:] = positions
+        yield system, log_ratio, kinetic, weights
+        np.testing.assert_array_equal(system.beads.q, positions)
+        assert system.forces.pot == pytest.approx(0.125, abs=1e-12)
+        np.testing.assert_allclose(system.forces.f, -0.5 * positions, atol=1e-12)
+
+
+@pytest.mark.parametrize("estimator", ["get_isotope_yama", "get_isotope_thermo"])
+@pytest.mark.parametrize("alpha", [0.5, 2.0])
+def test_changed_isotope_mass_matches_independent_weighted_kinetic_energy(
+    changed_isotope_mass_case, estimator, alpha
+):
+    """Check each atom's h, kinetic energy and weight before combining atoms."""
+    system, log_ratio, kinetic, weights = changed_isotope_mass_case
+    estimate = getattr(system.properties, estimator)
+    for atom in range(2):
+        actual = estimate(alpha=str(alpha), atom=str(atom))
+        assert actual[0] == pytest.approx(log_ratio[atom], rel=1e-12, abs=1e-12)
+        assert actual[2] == pytest.approx(kinetic[atom], rel=1e-12, abs=1e-12)
+        assert np.exp(actual[4]) == pytest.approx(weights[atom], rel=1e-12, abs=1e-12)
+
+    combined = estimate(alpha=str(alpha))
+    weighted_mean = combined[6] * np.exp(combined[5] - combined[4])
+    assert weighted_mean == pytest.approx(
+        np.dot(weights, kinetic) / np.sum(weights), rel=1e-12, abs=1e-12
+    )
+
+
+@pytest.mark.parametrize("estimator", ["get_isotope_yama", "get_isotope_thermo"])
+@pytest.mark.parametrize("alpha", [0.5, 2.0])
+def test_changed_isotope_mass_summary_outputs(
+    changed_isotope_mass_case, estimator, alpha
+):
+    """Check returned averages, squares, logarithmic sums and sign separately."""
+    system, log_ratio, kinetic, weights = changed_isotope_mass_case
+    expected = [
+        np.mean(log_ratio),
+        np.mean(log_ratio**2),
+        np.mean(kinetic),
+        np.mean(kinetic**2),
+        np.log(np.sum(weights)),
+        np.log(np.dot(weights, kinetic)),
+        1.0,
+    ]
+    actual = getattr(system.properties, estimator)(alpha=str(alpha))
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+
+
 @pytest.mark.parametrize("statistics", ["cl", "qn"])
 @pytest.mark.parametrize(
     "nparallel",
