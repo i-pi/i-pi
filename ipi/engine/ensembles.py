@@ -15,6 +15,7 @@ import numpy as np
 
 from ipi.utils.messages import warning
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 from ipi.utils.units import Constants
 from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
@@ -34,10 +35,10 @@ def ensemble_swap(ens1, ens2):
         ens1.temp, ens2.temp = ens2.temp, ens1.temp
     if ens1.pext != ens2.pext:
         ens1.pext, ens2.pext = ens2.pext, ens1.pext
-    if np.linalg.norm(ens1.stressext - ens2.stressext) > 1e-10:
-        tmp = dstrip(ens1.stressext).copy()
-        ens1.stressext[:] = ens2.stressext
-        ens2.stressext[:] = tmp
+    if float(xp.linalg.vector_norm(ens1.stressext - ens2.stressext)) > 1e-10:
+        tmp = xp.asarray(ens1.stressext, copy=True)
+        ens1._stressext[:] = ens2.stressext
+        ens2._stressext[:] = tmp
     if len(ens1.bweights) != len(ens2.bweights):
         raise ValueError(
             "Cannot exchange ensembles that have different numbers of bias components"
@@ -48,13 +49,13 @@ def ensemble_swap(ens1, ens2):
         )
     if not np.array_equal(ens1.bweights, ens2.bweights):
         ens1.bweights, ens2.bweights = (
-            dstrip(ens2.bweights).copy(),
-            dstrip(ens1.bweights).copy(),
+            ens2.bweights.copy(),
+            ens1.bweights.copy(),
         )
     if not np.array_equal(ens1.hweights, ens2.hweights):
         ens1.hweights, ens2.hweights = (
-            dstrip(ens2.hweights).copy(),
-            dstrip(ens1.hweights).copy(),
+            ens2.hweights.copy(),
+            ens1.hweights.copy(),
         )
 
 
@@ -98,7 +99,7 @@ class Ensemble:
 
         self._stressext = depend_array(name="stressext", value=np.zeros((3, 3), float))
         if stressext is not None:
-            self.stressext = np.reshape(np.asarray(stressext), (3, 3))
+            self.stressext = xp.reshape(xp.asarray(stressext), (3, 3))
         else:
             self.stressext = -1.0
 
@@ -128,7 +129,9 @@ class Ensemble:
         if bweights is None or len(bweights) == 0:
             bweights = np.ones(len(self.bcomp))
 
-        self._bweights = depend_array(name="bweights", value=np.asarray(bweights))
+        self._bweights = depend_array(
+            name="bweights", value=np.asarray(bweights), host=True
+        )
 
         # weights of the Hamiltonian scaling
         if hweights is None:
@@ -144,10 +147,10 @@ class Ensemble:
             econs=0.0,
             temp=self.temp,
             pext=self.pext,
-            stressext=dstrip(self.stressext).copy(),
+            stressext=xp.asarray(self.stressext, copy=True),
             bcomponents=self.bcomp,
-            bweights=dstrip(self.bweights).copy(),
-            hweights=dstrip(self.hweights).copy(),
+            bweights=self.bweights.copy(),
+            hweights=self.hweights.copy(),
             time=self.time,
         )
 
@@ -201,7 +204,9 @@ class Ensemble:
         if len(self.hweights) == 0:
             self.hweights = np.ones(len(self.forces.mforces))
 
-        self._hweights = depend_array(name="hweights", value=np.asarray(self.hweights))
+        self._hweights = depend_array(
+            name="hweights", value=np.asarray(self.hweights), host=True
+        )
         self._has_bias = depend_value(
             name="has_bias",
             func=lambda: (

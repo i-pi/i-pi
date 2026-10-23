@@ -19,12 +19,12 @@ import numpy as np
 
 from ipi.engine.cell import GenericCell
 from ipi.utils.prng import Random
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.interfaces.mpi import InterfaceMPI
 from ipi.interfaces.utils import parse_extra
-from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
@@ -161,7 +161,7 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = xp.asarray(atoms.q, copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -186,11 +186,12 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
+        # requests hold numpy copies of the positions and of the cell
         fields = {
             "id": reqid,
-            "pos": pbcpos,
+            "pos": to_numpy(pbcpos),
             "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -939,8 +940,8 @@ class FFPlumed(FFEval):
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
-            myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
-            mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+            myatoms._q *= unit_to_internal("length", self.init_file.units, 1.0)
+            mycell._h *= unit_to_internal("length", self.init_file.units, 1.0)
         else:
             raise ValueError(
                 "Unsupported init file format for FFPlumed: "
@@ -985,8 +986,8 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = dstrip(myatoms.q) * 0.0
-        self.masses = dstrip(myatoms.m)
+        self.charges = myatoms.q * 0.0
+        self.masses = myatoms.m
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -1021,9 +1022,9 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
-            vir[:] = -dstrip(self.system_force.vir)
-            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
+            f[:] = self.system_force.f.reshape((-1, 3))
+            vir[:] = -self.system_force.vir
+            self.plumed.cmd("setEnergy", self.system_force.pot)
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
@@ -1047,8 +1048,8 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= dstrip(self.system_force.f).flatten()
-            vir[:] -= -dstrip(self.system_force.vir)
+            f[:] -= self.system_force.f.flatten()
+            vir[:] -= -self.system_force.vir
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1084,7 +1085,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            request = {"pos": pos, "cell": (cell, None), "result": None}
             self.evaluate(request)
 
         if self.compute_work:
@@ -1753,12 +1754,12 @@ class FFRotations(ForceField):
 
         for R, w, _ in self._rotations:
             R = R @ R_random
+            # the rotation matrix used on the positions and the cell
+            xR = xp.asarray(R)
 
             rot_atoms = atoms.clone()
-            rot_cell = GenericCell(
-                R @ dstrip(cell.h).copy()
-            )  # NB we need generic cell orientation
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+            rot_cell = GenericCell(xR @ cell.h)  # NB we need generic cell orientation
+            rot_atoms._q[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
             rots.append((R, w))
             ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1766,10 +1767,11 @@ class FFRotations(ForceField):
             if self.inversion:
                 # also add a "flipped rotation" to the evaluation list
                 R = R * -1
+                xR = xR * -1
 
-                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+                rot_cell = GenericCell(xR @ cell.h)
                 rot_atoms = atoms.clone()
-                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+                rot_atoms._q[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
                 rots.append((R, w))
                 ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -2279,7 +2281,7 @@ class FFCavPhSocket(FFSocket):
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = np.array(to_numpy(atoms.q))
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -2316,13 +2318,15 @@ class FFCavPhSocket(FFSocket):
             iactive_local = self.iactive[0:ndim_local]
             # Let's try to do PBC for the small regions
             if self.dopbc:
+                pbcpos_local = xp.asarray(pbcpos_local)
                 cell.array_pbc(pbcpos_local)
+                pbcpos_local = to_numpy(pbcpos_local)
             newreq_local = ForceRequest(
                 {
                     "id": int(reqid * self.n_independent_bath) + idx,
                     "pos": pbcpos_local,
                     "active": iactive_local,
-                    "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                    "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
                     "pars": par_str,
                     "result": None,
                     "status": "Queued",
@@ -2474,7 +2478,7 @@ class FFCavPhSocket(FFSocket):
                 "id": reqid,
                 "pos": pbcpos,
                 "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
                 "pars": par_str,
                 "result": result_tot,
                 "status": newreq_lst[-1]["status"],

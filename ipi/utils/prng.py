@@ -5,6 +5,10 @@ These are used in initialising the velocities and in stochastic thermostats.
 The state of the random number generator is kept track of, so that the if the
 simulation is restarted from a checkpoint, we will see the same dynamics as if
 it had not been stopped.
+
+Scalars and host-side arrays are drawn with numpy generators. Arrays of
+Gaussian numbers (`gvec`, `gfill`) are drawn with the generator of the array
+backend, i.e. on the device when using torch.
 """
 
 # This file is part of i-PI.
@@ -15,6 +19,9 @@ it had not been stopped.
 import numpy as np
 import concurrent.futures
 import time
+
+from ipi.utils.array_backend import backend, device
+from ipi.utils.messages import verbosity, warning
 
 __all__ = ["Random"]
 
@@ -62,7 +69,19 @@ class Random(object):
         ]
 
         self.n_threads = n_threads
-        if self.n_threads == 1:
+        self._torch_rng = None
+        if backend() == "torch":
+            import torch
+
+            # Gaussian arrays are drawn on the device by a torch generator,
+            # seeded independently of the numpy generators
+            self._torch_rng = torch.Generator(device=device())
+            self._torch_rng.manual_seed(
+                int(np.random.SeedSequence(seed).generate_state(1, np.uint64)[0])
+            )
+            self.gvec = self.gvec_torch
+            self.gfill = self.gfill_torch
+        elif self.n_threads == 1:
             self.gvec = self.gvec_serial
             self.gfill = self.gfill_serial
         else:
@@ -74,19 +93,53 @@ class Random(object):
             self.state = state
 
     def get_state(self):
-        """Interface to the standard get_state() function."""
+        """Interface to the standard get_state() function.
 
-        return [r.bit_generator.state for r in self.rng]
+        Returns the list of the states of the numpy generators, or a dictionary
+        that also contains the state of the torch generator, if present.
+        """
+
+        states = [r.bit_generator.state for r in self.rng]
+        if self._torch_rng is None:
+            return states
+        return {
+            "numpy": states,
+            "torch": {
+                "device": str(self._torch_rng.device),
+                "state": self._torch_rng.get_state().tolist(),
+            },
+        }
 
     def set_state(self, value):
         """Interface to the standard set_state() function.
 
         Should only be used with states generated from another similar random
-        number generator, such as one from a previous run.
+        number generator, such as one from a previous run. If the state of the
+        torch generator is missing, or refers to a different device, the torch
+        generator keeps the state obtained from the seed.
         """
 
+        torch_state = None
+        if isinstance(value, dict):
+            torch_state = value.get("torch")
+            value = value["numpy"]
         for r, s in zip(self.rng, value):
             r.bit_generator.state = s
+        if self._torch_rng is not None:
+            if torch_state is not None and torch_state["device"] == str(
+                self._torch_rng.device
+            ):
+                import torch
+
+                self._torch_rng.set_state(
+                    torch.tensor(torch_state["state"], dtype=torch.uint8)
+                )
+            else:
+                warning(
+                    "No state for the torch random number generator on this device: "
+                    "it is initialized from the seed",
+                    verbosity.low,
+                )
 
     state = property(get_state, set_state)
 
@@ -237,3 +290,29 @@ class Random(object):
         self.gfill_threaded(rvec)
 
         return rvec
+
+    def gfill_torch(self, out):
+        """Fills a pre-allocated torch array with the torch generator.
+
+        Args:
+            out: The array to be filled.
+        """
+
+        out.normal_(generator=self._torch_rng)
+
+    def gvec_torch(self, shape):
+        """Returns an array of Gaussian random numbers drawn with the torch
+        generator, on its device.
+
+        Args:
+            shape: The shape of the array to be returned.
+        """
+
+        import torch
+
+        return torch.randn(
+            shape,
+            generator=self._torch_rng,
+            dtype=torch.float64,
+            device=self._torch_rng.device,
+        )

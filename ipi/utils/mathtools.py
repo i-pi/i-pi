@@ -11,6 +11,7 @@ from importlib import resources
 import numpy as np
 
 from ipi.utils.messages import verbosity, warning
+from ipi.utils.array_backend import xp, to_numpy
 
 __all__ = [
     "matrix_exp",
@@ -79,15 +80,15 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
     for i in range(ntaylor):
         tc[i + 1] = tc[i] / (i + 1)
 
-    SM = np.copy(M) / 2.0**nsquare
+    SM = M / 2.0**nsquare
 
-    EM = np.identity(n, float) * tc[ntaylor]
+    identity = xp.eye(n)
+    EM = identity * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
-        EM = np.dot(SM, EM)
-        EM += np.identity(n) * tc[i]
+        EM = SM @ EM + identity * tc[i]
 
     for i in range(nsquare):
-        EM = np.dot(EM, EM)
+        EM = EM @ EM
     return EM
 
 
@@ -110,8 +111,8 @@ def stab_cholesky(M):
     """
 
     n = M.shape[1]
-    D = np.zeros(n, float)
-    L = np.zeros(M.shape, float)
+    D = xp.zeros(n)
+    L = xp.zeros(M.shape)
     for i in range(n):
         L[i, i] = 1.0
         for j in range(i):
@@ -125,7 +126,7 @@ def stab_cholesky(M):
             D[i] -= L[i, k] * L[i, k] * D[k]
 
     negev = False
-    S = np.zeros(M.shape, float)
+    S = xp.zeros(M.shape)
     for i in range(n):
         if D[i] > 0:
             D[i] = math.sqrt(D[i])
@@ -141,8 +142,7 @@ def stab_cholesky(M):
 
     if negev:
         warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(M - np.dot(S, S.T)),
+            "Checking decomposition after negative eigenvalue: \n" + str(M - S @ S.T),
             verbosity.low,
         )
 
@@ -169,7 +169,7 @@ def h2abc(h):
     c = math.sqrt(h[0, 2] ** 2 + h[1, 2] ** 2 + h[2, 2] ** 2)
     gamma = math.acos(h[0, 1] / b)
     beta = math.acos(h[0, 2] / c)
-    alpha = math.acos(np.dot(h[:, 1], h[:, 2]) / (b * c))
+    alpha = math.acos(h[:, 1] @ h[:, 2] / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
@@ -189,12 +189,12 @@ def genh2abc(h):
        A list containing the lattice vector lengths and the angles between them.
     """
 
-    a = math.sqrt(np.dot(h[0], h[0]))
-    b = math.sqrt(np.dot(h[1], h[1]))
-    c = math.sqrt(np.dot(h[2], h[2]))
-    gamma = math.acos(np.dot(h[0], h[1]) / (a * b))
-    beta = math.acos(np.dot(h[0], h[2]) / (a * c))
-    alpha = math.acos(np.dot(h[2], h[1]) / (b * c))
+    a = math.sqrt(h[0] @ h[0])
+    b = math.sqrt(h[1] @ h[1])
+    c = math.sqrt(h[2] @ h[2])
+    gamma = math.acos(h[0] @ h[1] / (a * b))
+    beta = math.acos(h[0] @ h[2] / (a * c))
+    alpha = math.acos(h[2] @ h[1] / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
@@ -255,7 +255,7 @@ def invert_ut3x3(h):
        The inverse matrix of h.
     """
 
-    ih = np.zeros((3, 3), float)
+    ih = xp.zeros((3, 3))
     for i in range(3):
         ih[i, i] = 1.0 / h[i, i]
     ih[0, 1] = -ih[0, 0] * h[0, 1] * ih[1, 1]
@@ -384,11 +384,11 @@ def root_herm(A):
        original matrix.
     """
 
-    if not (abs(A.T - A) < 1e-10).all():
+    if not bool(xp.all(xp.abs(A.T - A) < 1e-10)):
         raise ValueError("Non-Hermitian matrix passed to root_herm function")
-    eigvals, eigvecs = np.linalg.eigh(A)
-    ndgrs = len(eigvals)
-    diag = np.zeros((ndgrs, ndgrs))
+    eigvals, eigvecs = xp.linalg.eigh(A)
+    ndgrs = eigvals.shape[0]
+    diag = xp.zeros((ndgrs, ndgrs))
     negev = False
     for i in range(ndgrs):
         if eigvals[i] >= 0:
@@ -401,31 +401,28 @@ def root_herm(A):
             )
             diag[i, i] = 0
             negev = True
-    rv = np.dot(eigvecs, np.dot(diag, eigvecs.T))
+    rv = eigvecs @ (diag @ eigvecs.T)
     if negev:
         warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(A - np.dot(rv, rv.T)),
+            "Checking decomposition after negative eigenvalue: \n" + str(A - rv @ rv.T),
             verbosity.low,
         )
 
     return rv
 
 
-def _sinch(x):
-    """Computes sinh(x)/x in a way that is stable for x->0.
+def sinch(x):
+    """Computes sinh(x)/x elementwise, in a way that is stable for x->0.
 
     Works for complex x too (e.g. complex eigenvalues from a non-symmetric
     barostat momentum tensor), so the small-argument test uses abs()."""
 
     x2 = x * x
-    if abs(x2) < 1e-12:
-        return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
-    else:
-        return np.sinh(x) / x
-
-
-sinch = np.vectorize(_sinch)
+    small = xp.abs(x2) < 1e-12
+    # the series is used for small arguments, and x is replaced by one to avoid 0/0
+    xs = xp.where(small, xp.ones_like(x), x)
+    series = 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
+    return xp.where(small, series, xp.sinh(xs) / xs)
 
 
 def mat_taylor(x, function):
@@ -440,19 +437,12 @@ def mat_taylor(x, function):
         warning("input matrix is not squared")
         return None
     dim = x.shape[0]
-    I = np.identity(dim)
+    I = xp.eye(dim)
     if function == "sinhx/x":
         # compute sinhx/x by directly taylor
-        x2 = np.linalg.matrix_power(x, 2)
-        return I + np.matmul(
-            x2 / (2.0 * 3.0),
-            (
-                I
-                + np.matmul(
-                    x2 / (4.0 * 5.0),
-                    (I + np.matmul(x2 / (6.0 * 7.0), (I + x2 / (8.0 * 9.0)))),
-                )
-            ),
+        x2 = x @ x
+        return I + (x2 / (2.0 * 3.0)) @ (
+            I + (x2 / (4.0 * 5.0)) @ (I + (x2 / (6.0 * 7.0)) @ (I + x2 / (8.0 * 9.0)))
         )
 
     else:
@@ -642,7 +632,8 @@ def get_rotation_quadrature_lebedev(L):
 def random_rotation(prng, improper=True):
     """Generates a (uniform) random rotation matrix"""
 
-    quaternion = prng.gvec(shape=(4,))
+    # the rotation is applied to the numpy positions sent to the forcefield
+    quaternion = np.array(to_numpy(prng.gvec(shape=(4,))))
     quaternion /= np.sqrt((quaternion**2).sum())
 
     rot = quat2rot(quaternion)

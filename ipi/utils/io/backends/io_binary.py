@@ -10,6 +10,8 @@
 import sys
 import numpy as np
 
+from ipi.utils.array_backend import to_numpy
+
 __all__ = ["print_binary", "read_binary"]
 
 
@@ -27,11 +29,11 @@ def print_binary(
 
     buff = filedesc
     # applies conversion of units to the cell and saves to file.
-    (cell.h.flatten() * cell_conv).tofile(buff)
+    (to_numpy(cell.h).flatten() * cell_conv).tofile(buff)
     nat = np.asarray([atoms.natoms])
     nat.tofile(buff)
     # applies conversion of units to the atoms and saves to file.
-    (atoms.q * atoms_conv).tofile(buff)
+    (to_numpy(atoms.q) * atoms_conv).tofile(buff)
     # concatenates names, assuming none contains '|'
     names = "|".join(atoms.names)
     nat[0] = len(names)

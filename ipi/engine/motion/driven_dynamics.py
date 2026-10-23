@@ -6,6 +6,8 @@
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import (
@@ -122,32 +124,32 @@ class EDAIntegrator(DummyIntegrator):
             )
 
         edaforces = self.EDAforces(time)
-        self.beads.p += edaforces * self.pdt[level]
+        self.beads._p += edaforces * self.pdt[level]
         self.pconstraints()
 
         pass
 
     def EDAforces(self, time):
         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
-        Z = dstrip(self.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
+        Z = self.Born_Charges.bec  # tensor of shape (nbeads,3xNatoms,3)
         E = self.Electric_Field.Efield(time)  # vector of shape (3)
         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
 
     def dipole_dtime(self, bead=-1):
         """Compute the time derivative of the electric dipole of the system"""
-        Z = dstrip(
+        Z = (
             self.Born_Charges.bec
         )  # Born Effective Charges: shape == (nbeads,3xNatoms,3)
         v = self.beads.p / self.beads.m3  # velocities: shape == (nbeads,3xNatoms)
         if bead >= 0:
-            mu_dt = Constants.e * np.einsum("jk,j->k", Z[bead], v[bead])
+            mu_dt = Constants.e * (Z[bead].T @ v[bead])
             # time derivative of the dipole: shape == (3)
             assert mu_dt.shape == (
                 3,
             ), f"Got mu_dt.shape = {mu_dt.shape}, expected (3,)"
         else:
-            mu_dt = Constants.e * np.einsum("ijk,ij->ik", Z, v)
+            mu_dt = Constants.e * (Z * v[:, :, None]).sum(axis=1)
             # time derivative of the dipole: shape == (nbeads,3)
             assert mu_dt.shape == (
                 self.beads.nbeads,
@@ -290,7 +292,7 @@ class BEC:
 
             Z[n, :, :] = np.copy(bec)
 
-        return Z
+        return xp.asarray(Z)
 
     def _get_fixed_BEC(self):
         """Return the BEC tensors (in cartesian coordinates).
@@ -329,7 +331,7 @@ class ElectricDipole:
         val = np.full((self.nbeads, 3), np.nan)
         self._dipole = depend_array(
             name="dipole",
-            func=lambda: self._get_dipole(),
+            func=lambda: xp.asarray(self._get_dipole()),
             value=val,
             dependencies=[ensemble.beads._q],
         )
@@ -429,14 +431,14 @@ class ElectricField:
         """Get the value of the external electric field (cartesian axes)"""
         if not self.enabled:  # return a zero field with the correct shape
             if hasattr(time, "__len__"):
-                return np.zeros((len(time), 3), float)
+                return xp.zeros((len(time), 3))
             else:
-                return np.zeros(3, float)
+                return xp.zeros(3)
         else:
             Eenv = self.Eenvelope(time)  # evaluate the envelope function
             Ecos = self._get_Ecos(time)  # evaluate the cos function
             if hasattr(time, "__len__"):
-                return np.outer(Ecos * Eenv, self.amp)
+                return xp.asarray(Ecos * Eenv)[:, None] * self.amp
             else:
                 return Ecos * Eenv * self.amp
 

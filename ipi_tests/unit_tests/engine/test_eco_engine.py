@@ -17,7 +17,6 @@ from ipi.inputs.cell import InputCell
 from ipi.inputs.normalmodes import InputNormalModes
 from ipi.scripting import InteractiveSimulation
 from ipi.utils import nmtransform
-from ipi.utils.depend import dstrip
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 from ipi.utils.units import Constants
 
@@ -92,14 +91,14 @@ def test_omegak_and_masses(eco_sim):
     """Checks the eco frequencies against the fit, and the dynamical masses."""
 
     nm = eco_sim.syslist[0].nm
-    omegak = dstrip(nm.omegak)
-    xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
+    omegak = nm.omegak
+    xmax = float(nm.nm_freqs[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
         omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-10
     )
     assert omegak[0] == 0.0
     # eco changes the springs but not the dynamical masses
-    np.testing.assert_allclose(dstrip(nm.nm_factor), np.ones(NBEADS))
+    np.testing.assert_allclose(nm.nm_factor, np.ones(NBEADS))
 
 
 def test_spring_and_kinetic_td(eco_sim):
@@ -108,11 +107,11 @@ def test_spring_and_kinetic_td(eco_sim):
 
     sys = eco_sim.syslist[0]
     nm = sys.nm
-    qnm = dstrip(nm.qnm)
-    m3 = dstrip(sys.beads.m3)
-    wk2 = dstrip(nm.omegak) ** 2
+    qnm = nm.qnm
+    m3 = sys.beads.m3
+    wk2 = nm.omegak**2
     vspring = 0.5 * np.sum(wk2[:, np.newaxis] * m3 * qnm**2)
-    np.testing.assert_allclose(dstrip(nm.vspring), vspring, rtol=1e-12)
+    np.testing.assert_allclose(nm.vspring, vspring, rtol=1e-12)
 
     ktd = sys.properties["kinetic_td"][0]
     kt = Constants.kb * sys.ensemble.temp
@@ -127,10 +126,10 @@ def test_temperature_refit(eco_sim):
 
     sys = eco_sim.syslist[0]
     nm = sys.nm
-    gamma_old = dstrip(nm.omegak).copy() / nm.omegan
+    gamma_old = nm.omegak.copy() / nm.omegan
     sys.ensemble.temp = sys.ensemble.temp * 1.13
-    omegak = dstrip(nm.omegak)
-    xmax = float(dstrip(nm.nm_freqs)[0] * nm.nbeads / nm.omegan)
+    omegak = nm.omegak
+    xmax = float(nm.nm_freqs[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
         omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-8
     )
@@ -233,4 +232,4 @@ def test_input_roundtrip(eco_sim):
     reparsed.parse(xml_parse_string(inm.write("normal_modes")).fields[0][1])
     nm2 = reparsed.fetch()
     assert nm2.mode == "eco"
-    np.testing.assert_allclose(nm2.nm_freqs, dstrip(nm.nm_freqs))
+    np.testing.assert_allclose(nm2.nm_freqs, nm.nm_freqs)

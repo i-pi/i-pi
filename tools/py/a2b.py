@@ -12,7 +12,6 @@ Syntax:
 
 """
 
-
 import sys
 import re
 from ipi.utils.io import read_file, print_file, read_file_raw

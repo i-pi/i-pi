@@ -184,7 +184,7 @@ class InputStringMEP(InputDictionary):
             InputArray,
             {
                 "dtype": float,
-                "default": input_default(factory=np.array, args=(1.0,)),
+                "default": input_default(factory=np.array, args=([1.0],)),
                 "help": "Starting value for the trust radius for BFGSTRM.",
                 "dimension": "length",
             },

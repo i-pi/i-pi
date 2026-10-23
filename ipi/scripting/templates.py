@@ -9,6 +9,7 @@ forcefield flavors, etc.).
 import numpy as np
 
 from ipi.utils.units import Elements, unit_to_internal
+from ipi.utils.array_backend import xp
 from ipi.inputs.beads import InputBeads
 from ipi.inputs.cell import InputCell
 from ipi.engine.beads import Beads
@@ -78,12 +79,14 @@ def simulation_xml(
         q = structure.positions.flatten()
 
     beads = Beads(nbeads=nbeads, natoms=natoms)
-    beads.q = q * unit_to_internal("length", "ase", 1.0)
+    beads.q = xp.asarray(q * unit_to_internal("length", "ase", 1.0))
     beads.names = np.array(structure.symbols)
     if "mass" in structure.arrays:
-        beads.m = structure.arrays["mass"] * unit_to_internal("mass", "ase", 1.0)
+        beads.m = xp.asarray(
+            structure.arrays["mass"] * unit_to_internal("mass", "ase", 1.0)
+        )
     else:
-        beads.m = np.array([Elements.mass(n) for n in beads.names])
+        beads.m = xp.asarray([Elements.mass(n) for n in beads.names])
 
     input_beads = InputBeads()
     input_beads.store(beads)

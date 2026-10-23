@@ -171,14 +171,21 @@ depends and a function used to calculate its value.
    and the updated value obtained. If a quantity is not marked as
    tainted, the cached value is returned instead.
 
-“Depend” objects can be called to get the physical quantity they
-represent. However, they have further functionality. Firstly, once the
-value of a “depend” object has been calculated, its value is cached, so
-further references to that quantity will not need to evaluate the
-function that calculates it. Furthermore, the code keeps track of when
-any of the dependencies of the variable are updated, and makes sure that
-the quantity is automatically when it is needed (i.e., when
-the quantity is assessed again).
+“Depend” objects store the physical quantity they represent, but they
+have further functionality. Firstly, once the value of a “depend” object
+has been calculated, its value is cached, so further references to that
+quantity will not need to evaluate the function that calculates it.
+Furthermore, the code keeps track of when any of the dependencies of the
+variable are updated, and makes sure that the quantity is recomputed
+automatically when it is needed (i.e., when the quantity is accessed again).
+
+There are two classes of depend objects: ``depend_value`` holds a generic
+Python object (typically a scalar), and ``depend_array`` holds an array.
+Both can be "primitive", i.e. set directly, or computed by a function from
+the values of other depend objects, which are declared as their
+dependencies. Updates are lazy: modifying a value immediately marks all the
+quantities that depend on it, directly or indirectly, as "tainted", but a
+tainted quantity is only recomputed when it is read.
 
 This is a minimal example of how to implement dependencies in a class
 
@@ -254,8 +261,169 @@ at runtime, to the value of the other object. A typical usage pattern is
    myoth.vec = np.asarray([0,1,2,3])
    print(myoth.scaled) # prints [0,8,16,24]
 
-   myoth.vec[3] = 0 # depend_arrays can be accessed as normal np.ndarray
+   # reading `myoth.vec` returns a read-only array. parts of a depend_array
+   # are modified through the depend object, which updates the dependencies
+   myoth._vec[3] = 0
    print(myoth.scaled) # prints [0,8,16,0]
+   myoth._vec += 1 # in-place operations are also done on the depend object
+   print(myoth.scaled) # prints [8,16,24,8]
+
+Indexing a depend object, e.g. ``myoth._vec[1:3]``, returns a view of
+part of the array that remains connected to the dependency graph: it
+shares the memory of the full array, writing through it updates the
+dependants of the full array, and reading a stale view recomputes the
+full array. Views are used, for instance, to expose the positions of each
+replica of a ring polymer as a separate ``Atoms`` object, or to bind a
+thermostat to the momenta of one normal mode.
+
+Rules of thumb
+^^^^^^^^^^^^^^
+
+For a depend member stored as ``obj._x`` and exposed with ``dproperties``
+as ``obj.x``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Operation
+     - Syntax
+   * - read the value (recomputed if needed)
+     - ``obj.x``
+   * - overwrite the whole value
+     - ``obj.x = v``
+   * - modify part of an array
+     - ``obj._x[i] = v``
+   * - in-place update of a whole array
+     - ``obj._x += v`` (faster than ``obj._x[:] += v``)
+   * - declare a dependency
+     - ``dependencies=[other._y]`` or ``obj._x.add_dependency(other._y)``
+   * - read the value of a depend object that is not a class member
+     - ``dep.get()``
+   * - keep a view of part of an array that stays connected to the
+       dependency graph (e.g. to bind a thermostat to some of the momenta)
+     - ``obj._x[i]``, ``obj._x.flatten()``
+
+Common pitfalls:
+
+* Arrays read as ``obj.x`` are read-only, so ``obj.x[i] = v`` and
+  ``obj.x += v`` raise an error: modify the array through ``obj._x``.
+* Storing ``obj.x`` in another variable keeps the array as it is: if ``x``
+  is computed, the stored array is not recomputed when its dependencies
+  change. Store the depend object ``obj._x`` (or a view of it) instead.
+* A ``depend_value`` that holds an array is not protected: modifying the
+  array in place does not update its dependants.
+* Depend objects are not arrays: use ``obj.x`` (or ``obj._x.get()``) when
+  the value is needed.
+* Functions that compute a value should not modify other depend objects:
+  they are called at unpredictable times, whenever a stale value is read.
+
+Each read of ``obj.x`` checks whether the value is stale, and recomputes
+it if needed. Recomputation is protected by a lock, so values can be read
+from several threads, e.g. when the outputs of different systems are
+written in parallel. Reading an up-to-date value is cheap (a fraction of a
+microsecond), but in loops that do not modify it, it is still better to
+read the value once into a local variable.
+
+``dpipe`` makes a depend object follow the value of another one, e.g. to
+share the temperature between the ensemble and the thermostats:
+
+.. code-block:: python
+
+   from ipi.utils.depend import dpipe
+
+   class Thermo:
+      def __init__(self):
+         self._temp = depend_value(name="temp", value=0.0)
+
+   dproperties(Thermo, ["temp"])
+
+   thermo = Thermo()
+   dpipe(myobj._double, thermo._temp) # thermo.temp follows myobj.double
+   myobj.scalar = 5
+   print(thermo.temp) # prints `10`
+
+``dsynchro`` links two representations of the same data, that can both be
+modified, such as the bead and normal-mode coordinates of a ring polymer.
+It takes the two depend objects and the two functions that compute each
+one from the other. Writing one of the two marks the other as stale, and
+reading the stale one recomputes it from the one that was written last.
+When they are linked, the first object is taken to hold the current data.
+A view of a synchronized array (e.g. the positions of a single replica)
+is synchronized as well.
+
+.. code-block:: python
+
+   from ipi.utils.depend import dsynchro
+
+   class Length:
+      def __init__(self):
+         self._meters = depend_array(name="meters", value=np.zeros(3))
+         self._feet = depend_array(name="feet", value=np.zeros(3))
+         dsynchro(self._meters, self._feet,
+                  lambda: self.feet * 0.3048,    # meters from feet
+                  lambda: self.meters / 0.3048)  # feet from meters
+
+   dproperties(Length, ["meters", "feet"])
+
+   length = Length()
+   length.meters = np.ones(3)
+   print(length.feet) # prints [3.2808399 3.2808399 3.2808399]
+   length._feet[0] = 0.0
+   print(length.meters) # prints [0. 1. 1.]
+
+Array backends
+^^^^^^^^^^^^^^
+
+The arrays held by depend objects are created with the array backend
+selected at launch (see :ref:`array-backends`), so the code that manipulates
+them must work with numpy arrays as well as with torch tensors, possibly on a
+GPU. The namespace of the current backend is ``xp``
+(``from ipi.utils.array_backend import xp``): it is the numpy module with the
+numpy backend, and a wrapper of torch that follows the
+`array API standard <https://data-apis.org/array-api/>`_ (from
+``array_api_compat``) with the torch backend. ``xp`` is updated in place when
+the backend is selected, so it can be imported at module level, but arrays
+must not be created at import time (module constants, default arguments).
+
+* Arrays that are part of the simulation state, and the results of
+  computations on them, use ``xp`` functions and operators (``a @ b`` rather
+  than ``np.dot(a, b)``). The array methods ``.reshape``, ``.sum``,
+  ``.mean`` and ``.T`` are portable too, and faster than the corresponding
+  numpy functions. Not portable: ``.copy()`` (use
+  ``xp.asarray(x, copy=True)``), ``.astype``, ``.flatten``, ``.size``,
+  ``.max(axis=...)``, and slices with negative steps (use ``xp.flip``).
+* Python scalars (parameters, time steps, temperatures) stay Python floats,
+  and functions applied to them use ``math`` or ``np``: ``xp.sqrt(2.0)``
+  fails with torch.
+* The creation functions of ``xp`` produce double-precision arrays on the
+  selected device: do not pass ``dtype=`` or ``device=`` for floating-point
+  arrays.
+* Data enters and leaves the backend only at the boundaries. Input values
+  and files are converted with ``xp.asarray`` before being stored; outputs,
+  checkpoints, sockets, forcefields and calls to scipy use ``to_numpy``,
+  which may return a view of the stored data with numpy (copy it if it is
+  kept). Depend objects never convert their argument: writing a numpy array
+  into a torch-backed ``depend_array`` raises an error.
+* Small arrays used for indexing or control on the host (atom names, index
+  lists, the number of multiple-time-step sub-steps, the time scales of the
+  normal-mode thermostats) are stored as numpy arrays with
+  ``depend_array(..., host=True)``.
+* With a GPU, ``float(x)``, ``bool(x)``, ``if x > 0`` and ``x.item()`` on a
+  device array wait for all the queued operations to complete: avoid them in
+  the MD step, and prefer array operations (e.g. ``xp.where``).
+* ``prng.gvec`` and ``prng.gfill`` produce backend arrays (drawn on the device
+  with torch), while scalar draws (``prng.u``, ``prng.g``, ``prng.gamma``, ...)
+  are Python or numpy numbers.
+
+The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
+check that the torch backend reproduces the numpy trajectories and that an MD
+step does not synchronize with the GPU. The regression tests and the examples
+can be run with another backend with ``pytest --ipi-backend torch
+[--ipi-device cuda]``. In these runs (and in the tests that use the
+``strict_torch`` fixture) implicit conversions of torch tensors to numpy
+arrays raise an error also on the CPU, as they do on GPUs, so that missing
+``to_numpy`` calls are detected without a GPU.
 
 
 Licence and credits

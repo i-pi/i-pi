@@ -12,7 +12,7 @@ appropriate conserved energy quantity.
 import numpy as np
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dproperties, depend_value, dstrip
+from ipi.utils.depend import dproperties, depend_value
 from ipi.utils.units import Constants
 
 # __all__ = ['AlchemyMC']
@@ -95,7 +95,7 @@ class AlchemyMC(Motion):
         if lenlist == 0:
             raise ValueError("Atoms exchange list is empty in alchemical sampler.")
         atomspring = np.zeros(lenlist)
-        wk2 = dstrip(self.nm.omegak2)
+        wk2 = self.nm.omegak2
 
         i = 0
         for atomnum in axlist:
@@ -108,7 +108,7 @@ class AlchemyMC(Motion):
             spr *= 0.5
 
             # no mass here - just the massless spring term
-            atomspring[i] = spr
+            atomspring[i] = float(spr)
             i += 1
 
         # does the exchange
@@ -125,7 +125,7 @@ class AlchemyMC(Motion):
                 j = self.prng.integers(0, lenlist)  # makes sure we pick a real exchange
 
             # energy change due to the swap
-            difspring = (atomspring[i] - atomspring[j]) * (
+            difspring = (atomspring[i] - atomspring[j]) * float(
                 self.beads.m[axlist[j]] - self.beads.m[axlist[i]]
             )
             pexchange = np.exp(-betaP * difspring)
@@ -137,19 +137,19 @@ class AlchemyMC(Motion):
 
                 # swap names
                 nameswap = self.beads.names[axlist[i]]
-                self.beads.names[axlist[i]] = self.beads.names[axlist[j]]
-                self.beads.names[axlist[j]] = nameswap
+                self.beads._names[axlist[i]] = self.beads.names[axlist[j]]
+                self.beads._names[axlist[j]] = nameswap
 
                 # change masses
-                massratio = self.beads.m[axlist[i]] / self.beads.m[axlist[j]]
-                self.beads.m[axlist[i]] /= massratio
-                self.beads.m[axlist[j]] *= massratio
+                massratio = float(self.beads.m[axlist[i]] / self.beads.m[axlist[j]])
+                self.beads._m[axlist[i]] /= massratio
+                self.beads._m[axlist[j]] *= massratio
 
                 # adjust the (classical) momenta to conserve ke
-                self.beads.p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
+                self.beads._p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
                     massratio
                 )
-                self.beads.p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
+                self.beads._p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
                     massratio
                 )
 

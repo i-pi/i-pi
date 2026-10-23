@@ -14,6 +14,7 @@ centroid coordinate is required.
 import numpy as np
 
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 from ipi.engine.atoms import Atoms
 
 __all__ = ["Beads"]
@@ -88,7 +89,7 @@ class Beads:
         self.nbeads = nbeads
 
         self._names = depend_array(
-            name="names", value=np.zeros(natoms, np.dtype("|U6"))
+            name="names", value=np.zeros(natoms, np.dtype("|U6")), host=True
         )
 
         # atom masses, and mass-related arrays
@@ -144,7 +145,7 @@ class Beads:
         # create proxies to access the individual beads as Atoms objects
         # TODO: ACTUALLY THIS IS ONLY USED HERE METHINK, SO PERHAPS WE COULD REMOVE IT TO DECLUTTER THE CODE.
         self._blist = [
-            Atoms(natoms, _prebind=(self.q[i, :], self.p[i, :], self.m, self.names))
+            Atoms(natoms, _prebind=(self._q[i, :], self._p[i, :], self._m, self._names))
             for i in range(nbeads)
         ]
 
@@ -178,16 +179,16 @@ class Beads:
             nbeads = self.nbeads
 
         newbd = Beads(self.natoms, nbeads)
-        newbd.q[:] = self.q[:nbeads]
-        newbd.p[:] = self.p[:nbeads]
-        newbd.m[:] = self.m
-        newbd.names[:] = self.names
+        newbd._q[:] = self.q[:nbeads]
+        newbd._p[:] = self.p[:nbeads]
+        newbd._m[:] = self.m
+        newbd._names[:] = self.names
         return newbd
 
     def m3tosm3(self):
         """Takes the mass array and returns the square rooted mass array."""
 
-        return np.sqrt(dstrip(self.m3))
+        return xp.sqrt(self.m3)
 
     def mtom3(self):
         """Takes the mass array for each bead and returns one with an element
@@ -198,7 +199,7 @@ class Beads:
            to the mass associated with the appropriate degree of freedom in q.
         """
 
-        m3 = np.zeros((self.nbeads, 3 * self.natoms), float)
+        m3 = xp.zeros((self.nbeads, 3 * self.natoms))
         m3[:, 0 : 3 * self.natoms : 3] = self.m
         m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
@@ -207,13 +208,13 @@ class Beads:
     def get_qc(self):
         """Gets the centroid coordinates."""
 
-        return np.sum(dstrip(self.q), axis=0) / self.nbeads
+        return self.q.sum(axis=0) / self.nbeads
         # return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
-        return np.sum(dstrip(self.p), axis=0) / self.nbeads
+        return self.p.sum(axis=0) / self.nbeads
         # return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
 
     def kin_gather(self):
@@ -223,7 +224,7 @@ class Beads:
            A list of the kinetic energy for each system.
         """
 
-        return np.array([b.kin for b in self._blist])
+        return xp.stack([b.kin for b in self._blist])
 
     def get_kin(self):
         """Gets the total kinetic energy of all the replicas.
@@ -247,7 +248,7 @@ class Beads:
            The sum of the kinetic stress tensor of each replica.
         """
 
-        ks = np.zeros((3, 3), float)
+        ks = xp.zeros((3, 3))
         for b in range(self.nbeads):
             ks += self[b].kstress
         return ks
@@ -261,14 +262,14 @@ class Beads:
         """
 
         epath = 0.0
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q
+        m = self.m3[0]
         for b in range(self.nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
             else:
                 dq = q[b, :] - q[self.nbeads - 1, :]
-            epath += np.dot(dq, m * dq)
+            epath += dq @ (m * dq)
         print(
             "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
         )
@@ -284,10 +285,10 @@ class Beads:
 
         nbeads = self.nbeads
         natoms = self.natoms
-        f = np.zeros((nbeads, 3 * natoms), float)
+        f = xp.zeros((nbeads, 3 * natoms))
 
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q
+        m = self.m3[0]
         for b in range(nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
@@ -340,10 +341,10 @@ class Beads:
            value: The Atoms object that holds the new values.
         """
 
-        self._blist[index].p[:] = value.p
-        self._blist[index].q[:] = value.q
-        self._blist[index].m[:] = value.m
-        self._blist[index].names[:] = value.names
+        self._blist[index]._p[:] = value.p
+        self._blist[index]._q[:] = value.q
+        self._blist[index]._m[:] = value.m
+        self._blist[index]._names[:] = value.names
 
 
 dproperties(

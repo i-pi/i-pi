@@ -35,9 +35,9 @@ def main(prefix, lag):
         try:
             ret = read_file("xyz", ikin)
             tk = ret["atoms"]
-            kin = dstrip(tk.q)
+            kin = tk.q
             ret = read_file("xyz", ikod)
-            kod = dstrip(ret["atoms"].q)
+            kod = ret["atoms"].q
             if natoms == 0:  # initializes vectors
                 natoms = len(kin) / 3
                 ktbuf = np.zeros(

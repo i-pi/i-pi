@@ -5,7 +5,6 @@ from ipi.scripting import (
     motion_nvt_xml,
     InteractiveSimulation,
 )
-from ipi.utils.depend import dstrip
 import ase, ase.io
 
 # There are utilities to quickly set up XML inputs for commonly-used simulations
@@ -78,9 +77,9 @@ print(
 # of the i-PI internals)
 def vv_obabo(self, step=None):
     self.thermostat.step()
-    self.beads.p[:] += dstrip(self.forces.f) * self.dt * 0.5
-    self.beads.q[:] += dstrip(self.beads.p) / dstrip(self.beads.m3) * self.dt
-    self.beads.p[:] += dstrip(self.forces.f) * self.dt * 0.5
+    self.beads._p += self.forces.f * self.dt * 0.5
+    self.beads._q += self.beads.p / self.beads.m3 * self.dt
+    self.beads._p += self.forces.f * self.dt * 0.5
     self.thermostat.step()
     self.ensemble.time += self.dt
 

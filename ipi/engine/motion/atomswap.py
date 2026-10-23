@@ -115,18 +115,18 @@ class AtomSwap(Motion):
 
             old_energy = self.forces.pot
             # swap the atom positions
-            self.dbeads.q[:] = self.beads.q[:]
-            self.dbeads.q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
-            self.dbeads.q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
+            self.dbeads._q[:] = self.beads.q[:]
+            self.dbeads._q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
+            self.dbeads._q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
             new_energy = self.dforces.pot
-            pexchange = np.exp(-betaP * (new_energy - old_energy))
+            pexchange = np.exp(-betaP * float(new_energy - old_energy))
 
             # attemps the exchange, and actually propagate the exchange if something has happened
             if pexchange > self.prng.u:
                 nexch += 1
 
                 # copy the exchanged beads position
-                self.beads.q[:] = self.dbeads.q[:]
+                self.beads._q[:] = self.dbeads.q[:]
                 # transfers the (already computed) status of the force, so we don't need to recompute
                 self.forces.transfer_forces(self.dforces)
 
