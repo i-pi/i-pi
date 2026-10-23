@@ -26,7 +26,7 @@ from ipi.engine.motion.motion import Motion
 
 from ipi.utils.depend import dstrip
 from ipi.utils.phonontools import apply_asr
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.mathtools import gaussian_inv
 
 try:
@@ -71,6 +71,9 @@ class SCPhononsMover(Motion):
         delta: A 3Nx3N array that stores the dynamic matrix.
         """
 
+        warning(
+            "Self-consistent phonons: This feature is not maintained and can have bugs."
+        )
         super(SCPhononsMover, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         # Finite difference option.
