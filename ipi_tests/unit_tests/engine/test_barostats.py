@@ -169,7 +169,7 @@ def test_scr_pressure_force_for_noninteracting_particles(
     with simulation(scr_two_particle_xml(external_pressure)) as sim:
         system = sim.syslist[0]
         barostat = system.motion.barostat
-        assert system.beads.kin == pytest.approx(3.0, rel=1e-12)
+        assert system.nm.kin == pytest.approx(3.0, rel=1e-12)
         np.testing.assert_allclose(system.forces.vir, np.zeros((3, 3)), atol=1e-12)
         assert np.trace(barostat.stress_mts(0)) / 3.0 == pytest.approx(0.25, rel=1e-12)
         assert barostat.get_lambda_force() == pytest.approx(
@@ -193,7 +193,7 @@ def test_scr_pressure_force_for_harmonic_pair(
     ) as sim:
         system = sim.syslist[0]
         barostat = system.motion.barostat
-        assert system.beads.kin == pytest.approx(3.0, rel=1e-12)
+        assert system.nm.kin == pytest.approx(3.0, rel=1e-12)
         assert system.forces.pot == pytest.approx(1.0, rel=1e-12)
         np.testing.assert_allclose(
             system.forces.vir, np.diag([-2.0, 0.0, 0.0]), rtol=1e-12, atol=1e-12
