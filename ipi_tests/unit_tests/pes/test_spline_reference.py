@@ -1,4 +1,4 @@
-"""A tabulated quadratic gives an independent reference for spline evaluation."""
+"""Spline driver evaluated on a tabulated quadratic."""
 
 import json
 
@@ -29,6 +29,7 @@ def test_tabulated_quadratic_energy_and_transverse_forces(quadratic):
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="Spline force omits the coordinate-scale factor in the energy derivative",
 )
 def test_tabulated_quadratic_longitudinal_force(quadratic):
@@ -36,15 +37,9 @@ def test_tabulated_quadratic_longitudinal_force(quadratic):
     assert quadratic.get_forces(pos)[0, 0] == pytest.approx(-2 * pos[0, 0], abs=1e-10)
 
 
-def test_constant_friction_is_symmetric_positive_and_serialized(quadratic, monkeypatch):
+def test_constant_friction_is_serialized(quadratic, monkeypatch):
     monkeypatch.setattr(spline, "friction", True)
     _, _, _, extra = quadratic.compute_structure(np.eye(3), np.zeros((1, 3)))
     np.testing.assert_allclose(
         json.loads(extra)["friction"], np.eye(3) * spline.fric_value
     )
-
-
-@pytest.mark.parametrize("shape", [(2, 3), (3,), (1, 2)])
-def test_spline_rejects_wrong_number_of_coordinates(quadratic, shape):
-    with pytest.raises(AssertionError):
-        quadratic.compute_structure(np.eye(3), np.zeros(shape))

@@ -2,7 +2,8 @@
 
 import numpy as np
 import pytest
-from ipi.utils.mintools import min_trm, nichols, Powell
+
+from ipi.utils.mintools import L_BFGS_nls, min_brent_neb, min_trm, nichols, Powell
 
 
 @pytest.mark.parametrize("radius", [0.1, 10.0])
@@ -46,7 +47,6 @@ def test_powell_update_satisfies_secant_equation_and_symmetry():
 @pytest.mark.parametrize("center", [-2.0, 1.5])
 @pytest.mark.parametrize("quartic", [False, True])
 def test_neb_scalar_search_finds_known_minimum(center, quartic):
-    from ipi.utils.mintools import min_brent_neb
 
     def objective(x):
         d = x - center
@@ -59,8 +59,7 @@ def test_neb_scalar_search_finds_known_minimum(center, quartic):
     assert value < 1e-12
 
 
-def test_lbfgs_without_line_search_converges_on_positive_quadratic():
-    from ipi.utils.mintools import L_BFGS_nls
+def test_lbfgs_without_line_search_on_quadratic():
 
     h = np.diag([1.0, 2.0, 3.0])
     x = np.array([[0.2, -0.3, 0.4]])

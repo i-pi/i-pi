@@ -24,7 +24,7 @@ from ipi.utils.tools.acf_xyz import compute_acf_xyz
     ],
 )
 @pytest.mark.parametrize("auxiliary", [False, True])
-def test_gle_covariance_obeys_equipartition_and_lyapunov_equation(frequency, auxiliary):
+def test_gle_covariance_solves_lyapunov_equation(frequency, auxiliary):
     ap = np.array([[1.0, 0.3], [-0.3, 2.0]]) if auxiliary else np.array([[0.7]])
     dp = ap + ap.T
     a = Aqp(frequency, ap)

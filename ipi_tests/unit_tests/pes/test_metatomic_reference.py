@@ -1,5 +1,6 @@
 """Exported quadratic pair model checks metatomic forces, virials, and batching."""
 
+import json
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -142,7 +143,6 @@ def test_metatomic_rejects_conflicting_ensemble_options(options):
 
 
 def test_metatomic_committee_derivatives_match_each_quadratic(model_files):
-    import json
 
     driver = MetatomicDriver(
         *model_files,

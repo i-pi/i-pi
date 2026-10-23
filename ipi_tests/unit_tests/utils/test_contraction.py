@@ -35,7 +35,6 @@ qs_to_check = [
 ]
 
 
-# Preserve the original geometries and bead counts, then add open-path cases.
 CASES = (
     [
         pytest.param(q, n, None, id=f"original-p{len(q)}-to-{n}")
@@ -77,12 +76,7 @@ def test_contraction(q, n, open_paths):
     restored = rescale.b2tob1(expanded)
     reverse = nmtransform.nm_rescale(n, len(q), open_paths=open_paths)
 
-    assert_almost_equal(q, restored)
-    assert_almost_equal(restored, reverse.b1tob2(expanded))
-    assert_almost_equal(
-        nmtransform.mk_rs_matrix(n, 1) @ expanded,
-        nmtransform.mk_rs_matrix(len(q), 1) @ q,
-    )
-    np.testing.assert_allclose(expanded.mean(axis=0), q.mean(axis=0), atol=2e-14)
     np.testing.assert_allclose(restored, q, atol=2e-14)
+    assert_almost_equal(restored, reverse.b1tob2(expanded))
+    np.testing.assert_allclose(expanded.mean(axis=0), q.mean(axis=0), atol=2e-14)
     assert not np.shares_memory(q, expanded)

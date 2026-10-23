@@ -42,7 +42,7 @@ def test_finite_difference_hessian_and_friction_derivative(
 
 
 @pytest.mark.parametrize("asr,removed", [("none", 0), ("crystal", 3), ("poly", 6)])
-def test_rigid_motion_projection_preserves_remaining_unit_frequencies(asr, removed):
+def test_rigid_motion_projection(asr, removed):
     q = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]])
     masses = np.array([1.0, 2.0, 3.0, 4.0])
     m3 = np.repeat(masses, 3)[None, :]

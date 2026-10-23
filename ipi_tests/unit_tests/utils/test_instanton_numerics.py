@@ -1,4 +1,4 @@
-"""Independent spring-matrix and interpolation checks for instanton utilities."""
+"""Spring matrices, path doubling and interpolation in instanton utilities."""
 
 from types import SimpleNamespace
 import numpy as np
@@ -105,9 +105,7 @@ def test_unstable_direction_and_invalid_stable_hessian():
     reason="Interpolated Hessian output remains buffered after the function returns",
 )
 @pytest.mark.parametrize("new_count", [2, 4, 8])
-def test_instanton_interpolation_preserves_constant_geometry_and_hessian(
-    tmp_path, monkeypatch, new_count
-):
+def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     monkeypatch.chdir(tmp_path)
     with open("path.xyz", "w") as f:
         for _ in range(4):

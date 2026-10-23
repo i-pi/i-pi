@@ -1,4 +1,4 @@
-"""Independent identities for numerical operations used by dynamics."""
+"""Identities for matrix functions and signed log sums used by dynamics."""
 
 import math
 

@@ -1,20 +1,24 @@
 """Real small MACE models: batching, force derivatives, and rotational covariance."""
 
 import copy
+import json
 
 import numpy as np
 import pytest
 
 pytest.importorskip("mace")
 torch = pytest.importorskip("torch")
+from ase import Atoms
+from ase.io import read, write
 from e3nn import o3
 from mace.modules import (
     MACE,
     RealAgnosticInteractionBlock,
     RealAgnosticResidualInteractionBlock,
 )
-from ipi.pes._mace import BatchedMACE
-from ase import Atoms
+
+from ipi.pes._mace import BatchedMACE, MACE_driver, run_cli
+from ipi.utils.units import unit_to_internal
 
 
 @pytest.fixture
@@ -112,10 +116,6 @@ def test_identical_mace_committee_matches_single_model(model):
 def test_mace_cli_exports_model_results_with_requested_prefix(
     model, tmp_path, monkeypatch
 ):
-    import json
-    from ase.io import read, write
-    from ipi.pes._mace import run_cli, MACE_driver
-    from ipi.utils.units import unit_to_internal
 
     checkpoint = tmp_path / "model.pt"
     torch.save(model, checkpoint)

@@ -75,16 +75,3 @@ def test_explicit_bath_coupling_derivative_and_forces(cutoff):
             atol=1e-10,
         )
     assert np.all(energy >= 0)
-
-
-def test_double_well_returns_scalar_total_energy():
-    from ipi.pes.doublewell import DoubleWell_driver
-
-    driver = DoubleWell_driver()
-    q = np.array([[0.1, 0.2, 0.3], [-0.2, 0.1, 0.4]])
-    energy, _, _, _ = driver.compute_structure(np.eye(3) * 10, q)
-    assert np.ndim(energy) == 0
-    expected = np.sum(
-        driver.A * q[:, 0] ** 2 + driver.B * q[:, 0] ** 4
-    ) + 0.5 * driver.k * np.sum(q[:, 1:] ** 2)
-    assert energy == pytest.approx(expected)

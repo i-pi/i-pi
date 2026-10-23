@@ -28,11 +28,9 @@ from ipi.scripting import read_output
 pos_xyz = np.arange(9)
 pos_pdb = unit_to_internal("length", "angstrom", pos_xyz)
 
-# The two legacy groups used identical inputs. Retain both executions and IDs.
 FORMATS = [
-    pytest.param(mode, positions, id=f"{mode}{suffix}")
-    for suffix in ["", "2"]
-    for mode, positions in [("xyz", pos_xyz), ("pdb", pos_pdb)]
+    pytest.param("xyz", pos_xyz, id="xyz"),
+    pytest.param("pdb", pos_pdb, id="pdb"),
 ]
 
 
