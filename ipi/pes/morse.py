@@ -24,12 +24,19 @@ class MorseHarmonic_driver(Dummy_driver):
     Example usage:
         i-pi-py_driver -m MorseHarmonic -o a=a_value,k=k_value,z0=z0_value,De=De_value
 
-    Parameter descriptions (with expected units):
+    User-supplied parameters must use these input units:
 
-    - De (Ha)         : Well depth in Hartree. Default: 0.00735 Ha
-    - a  (a.u.^-1)    : Range parameter in inverse Bohr. Default: 1.61 a.u.^-1
-    - z0 (a.u.)       : Equilibrium position in Bohr (~1.1 Å). Default: 2.1 a.u.
-    - k  (a.u.)       : Harmonic force constant. Default: 0.343 a.u.
+    - De (eV): Well depth.
+    - a (angstrom^-1): Range parameter.
+    - z0 (angstrom): Equilibrium position.
+    - k (eV/angstrom^2): Harmonic force constant.
+
+    These inputs are converted internally to atomic units: Hartree for De,
+    inverse Bohr for a, Bohr for z0, and Hartree/Bohr^2 for k.
+
+    The built-in defaults are already in atomic units and need no conversion:
+    De = 0.00735 Hartree, a = 1.61 Bohr^-1, z0 = 2.1 Bohr,
+    and k = 0.343 Hartree/Bohr^2.
     """
 
     def __init__(self, De=None, a=None, z0=None, k=None, *args, **kwargs):
