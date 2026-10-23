@@ -32,6 +32,9 @@ or because they were approved explicitly:
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
 
+The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
+bugs pass, and are no longer marked.
+
 ## Work after this PR
 
 ### Pre-existing bugs found and not fixed (need a decision)
@@ -55,7 +58,9 @@ or because they were approved explicitly:
 - Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs
   ("release unlocked lock": two signal threads racing in `softexit.cleanup`).
 - Failing also on main: regression test `COMMITTEE/XTRA-JSON`; `test_setup.py::test_driver_forcebuild` outside
-  tox (driver symlink).
+  tox (driver symlink); `test_metatomic_reference.py` errors at setup with Python 3.14
+  (`AtomisticModel.__annotations__`).
+- The other known bugs marked as strict xfail in the unit tests fail in the same way as on main.
 
 ### GPU performance and `torch.compile`
 - The cell and barostat state stay on the device, so that whole steps can be compiled. The remaining host

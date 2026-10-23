@@ -144,7 +144,7 @@ def test_cavity_request_force_matches_energy(representation, apply, evaluate, su
     cell = Cell(np.eye(3) * 20)
 
     def calculate(pos):
-        atoms.q[:] = pos
+        atoms._q[:] = pos
         request = ff.queue(atoms, cell, reqid=4)
         assert request["status"] == "Done"
         assert not ff.requests

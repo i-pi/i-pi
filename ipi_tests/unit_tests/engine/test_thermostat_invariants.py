@@ -21,8 +21,8 @@ from ipi.utils.prng import Random
 def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
     """For an isolated thermostat step, kinetic energy plus bath energy is conserved."""
     atoms = Atoms(2)
-    atoms.m[:] = [2, 5]
-    atoms.p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
+    atoms._m[:] = [2, 5]
+    atoms._p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
     options = dict(temp=300, dt=0.1, ethermo=1.25)
     if kind == "langevin":
         thermostat = ThermoLangevin(tau=0.5, **options)
@@ -45,8 +45,8 @@ def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
 def test_zero_temperature_langevin_is_exact_damping():
     """Without thermal noise, each momentum decays exponentially."""
     atoms = Atoms(1)
-    atoms.m[:] = 3
-    atoms.p[:] = [1, -2, 3]
+    atoms._m[:] = 3
+    atoms._p[:] = [1, -2, 3]
     original = atoms.p.copy()
     thermostat = ThermoLangevin(temp=0, dt=0.2, tau=0.5)
     thermostat.bind(atoms=atoms, prng=Random(seed=29))
@@ -70,8 +70,8 @@ def test_finite_temperature_langevin_matches_published_update(monkeypatch):
     draws = np.array([-1.0, 0.5, 2.0, 1.5, -0.25, 0.0])
     temperature, timestep, tau = 0.2, 0.2, 0.5
     atoms = Atoms(2)
-    atoms.m[:] = masses
-    atoms.p[:] = initial
+    atoms._m[:] = masses
+    atoms._p[:] = initial
     prng = Random(seed=37)
 
     def fixed_gaussian_values(size):
@@ -102,8 +102,8 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
     draws = np.array([0.5, -1.0, 0.25, 0.75, -0.5, 1.25])[: 3 * natoms]
     temperature, timestep, tau = 0.2, 0.2, 0.5
     atoms = Atoms(natoms)
-    atoms.m[:] = masses
-    atoms.p[:] = initial
+    atoms._m[:] = masses
+    atoms._p[:] = initial
 
     class FixedRandom:
         def __init__(self):
@@ -139,8 +139,8 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
 def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
 
     atoms = Atoms(2)
-    atoms.m[:] = [2, 5]
-    atoms.p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
+    atoms._m[:] = [2, 5]
+    atoms._p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
     bath = ThermoCL(
         temp=0.2,
         dt=0.01,
@@ -164,8 +164,8 @@ def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
 def test_multiple_baths_compose_damping_and_sum_heat():
 
     atoms = Atoms(1)
-    atoms.m[:] = 2
-    atoms.p[:] = [0.2, -0.3, 0.4]
+    atoms._m[:] = 2
+    atoms._p[:] = [0.2, -0.3, 0.4]
     initial = atoms.p.copy()
     baths = [ThermoLangevin(tau=0.5), ThermoLangevin(tau=1.0)]
     combined = MultiThermo(temp=0.0, dt=0.2, thermolist=baths)

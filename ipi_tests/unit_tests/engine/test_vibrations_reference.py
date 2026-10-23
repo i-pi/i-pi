@@ -163,23 +163,7 @@ def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
     )
 
 
-@pytest.mark.parametrize(
-    "mode",
-    [
-        "fd",
-        *[
-            pytest.param(
-                mode,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="NMFD transform discards the refined matrix and restores the input matrix",
-                ),
-            )
-            for mode in ("nmfd", "enmfd")
-        ],
-    ],
-)
+@pytest.mark.parametrize("mode", ["fd", "nmfd", "enmfd"])
 def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
     options = ET.Element("vibrations", mode=mode)
     masses = np.repeat([2.0, 3.0], 3)
