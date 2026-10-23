@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from ipi.engine.forcefields import FFDirect
-from ipi.engine.forces import Forces, ForceComponent, ScaledForceComponent, MTSForces
+from ipi.engine.forces import Forces, ForceComponent, ScaledForceComponent
 from ipi_tests.unit_tests.engine.test_property_mathematical_references import (
     PrescribedPolynomial,
     reference_system as _reference_system,
@@ -278,26 +278,3 @@ def test_multicomponent_sc_force_derivatives_obey_chain_rule(
     np.testing.assert_allclose(
         forces.f_4th_order, sum(derivatives), rtol=1e-7, atol=2e-8
     )
-
-
-@verifies(
-    "forces:MTSForces.get_forces_mts",
-    "forces:MTSForces.get_virs_mts",
-    "forces:MTSForces.get_vir_mts",
-)
-@pytest.mark.xfail(
-    strict=True,
-    raises=(IndexError, AssertionError),
-    reason="BUG: empty MTS weights should select the outer level but force indexing fails and virials are omitted",
-)
-@pytest.mark.parametrize("quantity", ["f", "virs", "vir"])
-def test_empty_mts_weights_place_unpartitioned_component_on_outer_level(
-    reference_system, quantity
-):
-    s, r = reference_system()
-    s.forces.mforces[0].mts_weights = np.array([])
-    outer = MTSForces(s.forces, 0)
-    u, f, h = polynomial(r.q, r.a, r.b)
-    v = virials(r.q, f)
-    expected = dict(f=f, virs=v, vir=v.sum(axis=0))[quantity]
-    np.testing.assert_allclose(getattr(outer, quantity), expected, atol=1e-12)

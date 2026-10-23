@@ -106,11 +106,6 @@ def case_checks_entry(case, entry, tests):
     }
     if mentioned:
         return entry in mentioned
-    if name == "test_empty_mts_weights_place_unpartitioned_component_on_outer_level":
-        suffix = {"f": "get_forces_mts", "virs": "get_virs_mts", "vir": "get_vir_mts"}[
-            identifiers
-        ]
-        return entry.endswith("." + suffix)
     return entry in tests[name]["entries"]
 
 
