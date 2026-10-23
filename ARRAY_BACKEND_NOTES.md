@@ -87,5 +87,5 @@ bugs pass, and are no longer marked.
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
-- The examples are not run with torch in CI (only the unit and regression tests); the benchmark is not run
-  in CI.
+- The torch CI jobs run the unit tests, and the regression tests and examples with the torch backend
+  (`tox -e torch`, `tox -e torch-examples`); the benchmark is not run in CI.
