@@ -1,10 +1,244 @@
-"""Weighted and centroid-contracted forces preserve energies and cache invalidation."""
+"""Force composition: weights, contraction, MTS levels, SC corrections and requests.
 
+Reference values come from explicit Fourier projections and from derivatives
+of the polynomial and harmonic models.
+"""
+
+import time
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+
+import ipi.engine.forces as force_module
+from ipi.engine.beads import Beads
+from ipi.engine.cell import Cell
+from ipi.engine.forcefields import FFDirect, FFEval
+from ipi.engine.forces import Forces, ForceComponent, ScaledForceComponent
+from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
+from ipi_tests.unit_tests.engine.mathematical_references import (
+    polynomial,
+    projection,
+    sc_reference,
+    virials,
+)
+
+
+def combined_case(s, r, contracted=True):
+    components = [
+        ForceComponent(
+            "first",
+            weight=0.7,
+            mts_weights=[0.2, 0.4],
+            epsilon=-1e-5,
+            interpolate_extras=["energy"],
+        ),
+        ForceComponent(
+            "second",
+            nbeads=3 if contracted else 6,
+            weight=-0.3,
+            mts_weights=[0.8, 0.6],
+            epsilon=-1e-5,
+            interpolate_extras=["energy"],
+        ),
+    ]
+    providers = {}
+    expected = []
+    for index, component in enumerate(components):
+        provider = FFDirect(pes="harmonic", pars={"k1": 1.0})
+        a, b = r.a * (1 + index * 0.4), r.b * (1 + index * 0.7)
+        provider.driver = PrescribedPolynomial(a, b)
+        providers[component.ffield] = provider
+        count = component.nbeads or 6
+        contract, expand = projection(6, count), projection(count, 6)
+        q = contract @ r.q
+        energy, force, hessian = polynomial(q, a, b)
+        expected.append(
+            dict(
+                component=component,
+                q=q,
+                energy=energy,
+                force=force,
+                curvature=hessian,
+                virial=virials(q, force),
+                contract=contract,
+                expand=expand,
+                a=a,
+                b=b,
+            )
+        )
+    result = Forces()
+    result.bind(s.beads, s.cell, components, providers, [], None)
+    result.alpha = r.alpha
+    result.omegan2 = (6 * r.temperature) ** 2
+    return result, expected
+
+
+def expand(matrix, values):
+    return np.tensordot(matrix, values, axes=1)
+
+
+@pytest.mark.parametrize("contracted", [False, True])
+def test_contracted_components_and_mts_levels(reference_system, contracted):
+    s, r = reference_system()
+    forces, refs = combined_case(s, r, contracted)
+    for actual, ref in zip(forces.mforces, refs):
+        np.testing.assert_allclose(actual.beads.q, ref["q"], atol=1e-13)
+        assert actual.pot == pytest.approx(ref["energy"].sum())
+        scaled = ScaledForceComponent(actual, scaling=-0.4)
+        assert scaled.pot == pytest.approx(-0.4 * ref["energy"].sum())
+    totals = {}
+    for quantity in ["force", "energy", "virial"]:
+        totals[quantity] = sum(
+            x["component"].weight
+            * sum(x["component"].mts_weights)
+            * expand(x["expand"], x[quantity])
+            for x in refs
+        )
+    np.testing.assert_allclose(forces.f, totals["force"], atol=1e-12)
+    np.testing.assert_allclose(forces.pots, totals["energy"], atol=1e-12)
+    np.testing.assert_allclose(forces.virs, totals["virial"], atol=1e-12)
+    np.testing.assert_allclose(forces.extras["energy"], totals["energy"], atol=1e-12)
+    for level in range(2):
+        expected_force = sum(
+            x["component"].weight
+            * x["component"].mts_weights[level]
+            * expand(x["expand"], x["force"])
+            for x in refs
+        )
+        expected_virial = sum(
+            x["component"].weight
+            * x["component"].mts_weights[level]
+            * expand(x["expand"], x["virial"])
+            for x in refs
+        )
+        np.testing.assert_allclose(
+            forces.mts_forces[level].f, expected_force, atol=1e-12
+        )
+        np.testing.assert_allclose(
+            forces.mts_forces[level].virs, expected_virial, atol=1e-12
+        )
+        np.testing.assert_allclose(
+            forces.mts_forces[level].vir, expected_virial.sum(axis=0), atol=1e-12
+        )
+    for index, ref in enumerate(refs):
+        for weighted in [False, True]:
+            for interpolate in [False, True]:
+                expected = ref["virial"].copy()
+                if weighted:
+                    expected *= ref["component"].weight
+                if interpolate:
+                    expected = expand(ref["expand"], expected)
+                np.testing.assert_allclose(
+                    forces.virs_component(index, weighted, interpolate),
+                    expected,
+                    atol=1e-12,
+                )
+
+
+@pytest.mark.parametrize(
+    "key,bead",
+    [
+        ("pot_component", -1),
+        ("pot_component", 1),
+        ("pot_component_raw", 1),
+        ("vir_component", -1),
+        ("vir_component", 1),
+        ("vir_component_raw", -1),
+        ("vir_component_raw", 1),
+        ("forces_component", -1),
+        ("forces_component", 1),
+        ("forces_component_raw", -1),
+        ("forces_component_raw", 1),
+    ],
+)
+def test_component_outputs_raw_and_weighted(reference_system, key, bead):
+    s, r = reference_system()
+    forces, refs = combined_case(s, r)
+    s.properties.forces = s.forces = forces
+    raw = key.endswith("_raw")
+    quantity = (
+        "energy"
+        if key.startswith("pot")
+        else "virial" if key.startswith("vir") else "force"
+    )
+    ref = refs[1]
+    expected = ref[quantity].copy()
+    if not raw:
+        expected = -0.3 * expand(ref["expand"], expected)
+    expected = expected.mean(axis=0) if bead < 0 else expected[bead]
+    if quantity == "virial":
+        expected = expected[[0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]] / 120
+    np.testing.assert_allclose(
+        (s.trajs if quantity == "force" else s.properties)[f"{key}(1;{bead})"][0],
+        expected,
+        atol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("alpha", [0.0, 0.3, 1.0])
+def test_sc_coefficients_and_corrections(reference_system, alpha):
+    s, r = reference_system(alpha=alpha)
+    force = s.forces
+    force.mforces[0].epsilon = -1e-5
+    ref = sc_reference(r.q, r.masses, r.a, r.b, alpha, 0.4)
+    derivative = ref["derivative"].copy()
+    if alpha == 0:
+        derivative[::2] = 0
+    checks = dict(
+        coeffsc_part_1=ref["linear"][:, None],
+        coeffsc_part_2=ref["quadratic"][:, None],
+        f_4th_order=derivative,
+        potssc=ref["correction"],
+        fsc_part_1=ref["force1"],
+        fsc_part_2=ref["force2"],
+        fsc=ref["force1"] + ref["force2"],
+    )
+    for name, expected in checks.items():
+        np.testing.assert_allclose(
+            getattr(force, name), expected, rtol=1e-7, atol=2e-8, err_msg=name
+        )
+
+
+@pytest.mark.parametrize("contracted", [False, True])
+@pytest.mark.parametrize("alpha", [0.0, 0.3])
+def test_multicomponent_sc_force_derivatives_obey_chain_rule(
+    reference_system, contracted, alpha, request
+):
+    if contracted and alpha == 0:
+        request.node.add_marker(
+            pytest.mark.xfail(
+                strict=True,
+                raises=AssertionError,
+                reason="BUG: alpha=0 SC contraction mixes positive and negative displacements before evaluating the contracted force",
+            )
+        )
+    s, r = reference_system(alpha=alpha)
+    forces, refs = combined_case(s, r, contracted)
+    total_force = sum(
+        x["component"].weight
+        * sum(x["component"].mts_weights)
+        * expand(x["expand"], x["force"])
+        for x in refs
+    )
+    direction = total_force / np.repeat(r.masses, 3)
+    derivatives = []
+    for index, ref in enumerate(refs):
+        dq = ref["contract"] @ direction
+        local = 2 * ref["curvature"] * dq
+        df = expand(ref["expand"], local)
+        if alpha == 0:
+            df[::2] = 0
+        actual_f, _ = forces.forcesvirs_4th_order(index)
+        np.testing.assert_allclose(actual_f, df, rtol=1e-7, atol=2e-8)
+        weight = ref["component"].weight * sum(ref["component"].mts_weights)
+        derivatives.append(weight * df)
+    np.testing.assert_allclose(
+        forces.f_4th_order, sum(derivatives), rtol=1e-7, atol=2e-8
+    )
 
 
 @pytest.mark.parametrize("weight", [0.0, 0.3, -0.2])
@@ -54,11 +288,6 @@ def test_weighted_centroid_force_and_saved_state(simulation, weight):
 @pytest.fixture
 def force_system():
     """Real force aggregation with a small analytic harmonic provider, including virials and extras."""
-    import time
-    from ipi.engine.beads import Beads
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFEval
-    from ipi.engine.forces import Forces
 
     class Harmonic(FFEval):
         def evaluate(self, request):
@@ -100,7 +329,6 @@ def force_system():
 @pytest.mark.parametrize("contracted", [1, 4])
 @pytest.mark.parametrize("weight", [0.0, -0.5, 2.0])
 def test_extras_and_virials_follow_component_weights(force_system, contracted, weight):
-    from ipi.engine.forces import ForceComponent
 
     beads, _, forces = force_system(
         [
@@ -138,7 +366,6 @@ def test_extras_and_virials_follow_component_weights(force_system, contracted, w
 
 @pytest.mark.parametrize("scaling", [0.0, -0.5, 2.0])
 def test_scaled_component_updates_energy_force_and_virial(force_system, scaling):
-    from ipi.engine.forces import ForceComponent, ScaledForceComponent
 
     beads, _, forces = force_system([ForceComponent("harmonic")])
     scaled = ScaledForceComponent(forces.mforces[0], scaling=scaling)
@@ -157,7 +384,6 @@ def test_scaled_component_updates_energy_force_and_virial(force_system, scaling)
 
 @pytest.mark.parametrize("bad", ["missing", "nonnumeric", "extra-key"])
 def test_inconsistent_extras_are_rejected(force_system, bad):
-    from ipi.engine.forces import ForceComponent
 
     def extras(q):
         if bad == "missing":
@@ -180,11 +406,8 @@ def test_inconsistent_extras_are_rejected(force_system, bad):
 @pytest.mark.parametrize("zero_force", [False, True])
 @pytest.mark.parametrize("alpha", [0.0, 0.3])
 @pytest.mark.parametrize("epsilon", [-1e-4, 1e-4])
-def test_suzuki_chin_force_correction_matches_harmonic_derivative(
-    force_system, alpha, epsilon, zero_force
-):
-    from ipi.engine.forces import ForceComponent
-
+def test_suzuki_chin_finite_difference_modes(force_system, alpha, epsilon, zero_force):
+    """Forward and centered displacements, including the zero-force fallback."""
     beads, _, forces = force_system([ForceComponent("harmonic", epsilon=epsilon)])
     forces.alpha = alpha
     forces.omegan2 = 2.0
@@ -196,46 +419,11 @@ def test_suzuki_chin_force_correction_matches_harmonic_derivative(
         expected[::2] = 0
     correction, _ = forces.forcesvirs_4th_order(0)
     np.testing.assert_allclose(correction, expected, rtol=1e-10, atol=1e-12)
-    # Physical virials are checked against cell-strain energy derivatives in
-    # test_virial_mathematical_references, separately from these force checks.
     np.testing.assert_array_equal(beads.q, q)
-    np.testing.assert_allclose(
-        forces.virssc, forces.virssc_part_1 + forces.virssc_part_2
-    )
-    linear = np.array([-1.0, 1.0, -1.0, 1.0]) / 3
-    quadratic = np.array([alpha, 1 - alpha, alpha, 1 - alpha]) / 18
-    np.testing.assert_allclose(
-        forces.potssc.ravel(), (linear + quadratic) * 0.5 * np.sum(q * q, axis=1)
-    )
-    np.testing.assert_allclose(
-        forces.fsc, -linear[:, None] * q + quadratic[:, None] * expected, atol=1e-11
-    )
-
-
-@pytest.mark.parametrize("weights", [[1.0, 0.0], [0.0, 1.0], [0.25, 0.75]])
-def test_multiple_time_step_levels_recover_total_force_and_virial(
-    force_system, weights
-):
-    from ipi.engine.forces import ForceComponent
-
-    beads, _, forces = force_system(
-        [ForceComponent("harmonic", weight=-0.5, mts_weights=weights)]
-    )
-    for level, fraction in enumerate(weights):
-        np.testing.assert_allclose(forces.mts_forces[level].f, 0.5 * fraction * beads.q)
-        np.testing.assert_allclose(
-            forces.mts_forces[level].vir,
-            0.5 * fraction * np.sum([np.triu(np.outer(a, a)) for a in beads.q], axis=0),
-        )
-    np.testing.assert_allclose(sum(level.f for level in forces.mts_forces), forces.f)
-    np.testing.assert_allclose(
-        sum(level.vir for level in forces.mts_forces), forces.vir
-    )
 
 
 @pytest.mark.parametrize("extras", [None, {"label": ["saved"] * 4}])
-def test_manual_force_transfer_is_invalidated_by_position_change(force_system, extras):
-    from ipi.engine.forces import ForceComponent
+def test_manual_force_transfer_invalidated_by_move(force_system, extras):
 
     beads, _, forces = force_system([ForceComponent("harmonic")])
     q = beads.q.copy()
@@ -258,7 +446,6 @@ def test_manual_force_transfer_is_invalidated_by_position_change(force_system, e
 
 
 def test_clone_and_force_transfer_preserve_independent_state(force_system):
-    from ipi.engine.forces import ForceComponent
 
     beads, cell, forces = force_system([ForceComponent("harmonic")])
     q = beads.q.copy()
@@ -282,7 +469,6 @@ def test_clone_and_force_transfer_preserve_independent_state(force_system):
     ["unbound", "beads", "cell", "component-beads", "unknown-provider", "mts-levels"],
 )
 def test_force_binding_rejects_incompatible_objects(force_system, bad):
-    from ipi.engine.forces import Forces, ForceComponent
 
     beads, cell, forces = force_system([ForceComponent("harmonic")])
     if bad == "unbound":
@@ -312,7 +498,6 @@ def test_force_binding_rejects_incompatible_objects(force_system, bad):
 
 @pytest.mark.parametrize("invalid", ["odd-beads", "forward-contracted"])
 def test_suzuki_chin_rejects_unsupported_bead_discretization(force_system, invalid):
-    from ipi.engine.forces import ForceComponent
 
     _, _, forces = force_system(
         [
@@ -332,9 +517,6 @@ def test_suzuki_chin_rejects_unsupported_bead_discretization(force_system, inval
 
 
 def test_cancelled_bead_request_cannot_return_force_data(force_system, monkeypatch):
-    from types import SimpleNamespace
-    from ipi.engine.forces import ForceComponent
-    import ipi.engine.forces as force_module
 
     _, _, forces = force_system([ForceComponent("harmonic")])
     bead_force = forces.mforces[0]._forces[0]
@@ -363,18 +545,12 @@ def test_cancelled_bead_request_cannot_return_force_data(force_system, monkeypat
 def test_bead_force_waits_for_evaluation_and_releases_request(
     force_system, monkeypatch, readers
 ):
-    from concurrent.futures import ThreadPoolExecutor
-    from threading import Barrier
-    from types import SimpleNamespace
-    from ipi.engine.forces import ForceComponent
-    import ipi.engine.forces as force_module
 
     _, _, forces = force_system([ForceComponent("harmonic")])
     bead_force = forces.mforces[0]._forces[0]
     provider = bead_force.ff
-    provider.threaded = (
-        True  # queue first; start evaluation only after the reader waits
-    )
+    # Queue first; evaluation starts only after the readers wait.
+    provider.threaded = True
     bead_force.queue()
     request = bead_force.request
     waiting = Barrier(readers + 1)
@@ -409,7 +585,6 @@ def test_bead_force_waits_for_evaluation_and_releases_request(
 
 
 def test_unqueued_bead_force_evaluates_and_releases_request(force_system):
-    from ipi.engine.forces import ForceComponent
 
     _, _, forces = force_system([ForceComponent("harmonic")])
     bead_force = forces.mforces[0]._forces[0]

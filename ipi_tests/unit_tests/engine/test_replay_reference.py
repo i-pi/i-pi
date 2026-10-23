@@ -5,7 +5,10 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+from ipi.engine.atoms import Atoms as IAtoms
+from ipi.engine.cell import Cell
+from ipi.utils.io import print_file
+from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
 @pytest.mark.parametrize(
@@ -13,9 +16,6 @@ from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_inpu
     [("xyz", False), ("pdb", False), ("ase", False), ("xyz", True), ("pdb", True)],
 )
 def test_replay_reads_known_frames_in_bead_order(simulation, tmp_path, mode, separate):
-    from ipi.utils.io import print_file
-    from ipi.engine.atoms import Atoms as IAtoms
-    from ipi.engine.cell import Cell
 
     q = np.arange(2 * 3 * 6, dtype=float).reshape(2, 3, 6) / 10
     paths = (

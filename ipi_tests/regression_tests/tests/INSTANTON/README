@@ -6,15 +6,3 @@ numpy-accessible outputs.
 These have been tested against Yair Litman's in-the-house independent implementation (2020).
 
 Implicit bath has been tested against explicit bath calculations (Dec 2023)
-
-BUGFIX: 100K_implicit_friction frequency conversion and proton mass
-----------------------------------------------------------------------
-The y/z spring constant uses the incorrect conversion divisor 219323.
-Use i-PI's standard conversion divisor of approximately 219474.6291 instead.
-Also replace the hardcoded masses used in these y/z spring constants
-(1836 and 1837.36223469) with the CODATA 2022 proton mass, 1836.152673426
-in atomic units (proton-electron mass ratio).
-Source: https://physics.nist.gov/cgi-bin/cuu/Value?mpsme
-The saved Hessian contains the old spring constant even though y and z
-coordinates are zero. Validate and regenerate the Hessian reference when
-correcting these constants.

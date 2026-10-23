@@ -2,9 +2,10 @@
 
 import numpy as np
 import pytest
+
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
-from ipi.engine.forcefields import FFDebye, FFRotations
+from ipi.engine.forcefields import FFDebye, FFRotations, ForceField, ForceRequest
 from ipi.utils.prng import Random
 
 
@@ -47,7 +48,6 @@ def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
     ],
 )
 def test_rotation_average_rejects_ambiguous_models(options, message):
-    from ipi.engine.forcefields import ForceField
 
     options = {
         key: ForceField(name=key) if value is True else value
@@ -59,7 +59,6 @@ def test_rotation_average_rejects_ambiguous_models(options, message):
 
 def test_rotation_average_waits_for_all_member_results():
     """Partial results must not be reported as a completed rotation average."""
-    from ipi.engine.forcefields import ForceField
 
     member = ForceField(name="zero", threaded=True)
     ff = FFRotations(ffsocket=member, grid_order=1, prng=Random(seed=19))
@@ -83,7 +82,6 @@ def test_rotation_average_waits_for_all_member_results():
     ],
 )
 def test_rotation_average_preserves_extras_from_each_orientation(extras, expected):
-    from ipi.engine.forcefields import ForceField, ForceRequest
 
     member = ForceField()
     ff = FFRotations(ffdirect=member, grid_order=1, prng=Random(seed=19))

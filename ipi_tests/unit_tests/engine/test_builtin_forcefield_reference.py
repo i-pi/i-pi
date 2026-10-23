@@ -1,8 +1,21 @@
-"""Built-in force providers checked against independent energies and derivatives."""
+"""Built-in force providers checked against energy derivatives and known limits."""
+
+import json
 
 import numpy as np
 import pytest
-from ipi.engine.forcefields import FFLennardJones, FFDebye, FFdmd, ForceRequest
+
+from ipi.engine.atoms import Atoms
+from ipi.engine.cell import Cell
+from ipi.engine.forcefields import (
+    FFCommittee,
+    FFDebye,
+    FFdmd,
+    FFLennardJones,
+    ForceField,
+    ForceRequest,
+)
+from ipi.engine.outputs import OutputMaker
 
 
 def evaluate(ff, q, h):
@@ -66,9 +79,6 @@ def test_lennard_jones_minimum_and_periodic_rejection():
 
 @pytest.mark.parametrize("baseline", [False, True])
 def test_committee_force_differentiates_combined_energy(baseline):
-    from ipi.engine.forcefields import FFCommittee
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
 
     members = [
         FFDebye(name=str(k), H=np.eye(3) * k, xref=np.zeros(3)) for k in [1.0, 2.0, 3.0]
@@ -123,7 +133,6 @@ def test_committee_force_differentiates_combined_energy(baseline):
     ],
 )
 def test_committee_rejects_inconsistent_configuration(options, message):
-    from ipi.engine.forcefields import FFCommittee, ForceField
 
     defaults = dict(fflist=[ForceField(name="base"), ForceField(name="member")])
     with pytest.raises(ValueError, match=message):
@@ -146,7 +155,6 @@ def test_debye_rejects_request_with_incompatible_dimensions(H, xref, message):
 @pytest.mark.parametrize("components", ["both", "force", "virial", "neither"])
 def test_committee_json_ensemble_preserves_means_and_uncertainty(components):
     """A serialized two-model ensemble has known mean and sample variance."""
-    from ipi.engine.forcefields import FFCommittee, ForceField
 
     extras = {"committee_pot": [1.0, 3.0], "raw": "two models"}
     if components in ("both", "force"):
@@ -186,7 +194,6 @@ def test_committee_json_ensemble_preserves_means_and_uncertainty(components):
     ],
 )
 def test_committee_rejects_ambiguous_member_results(problem, message):
-    from ipi.engine.forcefields import FFCommittee, ForceField
 
     def result(extra):
         return ForceRequest(result=[0.0, np.zeros(3), np.zeros((3, 3)), extra])
@@ -211,11 +218,6 @@ def test_committee_rejects_ambiguous_member_results(problem, message):
 
 
 def test_committee_saves_uncertain_structures(tmp_path):
-    import json
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCommittee
-    from ipi.engine.outputs import OutputMaker
 
     members = [FFDebye(H=np.eye(3) * k, xref=np.zeros(3)) for k in [1.0, 3.0]]
     ff = FFCommittee(fflist=members, active_thresh=0.1)
@@ -254,9 +256,6 @@ def test_dmd_rejects_wrong_number_of_pair_couplings():
 
 
 def test_committee_waits_for_every_member():
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCommittee, ForceField
 
     members = [ForceField(threaded=True), ForceField(threaded=True)]
     ff = FFCommittee(fflist=members)

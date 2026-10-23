@@ -4,7 +4,14 @@ import numpy as np
 import pytest
 
 from ipi.engine.atoms import Atoms
-from ipi.engine.thermostats import ThermoFFL, ThermoGLE, ThermoLangevin, ThermoSVR
+from ipi.engine.thermostats import (
+    MultiThermo,
+    ThermoCL,
+    ThermoFFL,
+    ThermoGLE,
+    ThermoLangevin,
+    ThermoSVR,
+)
 from ipi.utils.prng import Random
 
 
@@ -130,7 +137,6 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
 @pytest.mark.parametrize("intau,idtau", [(0.0, 0.0), (0.7, 0.0), (0.0, 0.7)])
 @pytest.mark.parametrize("adaptive", [False, True])
 def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
-    from ipi.engine.thermostats import ThermoCL
 
     atoms = Atoms(2)
     atoms.m[:] = [2, 5]
@@ -156,7 +162,6 @@ def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
 
 
 def test_multiple_baths_compose_damping_and_sum_heat():
-    from ipi.engine.thermostats import MultiThermo
 
     atoms = Atoms(1)
     atoms.m[:] = 2

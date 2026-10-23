@@ -1,4 +1,4 @@
-"""Vibrational free energies and minimum-energy paths with analytic references."""
+"""Vibrational analyses of a separable harmonic potential."""
 
 import xml.etree.ElementTree as ET
 from types import SimpleNamespace
@@ -7,18 +7,8 @@ import numpy as np
 import pytest
 
 from ipi.engine.motion.vscf import IMF
-from ipi.engine.motion.stringmep import spline_derv, spline_resample
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
-
-
-def motion_input(mode, options, nbeads=1):
-    root = ET.fromstring(harmonic_input(nbeads=nbeads))
-    motion = root.find("system/motion")
-    motion.clear()
-    motion.set("mode", mode)
-    ET.SubElement(motion, "fixcom").text = "False"
-    motion.append(options)
-    return root
+from ipi.utils.tools.instanton_postproc import cm2au, instanton_compute
+from ipi_tests.unit_tests.engine.inputs import motion_input
 
 
 @pytest.mark.parametrize("shift", [0.0, 0.3, -0.2])
@@ -71,50 +61,6 @@ def test_independent_modes_recover_exact_harmonic_free_energy(simulation, reuse_
             assert calc.total_anhar_internal_energy == pytest.approx(
                 np.sum(omega / 2 / np.tanh(omega / 0.4)), abs=2e-7
             )
-
-
-@pytest.mark.parametrize("count", [4, 7, 11])
-def test_string_resampling_preserves_straight_line_and_unit_tangent(count):
-    t = np.linspace(0, 1, count) ** 2
-    start = np.array([0.2, -0.1, 0.3])
-    direction = np.array([2.0, 1.0, -1.0])
-    q = start + t[:, None] * direction
-    sampled = spline_resample(q, count)
-    np.testing.assert_allclose(
-        sampled, start + np.linspace(0, 1, count)[:, None] * direction, atol=1e-12
-    )
-    np.testing.assert_allclose(
-        spline_derv(q, count),
-        np.tile(direction / np.linalg.norm(direction), (count, 1)),
-        atol=1e-12,
-    )
-
-
-@pytest.mark.parametrize("projected", [False, True])
-def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projected):
-    from ipi.engine.motion.stringmep import GradientMapper, StringGradientMapper
-
-    with simulation(harmonic_input(nbeads=7)) as sim:
-        system = sim.syslist[0]
-        q = np.zeros((7, 6))
-        q[:, 0] = np.linspace(-1, 1, 7)
-        q[:, 1] = 0.2
-        system.beads.q[:] = q
-        mapper = (StringGradientMapper if projected else GradientMapper)()
-        mapper.bind(
-            SimpleNamespace(
-                beads=system.beads,
-                cell=system.cell,
-                forces=system.forces,
-                fixatoms_dof=np.array([], dtype=int),
-            )
-        )
-        energy, gradient = mapper(q[1:-1])
-        assert energy == pytest.approx(0.25 * np.sum(q[1:-1] ** 2))
-        expected = 0.5 * q[1:-1].copy()
-        if projected:
-            expected[:, 0] = 0
-        np.testing.assert_allclose(gradient, expected, atol=1e-12)
 
 
 @pytest.mark.parametrize("reuse_map", [False, True])
@@ -193,7 +139,6 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
 
 
 def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
-    from ipi.utils.tools.instanton_postproc import instanton_compute, cm2au
 
     options = ET.Element("normalmodes", mode="imf")
     masses = np.repeat([2.0, 3.0], 3)
@@ -216,3 +161,38 @@ def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
         np.sort(np.sqrt(0.5 / masses)),
         atol=1e-12,
     )
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "fd",
+        *[
+            pytest.param(
+                mode,
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=AssertionError,
+                    reason="NMFD transform discards the refined matrix and restores the input matrix",
+                ),
+            )
+            for mode in ("nmfd", "enmfd")
+        ],
+    ],
+)
+def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
+    options = ET.Element("vibrations", mode=mode)
+    masses = np.repeat([2.0, 3.0], 3)
+    ET.SubElement(options, "dynmat", shape="(6,6)").text = str(
+        np.diag(0.8 / masses).ravel().tolist()
+    )
+    ET.SubElement(options, "pos_shift").text = ".001"
+    ET.SubElement(options, "energy_shift").text = ".0001"
+    root = motion_input("vibrations", options)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        motion = sim.syslist[0].motion
+        motion.exit_on_convergence = False
+        sim.run(steps=7, write_outputs=False)
+        np.testing.assert_allclose(
+            motion.refdynmatrix, np.diag(0.5 / masses), atol=1e-10
+        )

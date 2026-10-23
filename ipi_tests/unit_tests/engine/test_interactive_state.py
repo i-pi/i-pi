@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 from ipi.utils.units import unit_to_user
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
 @pytest.mark.parametrize("systems,beads", [(1, 1), (1, 4), (2, 1), (2, 4)])

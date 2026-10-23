@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 from ipi.engine.smotion.remd import ReplicaExchange, motion_scale
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
 @pytest.mark.parametrize("accept", [False, True])
@@ -15,7 +15,7 @@ from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_inpu
 def test_exchange_acceptance_or_rejection_has_consistent_state(
     simulation, accept, rescale, displacement
 ):
-    """Bracket independent acceptance probabilities and check the resulting state."""
+    """Draws just below or above the analytic acceptance probability."""
     # Atomic units: kB=1. U(q)=sum(q**2)/4 and K(p)=sum(p**2/(2*m)).
     temperatures = [0.2, 0.4]
     positions = [np.zeros((1, 6)), np.full((1, 6), displacement)]

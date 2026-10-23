@@ -1,5 +1,6 @@
 """Real PLUMED restraint energies, forces and update accounting."""
 
+import sys
 from types import SimpleNamespace
 
 import numpy as np
@@ -78,32 +79,34 @@ def test_plumed_distance_restraint_matches_quadratic(
         ff.evaluate(ForceRequest(pos=np.zeros(3)))
 
 
-def test_plumed_returns_only_bias_when_physical_forces_are_supplied(
-    plumed_field, request
-):
-    ff = plumed_field()
+def bias_with_physical_forces(ff):
+    """Results without and with a separate harmonic pair potential U = |r|^2/2."""
     q = np.array([0.0, 0.0, 0.0, 1.0, 2.0, -1.0])
     cell = np.eye(3) * 20
     first = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
     ff.evaluate(first)
-    # A separate harmonic pair potential: U = |r|²/2.
     ff.system_force = SimpleNamespace(
         pot=3.0, f=np.concatenate([q[3:], -q[3:]]), vir=-np.outer(q[3:], q[3:])
     )
     second = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
     ff.evaluate(second)
-    for component in range(3):
-        if component == 2:
-            request.node.add_marker(
-                pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="FFPlumed adds rather than removes the physical virial after changing its sign",
-                )
-            )
-        np.testing.assert_allclose(
-            second["result"][component], first["result"][component], atol=1e-10
-        )
+    return first["result"], second["result"]
+
+
+def test_plumed_returns_only_bias_energy_and_forces(plumed_field):
+    alone, combined = bias_with_physical_forces(plumed_field())
+    for component in range(2):
+        np.testing.assert_allclose(combined[component], alone[component], atol=1e-10)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="FFPlumed adds rather than removes the physical virial after changing its sign",
+)
+def test_plumed_returns_only_bias_virial(plumed_field):
+    alone, combined = bias_with_physical_forces(plumed_field())
+    np.testing.assert_allclose(combined[2], alone[2], atol=1e-10)
 
 
 @pytest.mark.xfail(
@@ -127,7 +130,6 @@ def test_plumed_rejects_unsupported_initial_structure_format(plumed_field):
 
 
 def test_plumed_missing_library_reports_import_error(monkeypatch):
-    import sys
 
     monkeypatch.setitem(sys.modules, "plumed", None)
     with pytest.raises(ImportError, match="Cannot find plumed"):

@@ -1,11 +1,24 @@
 """Force requests preserve input snapshots and complete before being released."""
 
+import socket
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
-from ipi.engine.forcefields import ForceField, FFEval
+from ipi.engine.forcefields import (
+    FFCommittee,
+    FFDirect,
+    FFEval,
+    FFRotations,
+    FFSocket,
+    ForceField,
+)
+from ipi.interfaces.sockets import InterfaceSocket
+from ipi.utils.prng import Random
 from ipi.utils.softexit import Softexit
 
 
@@ -83,8 +96,6 @@ def test_stop_marks_pending_requests_for_exit():
 
 @pytest.mark.parametrize("kind", ["committee", "rotations"])
 def test_composite_forcefields_complete_threaded_requests(kind, monkeypatch):
-    from ipi.engine.forcefields import FFCommittee, FFDirect, FFRotations
-    from ipi.utils.prng import Random
 
     exit_state = Softexit()
     monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
@@ -117,8 +128,6 @@ def test_composite_forcefields_complete_threaded_requests(kind, monkeypatch):
 
 
 def test_batched_socket_rejects_unconsolidated_protocol():
-    from ipi.engine.forcefields import FFSocket
-    from ipi.interfaces.sockets import InterfaceSocket
 
     ff = FFSocket(interface=InterfaceSocket(batch_size=2, consolidate_messages=False))
     with pytest.raises(ValueError, match="consolidate_messages"):
@@ -127,11 +136,6 @@ def test_batched_socket_rejects_unconsolidated_protocol():
 
 
 def test_socket_forcefield_stops_polling_and_removes_endpoint(monkeypatch):
-    import socket
-    import tempfile
-    from pathlib import Path
-    from ipi.engine.forcefields import FFSocket
-    from ipi.interfaces.sockets import InterfaceSocket
 
     monkeypatch.setattr("ipi.engine.forcefields.softexit", Softexit())
     # A short path also respects the Unix socket path limit on macOS.

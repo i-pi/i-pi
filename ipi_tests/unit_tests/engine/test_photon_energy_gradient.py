@@ -1,8 +1,14 @@
 """Cavity forces must differentiate the total light-matter energy."""
 
+from copy import deepcopy
+
 import numpy as np
 import pytest
-from ipi.engine.forcefields import PhotonDriver
+
+from ipi.engine.atoms import Atoms
+from ipi.engine.cell import Cell
+from ipi.engine.forcefields import FFCavPhSocket, ForceField, PhotonDriver
+from ipi.utils.softexit import Softexit
 
 
 @pytest.mark.parametrize("representation", ["loose", "dense"])
@@ -68,8 +74,6 @@ def test_disabled_photons_leave_all_coordinates_atomic():
     ],
 )
 def test_cavity_bath_extras_preserve_bath_order(extras, expected):
-    from copy import deepcopy
-    from ipi.engine.forcefields import FFCavPhSocket
 
     original = deepcopy(extras)
     ff = FFCavPhSocket(apply_photon=False)
@@ -84,7 +88,6 @@ def test_cavity_bath_extras_preserve_bath_order(extras, expected):
 
 
 def test_cavity_dipoles_keep_independent_baths_separate():
-    from ipi.engine.forcefields import FFCavPhSocket
 
     ff = FFCavPhSocket(apply_photon=False)
     positions = np.array([[1, 2, 3], [0, 1, 2], [4, 5, 6], [2, 1, 0]])
@@ -108,9 +111,6 @@ def test_cavity_request_force_matches_energy(representation, apply, evaluate, su
     ForceField.poll supplies molecular results in process; socket transport is
     tested separately. Queue splitting and photon assembly remain unmodified.
     """
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCavPhSocket, ForceField
 
     class PointChargeDriver(ForceField):
         """Analytic dipole surface for two fixed charges, with zero nuclear PES."""
@@ -171,9 +171,6 @@ def test_cavity_request_force_matches_energy(representation, apply, evaluate, su
 
 @pytest.mark.parametrize("active", [[2], [0, 1, 2]])
 def test_cavity_rejects_active_atoms_outside_system(active):
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCavPhSocket
 
     ff = FFCavPhSocket(apply_photon=False, active=np.array(active))
     with pytest.raises(ValueError, match="more active atoms"):
@@ -187,9 +184,6 @@ def test_cavity_rejects_active_atoms_outside_system(active):
     reason="Cavity dipole validation indexes missing extras before checking their presence",
 )
 def test_cavity_missing_dipole_data_reports_a_validation_error():
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCavPhSocket, ForceField
 
     ff = FFCavPhSocket(interface=ForceField(), threaded=False, dipole_surface=True)
     with pytest.raises(ValueError, match="[Dd]ipole"):
@@ -203,10 +197,6 @@ def test_cavity_missing_dipole_data_reports_a_validation_error():
     reason="Cavity error handling passes the error message as an invalid soft-exit status",
 )
 def test_cavity_invalid_or_cancelled_request_triggers_soft_exit(where, monkeypatch):
-    from ipi.engine.atoms import Atoms
-    from ipi.engine.cell import Cell
-    from ipi.engine.forcefields import FFCavPhSocket, ForceField
-    from ipi.utils.softexit import Softexit
 
     exit_state = Softexit()
     monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)

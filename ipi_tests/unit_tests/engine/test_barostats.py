@@ -4,8 +4,6 @@
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
-import io
-import os
 import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 
@@ -16,10 +14,9 @@ from ipi.engine.barostats import BaroSCR
 from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
-from ipi.scripting import InteractiveSimulation
 from ipi.utils.depend import depend_value
-from ipi.utils.softexit import softexit
 from ipi.utils.units import unit_to_internal
+from ipi_tests.unit_tests.engine.inputs import pressure_input
 
 
 class FixedGaussian:
@@ -86,12 +83,12 @@ def scr_simulation_xml():
 </simulation>"""
 
 
-def simulation_state(simulation):
+def simulation_state(sim):
     """Returns the state needed to compare continuous and restarted runs."""
 
-    system = simulation.syslist[0]
+    system = sim.syslist[0]
     return (
-        simulation.step,
+        sim.step,
         np.asarray(system.beads.q).copy(),
         np.asarray(system.beads.p).copy(),
         np.asarray(system.cell.h).copy(),
@@ -226,38 +223,12 @@ def test_scr_input_roundtrip_preserves_restart_state():
     assert restored.ebaro == pytest.approx(original.ebaro)
 
 
-def test_scr_restart_matches_continuous_trajectory(tmp_path):
+def test_scr_restart_matches_continuous_trajectory(restart_states):
     """Checkpointing preserves SCR work, phase, and random-number state."""
 
-    original_directory = os.getcwd()
-    continuous_directory = tmp_path / "continuous"
-    restarted_directory = tmp_path / "restarted"
-    continuous_directory.mkdir()
-    restarted_directory.mkdir()
-
-    try:
-        os.chdir(continuous_directory)
-        continuous = InteractiveSimulation(io.StringIO(scr_simulation_xml()))
-        continuous.run(steps=10, write_outputs=False)
-        continuous_state = simulation_state(continuous)
-        continuous.stop()
-        softexit.reset()
-
-        os.chdir(restarted_directory)
-        interrupted = InteractiveSimulation(io.StringIO(scr_simulation_xml()))
-        interrupted.run(steps=6, write_outputs=False)
-        interrupted.stop()
-        softexit.reset()
-
-        with open("RESTART") as restart_file:
-            restarted = InteractiveSimulation(restart_file)
-        restarted.run(steps=10 - restarted.step, write_outputs=False)
-        restarted_state = simulation_state(restarted)
-        restarted.stop()
-        softexit.reset()
-    finally:
-        os.chdir(original_directory)
-        softexit.reset()
+    continuous_state, restarted_state = restart_states(
+        scr_simulation_xml(), simulation_state, steps=(6, 4)
+    )
 
     assert restarted_state[0] == continuous_state[0]
     for restarted_value, continuous_value in zip(
@@ -301,7 +272,7 @@ def test_scr_rejects_a_separate_cell_thermostat():
         input_baro.fetch()
 
 
-def test_scr_rejects_path_integral_dynamics():
+def test_scr_rejects_path_integral_dynamics(simulation):
     """The classical SCR equations reject path-integral dynamics."""
 
     xml = (
@@ -317,11 +288,9 @@ def test_scr_rejects_path_integral_dynamics():
         )
     )
 
-    try:
-        with pytest.raises(ValueError, match="classical dynamics only"):
-            InteractiveSimulation(io.StringIO(xml))
-    finally:
-        softexit.reset()
+    with pytest.raises(ValueError, match="classical dynamics only"):
+        with simulation(xml):
+            pass
 
 
 def test_scr_trotter_map_and_effective_energy():
@@ -415,10 +384,9 @@ def test_scr_trotter_map_and_effective_energy():
         initial_ebaro + expected_from_probabilities, rel=1e-12, abs=1e-12
     )
 
-    # Retain the original expanded-expression check as a second comparison.
-    # Expanding the Gaussian ratio above gives D*duration/(4*kBT) multiplying
-    # the force-square difference. The printed last coefficient in S11 differs
-    # from that consequence of S7; S7--S9 define the independent reference.
+    # Expanded form (S11). Expanding the Gaussian ratio above gives
+    # D*duration/(4*kBT) multiplying the force-square difference; the last
+    # coefficient printed in S11 differs from this consequence of S7.
     expected_correction = barostat.pext * (barostat.cell.V - old_volume)
     expected_correction -= barostat.temp * np.log(np.sqrt(barostat.cell.V) / old_lambda)
     expected_correction += 0.5 * delta_lambda * (old_force + new_force)
@@ -461,7 +429,7 @@ def test_dynamics_uses_standard_npt_integrator_for_scr():
 
 
 @pytest.mark.parametrize("splitting", ["obabo", "baoab"])
-def test_scr_uses_standard_npt_splittings(splitting):
+def test_scr_uses_standard_npt_splittings(simulation, splitting):
     """Both standard NPT thermostat splittings complete an SCR move."""
 
     xml = scr_simulation_xml().replace(
@@ -469,17 +437,13 @@ def test_scr_uses_standard_npt_splittings(splitting):
         f'<dynamics mode="npt" splitting="{splitting}">',
     )
 
-    try:
-        simulation = InteractiveSimulation(io.StringIO(xml))
-        simulation.run(steps=2, write_outputs=False)
-        assert type(simulation.syslist[0].motion.integrator) is NPTIntegrator
-        assert simulation.syslist[0].motion.barostat._scr_state is None
-        simulation.stop()
-    finally:
-        softexit.reset()
+    with simulation(xml) as sim:
+        sim.run(steps=2, write_outputs=False)
+        assert type(sim.syslist[0].motion.integrator) is NPTIntegrator
+        assert sim.syslist[0].motion.barostat._scr_state is None
 
 
-def test_scr_uses_standard_multiple_time_stepping():
+def test_scr_uses_standard_multiple_time_stepping(simulation):
     """The shared NPT integrator can apply SCR with multiple force levels."""
 
     xml = scr_simulation_xml().replace(
@@ -491,10 +455,13 @@ def test_scr_uses_standard_multiple_time_stepping():
         '<timestep units="femtosecond">0.5</timestep><nmts>[1,2]</nmts>',
     )
 
-    try:
-        simulation = InteractiveSimulation(io.StringIO(xml))
-        simulation.run(steps=2, write_outputs=False)
-        assert simulation.syslist[0].motion.barostat._scr_state is None
-        simulation.stop()
-    finally:
-        softexit.reset()
+    with simulation(xml) as sim:
+        sim.run(steps=2, write_outputs=False)
+        assert sim.syslist[0].motion.barostat._scr_state is None
+
+
+def test_flexible_barostat_volume_constraint(simulation):
+    with simulation(pressure_input("flexible", constant_volume=True)) as sim:
+        initial = sim.syslist[0].cell.V
+        sim.run(steps=8, write_outputs=False)
+        assert sim.syslist[0].cell.V == pytest.approx(initial, rel=1e-12)

@@ -1,11 +1,9 @@
-"""Numerical references built from definitions, without importing i-PI.
+"""Reference formulas for path-integral tests, written with NumPy only.
 
 SC weights: Kapil, Behler & Ceriotti, arXiv:1606.00920, Eqs. 7-8,
 Appendix C. Scaled-coordinate derivatives: Yamamoto, physics/0505109,
 Eqs. 18,22,33,34. Resizing: Fourier projection, Markland & Manolopoulos,
-JCP 129,024105 (2008). Inputs to these functions are plain arrays/numbers;
-no production frequencies, masses, forces or estimator outputs are accepted
-as an independently calculated expected answer.
+JCP 129,024105 (2008).
 """
 
 import itertools

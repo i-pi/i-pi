@@ -5,7 +5,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+from ipi.inputs.motion.motion import InputMotion
+from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
 class Proposal:
@@ -65,7 +66,6 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
             np.testing.assert_array_equal(beads.p, p)
             np.testing.assert_array_equal(beads.m, m)
         # The changed species/masses and accumulated exchange energy belong in restart.
-        from ipi.inputs.motion.motion import InputMotion
 
         stored = InputMotion()
         stored.store(system.motion)
@@ -79,7 +79,7 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
     raises=AssertionError,
     reason="AtomSwap acceptance omits the ring-polymer spring-energy change for unequal masses",
 )
-def test_ring_polymer_swap_rejects_unfavorable_mass_weighted_spring_change(simulation):
+def test_ring_polymer_swap_includes_spring_energy(simulation):
     root = ET.fromstring(harmonic_input(nbeads=4))
     motion = root.find("system/motion")
     motion.clear()

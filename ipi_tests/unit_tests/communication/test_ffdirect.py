@@ -150,15 +150,11 @@ def test_ffdirect_flushes_incomplete_batch_after_idle_polls():
 
 
 def test_ffdirect_requires_custom_driver_path():
-    import pytest
-
     with pytest.raises(ValueError, match="pes_path"):
         FFDirect(pes="custom")
 
 
 def test_ffdirect_preserves_driver_import_error(tmp_path):
-    import pytest
-
     path = tmp_path / "unavailable_driver.py"
     path.write_text("raise ImportError('required model library is unavailable')\n")
     with pytest.raises(ImportError, match="required model library"):

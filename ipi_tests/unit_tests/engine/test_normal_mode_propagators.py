@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 from scipy.linalg import expm
-from ipi_tests.unit_tests.engine.test_simulation_invariants import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 MODE_SETTINGS = [
     ("rpmd", []),
@@ -14,7 +14,7 @@ MODE_SETTINGS = [
     ("wmax-cmd", [0.1, 0.02]),
 ]
 
-# Cayley with nonphysical dynamical masses awaits confirmation of support.
+# Cayley propagation is only checked with physical (RPMD) masses.
 PROPAGATOR_CASES = [
     (style, freqs, propagator)
     for style, freqs in MODE_SETTINGS
@@ -25,7 +25,7 @@ PROPAGATOR_CASES = [
 
 def normal_mode_input(style, freqs, propagator):
     root = ET.fromstring(harmonic_input(nbeads=4, timestep=0.1))
-    # Atomic-unit temperature makes P*kB*T/hbar = 4*0.2 without unit helpers.
+    # In atomic units P*kB*T/hbar = 4*0.2.
     temperature = root.find("system/ensemble/temperature")
     temperature.attrib.clear()
     temperature.text = "0.2"
@@ -37,10 +37,8 @@ def normal_mode_input(style, freqs, propagator):
 
 
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)
-def test_open_and_closed_frequencies_and_mass_factors_match_input(
-    simulation, style, freqs, propagator
-):
-    """Check spring eigenvalues and the requested dynamical frequencies independently."""
+def test_frequencies_and_mass_factors(simulation, style, freqs, propagator):
+    """Spring eigenvalues and mass factors of closed and open paths."""
     # Four-bead unit-spring matrices have these eigenvalues: a cyclic chain
     # in Fourier mode order, and a chain with free ends in ascending order.
     closed_spring = 0.8 * np.sqrt([0.0, 2.0, 4.0, 2.0])
@@ -62,7 +60,7 @@ def test_open_and_closed_frequencies_and_mass_factors_match_input(
                 # The first free internal mode must oscillate at wtarget.
                 # Adding physical curvature wmax**2 must make all internal
                 # modes oscillate at the same frequency. Those two conditions
-                # determine each mass factor, with no production values used.
+                # determine each mass factor.
                 wmax, wtarget = freqs
                 common_frequency = wtarget * np.sqrt(
                     1 + (wmax / expected_spring[1]) ** 2
