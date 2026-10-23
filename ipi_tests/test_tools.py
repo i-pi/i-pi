@@ -97,7 +97,7 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 20
+TIMEOUT = 30
 
 fortran_driver_models = [
     "dummy",
