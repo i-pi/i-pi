@@ -6,3 +6,10 @@ numpy-accessible outputs.
 These have been tested against Yair Litman's in-the-house independent implementation (2020).
 
 Implicit bath has been tested against explicit bath calculations (Dec 2023)
+
+BUGFIX: 100K_implicit_friction frequency conversion
+----------------------------------------------------------------------
+The y/z spring constant uses the incorrect conversion divisor 219323.
+The saved Hessian contains this value even though y and z coordinates are zero.
+Validate and regenerate the Hessian reference when correcting the conversion
+to use i-PI's standard inversecm factor (4.5563353e-6).
