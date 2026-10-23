@@ -24,36 +24,23 @@ def random_factory():
 
 
 @pytest.mark.parametrize(
-    "n_threads,shape",
+    "n_threads,shape,contiguous",
     [
-        (1, (3,)),
-        (1, (67, 3)),
-        (2, (33, 3)),
-        (4, (33, 3)),
-        pytest.param(
-            2,
-            (67, 3),
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="Threaded gfill fills a flattened copy instead of the supplied array",
-            ),
-        ),
-        pytest.param(
-            4,
-            (401, 3),
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="Threaded gfill fills a flattened copy instead of the supplied array",
-            ),
-        ),
+        (1, (3,), True),
+        (1, (67, 3), True),
+        (2, (33, 3), True),
+        (4, (33, 3), True),
+        (2, (67, 3), True),
+        (4, (401, 3), True),
+        (4, (401, 3), False),
     ],
 )
-def test_gaussian_fill_updates_the_supplied_array(random_factory, n_threads, shape):
+def test_gaussian_fill_updates_the_supplied_array(
+    random_factory, n_threads, shape, contiguous
+):
     """Both serial and parallel fills must overwrite every output element."""
     generator = random_factory(seed=109, n_threads=n_threads)
-    output = np.full(shape, np.nan)
+    output = np.full(shape, np.nan) if contiguous else np.full(shape[::-1], np.nan).T
     generator.gfill(output)
     assert np.isfinite(output).all()
     assert np.any(output != output.flat[0])
