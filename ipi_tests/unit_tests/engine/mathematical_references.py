@@ -62,10 +62,47 @@ def polynomial(q, quadratic, quartic):
 
 
 def virials(q, force):
-    """Virial = -dU/dstrain at fixed fractional coordinates, upper triangle."""
+    """Coordinate virial only; complete when U has no explicit cell dependence."""
     return np.asarray(
         [np.triu(x.reshape(-1, 3).T @ f.reshape(-1, 3)) for x, f in zip(q, force)]
     )
+
+
+def cell_strain_virial(energy, q, cell, step=1e-4):
+    """-dE/dstrain at fixed fractional coordinates, in i-PI's convention.
+
+    For component ij, q'=q@(I+eps*Eij) and h'=(I+eps*Eij).T@h.
+    Both positions and cell change. `energy` must include explicit cell
+    dependence and return either a scalar or one energy per bead.
+    A five-point derivative has O(step^4) truncation error.
+    """
+    positions = np.asarray(q).reshape(len(q), -1, 3)
+    value = np.asarray(energy(q, cell))
+    result = np.zeros(value.shape + (3, 3))
+    for i in range(3):
+        for j in range(i, 3):
+            direction = np.zeros((3, 3))
+            direction[i, j] = 1
+            values = []
+            for displacement in [-2 * step, -step, step, 2 * step]:
+                transform = np.eye(3) + displacement * direction
+                moved = (positions @ transform).reshape(q.shape)
+                values.append(energy(moved, transform.T @ cell))
+            result[..., i, j] = -(
+                values[0] - 8 * values[1] + 8 * values[2] - values[3]
+            ) / (12 * step)
+    return result
+
+
+def volume_polynomial(q, cell, quadratic, quartic, coupling=0.0, volume0=120.0):
+    """U=sum(a*(1+coupling*(V/V0-1))*x^2+b*x^4), including cell derivatives."""
+    ratio = np.linalg.det(cell) / volume0
+    a = np.asarray(quadratic)
+    energy, force, curvature = polynomial(q, a * (1 + coupling * (ratio - 1)), quartic)
+    # -V*dU/dV at fixed Cartesian positions supplements sum(q outer F).
+    explicit = coupling * ratio * np.sum(a * q**2, axis=1)
+    virial = virials(q, force) - explicit[:, None, None] * np.eye(3)
+    return energy, force, curvature, virial
 
 
 def sc_weights(count, alpha, temperature):
@@ -84,15 +121,10 @@ def sc_reference(q, masses, quadratic, quartic, alpha, temperature):
     square = np.sum(force**2 / mass, axis=1)
     # -gradient(sum(F^2/m)) = 2*H*F/m for a diagonal polynomial Hessian.
     derivative = 2 * curvature * force / mass
-    # -2*D(virial)[F/m], obtained by differentiating q outer F.
-    derivative_virial = []
-    for x, f, h in zip(q, force, curvature):
-        direction = (f / mass).reshape(-1, 3)
-        df = (-h * f / mass).reshape(-1, 3)
-        derivative_virial.append(
-            -2 * np.triu(direction.T @ f.reshape(-1, 3) + x.reshape(-1, 3).T @ df)
-        )
-    derivative_virial = np.asarray(derivative_virial)
+    # -d(sum(F^2/m))/dstrain, not just -2*D(ordinary virial)[F/m].
+    # With no explicit cell dependence, this is sum(q outer (-grad(F^2/m))).
+    # Kapil et al., JCTC 15,3237 (2019), Eq. 9 / SI S1.26--S1.31.
+    derivative_virial = virials(q, derivative)
     return dict(
         energy=energy,
         force=force,

@@ -206,13 +206,10 @@ def test_suzuki_chin_force_correction_matches_harmonic_derivative(
     expected = -2 * q / beads.m3  # -gradient of |F|^2/m for U=|q|^2/2
     if alpha == 0:
         expected[::2] = 0
-    correction, virial = forces.forcesvirs_4th_order(0)
+    correction, _ = forces.forcesvirs_4th_order(0)
     np.testing.assert_allclose(correction, expected, rtol=1e-10, atol=1e-12)
-    # Virial finite differences are quadratic in q, so forward differences have O(epsilon) error.
-    expected_virial = np.array([-4 * np.triu(np.outer(a, a)) / 2 for a in q])
-    if alpha == 0:
-        expected_virial[::2] = 0
-    np.testing.assert_allclose(virial, expected_virial, rtol=2e-4, atol=1e-12)
+    # Physical virials are checked against cell-strain energy derivatives in
+    # test_virial_mathematical_references, separately from these force checks.
     np.testing.assert_array_equal(beads.q, q)
     np.testing.assert_allclose(
         forces.virssc, forces.virssc_part_1 + forces.virssc_part_2

@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEST_DIR = Path("ipi_tests/unit_tests/engine")
 TEST_FILES = [
     TEST_DIR / ("test_" + name + "_mathematical_references.py")
-    for name in ["property", "force", "initializer"]
+    for name in ["property", "force", "initializer", "virial"]
 ]
 GROUPS = ["properties", "trajectories", "properties_helpers", "forces", "initializer"]
 
@@ -93,6 +93,9 @@ def case_checks_entry(case, entry, tests):
     if name not in tests:
         return False
     identifiers = case["name"].partition("[")[2].removesuffix("]")
+    if name == "test_sc_corrected_virial_differentiates_complete_energy":
+        part = "virssc_part_2" if "virssc_part_2" in identifiers else "virssc"
+        return entry == "forces:Forces.get_" + part
     mentioned = {
         candidate
         for candidate in tests[name]["entries"]
@@ -386,7 +389,7 @@ def main():
     independence = independence_check()
     production = [
         ROOT / "ipi/engine" / (name + ".py")
-        for name in ["properties", "forces", "initializer"]
+        for name in ["properties", "forces", "initializer", "barostats"]
     ]
     before = {str(path): sha(path) for path in production}
     execution = run_pytest(ROOT, TEST_FILES, directory, "references")
@@ -461,6 +464,7 @@ def main():
         + ". The independent numerical helper imports only NumPy and the standard library. This structural guard does not prove scientific correctness; equations and cases still require review.",
         "",
         "The reference cases use nonzero convex quartic forces, unequal masses, explicit Fourier projection, nonunit component/MTS weights, fixed Gaussian draws, independent SI anchors, and explicit two-particle permutation sums. SC coefficients come from arXiv:1606.00920 Eqs.7-8 and Appendix C; beta derivatives from physics/0505109 Eqs.18,22,33,34; SC operator double virial from JCTC 15,3237 (2019), Eqs.10,14,15.",
+        "Ordinary and SC force virials additionally use minus the cell-strain derivative of the complete energy at fixed fractional coordinates. The volume-coupled convex quartic model changes both energy and forces with cell volume. The SC expression is cross-checked against JCTC 15,3237 (2019), Eq.9 / SI S1.26--S1.31, accounting for the opposite paper sign. Separate checks cover force components, weighting, pressure outputs, MTS stresses with and without bias, BZP/SCBZP/MTK/RGB momentum contributions and the classical SCR pressure force. This does not establish full SC-NPT conserved-energy behavior or all contracted-path combinations.",
         "",
         "## Every marked entry",
         "",
@@ -534,8 +538,8 @@ def main():
                 str(args.baseline.resolve()),
                 "--report-dir",
                 str(directory),
-                "--mutations",
             ]
+            + (["--mutations"] if args.mutations else [])
         ),
         "```",
         "",

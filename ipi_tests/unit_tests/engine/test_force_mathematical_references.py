@@ -210,9 +210,6 @@ def test_component_output_wrappers_preserve_raw_and_weighted_bead_values(
     "forces:Forces.get_fsc_part_1",
     "forces:Forces.get_fsc_part_2",
     "forces:Forces.get_fsc",
-    "forces:Forces.get_virssc_part_1",
-    "forces:Forces.get_virssc_part_2",
-    "forces:Forces.get_virssc",
 )
 @pytest.mark.parametrize("alpha", [0.0, 0.3, 1.0])
 def test_individual_sc_coefficients_and_corrections_follow_polynomial_derivatives(
@@ -223,22 +220,16 @@ def test_individual_sc_coefficients_and_corrections_follow_polynomial_derivative
     force.mforces[0].epsilon = -1e-5
     ref = sc_reference(r.q, r.masses, r.a, r.b, alpha, 0.4)
     derivative = ref["derivative"].copy()
-    derivative_virial = ref["derivative_virial"].copy()
     if alpha == 0:
         derivative[::2] = 0
-        derivative_virial[::2] = 0
     checks = dict(
         coeffsc_part_1=ref["linear"][:, None],
         coeffsc_part_2=ref["quadratic"][:, None],
         f_4th_order=derivative,
-        vir_4th_order=derivative_virial,
         potssc=ref["correction"],
         fsc_part_1=ref["force1"],
         fsc_part_2=ref["force2"],
         fsc=ref["force1"] + ref["force2"],
-        virssc_part_1=ref["virial1"],
-        virssc_part_2=ref["virial2"],
-        virssc=ref["virial1"] + ref["virial2"],
     )
     for name, expected in checks.items():
         np.testing.assert_allclose(
@@ -250,11 +241,10 @@ def test_individual_sc_coefficients_and_corrections_follow_polynomial_derivative
     "forces:Forces.forcesvirs_4th_order",
     "forces:Forces.fvir_4th_order_combine",
     "forces:Forces.get_fsc",
-    "forces:Forces.get_virssc",
 )
 @pytest.mark.parametrize("contracted", [False, True])
 @pytest.mark.parametrize("alpha", [0.0, 0.3])
-def test_multicomponent_sc_force_and_virial_derivatives_obey_chain_rule(
+def test_multicomponent_sc_force_derivatives_obey_chain_rule(
     reference_system, contracted, alpha, request
 ):
     if contracted and alpha == 0:
@@ -274,35 +264,19 @@ def test_multicomponent_sc_force_and_virial_derivatives_obey_chain_rule(
         for x in refs
     )
     direction = total_force / np.repeat(r.masses, 3)
-    derivatives, virial_derivatives = [], []
+    derivatives = []
     for index, ref in enumerate(refs):
         dq = ref["contract"] @ direction
         local = 2 * ref["curvature"] * dq
-        v_local = []
-        for q, f, h, d in zip(ref["q"], ref["force"], ref["curvature"], dq):
-            v_local.append(
-                -2
-                * np.triu(
-                    d.reshape(2, 3).T @ f.reshape(2, 3)
-                    + q.reshape(2, 3).T @ (-h * d).reshape(2, 3)
-                )
-            )
         df = expand(ref["expand"], local)
-        dv = expand(ref["expand"], np.asarray(v_local))
         if alpha == 0:
             df[::2] = 0
-            dv[::2] = 0
-        actual_f, actual_v = forces.forcesvirs_4th_order(index)
+        actual_f, _ = forces.forcesvirs_4th_order(index)
         np.testing.assert_allclose(actual_f, df, rtol=1e-7, atol=2e-8)
-        np.testing.assert_allclose(actual_v, dv, rtol=1e-7, atol=2e-8)
         weight = ref["component"].weight * sum(ref["component"].mts_weights)
         derivatives.append(weight * df)
-        virial_derivatives.append(weight * dv)
     np.testing.assert_allclose(
         forces.f_4th_order, sum(derivatives), rtol=1e-7, atol=2e-8
-    )
-    np.testing.assert_allclose(
-        forces.vir_4th_order, sum(virial_derivatives), rtol=1e-7, atol=2e-8
     )
 
 
