@@ -158,28 +158,24 @@ def test_noncentroid_components_and_mts_levels_match_explicit_fourier_projection
     "trajectories:forces_component_raw",
 )
 @pytest.mark.parametrize(
-    "key",
+    "key,bead",
     [
-        "pot_component",
-        "pot_component_raw",
-        "vir_component",
-        "vir_component_raw",
-        "forces_component",
-        "forces_component_raw",
+        ("pot_component", -1),
+        ("pot_component", 1),
+        ("pot_component_raw", 1),
+        ("vir_component", -1),
+        ("vir_component", 1),
+        ("vir_component_raw", -1),
+        ("vir_component_raw", 1),
+        ("forces_component", -1),
+        ("forces_component", 1),
+        ("forces_component_raw", -1),
+        ("forces_component_raw", 1),
     ],
 )
-@pytest.mark.parametrize("bead", [-1, 1])
 def test_component_output_wrappers_preserve_raw_and_weighted_bead_values(
-    reference_system, key, bead, request
+    reference_system, key, bead
 ):
-    if key == "pot_component_raw" and bead < 0:
-        request.node.add_marker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="BUG: raw component potential mean divides by the full bead count instead of the component bead count",
-            )
-        )
     s, r = reference_system()
     forces, refs = combined_case(s, r)
     s.properties.forces = s.forces = forces
