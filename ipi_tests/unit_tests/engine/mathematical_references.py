@@ -163,23 +163,19 @@ def mode_mass_factors(count, temperature, style, frequencies):
     return factors
 
 
-def scaled_derivatives(q, quadratic, quartic, temperature, alpha=None):
+def scaled_derivatives(q, quadratic, quartic, temperature):
     """Differentiate beta'*V(q_c+sqrt(beta'/beta)*dq; beta') analytically.
 
     Write s=beta'/beta. At s=1, dq/ds=dq/2 and d2q/ds2=-dq/4.
-    For SC, the squared-force coefficient additionally scales as s^2.
     """
-    count, coordinates = q.shape
+    coordinates = q.shape[1]
     delta = q - q.mean(axis=0)
     energy, force, hessian = polynomial(q, quadratic, quartic)
     gradient = -force
     first = np.sum(gradient * delta / 2, axis=1)
     second = np.sum((hessian * delta**2 - gradient * delta) / 4, axis=1)
-    weights = np.ones(count)
-    if alpha is not None:
-        raise ValueError("Use sc_scaled_derivatives with explicit masses")
-    e = np.mean(weights * (energy + first)) + coordinates * temperature / 2
-    ep = temperature * np.mean(weights * (2 * first + second))
+    e = np.mean(energy + first) + coordinates * temperature / 2
+    ep = temperature * np.mean(2 * first + second)
     ep -= coordinates * temperature**2 / 2
     return np.array([e, ep])
 

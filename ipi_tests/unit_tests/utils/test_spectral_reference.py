@@ -36,14 +36,11 @@ def test_gle_covariance_solves_lyapunov_equation(frequency, auxiliary):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="GLE kernel does not reproduce the analytic Langevin spectrum",
-)
 def test_langevin_spectrum_matches_damped_oscillator_response():
     omega = np.linspace(0.05, 5, 100)
-    gamma = 0.6
+    # Kept off the grid's critical damping, omega = gamma/2, where the
+    # oscillator's drift matrix cannot be diagonalized.
+    gamma = 0.61
     dw = omega[1] - omega[0]
     kernel = gle_frequency_kernel(omega, np.array([[gamma]]), np.array([[2 * gamma]]))
     w = omega[:, None]

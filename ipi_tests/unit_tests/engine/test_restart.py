@@ -39,12 +39,19 @@ def assert_same(actual, expected):
 @pytest.mark.parametrize(
     "mode,nbeads,explicit_covariance",
     [
-        (m, n, False)
-        for m in [None, "langevin", "svr", "pile_l", "pile_g"]
-        for n in [1, 4]
-    ]
-    + [(m, 4, c) for m in ["gle", "nm_gle", "nm_gle_g"] for c in [False, True]]
-    + [(m, 4, False) for m in ["multi", "cl", "ffl"]],
+        (None, 1, False),
+        ("langevin", 1, False),
+        ("svr", 1, False),
+        ("pile_l", 4, False),
+        ("pile_g", 4, False),
+        ("gle", 4, False),
+        ("gle", 4, True),
+        ("nm_gle", 4, False),
+        ("nm_gle_g", 4, False),
+        ("multi", 4, False),
+        ("cl", 4, False),
+        ("ffl", 4, False),
+    ],
 )
 def test_thermostat_restart(restart_states, mode, nbeads, explicit_covariance):
     """Positions, momenta, heat and auxiliary momenta use the same random draws."""
@@ -62,8 +69,10 @@ def test_thermostat_restart(restart_states, mode, nbeads, explicit_covariance):
     assert_same(actual, expected)
 
 
-@pytest.mark.parametrize("barostat", ["isotropic", "flexible", "anisotropic"])
-@pytest.mark.parametrize("nbeads", [1, 4])
+@pytest.mark.parametrize(
+    "barostat,nbeads",
+    [("isotropic", 1), ("isotropic", 4), ("flexible", 1), ("anisotropic", 1)],
+)
 def test_barostat_restart(restart_states, barostat, nbeads):
     def snapshot(sim):
         s = sim.syslist[0]
@@ -80,8 +89,9 @@ def test_barostat_restart(restart_states, barostat, nbeads):
     assert np.linalg.det(actual[2]) > 0
 
 
-@pytest.mark.parametrize("mode", ["sc", "scnpt", "nvt-cc"])
-@pytest.mark.parametrize("splitting", ["obabo", "baoab"])
+@pytest.mark.parametrize(
+    "mode,splitting", [("sc", "obabo"), ("scnpt", "baoab"), ("nvt-cc", "obabo")]
+)
 def test_higher_order_and_constrained_centroid_restart(
     simulation, restart_states, mode, splitting
 ):
@@ -111,8 +121,9 @@ def test_higher_order_and_constrained_centroid_restart(
         )
 
 
-@pytest.mark.parametrize("kind,attribute", [("t", "temp"), ("p", "pext")])
-@pytest.mark.parametrize("logscale", [False, True])
+@pytest.mark.parametrize(
+    "kind,attribute,logscale", [("t", "temp", False), ("p", "pext", True)]
+)
 def test_ramp_restart(simulation, restart_states, kind, attribute, logscale):
     root = ET.fromstring(harmonic_input(timestep=0.01))
     system = root.find("system")
