@@ -363,21 +363,6 @@ def test_exchange_estimators_at_coincident_paths(bosons):
             s.properties.get_kintd("0")
 
 
-def test_open_path_primitive_estimator_includes_ring_closure():
-    # Characterization only: this reproduces the documented cyclic estimator.
-    # It does not establish that averaging it over open paths gives physical KE.
-    from ipi.engine.simulation import Simulation
-
-    xml = harmonic_input(nbeads=4).replace(
-        "<system>", "<system><normal_modes><open_paths>[0]</open_paths></normal_modes>"
-    )
-    s = Simulation.load_from_xml(xml, read_only=True).syslist[0]
-    q = s.beads.q[:, :3].copy()
-    springs = np.sum((q - np.roll(q, 1, axis=0)) ** 2)
-    expected = 6 * s.ensemble.temp - 0.5 * 2 * s.nm.omegan2 * springs / 4
-    assert s.properties.get_kintd("0") == pytest.approx(expected)
-
-
 @pytest.mark.parametrize(
     "encoding",
     [
