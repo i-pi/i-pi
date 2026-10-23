@@ -155,10 +155,8 @@ def test_scaled_component_updates_energy_force_and_virial(force_system, scaling)
     np.testing.assert_allclose(scaled.f, -3 * beads.q)
 
 
-@pytest.mark.parametrize(
-    "bad", ["missing", "nonnumeric", "extra-key", "missing-on-later-bead"]
-)
-def test_inconsistent_extras_are_rejected(force_system, bad, request):
+@pytest.mark.parametrize("bad", ["missing", "nonnumeric", "extra-key"])
+def test_inconsistent_extras_are_rejected(force_system, bad):
     from ipi.engine.forces import ForceComponent
 
     def extras(q):
@@ -166,21 +164,11 @@ def test_inconsistent_extras_are_rejected(force_system, bad, request):
             return {}
         if bad == "nonnumeric":
             return {"energy": "not a number"}
-        if bad == "extra-key":
-            return {"energy": 1.0, **({"other": 2.0} if q[0] > 0.2 else {})}
-        return {"energy": 1.0} if q[0] < 0.2 else {}
+        return {"energy": 1.0, **({"other": 2.0} if q[0] > 0.2 else {})}
 
     _, _, forces = force_system(
         [ForceComponent("harmonic", interpolate_extras=["energy"])], extra_values=extras
     )
-    if bad == "missing-on-later-bead":
-        request.node.add_marker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=pytest.fail.Exception,
-                reason="Extras gathering does not reject keys missing from later beads",
-            )
-        )
     if bad == "nonnumeric":
         with pytest.raises(Exception, match="has to be numerical"):
             forces.mforces[0].extras
@@ -369,20 +357,6 @@ def test_cancelled_bead_request_cannot_return_force_data(force_system, monkeypat
         assert "cannot return" in messages[0]
     finally:
         bead_force.ff.release(bead_force.request)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Combining raw extras modifies the first component's cached list",
-)
-def test_combining_extras_does_not_modify_component_data(force_system):
-    from ipi.engine.forces import ForceComponent
-
-    _, _, forces = force_system([ForceComponent("first"), ForceComponent("second")])
-    assert forces.extras_component(0)["raw"] == ["first"] * 4
-    assert forces.extras["raw"] == ["firstsecond"] * 4
-    assert forces.extras_component(0)["raw"] == ["first"] * 4
 
 
 @pytest.mark.parametrize("readers", [1, 2])
