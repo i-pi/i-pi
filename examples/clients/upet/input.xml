@@ -1,0 +1,45 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'> [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ] </properties>
+    <trajectory filename='pos' stride='10' format='ase'> positions </trajectory>
+    <trajectory filename='uq' stride='1' extra_type='energy_uncertainty'> extras </trajectory>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+
+  <!--
+      PET-MAD runs in-process through the metatomic driver. The four beads are
+      collected into batches of four, and each batch is split between two
+      model instances running in separate threads (device:cpu;cpu).
+      The per-atom energy uncertainty is returned as an extra, and a warning
+      is printed whenever it exceeds the threshold (in eV/atom).
+  -->
+  <ffdirect name='pet-mad' pbc='false'>
+    <pes> metatomic </pes>
+    <parameters> {template:init.xyz,model:pet-mad-xs-v1.6.0.pt,device:cpu;cpu,uncertainty_threshold:0.1} </parameters>
+    <batch_size> 4 </batch_size>
+  </ffdirect>
+
+  <system>
+    <initialize nbeads='4'>
+      <file mode='ase' units='angstrom'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='pet-mad'/>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='pile_g'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

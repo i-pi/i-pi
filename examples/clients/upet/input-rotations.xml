@@ -1,0 +1,49 @@
+<simulation verbosity='medium'>
+  <output prefix='rotations'>
+    <properties stride='1' filename='out'> [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt} ] </properties>
+    <trajectory filename='o3_pots' stride='1' extra_type='o3grid_pots'> extras </trajectory>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+
+  <!--
+      Non-conservative (direct) forces are fast, but they are neither
+      conservative nor exactly rotationally equivariant. <ffrotations> applies
+      a random rotation, and its inversion, at every step, averaging the two
+      predictions. The two rotated copies are evaluated as a single batch.
+      The noise this introduces is controlled by a strong local thermostat.
+  -->
+  <ffrotations name='pet-mad' pbc='false'>
+    <ffdirect name='pet-mad-nc' pbc='false'>
+      <pes> metatomic </pes>
+      <parameters> {template:init.xyz,model:pet-mad-xs-v1.6.0.pt,non_conservative:True} </parameters>
+      <batch_size> 2 </batch_size>
+    </ffdirect>
+    <random> True </random>
+    <inversion> True </inversion>
+    <prng> <seed> 54321 </seed> </prng>
+  </ffrotations>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase' units='angstrom'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='pet-mad'/>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 10 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>
