@@ -32,13 +32,16 @@ class MultiMotion(Motion):
         )  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
 
         self.fixatoms_dof = set(self.mlist[0].fixatoms_dof)
+        self.fixbeads = list(getattr(self.mlist[0], "fixbeads", []))
         for m in self.mlist:
             self.fixatoms_dof = self.fixatoms_dof.intersection(m.fixatoms_dof)
         self.fixatoms_dof = list(self.fixatoms_dof)
 
         self.fixcom = True  # fixcom is true only if all movers are fixed
+        self.fixcentroid = True
         for m in self.mlist:
             self.fixcom = self.fixcom and m.fixcom
+            self.fixcentroid = self.fixcentroid and getattr(m, "fixcentroid", False)
 
     def get_totdt(self):
         dt = 0.0
@@ -75,6 +78,13 @@ class MultiMotion(Motion):
                 generation.
         """
 
+        if any(
+            tuple(getattr(m, "fixbeads", [])) != tuple(self.fixbeads)
+            for m in self.mlist
+        ):
+            raise NotImplementedError(
+                "Different fixed-bead sets within MultiMotion are not implemented."
+            )
         for m in self.mlist:
             m.bind(ens, beads, nm, cell, bforce, prng, omaker)
 

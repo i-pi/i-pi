@@ -1,0 +1,20 @@
+<simulation verbosity="quiet" floatformat="%24.16e">
+  <total_steps>10</total_steps>
+  <output prefix="simulation">
+    <properties filename="check.dat" stride="1">[step, atom_x(atom=0;bead=0), atom_x(atom=0;bead=1), atom_p(atom=0;bead=0), atom_p(atom=0;bead=1)]</properties>
+  </output>
+  <ffdirect name="harmonic"><pes>harmonic</pes><parameters>{k1: 0.2}</parameters></ffdirect>
+  <system>
+    <beads natoms="1" nbeads="2">
+      <q shape="(2,3)">[1,0,0, 0.5,0,0]</q>
+      <p shape="(2,3)">[0,0,0, 0.3,0,0]</p>
+      <m shape="(1)">[2]</m><names shape="(1)">[H]</names>
+    </beads>
+    <cell shape="(3,3)">[10,0,0,0,10,0,0,0,10]</cell>
+    <forces><force forcefield="harmonic"/></forces>
+    <ensemble><temperature units="kelvin">10000</temperature></ensemble>
+    <motion mode="dynamics"><fixcentroid>True</fixcentroid>
+      <dynamics mode="nve"><timestep>0.01</timestep></dynamics>
+    </motion>
+  </system>
+</simulation>

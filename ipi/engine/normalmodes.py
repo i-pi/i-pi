@@ -172,6 +172,28 @@ class NormalModes:
 
         self.bosons = self.resolve_bosons()
 
+        self.fixbeads = getattr(motion, "fixbeads", [])
+        if len(self.fixbeads):
+            if len(self.open_paths) > 0 or len(self.bosons) > 0:
+                raise NotImplementedError(
+                    "Fixed beads are not supported together with open paths or bosonic exchange"
+                )
+            if self.mode != "rpmd":
+                raise NotImplementedError(
+                    "Fixed-bead propagation currently requires RPMD dynamical masses"
+                )
+            if self.propagator != "exact":
+                raise NotImplementedError(
+                    "Fixed-bead propagation currently requires the exact spring propagator"
+                )
+            (
+                self.freebeads,
+                self.fixbeads,
+                self.fixed_transform,
+                self.fixed_eva,
+                self.fixed_map,
+            ) = nmtransform.mk_fixed_bead_matrix(self.nbeads, self.fixbeads)
+
         # eco springs are only defined for closed, distinguishable paths
         if self.mode == "eco":
             if len(self.bosons) > 0 or len(self.open_paths) > 0:
@@ -334,6 +356,14 @@ class NormalModes:
             func=self.get_prop_pq_ms,
             dependencies=[self._prop_pq, self.beads._m3],
         )
+
+        if len(self.fixbeads):
+            self._fixed_prop_pq_ms = depend_array(
+                name="fixed_prop_pq_ms",
+                value=np.zeros((2, 2, len(self.freebeads), 3 * self.natoms)),
+                func=self.get_fixed_prop_pq_ms,
+                dependencies=[self._omegan, self._dt, self.beads._m3],
+            )
 
         self._o_prop_pq = depend_array(
             name="o_prop_pq",
@@ -566,6 +596,18 @@ class NormalModes:
         pq_ms[0, 1] *= dstrip(self.beads.m3)
         pq_ms[1, 0] /= dstrip(self.beads.m3)
 
+        return pq_ms
+
+    def get_fixed_prop_pq_ms(self):
+        """Gets the mass-scaled exact propagator for fixed-replica springs."""
+
+        omega = self.omegan * np.sqrt(self.fixed_eva)[:, None]
+        s = self.dt * np.sinc(omega * self.dt / np.pi)
+        m = dstrip(self.beads.m3)[0]
+        pq_ms = np.zeros((2, 2, len(self.freebeads), 3 * self.natoms))
+        pq_ms[0, 0] = pq_ms[1, 1] = np.cos(omega * self.dt)
+        pq_ms[0, 1] = -m * omega**2 * s
+        pq_ms[1, 0] = s / m
         return pq_ms
 
     def get_o_prop_pq(self):
@@ -958,6 +1000,21 @@ class NormalModes:
             self.pnm[1:] = new_pnm
             self.qnm[1:] = new_qnm
 
+    def free_qstep_fixed_beads(self):
+        """Propagates free replicas about the minimum-energy fixed-endpoint path."""
+
+        qc = self.fixed_map @ dstrip(self.beads.q)[self.fixbeads]
+        qnm = self.fixed_transform.T @ (dstrip(self.beads.q)[self.freebeads] - qc)
+        pnm = self.fixed_transform.T @ dstrip(self.beads.p)[self.freebeads]
+        prop_pq_ms = dstrip(self.fixed_prop_pq_ms)
+        self.beads.p[self.freebeads] = self.fixed_transform @ (
+            pnm * prop_pq_ms[0, 0] + qnm * prop_pq_ms[0, 1]
+        )
+        self.beads.q[self.freebeads] = qc + self.fixed_transform @ (
+            pnm * prop_pq_ms[1, 0] + qnm * prop_pq_ms[1, 1]
+        )
+        self.beads.p[self.fixbeads] = 0.0
+
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.
 
@@ -1025,6 +1082,7 @@ dproperties(
         "dynomegak",
         "prop_pq",
         "prop_pq_ms",
+        "fixed_prop_pq_ms",
         "o_prop_pq",
         "o_prop_pq_ms",
         "kins",
