@@ -23,6 +23,7 @@ __all__ = ["SCPhononsMover"]
 import os
 import numpy as np
 from ipi.engine.motion.motion import Motion
+from ipi.engine.beads import Beads
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.mathtools import gaussian_inv
@@ -133,9 +134,13 @@ class SCPhononsMover(Motion):
         self.dynmatrix = xp.asarray(self.dynmatrix).reshape((nq, nq))
         self.atol = self.chop
 
-        # Creates duplicate classes to simplify computation of forces.
+        # Creates duplicate classes to simplify computation of forces, with
+        # nparallel copies of the system to evaluate several configurations at once.
         self.dof = 3 * self.beads.natoms
-        self.dbeads = self.beads.clone(nbeads=self.nparallel)
+        self.dbeads = Beads(self.beads.natoms, self.nparallel)
+        self.dbeads._q[:] = self.beads.q
+        self.dbeads._m[:] = self.beads.m
+        self.dbeads._names[:] = self.beads.names
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
 

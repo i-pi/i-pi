@@ -28,7 +28,7 @@ from ipi.engine.motion import Motion
 
 # from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.array_backend import xp, xp_size, to_numpy
 
 # from ipi.utils.io import print_file
@@ -146,7 +146,13 @@ class NormalModeMover(Motion):
         self.m = self.beads.m
         self.calc.bind(self)
 
-        self.dbeads = self.beads.clone(nbeads=self.nparallel)
+        # the configurations are evaluated one at a time
+        if self.nparallel > 1:
+            warning(
+                "VSCF evaluates one configuration at a time: nparallel is ignored",
+                verbosity.low,
+            )
+        self.dbeads = self.beads.clone()
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
