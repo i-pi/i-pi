@@ -37,6 +37,8 @@ or because they were approved explicitly:
 - Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as
   arrays of the backend, and return energy, forces and virial as arrays of the backend, so with the torch
   backend they stay on the device. Results are unchanged (bit-identical on the CPU for the LJ example model).
+  The `dummy` PES does the same, so that direct forcefields with `<pes>dummy</pes>` (e.g. in
+  `ipi_tests/profiling/benchmark.py`) exercise this path.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

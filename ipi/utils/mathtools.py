@@ -64,7 +64,8 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
     then squaring the result the appropriate number of times.
 
     Args:
-       M: Matrix to be exponentiated.
+       M: Matrix to be exponentiated, or a stack of matrices with shape
+          (..., n, n), which are exponentiated together.
        ntaylor: Optional integer giving the number of terms in the Taylor series.
           Defaults to 15.
        nsquare: Optional integer giving how many times the original matrix will
@@ -74,7 +75,7 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
        The matrix exponential of M.
     """
 
-    n = M.shape[1]
+    n = M.shape[-1]
     tc = np.zeros(ntaylor + 1)
     tc[0] = 1.0
     for i in range(ntaylor):

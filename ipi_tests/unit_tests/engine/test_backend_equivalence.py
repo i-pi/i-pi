@@ -143,7 +143,7 @@ def test_backend_equivalence(
 
 @pytest.mark.skipif(not cuda_available, reason="CUDA not available")
 @pytest.mark.parametrize("case", ["nve", "nvt_langevin", "pimd_nvt", "pimd_npt"])
-def test_cuda_step_is_sync_free(case, tmp_path, monkeypatch):
+def test_cuda_step_is_sync_free(case, tmp_path, monkeypatch, device_random):
     """An MD step without force evaluation does not wait for the device"""
 
     from ipi.scripting import InteractiveSimulation

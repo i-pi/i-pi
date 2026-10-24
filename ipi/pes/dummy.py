@@ -1,6 +1,6 @@
 # this is how the driver will be referred to in the input files
 __DRIVER_NAME__ = "dummy"
-__DRIVER_CLASS__ = "Dummy_driver"
+__DRIVER_CLASS__ = "Zero_driver"
 
 import json
 from ipi.utils.messages import warning, verbosity
@@ -60,3 +60,20 @@ class Dummy_driver(object):
         """Function interface"""
 
         return self.compute(cell, pos)
+
+
+class Zero_driver(Dummy_driver):
+    """The "dummy" PES: zero energy, forces and virial, computed with the same
+    kind of arrays as the positions, i.e. also for the arrays of the i-PI array
+    backend.
+
+    Command line:
+        i-pi-py_driver -m dummy [...]
+    """
+
+    backend_arrays = True
+
+    def compute_structure(self, cell, pos):
+        """Evaluate a single structure, with a zero energy of the same kind as pos"""
+        pot, force, vir, extras = super().compute_structure(cell, pos)
+        return force.sum(), force, vir, extras

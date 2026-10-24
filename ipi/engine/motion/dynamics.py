@@ -326,6 +326,19 @@ class DummyIntegrator:
             value=np.zeros(3 * self.beads.natoms),
             func=lambda: self.qdt / self.beads.m3[0],
         )
+        # to remove the centre-of-mass momentum, each atom loses a fraction m/M
+        # of the total momentum, M being the total mass of all the beads
+        self._com_weights = depend_array(
+            name="com_weights",
+            value=np.zeros((self.beads.nbeads * self.beads.natoms, 3)),
+            func=lambda: 3.0 * self.beads.m3.reshape(-1, 3) / self.beads.m3.sum(),
+            dependencies=[self.beads._m3],
+        )
+        self._half_inv_mtot = depend_value(
+            name="half_inv_mtot",
+            func=lambda: 1.5 / self.beads.m3.sum(),
+            dependencies=[self.beads._m3],
+        )
         self._pdt = depend_array(
             name="pdt",
             func=self.get_pdt,
@@ -386,16 +399,11 @@ class DummyIntegrator:
 
         beads = self.beads
         if self.fixcom:
-            nb = beads.nbeads
-            p = beads.p
-            m3 = beads.m3.reshape((-1, 3))
-            M = beads[0].M
-            Mnb = M * nb
+            pcom = beads.p.reshape(-1, 3).sum(axis=0)
+            beads._p -= (self.com_weights * pcom).reshape(beads.nbeads, -1)
 
-            vcom = p.reshape(-1, 3).sum(axis=0) / Mnb
-            beads._p -= (m3 * vcom).reshape(nb, -1)
-
-            self.ensemble.eens += (vcom**2).sum() * 0.5 * Mnb  # COM kinetic energy.
+            # COM kinetic energy
+            self.ensemble.eens += (pcom @ pcom) * self.half_inv_mtot
 
         # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:
@@ -410,7 +418,19 @@ class DummyIntegrator:
 
 dproperties(
     DummyIntegrator,
-    ["splitting", "nmts", "dt", "inmts", "nmtslevels", "qdt", "pdt", "tdt", "qdt_on_m"],
+    [
+        "splitting",
+        "nmts",
+        "dt",
+        "inmts",
+        "nmtslevels",
+        "qdt",
+        "pdt",
+        "tdt",
+        "qdt_on_m",
+        "com_weights",
+        "half_inv_mtot",
+    ],
 )
 
 

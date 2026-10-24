@@ -6,6 +6,9 @@
 
 import pytest
 
+# methods of Random that draw on the device, replaced with --ipi-backend torch
+_device_random = {}
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -48,6 +51,9 @@ def pytest_configure(config):
         def gfill(self, out):
             out[...] = array_backend.xp.asarray(self.gvec_serial(tuple(out.shape)))
 
+        _device_random.update(
+            gvec_torch=Random.gvec_torch, gfill_torch=Random.gfill_torch
+        )
         Random.gvec_torch = gvec
         Random.gfill_torch = gfill
 
@@ -57,6 +63,17 @@ def pytest_configure(config):
         # implicit conversions of tensors to numpy fail on GPUs: they are made to
         # fail also on the CPU, so that tests on the CPU detect them
         torch.Tensor.__array__ = _no_implicit_numpy
+
+
+@pytest.fixture
+def device_random(monkeypatch):
+    """Draws the Gaussian arrays with the torch generator, on the device, also
+    when they are drawn from the numpy generator (--ipi-backend torch)."""
+
+    from ipi.utils.prng import Random
+
+    for name, method in _device_random.items():
+        monkeypatch.setattr(Random, name, method)
 
 
 @pytest.fixture

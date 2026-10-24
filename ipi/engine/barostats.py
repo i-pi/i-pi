@@ -1332,7 +1332,8 @@ class BaroRGB(Barostat):
         # compute in one go dt sinh v/v to handle zero-velocity cases
         sinh = dt_sinch(v, halfdt)
 
-        expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
+        vdt = v * halfdt
+        expq, expp = matrix_exp(xp.stack([vdt, -vdt]))
         # oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 
         q = self.nm.qnm[0].reshape(self.beads.natoms, 3)
@@ -1599,7 +1600,8 @@ class BaroMTK(Barostat):
         halfdt = self.qdt
         # compute in one go dt sinh v/v to handle zero-velocity cases
         sinh = dt_sinch(v, halfdt)
-        expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
+        vdt = v * halfdt
+        expq, expp = matrix_exp(xp.stack([vdt, -vdt]))
 
         #        oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 
