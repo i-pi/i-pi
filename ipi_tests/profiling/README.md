@@ -53,3 +53,20 @@ By default the `ipi` package is taken from the source tree containing the script
 Timings of large systems are sensitive to other activity on the machine: to detect
 small regressions, alternate several runs of the reference and of the new code, and
 compare the lists of files, which uses the fastest timing of each combination.
+
+With `--forcefield metatomic` the forces come from a metatomic model, evaluated in
+process by a direct forcefield that computes all the beads in one batch. The system is
+then a supercell (`-s`) of the 32-water box (`--structure water`, e.g. for PET-MAD) or
+of the 32-atom nickel box (`--structure nickel`, for the Lennard-Jones model in
+`examples/clients/metatomic/lj`). The model device is independent of the i-PI array
+backend, and the time taken by the driver alone on the same structures is also reported,
+so that the i-PI overhead is the difference between the two timings:
+
+```
+python -c "import upet; upet.save_upet(model='pet-mad', size='xs', version='1.6.0', \
+    output='pet-mad-xs-v1.6.0.pt')"
+python benchmark.py --forcefield metatomic --model pet-mad-xs-v1.6.0.pt --structure water \
+    --model-device cuda -c nve,pimd4_nvt -s 1,2,3 -o numpy.json
+python benchmark.py --forcefield metatomic --model pet-mad-xs-v1.6.0.pt --structure water \
+    --model-device cuda --backend torch --device cuda -c nve,pimd4_nvt -s 1,2,3 -o torch.json
+```
