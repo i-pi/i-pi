@@ -1,0 +1,114 @@
+name: metatomic tests and examples
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: metatomic-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  metatomic:
+    name: metatomic driver (PET-MAD and Lennard-Jones)
+    runs-on: ubuntu-24.04
+    env:
+      COVERAGE_FILE: ${{ github.workspace }}/.coverage-metatomic
+      COVERAGE_RCFILE: ${{ github.workspace }}/pyproject.toml
+      IPI_METATOMIC_MODEL: ${{ github.workspace }}/examples/clients/metatomic/pet-mad-xs-v1.6.0.pt
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install i-PI and metatomic
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[test]" "coverage>=7.10" -r requirements/metatomic.txt
+
+      - name: Cache PET-MAD model
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: examples/clients/metatomic/pet-mad-xs-v1.6.0.pt
+          key: pet-mad-xs-v1.6.0-${{ hashFiles('requirements/metatomic.txt', 'examples/clients/metatomic/getmodel.sh') }}
+
+      - name: Export PET-MAD model
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        working-directory: examples/clients/metatomic
+        run: bash getmodel.sh
+
+      - name: Run metatomic unit tests
+        run: |
+          python -m coverage run -p --source=ipi -m pytest -v -ra \
+            ipi_tests/unit_tests/pes/test_metatomic.py \
+            ipi_tests/unit_tests/pes/test_metatomic_reference.py
+
+      - name: Run PET-MAD batched ffdirect example
+        working-directory: examples/clients/metatomic
+        run: python -m coverage run -p --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run PET-MAD rotation-averaged example
+        working-directory: examples/clients/metatomic
+        run: python -m coverage run -p --source=ipi "$(command -v i-pi)" input-rotations.xml
+
+      - name: Run PET-MAD batched socket example
+        working-directory: examples/clients/metatomic
+        run: |
+          python -m coverage run -p --source=ipi "$(command -v i-pi)" input-socket.xml &
+          ipi_pid=$!
+          for i in $(seq 60); do [ -S /tmp/ipi_pet-mad ] && break; sleep 1; done
+          python -m coverage run -p --source=ipi,drivers "$(command -v i-pi-py_driver)" \
+            -a pet-mad -u -m metatomic \
+            -o template=init.xyz,model=pet-mad-xs-v1.6.0.pt,energy_ensemble=True
+          wait $ipi_pid
+
+      - name: Run Lennard-Jones ffdirect examples
+        working-directory: examples/clients/metatomic/lj
+        run: |
+          for input in input-direct.xml input-batched.xml input-ensemble.xml \
+                       input-ensemble-batched.xml input-ensemble-variant.xml; do
+            echo "::group::$input"
+            python -m coverage run -p --source=ipi "$(command -v i-pi)" "$input"
+            echo "::endgroup::"
+          done
+
+      - name: Run Lennard-Jones socket examples
+        working-directory: examples/clients/metatomic/lj
+        run: |
+          for input in input.xml input-batched-socket.xml; do
+            echo "::group::$input"
+            python -m coverage run -p --source=ipi "$(command -v i-pi)" "$input" &
+            ipi_pid=$!
+            for i in $(seq 60); do [ -S /tmp/ipi_metatomic ] && break; sleep 1; done
+            python -m coverage run -p --source=ipi,drivers "$(command -v i-pi-py_driver)" \
+              -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
+            wait $ipi_pid
+            echo "::endgroup::"
+          done
+
+      - name: Run Lennard-Jones scripting example
+        working-directory: examples/clients/metatomic/lj
+        run: python -m coverage run -p --source=ipi run.py
+
+      - name: Generate coverage report
+        run: |
+          python -m coverage combine
+          python -m coverage xml -o coverage-metatomic.xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-metatomic.xml
+          fail_ci_if_error: true

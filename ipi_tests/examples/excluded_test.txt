@@ -21,7 +21,7 @@ clients/ffsgdml/benzene_scpimd.10
 clients/mace/single          # covered by .github/workflows/mace.yml
 clients/mace/batched  # covered by .github/workflows/mace.yml
 clients/mace/polar # covered by .github/workflows/mace.ym
-clients/upet  # covered by .github/workflows/upet.yml
+clients/metatomic  # covered by .github/workflows/metatomic.yml
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel

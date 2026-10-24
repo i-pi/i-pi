@@ -1,26 +1,25 @@
 <simulation verbosity='medium'>
-  <output prefix='simulation'>
+  <output prefix='socket'>
     <properties stride='1' filename='out'> [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ] </properties>
-    <trajectory filename='pos' stride='10' format='ase'> positions </trajectory>
-    <trajectory filename='uq' stride='1' extra_type='energy_uncertainty'> extras </trajectory>
+    <trajectory filename='committee_pot' stride='1' extra_type='committee_pot'> extras </trajectory>
   </output>
-  <total_steps>20</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
 
   <!--
-      PET-MAD runs in-process through the metatomic driver. The four beads are
-      collected into batches of four, and each batch is split between two
-      model instances running in separate threads (device:cpu;cpu).
-      The per-atom energy uncertainty is returned as an extra, and a warning
-      is printed whenever it exceeds the threshold (in eV/atom).
+      Batched evaluation over a socket: all four beads are sent to the
+      i-pi-py_driver client in a single request. The driver also returns the
+      ensemble of energies used for uncertainty quantification:
+
+        i-pi-py_driver -a pet-mad -u -m metatomic \
+            -o template=init.xyz,model=pet-mad-xs-v1.6.0.pt,energy_ensemble=True
   -->
-  <ffdirect name='pet-mad' pbc='false'>
-    <pes> metatomic </pes>
-    <parameters> {template:init.xyz,model:pet-mad-xs-v1.6.0.pt,device:cpu;cpu,uncertainty_threshold:0.1} </parameters>
+  <ffsocket name='pet-mad' mode='unix' pbc='false'>
+    <address> pet-mad </address>
     <batch_size> 4 </batch_size>
-  </ffdirect>
+  </ffsocket>
 
   <system>
     <initialize nbeads='4'>
