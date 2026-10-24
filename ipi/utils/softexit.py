@@ -52,6 +52,8 @@ class Softexit(object):
         self.triggered = False
         self.exiting = False
         self._doloop = [False]
+        # wakes up the monitoring thread when the threads are stopped
+        self._wake = threading.Event()
         self._killed = False
         self.lock = threading.Lock()
         self.hard_exit = False
@@ -138,6 +140,7 @@ class Softexit(object):
 
         for t, dl in self.tlist:  # set thread exit flag
             dl[0] = False
+        self._wake.set()
 
         # wait for all (other) threads to finish
         for t, dl in self.tlist:
@@ -191,6 +194,7 @@ class Softexit(object):
         self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
         self._thread.daemon = True
         self._doloop[0] = True
+        self._wake.clear()
         for signum in (signal.SIGINT, signal.SIGTERM):
             handler = signal.signal(signum, self._kill_handler)
             # keeps the original handler when started more than once
@@ -228,7 +232,8 @@ class Softexit(object):
         """Keeps checking for soft exit conditions."""
 
         while self._doloop[0]:
-            time.sleep(SOFTEXITLATENCY)
+            if self._wake.wait(SOFTEXITLATENCY):
+                break
             if self._killed:
                 self.trigger(
                     status="restartable", message=" @SOFTEXIT: Kill signal received"

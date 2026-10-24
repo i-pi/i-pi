@@ -987,7 +987,7 @@
                   write(string,'((f15.8,","), (f15.8,","), f15.8)') forces(nat,:)
                   string2 = TRIM(string2) // TRIM(string) // " ], "                  
                
-                  WRITE(string3, '("[", 8(f15.8,",") f15.8, "]")') reshape(virial, (/9/))
+                  WRITE(string3, '("[", 8(f15.8,","), f15.8, "]")') reshape(virial, (/9/))
 
                   ! this is a ugly but easy way to compute both terms
                   CALL LJ_getall(rc, 2.5d0, -2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
@@ -1004,7 +1004,7 @@
                   write(string,'((f15.8,","), (f15.8,","), f15.8)') forces(nat,:)
                   string2 = TRIM(string2) // TRIM(string) // " ] "
 
-                  WRITE(string, '("[", 8(f15.8,",") f15.8, "]")') reshape(virial, (/9/))
+                  WRITE(string, '("[", 8(f15.8,","), f15.8, "]")') reshape(virial, (/9/))
                   string3 = TRIM(string3) // ", " // TRIM(string)
 
                   initbuffer = '{ "committee_pot" : [' 

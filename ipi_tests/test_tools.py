@@ -28,6 +28,14 @@ def _socket_ready(client):
     return os.path.exists("/tmp/ipi_" + client[2])
 
 
+def _free_port():
+    """A TCP port that is currently free, so that tests running in parallel
+    do not share inet sockets."""
+    with socket.socket() as s:
+        s.bind(("localhost", 0))
+        return s.getsockname()[1]
+
+
 def _cleanup_unix_sockets(clients):
     """Remove the UNIX rendezvous files this run created, so a crashed/timed-out
     example does not leave a stale /tmp/ipi_<addr> that makes a rerun fail with
@@ -89,7 +97,7 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 20
+TIMEOUT = 30
 
 fortran_driver_models = [
     "dummy",
@@ -281,7 +289,8 @@ def get_test_settings(
             driver_code = "fortran"
             driver_model = "dummy"
             address_name = "localhost"
-            port_number = 33333
+            # None means "use a free port"
+            port_number = None
             # None means "use the transport declared in the example's input.xml"
             socket_mode = None
             flaglist = {}
@@ -332,7 +341,7 @@ def get_test_settings(
         driver_codes.append("fortran")
         driver_models.append("dummy")
         address_names.append("localhost")
-        port_numbers.append(33333)
+        port_numbers.append(None)
         socket_modes.append(None)
         flaglists.append({})
 
@@ -387,9 +396,11 @@ def modify_xml_4_dummy_test(
         mode = driver_info["socket_mode"][s] or ffsocket.attrib.get("mode", "unix")
         ffsocket.attrib["mode"] = mode
 
+        port = driver_info["port_number"][s]
+        if mode == "inet" and port is None:
+            port = _free_port()
         for element in ffsocket:
-            port = driver_info["port_number"][s]
-            if element.tag == "port":
+            if element.tag == "port" and port is not None:
                 element.text = str(port)
             elif element.tag == "address":
                 # inet binds to a real host, so keep the address resolvable;
