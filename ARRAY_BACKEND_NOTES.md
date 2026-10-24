@@ -39,6 +39,10 @@ or because they were approved explicitly:
   backend they stay on the device. Results are unchanged (bit-identical on the CPU for the LJ example model).
   The `dummy` PES does the same, so that direct forcefields with `<pes>dummy</pes>` (e.g. in
   `ipi_tests/profiling/benchmark.py`) exercise this path.
+- The state stored before the steps for soft-exit checkpoints (`chk.store()`, every `safe_stride` steps)
+  keeps the arrays of the backend on their device, and converts them to numpy only when a checkpoint is
+  written, so storing no longer waits for the GPU. Stored scalars of the backend are copies, as the live
+  ones can be updated in place.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.
@@ -85,6 +89,9 @@ bugs pass, and are no longer marked.
   averaging is also being moved into the models. `forces.transfer_forces_manual` could also convert its
   arguments with `to_numpy` itself.
 - The metatomic driver synchronizes the device before each batched model call (`_compute_chunk`).
+- Storing the state for soft exits walks the whole input tree: ~0.3 ms per step with numpy, ~0.5-1.4 ms
+  with torch on CUDA (P400, 100-10000 atoms), more than an NVE step. Runs with cheap forcefields should use
+  `safe_stride` > 1.
 - Host-side code that could move to the device if it becomes a bottleneck: properties estimators that loop over
   atoms (they run on numpy copies), the bosonic exchange recursions (cycle energies and prefix/suffix
   potentials), the constraint solver (batch groups of the same shape).
