@@ -96,6 +96,8 @@ def set_backend(name="numpy", device="cpu"):
         if device != "cpu":
             raise ValueError("The numpy backend only supports the 'cpu' device")
         members = dict(vars(np))
+        # submodules that numpy may load lazily, i.e. only on first access
+        members.update(fft=np.fft, linalg=np.linalg)
     elif name == "torch":
         import torch
         import array_api_compat.torch as namespace

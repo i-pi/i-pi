@@ -57,9 +57,8 @@ bugs pass, and are no longer marked.
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
 - Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs
   ("release unlocked lock": two signal threads racing in `softexit.cleanup`).
-- Failing also on main: regression test `COMMITTEE/XTRA-JSON`; `test_setup.py::test_driver_forcebuild` outside
-  tox (driver symlink); `test_metatomic_reference.py` errors at setup with Python 3.14
-  (`AtomisticModel.__annotations__`).
+- Failing also on main: `test_metatomic.py` and `test_metatomic_reference.py` error at setup with Python 3.14
+  (`AtomisticModel.__annotations__`, TorchScript).
 - The other known bugs marked as strict xfail in the unit tests fail in the same way as on main.
 
 ### GPU performance and `torch.compile`
