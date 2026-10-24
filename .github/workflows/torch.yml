@@ -43,3 +43,14 @@ jobs:
 
       - name: tests with the torch backend
         run: tox -e ${{ matrix.toxenv }}
+        env:
+          # the examples run i-PI in separate processes, which are not measured
+          COVERAGE_FLAGS: ${{ matrix.toxenv == 'torch' && '--cov=ipi --cov-append --cov-report=xml:coverage-torch.xml' || '' }}
+
+      - name: upload coverage
+        if: matrix.toxenv == 'torch'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-torch.xml
+          fail_ci_if_error: true

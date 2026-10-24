@@ -52,7 +52,8 @@ jobs:
         run: |
           python -m coverage run -p --source=ipi -m pytest -v -ra \
             ipi_tests/unit_tests/pes/test_metatomic.py \
-            ipi_tests/unit_tests/pes/test_metatomic_reference.py
+            ipi_tests/unit_tests/pes/test_metatomic_reference.py \
+            ipi_tests/unit_tests/pes/test_metatomic_backend.py
 
       - name: Run PET-MAD batched ffdirect example
         working-directory: examples/clients/metatomic

@@ -77,7 +77,11 @@ class ForceField:
         _doloop: A list of booleans. Used to decide when to stop running the
             polling loop.
         _threadlock: Python handle used to lock the thread held in _thread.
+        backend_arrays: Whether requests carry, and results are, arrays of the
+            array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
     """
+
+    backend_arrays = False
 
     def __init__(
         self,
@@ -186,12 +190,19 @@ class ForceField:
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
-        # requests hold numpy copies of the positions and of the cell
+        # requests hold copies of the positions and of the cell, as numpy arrays
+        # or, for forcefields that work on them directly, as backend arrays
+        if self.backend_arrays:
+            pos = pbcpos
+            h, ih = xp.asarray(cell.h, copy=True), xp.asarray(cell.ih, copy=True)
+        else:
+            pos = to_numpy(pbcpos)
+            h, ih = np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))
         fields = {
             "id": reqid,
-            "pos": to_numpy(pbcpos),
+            "pos": pos,
             "active": self.iactive,
-            "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
+            "cell": (h, ih),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -550,6 +561,7 @@ class FFDirect(ForceField):
             print(f"Error setting up PES mode {self.pes}")
             print("Error trace: ")
             raise err
+        self.backend_arrays = getattr(self.driver, "backend_arrays", False)
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -579,9 +591,10 @@ class FFDirect(ForceField):
 
     def _process_results(self, results, request):
         # ensure shapes, apply the offset and parse the extra string
+        asarray = xp.asarray if self.backend_arrays else np.asarray
         results[0] -= self.offset
-        results[1] = np.asarray(results[1]).reshape(-1)
-        results[2] = np.asarray(results[2]).reshape(3, 3)
+        results[1] = asarray(results[1]).reshape(-1)
+        results[2] = asarray(results[2]).reshape(3, 3)
         results[3] = parse_extra(results[3])
 
         request["result"] = results
@@ -1461,6 +1474,10 @@ class FFCommittee(ForceField):
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         com_handles = r["ff_handles"].copy()
+        # the committee is evaluated with numpy
+        for ff, ff_r in zip(self.fflist, com_handles):
+            if ff.backend_arrays:
+                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
         if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
@@ -1808,6 +1825,10 @@ class FFRotations(ForceField):
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         rot_handles = r["ff_handles"].copy()
         rots = r["rots"].copy()
+        # the rotational average is evaluated with numpy
+        if self.ff.backend_arrays:
+            for ff_r in rot_handles:
+                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
 
         # Gathers the forcefield energetics and extras
         pots = []

@@ -41,6 +41,7 @@ def _check_virial_symmetry(vir, ffname):
     as only its upper triangular part is used."""
 
     _checked_virials.add(ffname)
+    vir = to_numpy(vir)
     lower = np.array([vir[1, 0], vir[2, 0], vir[2, 1]])
     upper = np.array([vir[0, 1], vir[0, 2], vir[1, 2]])
     if lower.any() and np.abs(lower - upper).max() > 1e-4 * np.abs(vir).max():
@@ -257,6 +258,8 @@ class ForceBead:
         if self.ff.name not in _checked_virials:
             _check_virial_symmetry(vir, self.ff.name)
         # upper triangular copy, leaving the forcefield result untouched
+        if not isinstance(vir, np.ndarray):
+            return xp.triu(xp.asarray(vir))
         vir = vir.copy()
         vir[1, 0] = 0.0
         vir[2, 0:2] = 0.0
@@ -452,6 +455,9 @@ class ForceComponent:
         """
 
         self.queue()
+        if self.ff.backend_arrays:
+            # backend scalars, possibly on a device
+            return xp.stack([xp.asarray(b.pot) for b in self._forces])
         return xp.asarray([float(b.pot) for b in self._forces])
 
     def extra_gather(self):

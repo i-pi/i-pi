@@ -29,8 +29,14 @@ or because they were approved explicitly:
 - Phonons: NMFD/eNMFD refinement was overwritten by the unrefined matrix (water/qtip4pf: NMFD eigenvalues now
   match FD to 5e-7, were 75% off).
 - IMF restart: `v0` was not set and the basis-size schedule differed from a fresh run.
+- SCP and VSCF with `nparallel > 1` failed at bind (a 1-bead system cloned to more beads). SCP now evaluates
+  `nparallel` configurations per step on `nparallel` copies of the system; VSCF, which evaluates one
+  configuration at a time, ignores `nparallel` with a warning.
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
+- Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as
+  arrays of the backend, and return energy, forces and virial as arrays of the backend, so with the torch
+  backend they stay on the device. Results are unchanged (bit-identical on the CPU for the LJ example model).
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.
@@ -46,9 +52,9 @@ bugs pass, and are no longer marked.
   `LanczosOptimizer`; `Mapper.__call__` passes `new_disc` positionally into `SpringMapper`'s `ret`.
 - VSCF with `grid=True` crashes: `scipy.interpolate.interp2d` was removed in scipy 1.14 (the examples run only
   one step).
-- SCP/VSCF with `nparallel > 1` clone a 1-bead system to more beads, which raises.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
-  using `sqtd` (looks like a typo; fixing it changes results).
+  using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
+  Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
 - `apply_asr` (phonontools, hesstools) uses `eig` on the symmetric inertia tensor; `eigh` would be cleaner.
 - Planetary output: `netstring_encoded_savez` writes the bytes of `np.savez` through `io.StringIO` into a
   text-mode file (Python 2 leftover), so saving the frequency matrix fails.
@@ -69,13 +75,25 @@ bugs pass, and are no longer marked.
 - Fixed per-step cost on CUDA (Quadro P400): ~0.35 ms NVE, ~0.9 ms Langevin, ~2.7 ms NPT, 4-6.5 ms PIMD,
   independent of size (many small kernel launches). NPT on CUDA is slower than torch on CPU: fusing the 3x3
   cell/barostat operations, CUDA graphs or `torch.compile` should remove most of this.
-- Forcefields always exchange numpy arrays, so positions and forces are copied to the host at each force
-  evaluation. A device-resident path for Python potentials (e.g. ML potentials through `ffdirect`) would avoid
-  the copies. `forces.transfer_forces_manual` could also convert its arguments with `to_numpy` itself.
+- Forcefields exchange numpy arrays, so positions and forces are copied to the host at each force evaluation,
+  except for direct forcefields whose driver sets `backend_arrays` (the metatomic driver), which receive and
+  return arrays of the backend. Other torch drivers (e.g. `_mace.py`) could opt in the same way.
+  `FFRotations` and `FFCommittee` convert the results of such forcefields to numpy, as they combine them with
+  numpy; `FFRotations` could be ported to `xp` (rotation matrices on the device), although rotational
+  averaging is also being moved into the models. `forces.transfer_forces_manual` could also convert its
+  arguments with `to_numpy` itself.
+- The metatomic driver synchronizes the device before each batched model call (`_compute_chunk`).
 - Host-side code that could move to the device if it becomes a bottleneck: properties estimators that loop over
   atoms (they run on numpy copies), the bosonic exchange recursions (cycle energies and prefix/suffix
   potentials), the constraint solver (batch groups of the same shape).
 - Benchmarks to repeat on a compute GPU (the numbers above come from a 2 GB Quadro P400 with slow float64).
+- H100 with metatomic models through `ffdirect` (in-process steps without outputs, ms/step, i-PI overhead
+  = step - model): with the torch backend the overhead is ~0.44 ms (NVE) and ~2.2 ms (4-bead PIMD), independent
+  of size from 32 to 11000 atoms, i.e. kernel launches. Keeping the forcefield on the device lowered it by
+  0.1-0.3 ms at small sizes and by 0.8 ms at 11000 atoms (LJ PIMD 20.3 -> 18.1 ms/step); PET-MAD-xs 4-bead
+  PIMD of 96 water atoms went from 20.1 to 17.8 ms/step (numpy backend: 18.3). With the numpy backend and the
+  model on the GPU, the overhead of 4-bead PIMD grows to 15 ms (1 BLAS thread) - 30 ms (16 threads) at 11000
+  atoms, and was several times larger on a node shared with other jobs.
 
 ### Other backends
 - cupy and jax: `xp` comes from `array_api_compat`, the PRNG has one implementation per backend, and all
@@ -87,4 +105,6 @@ bugs pass, and are no longer marked.
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
 - The torch CI jobs run the unit tests, and the regression tests and examples with the torch backend
-  (`tox -e torch`, `tox -e torch-examples`); the benchmark is not run in CI.
+  (`tox -e torch`, `tox -e torch-examples`).
+- On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
+  three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).

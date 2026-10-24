@@ -15,6 +15,11 @@ class Dummy_driver(object):
         :param verbose: bool to determine whether the PES should output verbose info.
     """
 
+    # whether `compute` also accepts the arrays of the i-PI array backend (e.g.
+    # torch tensors on a GPU), returning results of the same kind, rather than
+    # only numpy arrays. Such inputs must not be modified.
+    backend_arrays = False
+
     def __init__(self, verbose=False, *args, **kwargs):
         """Initialized dummy drivers"""
         self.verbose = verbose
