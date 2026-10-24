@@ -196,9 +196,12 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
-        self._nl_calculators = vesin_metatomic.neighbor_lists_for_model(
-            "A", self.model, skin=self.skin
-        )
+        # one set of neighbor list calculators per device, as they are not
+        # thread-safe and keep state between calls
+        self._nl_calculators = [
+            vesin_metatomic.neighbor_lists_for_model("A", model, skin=self.skin)
+            for model in self.models
+        ]
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
@@ -276,12 +279,9 @@ class MetatomicDriver(Dummy_driver):
             outputs=outputs,
         )
 
-    def _prepare_system(self, cell, pos, model=None, device=None):
+    def _prepare_system(self, cell, pos, device_idx=0):
         """Prepares a metatomic System object from cell and positions."""
-        if model is None:
-            model = self.model
-        if device is None:
-            device = self.device
+        device = self.devices[device_idx]
 
         # Convert units to Angstrom
         positions = unit_to_user("length", "angstrom", pos)
@@ -303,7 +303,7 @@ class MetatomicDriver(Dummy_driver):
         system = system.to(device)
 
         # Compute neighbor lists using vesin
-        for calculator in self._nl_calculators:
+        for calculator in self._nl_calculators[device_idx]:
             calculator.add_neighbor_list(system)
 
         return system, strain
@@ -582,7 +582,7 @@ class MetatomicDriver(Dummy_driver):
 
         # Prepare systems on the target device
         for c, p in zip(cell_chunk, pos_chunk):
-            sy, st = self._prepare_system(c, p, model=model, device=device)
+            sy, st = self._prepare_system(c, p, device_idx=device_idx)
             sys_batch.append(sy)
             strain_batch.append(st)
 

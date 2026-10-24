@@ -1,0 +1,12 @@
+# Known-compatible dependencies for the i-PI metatomic examples and tests.
+# torch is pinned separately in .github/workflows/metatomic.yml (CPU wheel).
+#
+# PET-MAD v1.6 checkpoints need metatrain >= 2026.4 to be exported.
+upet==0.3.1
+metatrain==2026.4.1
+metatomic-torch==0.1.19
+metatomic-ase==0.1.4
+metatensor-core==0.2.2
+metatensor-torch==0.10.1
+metatensor-operations==0.5.0
+vesin==0.6.1

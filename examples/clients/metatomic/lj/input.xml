@@ -6,21 +6,19 @@
 		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
     </properties>
     <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
-    <trajectory filename="fc" stride="5" cell_units="angstrom"> f_centroid </trajectory>
-    <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'>extras</trajectory>
+    <trajectory filename="forces" stride="5" format="ase"> forces </trajectory>
     <checkpoint stride="1000"/>
 </output>
-<total_steps> 1000</total_steps>
+<total_steps> 100</total_steps>
 <prng><seed>12345</seed></prng>
 
-<ffdirect name='driver'>
-    <pes> metatomic </pes>
-    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True,
-                  force_virial_ensemble:True,uncertainty_threshold:1e-2} </parameters>
-    <batch_size> 2 </batch_size>
-</ffdirect>
+<ffsocket mode='unix' name='driver' pbc="false">
+    <port>12345</port>
+    <address>metatomic</address>
+</ffsocket>
+
 <system>
-    <initialize nbeads="4"> 
+    <initialize nbeads="1">
         <file mode="ase" units="angstrom"> nickel.xyz </file>
         <velocities mode="thermal" units="kelvin"> 250.0 </velocities>
     </initialize>
@@ -30,7 +28,7 @@
 
     <motion mode="dynamics">
     	<dynamics mode="nvt">
-        	<timestep units="femtosecond"> 0.5 </timestep>
+        	<timestep units="femtosecond"> 2 </timestep>
             <thermostat mode='gle'>
             	<A shape='(5,5)'>[
                 	 4.49e-3,   6.59e-6,   2.79e-4,  -8.81e-4,   5.61e-3,
