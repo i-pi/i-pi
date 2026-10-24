@@ -503,7 +503,7 @@ class Planets(object):
         """
         Deterine mass matrix based on identities of atoms
         """
-        m = dstrip(self.qpos.m)
+        m = self.qpos.m
         self.m = np.concatenate((m, m, m))
         self.m[:] = self.m.reshape(3, -1).transpose().reshape(-1)
         self.mmat = np.diag(self.m)

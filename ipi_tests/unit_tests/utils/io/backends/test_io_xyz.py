@@ -248,9 +248,9 @@ def create_random_xyz_traj_to_write(request):
     for _fr in range(frames):
         cell = Cell(expected_cell)
         atoms = Atoms(natoms)
-        atoms.q[:] = xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3]
+        atoms._q[:] = xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3]
         atoms.names = atom_names[_fr * natoms : (_fr + 1) * natoms]
-        atoms.m[:] = masses[_fr * natoms : (_fr + 1) * natoms]
+        atoms._m[:] = masses[_fr * natoms : (_fr + 1) * natoms]
         atoms_list.append(atoms)
         cell_list.append(cell)
 

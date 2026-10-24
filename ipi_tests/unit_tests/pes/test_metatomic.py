@@ -215,7 +215,7 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
     )
     assert len(ff._rotations) == 18
     atoms = Atoms(len(pos))
-    atoms.q[:] = pos.flatten()
+    atoms._q[:] = pos.flatten()
     request = ff.queue(atoms, Cell(cell))
     ff.poll()
     assert request["status"] == "Done"

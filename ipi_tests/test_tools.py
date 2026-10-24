@@ -15,6 +15,11 @@ import glob
 from ipi.scripting import InteractiveSimulation
 from ipi.utils.softexit import softexit
 
+# array backend and device used to run i-PI, set by the --ipi-backend and
+# --ipi-device pytest options (see ipi_tests/conftest.py)
+ipi_backend = "numpy"
+ipi_device = "cpu"
+
 
 def _socket_ready(client):
     """True once i-PI is listening for this client's transport: a UNIX
@@ -177,7 +182,9 @@ class InProcessIPI:
                 self.stderr
             ):
                 with open(self.command.split()[-1]) as input_file:
-                    self.simulation = InteractiveSimulation(input_file)
+                    self.simulation = InteractiveSimulation(
+                        input_file, backend=ipi_backend, device=ipi_device
+                    )
         except BaseException:
             self.returncode = 1
             self.stderr.write(traceback.format_exc())
@@ -506,8 +513,11 @@ class Runner(object):
             if getattr(self, "run_ipi_in_process", False):
                 ipi = InProcessIPI(self.call_ipi, self.tmp_dir)
             else:
+                call_ipi = self.call_ipi.replace(
+                    "i-pi", f"i-pi --backend {ipi_backend} --device {ipi_device}", 1
+                )
                 ipi = sp.Popen(
-                    self.call_ipi,
+                    call_ipi,
                     cwd=(self.tmp_dir),
                     shell=True,
                     stdin=sp.DEVNULL,

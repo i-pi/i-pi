@@ -13,6 +13,7 @@ arrays of atoms and for individual atoms.
 import numpy as np
 
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 
 __all__ = ["Atoms", "Atom"]
 
@@ -45,17 +46,17 @@ class Atom:
               list. Note that indices start from 0.
         """
 
-        self.p = system.p[3 * index : 3 * index + 3]
-        self.q = system.q[3 * index : 3 * index + 3]
-        self.m = system.m[index : index + 1]
-        self.name = system.names[index : index + 1]
-        self.m3 = system.m3[3 * index : 3 * index + 3]
+        self._p = system._p[3 * index : 3 * index + 3]
+        self._q = system._q[3 * index : 3 * index + 3]
+        self._m = system._m[index : index + 1]
+        self._name = system._names[index : index + 1]
+        self._m3 = system._m3[3 * index : 3 * index + 3]
 
     @property
     def kin(self):
         """Calculates the contribution of the atom to the kinetic energy."""
 
-        return np.dot(self.p, self.p) / (2.0 * self.m)
+        return (self.p @ self.p) / (2.0 * self.m)
 
     @property
     def kstress(self):
@@ -63,15 +64,15 @@ class Atom:
         tensor.
         """
 
-        p = dstrip(self.p)
-        ks = np.zeros((3, 3), float)
+        p = self.p
+        ks = xp.zeros((3, 3))
         for i in range(3):
             for j in range(i, 3):
                 ks[i, j] = p[i] * p[j]
         return ks / self.m
 
 
-# dproperties(Atom, ["p", "q", "m", "m3", "name"])
+dproperties(Atom, ["p", "q", "m", "m3", "name"])
 
 
 class Atoms:
@@ -118,7 +119,7 @@ class Atoms:
             self._p = depend_array(name="p", value=np.zeros(3 * natoms, float))
             self._m = depend_array(name="m", value=np.zeros(natoms, float))
             self._names = depend_array(
-                name="names", value=np.zeros(natoms, np.dtype("|U6"))
+                name="names", value=np.zeros(natoms, np.dtype("|U6")), host=True
             )
         else:
             self._q = _prebind[0]
@@ -149,10 +150,10 @@ class Atoms:
         """
 
         newat = Atoms(self.natoms)
-        newat.q[:] = dstrip(self.q)
-        newat.p[:] = dstrip(self.p)
-        newat.m[:] = dstrip(self.m)
-        newat.names[:] = self.names
+        newat._q[:] = self.q
+        newat._p[:] = self.p
+        newat._m[:] = self.m
+        newat._names[:] = self.names
         return newat
 
     def __len__(self):
@@ -231,7 +232,7 @@ class Atoms:
            by the mass.
         """
 
-        m3 = np.zeros(3 * self.natoms, float)
+        m3 = xp.zeros(3 * self.natoms)
         m3[0 : 3 * self.natoms : 3] = self.m
         m3[1 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
         m3[2 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
@@ -240,27 +241,27 @@ class Atoms:
     def get_kin(self):
         """Calculates the total kinetic energy of the system."""
 
-        p = dstrip(self.p)
-        return 0.5 * np.dot(p, p / dstrip(self.m3))
+        p = self.p
+        return 0.5 * (p @ (p / self.m3))
 
     def get_kstress(self):
         """Calculates the total contribution of the atoms to the kinetic stress
         tensor -- not volume-scaled
         """
 
-        p = dstrip(self.p)
-        m = dstrip(self.m)
+        p = self.p
+        m = self.m
         px = p[0::3]
         py = p[1::3]
         pz = p[2::3]
 
-        ks = np.zeros((3, 3), float)
-        ks[0, 0] = np.dot(px, px / m)
-        ks[1, 1] = np.dot(py, py / m)
-        ks[2, 2] = np.dot(pz, pz / m)
-        ks[0, 1] = np.dot(px, py / m)
-        ks[0, 2] = np.dot(px, pz / m)
-        ks[1, 2] = np.dot(py, pz / m)
+        ks = xp.zeros((3, 3))
+        ks[0, 0] = px @ (px / m)
+        ks[1, 1] = py @ (py / m)
+        ks[2, 2] = pz @ (pz / m)
+        ks[0, 1] = px @ (py / m)
+        ks[0, 2] = px @ (pz / m)
+        ks[1, 2] = py @ (pz / m)
         return ks
 
 

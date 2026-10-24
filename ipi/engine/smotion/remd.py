@@ -9,11 +9,12 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 
 
 import numpy as np
+
+from ipi.utils.array_backend import xp
 import time
 
 from ipi.engine.smotion import Smotion
 from ipi.engine.ensembles import ensemble_swap
-from ipi.utils.depend import *
 from ipi.utils.messages import verbosity, info
 
 __all__ = ["ReplicaExchange"]
@@ -130,22 +131,22 @@ class ReplicaExchange(Smotion):
                 # which means that the exchange is done only relative to the potential energy part.
                 if self.rescalekin:
                     # also rescales the velocities -- should do the same with cell velocities
-                    sl[i].beads.p *= np.sqrt(tj / ti)
-                    sl[j].beads.p *= np.sqrt(ti / tj)
+                    sl[i].beads._p *= np.sqrt(tj / ti)
+                    sl[j].beads._p *= np.sqrt(ti / tj)
                     try:  # if motion has a barostat, and barostat has a momentum, does the swap
                         # also note that the barostat has a hidden T dependence inside the mass, so
                         # as a matter of fact <p^2> \propto T^2
-                        sl[i].motion.barostat.p *= tj / ti
-                        sl[j].motion.barostat.p *= ti / tj
+                        sl[i].motion.barostat._p *= tj / ti
+                        sl[j].motion.barostat._p *= ti / tj
                     except AttributeError:
                         pass
 
                 try:  # if motion has a barostat, and the barostat has a reference cell, does the swap
                     # as that when there are very different pressures, the cell should reflect the
                     # pressure/temperature dependence. this also changes the barostat conserved quantities
-                    bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
-                    sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
-                    sl[i].motion.barostat.h0.h[:] = bjh
+                    bjh = xp.asarray(sl[j].motion.barostat.h0.h, copy=True)
+                    sl[j].motion.barostat.h0._h[:] = sl[i].motion.barostat.h0.h[:]
+                    sl[i].motion.barostat.h0._h[:] = bjh
                 except AttributeError:
                     pass
 
@@ -155,7 +156,7 @@ class ReplicaExchange(Smotion):
                 newpensi = sl[i].ensemble.lpens
                 newpensj = sl[j].ensemble.lpens
 
-                pxc = np.exp((newpensi + newpensj) - (pensi + pensj))
+                pxc = np.exp(float((newpensi + newpensj) - (pensi + pensj)))
                 t_eval += time.time()
 
                 if pxc > self.prng.u:  # really does the exchange
@@ -186,17 +187,17 @@ class ReplicaExchange(Smotion):
 
                     # undoes the kinetic scaling
                     if self.rescalekin:
-                        sl[i].beads.p *= np.sqrt(ti / tj)
-                        sl[j].beads.p *= np.sqrt(tj / ti)
+                        sl[i].beads._p *= np.sqrt(ti / tj)
+                        sl[j].beads._p *= np.sqrt(tj / ti)
                         try:
-                            sl[i].motion.barostat.p *= ti / tj
-                            sl[j].motion.barostat.p *= tj / ti
+                            sl[i].motion.barostat._p *= ti / tj
+                            sl[j].motion.barostat._p *= tj / ti
                         except AttributeError:
                             pass
                     try:
-                        bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
-                        sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
-                        sl[i].motion.barostat.h0.h[:] = bjh
+                        bjh = xp.asarray(sl[j].motion.barostat.h0.h, copy=True)
+                        sl[j].motion.barostat.h0._h[:] = sl[i].motion.barostat.h0.h[:]
+                        sl[i].motion.barostat.h0._h[:] = bjh
                     except AttributeError:
                         pass
 

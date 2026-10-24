@@ -10,6 +10,7 @@ from ipi.utils.messages import verbosity, info
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.utils.units import unit_to_internal
+from ipi.utils.array_backend import xp
 from ipi.engine.properties import Trajectories as Traj
 
 __all__ = ["auto_units", "process_units"]
@@ -124,8 +125,8 @@ def process_units(
     # Return data as i-PI structures
     cell = Cell(cell)
     atoms = Atoms(natoms)
-    atoms.q[:] = data
-    atoms.names[:] = names
-    atoms.m[:] = masses
+    atoms._q[:] = xp.asarray(data)
+    atoms._names[:] = names
+    atoms._m[:] = xp.asarray(masses)
 
     return {"atoms": atoms, "cell": cell, "comment": comment}

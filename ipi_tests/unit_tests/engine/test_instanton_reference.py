@@ -38,7 +38,7 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
         )
         mapper.set_fric_spec_dens(data, 0)
         q = np.linspace(-0.2, 0.4, count)[:, None] * np.arange(1.0, 7.0)[None, :]
-        mapper.dbeads.q[:] = q
+        mapper.dbeads._q[:] = q
         mapper.initialize(q, mapper.dforces)
         energy, gradient = mapper.compute_friction_terms()
         n = np.arange(count)
@@ -59,7 +59,7 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
         )
         assert np.linalg.eigvalsh(hessian).min() > -1e-12
         # A rigid shift of the whole path must not change the friction action.
-        mapper.dbeads.q[:] = q + 0.7
+        mapper.dbeads._q[:] = q + 0.7
         shifted_energy, shifted_gradient = mapper.compute_friction_terms()
         assert shifted_energy == pytest.approx(energy, abs=1e-12)
         np.testing.assert_allclose(shifted_gradient, gradient, atol=1e-12)

@@ -10,6 +10,7 @@ import numpy as np
 import ipi.engine.thermostats
 from ipi.engine.barostats import *
 from ipi.utils.inputvalue import *
+from ipi.utils.array_backend import xp
 from ipi.inputs.thermostats import *
 from ipi.engine.cell import Cell
 from ipi.inputs.cell import *
@@ -227,7 +228,7 @@ class InputBaro(Input):
                 )
             baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit:
-                baro.p = self.p.fetch()
+                baro.p = xp.asarray(self.p.fetch())
         elif self.mode.fetch() == "sc-isotropic":
             if len(self.hfix.fetch()) > 0:
                 raise ValueError(
@@ -235,7 +236,7 @@ class InputBaro(Input):
                 )
             baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit:
-                baro.p = self.p.fetch()
+                baro.p = xp.asarray(self.p.fetch())
         elif self.mode.fetch() == "flexible":
             baro = BaroMTK(
                 thermostat=self.thermostat.fetch(),
@@ -244,7 +245,7 @@ class InputBaro(Input):
                 vol_constraint=self.vol_constraint.fetch(),
             )
             if self.p._explicit:
-                baro.p = self.p.fetch()
+                baro.p = xp.asarray(self.p.fetch())
         elif self.mode.fetch() == "anisotropic":
             baro = BaroRGB(
                 thermostat=self.thermostat.fetch(),
@@ -252,7 +253,7 @@ class InputBaro(Input):
                 hfix=self.hfix.fetch(),
             )
             if self.p._explicit:
-                baro.p = self.p.fetch()
+                baro.p = xp.asarray(self.p.fetch())
             if self.h0._explicit:
                 baro.h0 = self.h0.fetch()
             else:

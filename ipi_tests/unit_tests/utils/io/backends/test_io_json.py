@@ -13,8 +13,8 @@ def test_json_roundtrip_preserves_configuration():
     """Checks positions, labels, cell and title after a JSON round-trip."""
 
     atoms = Atoms(2)
-    atoms.q[:] = np.arange(6, dtype=float)
-    atoms.names[:] = ["H", "O"]
+    atoms._q[:] = np.arange(6, dtype=float)
+    atoms._names[:] = ["H", "O"]
     cell = Cell(np.diag([2.0, 3.0, 4.0]))
     stream = io.StringIO()
 
@@ -33,11 +33,11 @@ def test_iter_json_reads_multiple_frames_and_stops_at_eof():
     """Checks iteration over every frame in a JSON trajectory."""
 
     atoms = Atoms(1)
-    atoms.names[:] = ["H"]
+    atoms._names[:] = ["H"]
     cell = Cell(np.eye(3))
     stream = io.StringIO()
     for frame in range(2):
-        atoms.q[:] = frame
+        atoms._q[:] = frame
         print_json(atoms, cell, stream, title=f"frame {frame}")
     stream.seek(0)
 

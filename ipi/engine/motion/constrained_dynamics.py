@@ -13,6 +13,8 @@ constant energy and constant temperature dynamics.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp
+
 from ipi.engine.motion import Dynamics
 from ipi.engine.motion.dynamics import DummyIntegrator
 
@@ -62,11 +64,11 @@ class ConstrainedDynamics(Dynamics):
         thermostat=None,
         barostat=None,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         nmts=None,
         nsteps_geo=1,
         nsteps_o=1,
-        constraint_list=[],
+        constraint_list=None,
         csolver=None,
     ):
         """Initialises a "dynamics" motion object.
@@ -80,7 +82,7 @@ class ConstrainedDynamics(Dynamics):
         warning(
             "Constrained dynamics: This feature is not maintained and can have bugs."
         )
-        super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(Dynamics, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
         self._dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
@@ -89,9 +91,13 @@ class ConstrainedDynamics(Dynamics):
             self.thermostat = thermostat
 
         if nmts is None or len(nmts) == 0:
-            self._nmts = depend_array(name="nmts", value=np.asarray([1], int))
+            self._nmts = depend_array(
+                name="nmts", value=np.asarray([1], int), host=True
+            )
         else:
-            self._nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
+            self._nmts = depend_array(
+                name="nmts", value=np.asarray(nmts, int), host=True
+            )
 
         if barostat is None:
             self.barostat = Barostat()
@@ -104,7 +110,7 @@ class ConstrainedDynamics(Dynamics):
         elif self.enstype == "nvt":
             self.integrator = NVTConstrainedIntegrator()
         else:
-            ValueError(
+            raise ValueError(
                 "{:s} is not a valid ensemble for constrained dynamics".format(
                     self.enstype
                 )
@@ -115,8 +121,7 @@ class ConstrainedDynamics(Dynamics):
 
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
-        if constraint_list is not None:
-            self.constraint_list = constraint_list
+        self.constraint_list = [] if constraint_list is None else constraint_list
 
         has_eckart = False
         for constr in self.constraint_list:
@@ -140,11 +145,7 @@ class ConstrainedDynamics(Dynamics):
                 "Cannot simultaneously fix cell CoM and enforce Eckart constraints!"
             )
 
-        if fixatoms is None:
-            self.fixatoms = np.zeros(0, int)
-        else:
-            self.fixatoms = fixatoms
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             raise ValueError("Cannot fix atoms together with constrained MD")
 
         if csolver is None:
@@ -214,7 +215,7 @@ class ConstraintSolverBase:
 
         self.beads = beads
         # Sets the initial value of the constraint positions
-        q = dstrip(beads.q[0])
+        q = beads.q[0]
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
 
@@ -272,20 +273,20 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        p = dstrip(self.beads.p[0]).copy()
+        p = xp.asarray(self.beads.p[0], copy=True)
 
         for constr in self.constraint_list:
-            dg = dstrip(constr.Dg)
+            dg = constr.Dg
             ic = constr.i3_unique
-            b = np.dot(dg, p[ic] / constr.m3)
+            b = dg @ (p[ic] / constr.m3)
 
-            if spla is None:
-                x = np.linalg.solve(dstrip(constr.Gram), b)
+            if use_cho_factor():
+                x = spla.cho_solve(constr.GramChol, b)
             else:
-                x = spla.cho_solve(dstrip(constr.GramChol), b)
+                x = xp.linalg.solve(constr.Gram, b)
 
-            p[ic] -= np.dot(np.transpose(dg), x)
-        self.beads.p[0] = p
+            p[ic] -= dg.T @ x
+        self.beads._p[0] = p
 
     def proj_manifold(self):
         """Iteratively enforce the constraints onto the positions by finding
@@ -294,39 +295,41 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        m3 = dstrip(self.beads.m3[0])
-        p = dstrip(self.beads.p[0]).copy()
-        q = dstrip(self.beads.q[0]).copy()
+        m3 = self.beads.m3[0]
+        p = xp.asarray(self.beads.p[0], copy=True)
+        q = xp.asarray(self.beads.q[0], copy=True)
 
         for constr in self.constraint_list:
-            dg = dstrip(constr.Dg)
+            dg = constr.Dg
 
-            if spla is None:
-                gram = dstrip(constr.Gram)
+            if use_cho_factor():
+                chol_gram = constr.GramChol
             else:
-                chol_gram = dstrip(constr.GramChol)
+                gram = constr.Gram
 
             ic = constr.i3_unique
             constr.q = q[ic]
 
             # iterative projection on the manifold
             for i in range(self.maxit):
-                g = dstrip(constr.g)
+                g = constr.g
                 # bailout condition
-                if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
+                if self.tolerance > float(
+                    xp.linalg.vector_norm(g, ord=self.norm_order)
+                ):
                     break
 
-                if spla is None:
-                    dlambda = np.linalg.solve(gram, g)
-                else:
+                if use_cho_factor():
                     dlambda = spla.cho_solve(chol_gram, g)
-                delta = np.dot(np.transpose(dg), dlambda)
+                else:
+                    dlambda = xp.linalg.solve(gram, g)
+                delta = dg.T @ dlambda
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic]  # updates the constraint to recompute g
 
                 p[ic] -= delta / self.dt
-
-            if i == self.maxit:
+            else:
+                # the loop ended without reaching the tolerance
                 warning(
                     "No convergence in Newton iteration for positional component",
                     verbosity.low,
@@ -335,8 +338,8 @@ class ConstraintSolver(ConstraintSolverBase):
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
-        self.beads.p[0] = p
-        self.beads.q[0] = q
+        self.beads._p[0] = p
+        self.beads._q[0] = q
 
 
 class ConstrainedIntegrator(DummyIntegrator):
@@ -401,11 +404,11 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
     def step_A(self):
         """Unconstrained A-step (coordinate integration)"""
-        self.beads.q[0] += self.beads.p[0] / dstrip(self.beads.m3)[0] * self.qdt
+        self.beads._q[0] += self.beads.p[0] / self.beads.m3[0] * self.qdt
 
     def step_B(self, level=0):
         """Unconstrained B-step (momentum integration)"""
-        self.beads.p[0] += self.forces.forces_mts(level)[0] * self.pdt[level]
+        self.beads._p[0] += self.forces.mts_forces[level].f[0] * self.pdt[level]
 
     def step_Bc(self, level=0):
         """Unconstrained B-step (momentum integration)
@@ -517,18 +520,18 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
         the thermostat and the projective step do not necessarily commute
         (e.g. in GLE) by doing a MTS splitting scheme"""
 
-        m3 = dstrip(self.beads.m3)
+        m3 = self.beads.m3
         for i in range(self.nsteps_o):
             self.thermostat.step()
 
             # accumulates conserved quantity
-            p = dstrip(self.beads.p)
-            self.ensemble.eens += np.dot(p.flatten(), (p / m3).flatten()) * 0.5
+            p = self.beads.p
+            self.ensemble.eens += (p * (p / m3)).sum() * 0.5
 
             self.proj_cotangent()
 
-            p = dstrip(self.beads.p).copy()
-            self.ensemble.eens -= np.dot(p.flatten(), (p / m3).flatten()) * 0.5
+            p = self.beads.p
+            self.ensemble.eens -= (p * (p / m3)).sum() * 0.5
 
     def step(self, step=None):
         """Does one simulation time step."""

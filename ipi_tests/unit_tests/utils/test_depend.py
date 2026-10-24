@@ -64,11 +64,11 @@ mbs = 2
 mbv = 3
 
 myA.scalar = mas
-myA.vector[:] = mav
+myA._vector[:] = mav
 
 myB = B()
 myB.scalar = mbs
-myB.vector[:] = mbv
+myB._vector[:] = mbv
 myB.bind(myA)
 
 

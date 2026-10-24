@@ -69,3 +69,12 @@ An example of usage of this interface goes as follows:
     sim.run(100)
     potential = sim.properties("potential")
     ase.io.write("final_structure.xyz", sim.get_structures())
+
+The array backend (see :ref:`array-backends`) can be selected when creating
+the simulation, e.g. ``InteractiveSimulation(input_xml, backend="torch",
+device="cuda")``, or beforehand by calling
+``ipi.utils.array_backend.set_backend("torch", device="cuda")``. The backend is
+a global setting of the Python process: it should be selected before creating
+a simulation, and simulations that exist at the same time must use the same
+backend. ``properties`` and ``get_structures`` always return numpy arrays
+and ASE structures, whatever the backend.

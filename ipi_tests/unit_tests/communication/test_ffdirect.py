@@ -12,7 +12,7 @@ K = 2.0
 
 def _make_atoms(q):
     atoms = Atoms(len(q) // 3)
-    atoms.q[:] = np.asarray(q, dtype=float)
+    atoms._q[:] = np.asarray(q, dtype=float)
     return atoms
 
 

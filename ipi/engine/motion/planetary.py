@@ -6,6 +6,8 @@
 
 import time
 import numpy as np
+
+from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils import sparse
 
 from ipi.engine.motion import Motion, Dynamics
@@ -71,10 +73,8 @@ class Planetary(Motion):
         self.screen = screen
 
         # the planetary step just computes constrained-centroid properties so it
-        # should not advance the timer
-        self._dt = depend_value(name="dt", value=0.0)
-        self.fixatoms_dof = np.asarray([])
-        self.fixcom = True
+        # should not advance the timer (the base class sets dt to zero)
+        super(Planetary, self).__init__(fixcom=True)
 
         # nvt-cc means contstant-temperature with constrained centroid
         # this basically is a motion class that will be used to make the
@@ -122,7 +122,7 @@ class Planetary(Motion):
         # copies of all of the helper classes that are needed to bind the ccdyn object
         self.dbeads = beads.clone(nbeads=self.nbeads)
         self.dcell = cell.clone()
-        self.dforces = bforce.copy(self.dbeads, self.dcell)
+        self.dforces = bforce.clone(self.dbeads, self.dcell)
 
         # options for NM propagation - hardcoded frequencies unless using a GLE thermo
         # for which frequencies matter
@@ -131,7 +131,7 @@ class Planetary(Motion):
             self.dnm.mode = "rpmd"
         else:
             self.dnm = nm.copy(
-                freqs=nm.omegak[1]
+                freqs=float(nm.omegak[1])
                 * self.nbeads
                 * np.sin(np.pi / self.nbeads)
                 * np.ones(self.nbeads - 1)
@@ -140,18 +140,18 @@ class Planetary(Motion):
             self.dnm.mode = "manual"
 
         self.dnm.bind(ens, self, beads=self.dbeads, forces=self.dforces)
-        self.dnm.qnm[:] = (
+        self.dnm._qnm[:] = (
             nm.qnm[: self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(beads.nbeads)
         )
         self.dens = ens.copy()
-        self.dbias = ens.bias.copy(self.dbeads, self.dcell)
+        self.dbias = ens.bias.clone(self.dbeads, self.dcell)
         self.dens.bind(
             self.dbeads, self.dnm, self.dcell, self.dforces, self.dbias, omaker
         )
 
         self.natoms = self.dbeads.natoms
         natoms3 = self.dbeads.natoms * 3
-        self.omega2 = np.zeros((natoms3, natoms3), float)
+        self.omega2 = xp.zeros((natoms3, natoms3))
 
         # initializes counters
         self.tmc = 0
@@ -169,15 +169,15 @@ class Planetary(Motion):
 
     def increment(self, dnm):
         # accumulates an estimate of the frequency matrix
-        sm3 = dstrip(self.dbeads.sm3)
-        qms = dstrip(dnm.qnm) * sm3
-        fms = dstrip(dnm.fnm) / sm3
+        sm3 = self.dbeads.sm3
+        qms = dnm.qnm * sm3
+        fms = dnm.fnm / sm3
         fms[0, :] = 0
         qms[0, :] = 0
-        qms *= (dnm.omegak**2)[:, np.newaxis]
+        qms *= (dnm.omegak**2)[:, None]
 
-        self.omega2 += np.tensordot(fms, fms, axes=(0, 0))
-        qffq = np.tensordot(fms, qms, axes=(0, 0))
+        self.omega2 += fms.T @ fms
+        qffq = fms.T @ qms
         qffq = qffq + qffq.T
         qffq *= 0.5
         self.omega2 -= qffq
@@ -187,24 +187,24 @@ class Planetary(Motion):
         noisy elements of the covariance and frequency matrices for
         far-away atoms"""
 
-        q = np.array(self.dbeads[0].q).reshape(self.natoms, 3)
-        sij = q[:, np.newaxis, :] - q
-        sij = sij.transpose().reshape(3, self.natoms**2)
+        q = self.dbeads.q[0].reshape(self.natoms, 3)
+        sij = q[:, None, :] - q
+        sij = xp.permute_dims(sij, (2, 1, 0)).reshape(3, self.natoms**2)
         # find minimum distances between atoms (rigorous for cubic cell)
-        sij = np.matmul(self.dcell.ih, sij)
-        sij -= np.around(sij)
-        sij = np.matmul(self.dcell.h, sij)
-        sij = sij.reshape(3, self.natoms, self.natoms).transpose()
+        sij = self.dcell.ih @ sij
+        sij -= xp.round(sij)
+        sij = self.dcell.h @ sij
+        sij = xp.permute_dims(sij.reshape(3, self.natoms, self.natoms), (2, 1, 0))
         # take square magnitudes of distances
-        sij = np.sum(sij * sij, axis=2)
+        sij = (sij * sij).sum(axis=2)
         # screen with Heaviside step function
-        sij = (sij < self.screen**2).astype(float)
+        sij = xp.astype(sij < self.screen**2, xp.float64)
         # sij = np.exp(-sij / (self.screen**2))
         # acount for 3 dimensions
-        sij = np.concatenate((sij, sij, sij), axis=0)
-        sij = np.concatenate((sij, sij, sij), axis=1)
-        sij = sij.reshape(-1).reshape(-1, self.natoms).transpose()
-        sij = sij.reshape(-1).reshape(-1, 3 * self.natoms).transpose()
+        sij = xp.concat((sij, sij, sij), axis=0)
+        sij = xp.concat((sij, sij, sij), axis=1)
+        sij = sij.reshape(-1).reshape(-1, self.natoms).T
+        sij = sij.reshape(-1).reshape(-1, 3 * self.natoms).T
         return sij
 
     def save_matrix(self, matrix):
@@ -220,7 +220,7 @@ class Planetary(Motion):
 
         # Initialize positions to the actual positions, possibly with contraction
 
-        self.dnm.qnm[:] = (
+        self.dnm._qnm[:] = (
             self.basenm.qnm[: self.nbeads]
             * np.sqrt(self.nbeads)
             / np.sqrt(self.basebeads.nbeads)
@@ -229,10 +229,10 @@ class Planetary(Motion):
         # Randomized momenta
         self.dnm.pnm = (
             self.prng.gvec((self.dbeads.nbeads, 3 * self.dbeads.natoms))
-            * np.sqrt(self.dnm.dynm3)
+            * xp.sqrt(self.dnm.dynm3)
             * np.sqrt(self.dens.temp * self.dbeads.nbeads * Constants.kb)
         )
-        self.dnm.pnm[0] = 0.0
+        self.dnm._pnm[0] = 0.0
 
         # Resets the frequency matrix
         self.omega2[:] = 0.0
@@ -265,12 +265,12 @@ class Planetary(Motion):
             self.omega2 *= scr
 
         # ensure perfect symmetry
-        self.omega2[:] = 0.5 * (self.omega2 + self.omega2.transpose())
+        self.omega2[:] = 0.5 * (self.omega2 + self.omega2.T)
         # only save lower triangular part
-        self.omega2[:] = np.tril(self.omega2)
+        self.omega2[:] = xp.tril(self.omega2)
 
         # save as a sparse matrix in half precision
-        save_omega2 = sparse.csc_matrix(self.omega2.astype(np.float16))
+        save_omega2 = sparse.csc_matrix(to_numpy(self.omega2).astype(np.float16))
 
         # save the frequency matrix to the PLANETARY file
         self.save_matrix(save_omega2)

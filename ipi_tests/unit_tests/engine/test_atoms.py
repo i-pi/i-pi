@@ -44,8 +44,8 @@ def test_kinetic_energy_and_stress_match_manual_calculation():
     atoms = Atoms(2)
     masses = np.array([2.0, 4.0])
     momenta = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    atoms.m[:] = masses
-    atoms.p[:] = momenta.flatten()
+    atoms._m[:] = masses
+    atoms._p[:] = momenta.flatten()
 
     expected_kinetic = np.sum(momenta**2, axis=1) / (2.0 * masses)
     expected_atom_stress = np.array(
@@ -69,10 +69,10 @@ def test_clone_copies_values_without_sharing_storage():
     momenta = positions + 10.0
     masses = np.array([1.0, 2.0])
     names = np.array(["H", "O"])
-    atoms.q[:] = positions
-    atoms.p[:] = momenta
-    atoms.m[:] = masses
-    atoms.names[:] = names
+    atoms._q[:] = positions
+    atoms._p[:] = momenta
+    atoms._m[:] = masses
+    atoms._names[:] = names
 
     cloned = atoms.clone()
 
@@ -81,10 +81,10 @@ def test_clone_copies_values_without_sharing_storage():
     assert np.array_equal(cloned.m, masses)
     assert np.array_equal(cloned.names, names)
 
-    cloned.q[0] = -1.0
-    cloned.p[1] = -2.0
-    cloned.m[0] = 3.0
-    cloned.names[1] = "C"
+    cloned._q[0] = -1.0
+    cloned._p[1] = -2.0
+    cloned._m[0] = 3.0
+    cloned._names[1] = "C"
 
     assert np.array_equal(atoms.q, positions)
     assert np.array_equal(atoms.p, momenta)

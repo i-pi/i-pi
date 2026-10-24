@@ -24,6 +24,7 @@ import numpy as np
 
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.array_backend import to_numpy
 
 __all__ = [
     "Input",
@@ -1231,6 +1232,7 @@ class InputArray(InputValue):
               in.
         """
 
+        value = to_numpy(value)
         super(InputArray, self).store(
             value=np.array(value, dtype=self.type).flatten().copy(), units=units
         )

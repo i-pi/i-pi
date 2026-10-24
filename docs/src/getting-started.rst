@@ -249,6 +249,45 @@ running any dynamics. Note that until this has happened the code is
 essentially idle, the only action that it performs is to periodically
 poll for incoming connections.
 
+.. _array-backends:
+
+Array backends and GPUs
+^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, i-PI stores positions, momenta, forces and all the other arrays
+of the simulation as numpy arrays. They can instead be stored as
+`PyTorch <https://pytorch.org>`_ tensors, on the CPU or on a GPU, by
+selecting the array backend when launching i-PI:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda input_file.xml
+
+``--backend`` is either ``numpy`` (the default) or ``torch``, and ``--device``
+is a device name understood by PyTorch, e.g. ``cpu``, ``cuda`` or ``cuda:1``
+(the numpy backend only supports ``cpu``). PyTorch is an optional dependency,
+that can be installed together with i-PI as ``pip install ipi[torch]``.
+
+The backend is chosen at run time and is not part of the input: the same
+input and checkpoint files can be used with either backend, and the
+simulation results are the same up to rounding errors. The only exception
+is the stream of random numbers: with the torch backend, the Gaussian noise
+used by the thermostats and to draw the initial velocities is generated
+directly on the device by a PyTorch generator, so the trajectories differ
+from those obtained with numpy. The state of this generator is stored in the
+checkpoint files, so restarts are reproducible on the same device; restarting
+on a different device, or from a checkpoint written with the numpy backend,
+re-initializes it from the seed (with a warning).
+
+Forcefields always exchange numpy arrays with the client codes (or with the
+Python potentials of :ref:`ffdirect`), so with a GPU backend the positions and
+the forces are copied between host and device at each force evaluation. The
+torch backend therefore pays off for large systems, when the cost of the
+integrator (normal-mode transformations, thermostats, barostats) becomes
+significant. For small systems the overhead of launching many small
+operations on the GPU (or of PyTorch on the CPU) makes the numpy backend
+faster.
+
 .. _runningclients:
 
 Running the client code

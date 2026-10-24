@@ -22,7 +22,7 @@ from ipi.utils.units import unit_to_internal
 @pytest.mark.parametrize("mass_weighted", [False, True])
 def test_banded_newton_solution_matches_dense_spring_matrix(nbeads, mass_weighted):
     beads = Beads(1, nbeads)
-    beads.m[:] = 2.0
+    beads._m[:] = 2.0
     block = np.array([[3.0, 0.2, 0.1], [0.2, 4.0, 0.3], [0.1, 0.3, 5.0]])
     reduced = np.tile(block, (1, nbeads))
     mapper = SimpleNamespace(
@@ -137,14 +137,7 @@ def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     [
         1,
         2,
-        pytest.param(
-            3,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AttributeError,
-                reason="Fix.get_full_vector references nonexistent self.fix",
-            ),
-        ),
+        3,
         pytest.param(
             4,
             marks=pytest.mark.xfail(
@@ -165,7 +158,7 @@ def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
 )
 def test_fixed_atom_reduction_and_expansion_roundtrip(kind):
     beads = Beads(2, 3)
-    beads.m[:] = [2, 3]
+    beads._m[:] = [2, 3]
     fix = Fix(np.array([0, 1, 2]), beads)
     shapes = {1: (3, 6), 2: (6, 18), 3: (2, 18), 4: (3, 6, 6, 6), 5: (3, 6, 6)}
     a = np.arange(np.prod(shapes[kind]), dtype=float).reshape(shapes[kind])

@@ -152,8 +152,8 @@ def test_ordinary_virials_are_complete_cell_derivatives(virial_case, coupling):
     ]:
         q = (r.q.reshape(-1, 3) @ transform).reshape(r.q.shape)
         h = transform.T @ r.h
-        s.beads.q[:] = q
-        s.cell.h[:] = h
+        s.beads._q[:] = q
+        s.cell._h[:] = h
         total = cell_strain_virial(lambda x, cell: r.energies(x, cell)[:, 0], q, h)
         close(s.forces.virs, total)
         close(s.forces.vir_combine(), total)
@@ -187,8 +187,8 @@ def test_sc_complete_energy(virial_case):
     s, r = virial_case()
     for scale in [0.93, 1.0, 1.07]:
         q, h = scale * r.q, scale * r.h
-        s.beads.q[:] = q
-        s.cell.h[:] = h
+        s.beads._q[:] = q
+        s.cell._h[:] = h
         close(s.forces.pots + s.forces.potssc, r.energies(q, h)[:, 4])
 
 
@@ -200,10 +200,10 @@ def test_published_sc_virial_formula(virial_case, coupling):
     step = 1e-3
     values = []
     for displacement in [-2 * step, -step, step, 2 * step]:
-        s.beads.q[:] = r.q + displacement * direction
+        s.beads._q[:] = r.q + displacement * direction
         # Later force evaluations update the dependency array in place.
         values.append(np.asarray(s.forces.virs).copy())
-    s.beads.q[:] = r.q
+    s.beads._q[:] = r.q
     derivative = (values[0] - 8 * values[1] + 8 * values[2] - values[3]) / (12 * step)
     product = np.array(
         [np.triu(f.reshape(2, 3).T @ (f / r.mass).reshape(2, 3)) for f in force]
@@ -466,7 +466,7 @@ def test_barostat_momentum_receives_complete_virial_contribution(virial_case, ki
         barostat.bind(
             s.beads, s.nm, s.cell, s.forces, prng=Random(seed=17), nmts=levels
         )
-        barostat.pdt[:] = [0.01 * (level + 1) for level in range(levels)]
+        barostat._pdt[:] = np.array([0.01 * (level + 1) for level in range(levels)])
         steps, expected_steps = [], []
         cumulative = np.zeros(1 if kind in ["BZP", "SCBZP"] else (3, 3))
         for level in range(levels):
