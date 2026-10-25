@@ -104,6 +104,13 @@ class Random(object):
         if state is not None:
             self.state = state
 
+    @property
+    def torch_generator(self):
+        """The torch generator that draws the Gaussian arrays on the device, or
+        None if they are drawn with numpy."""
+
+        return self._torch_rng
+
     def get_state(self):
         """Interface to the standard get_state() function.
 

@@ -40,6 +40,7 @@ __all__ = [
     "set_backend",
     "backend",
     "device",
+    "cuda_graphs",
     "to_numpy",
     "synchronize",
 ]
@@ -47,7 +48,7 @@ __all__ = [
 xp = types.SimpleNamespace()
 xp_size = array_api_compat.size
 
-_current = {"backend": None, "device": None}
+_current = {"backend": None, "device": None, "cuda_graphs": False}
 
 
 def _creation_functions(namespace, device, dtype):
@@ -85,14 +86,20 @@ def _creation_functions(namespace, device, dtype):
     return functions
 
 
-def set_backend(name="numpy", device="cpu"):
+def set_backend(name="numpy", device="cpu", cuda_graphs=False):
     """Selects the array library and the device used to store arrays.
 
     Args:
         name: "numpy", "torch" or "jax".
         device: The device on which arrays are allocated, e.g. "cpu" or
             "cuda". The numpy backend only supports "cpu".
+        cuda_graphs: If True, the steps of the simulations that support it are
+            recorded as CUDA graphs and replayed (torch backend on a CUDA
+            device only, see `ipi.engine.cudagraphs`).
     """
+
+    if cuda_graphs and (name != "torch" or not device.startswith("cuda")):
+        raise ValueError("CUDA graphs require the torch backend on a CUDA device")
 
     if name == "numpy":
         if device != "cpu":
@@ -130,6 +137,7 @@ def set_backend(name="numpy", device="cpu"):
     xp.__dict__.update(members)
     _current["backend"] = name
     _current["device"] = device
+    _current["cuda_graphs"] = cuda_graphs
 
 
 def backend():
@@ -142,6 +150,12 @@ def device():
     """Device on which arrays are allocated."""
 
     return _current["device"]
+
+
+def cuda_graphs():
+    """True if the steps of the simulations are replayed as CUDA graphs."""
+
+    return _current["cuda_graphs"]
 
 
 def to_numpy(x):

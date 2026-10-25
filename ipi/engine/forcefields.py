@@ -18,6 +18,7 @@ from contextlib import nullcontext
 import numpy as np
 
 from ipi.engine.cell import GenericCell
+from ipi.utils import cudagraphs
 from ipi.utils.prng import Random
 from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.softexit import softexit
@@ -589,14 +590,25 @@ class FFDirect(ForceField):
                 if self._batch_idle_cycles >= self._batch_idle_threshold:
                     self.launch_batch()
 
-    def _process_results(self, results, request):
+    def _results(self, cell, pos):
+        """Evaluates the driver on a structure, or on lists of structures, and
+        returns the processed results."""
+
+        if isinstance(cell, list):
+            return [self._process_results(r) for r in self.driver(cell, pos)]
+        return self._process_results(self.driver(cell, pos))
+
+    def _process_results(self, results):
         # ensure shapes, apply the offset and parse the extra string
         asarray = xp.asarray if self.backend_arrays else np.asarray
+        results = list(results)
         results[0] -= self.offset
         results[1] = asarray(results[1]).reshape(-1)
         results[2] = asarray(results[2]).reshape(3, 3)
         results[3] = parse_extra(results[3])
+        return results
 
+    def _finish(self, request, results):
         request["result"] = results
         request["status"] = "Done"
         request._event_done.set()
@@ -612,18 +624,20 @@ class FFDirect(ForceField):
         )
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
-        results_batch = self.driver(cell_batch, pos_batch)
+        # the driver is not part of the CUDA graphs that record a step
+        results_batch = cudagraphs.eager(self._results, cell_batch, pos_batch)
         for results, request in zip(results_batch, self.request_batch):
-            self._process_results(list(results), request)
+            self._finish(request, results)
         self.request_batch = []
         self._batch_idle_cycles = 0
 
     def evaluate(self, request):
         if self.batch_size == 1:
-            results = list(
-                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
+            # the driver is not part of the CUDA graphs that record a step
+            results = cudagraphs.eager(
+                self._results, request["cell"][0], request["pos"].reshape(-1, 3)
             )
-            self._process_results(results, request)
+            self._finish(request, results)
         else:
             self.request_batch.append(request)
             if len(self.request_batch) >= self.batch_size:

@@ -59,7 +59,7 @@ def main(fn_input, options):
             raise ImportError('Profiling requires the `yappi` package.')            
 
     # selects the library used to store and process arrays
-    set_backend(options.backend, device=options.device)
+    set_backend(options.backend, device=options.device, cuda_graphs=options.cuda_graphs)
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
@@ -116,6 +116,9 @@ if __name__ == '__main__':
 
     parser.add_option('--device', dest='device', default='cpu',
                       help='Device on which arrays are allocated (e.g. `cpu` or `cuda`); only `cpu` is supported by the numpy backend.')
+
+    parser.add_option('--cuda-graphs', dest='cuda_graphs', action='store_true', default=False,
+                      help='Records the MD steps as CUDA graphs and replays them, for the simulations that support it (torch backend on a CUDA device only).')
 
     options, args = parser.parse_args()
 

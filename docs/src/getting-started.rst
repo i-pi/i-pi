@@ -279,14 +279,34 @@ checkpoint files, so restarts are reproducible on the same device; restarting
 on a different device, or from a checkpoint written with the numpy backend,
 re-initializes it from the seed (with a warning).
 
-Forcefields always exchange numpy arrays with the client codes (or with the
+Forcefields exchange numpy arrays with the client codes (and with most of the
 Python potentials of :ref:`ffdirect`), so with a GPU backend the positions and
 the forces are copied between host and device at each force evaluation. The
-torch backend therefore pays off for large systems, when the cost of the
-integrator (normal-mode transformations, thermostats, barostats) becomes
-significant. For small systems the overhead of launching many small
-operations on the GPU (or of PyTorch on the CPU) makes the numpy backend
-faster.
+potentials that work with the arrays of the backend, such as ``metatomic``,
+avoid these copies. The torch backend therefore pays off for large systems,
+when the cost of the integrator (normal-mode transformations, thermostats,
+barostats) becomes significant. For small systems the overhead of launching
+many small operations on the GPU (or of PyTorch on the CPU) makes the numpy
+backend faster.
+
+This overhead is reduced by ``--cuda-graphs``, with which i-PI records the
+operations of an MD step as CUDA graphs after the first few steps, and then
+replays them, running the integrator several times faster:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda --cuda-graphs input_file.xml
+
+The forces are still computed as usual, between the replays of the parts of
+the step that precede and follow each force evaluation, so any forcefield can
+be used. For direct forcefields whose potential works with the arrays of the
+backend, such as ``metatomic``, only the potential is evaluated between the
+replays, while the requests and the collection of the results are part of the
+graphs. The steps are replayed for NVE and NVT dynamics (also path integral
+and with multiple time stepping) with the Langevin and PILE-L thermostats,
+while the other simulations run as usual. The parameters that are fixed in the
+recorded graphs, such as the temperature and the time step, cannot change
+while the steps are replayed: i-PI stops with an error if they do.
 
 ``--backend jax`` (experimental) stores the arrays as
 `JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It

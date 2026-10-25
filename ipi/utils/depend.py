@@ -69,6 +69,17 @@ __all__ = [
     "dproperties",
 ]
 
+# object notified of the reads and writes of depend objects while a function
+# is recorded as CUDA graphs (see ipi.utils.cudagraphs), None otherwise
+_recorder = None
+
+
+def set_recorder(recorder):
+    """Sets the object notified of the operations on depend objects."""
+
+    global _recorder
+    _recorder = recorder
+
 
 class depend_synchro(object):
     """Link between two depend objects holding two representations of the
@@ -167,6 +178,8 @@ class depend_base(object):
             if item is not None and not item._status.tainted:
                 item.taint()
         self._status.tainted = taintme
+        if _recorder is not None:
+            _recorder.tainted(self, taintme)
 
     def _taint_synchro(self):
         """Marks self as holding the current data of a synchronized pair, and
@@ -177,6 +190,8 @@ class depend_base(object):
         for peer in synchro.peers:
             if peer._status is not self._status and not peer._status.tainted:
                 peer.taint()
+        if _recorder is not None:
+            _recorder.synchronized(synchro)
 
     def tainted(self):
         return self._status.tainted
@@ -212,6 +227,8 @@ class depend_base(object):
 
         if self._status.tainted:
             self._refresh()
+        if _recorder is not None:
+            _recorder.read(self)
         return self._value
 
     def _refresh(self):
@@ -387,6 +404,8 @@ class depend_array(depend_base):
     def __getitem__(self, index):
         if self._status.tainted:
             self._refresh()
+        if _recorder is not None:
+            _recorder.read(self)
         value = self._value[index]
         if _is_scalar_index(index, self._value.ndim) or not _is_basic_index(index):
             # scalars, and the copies selected by masks or arrays of indices, are
@@ -691,6 +710,8 @@ def _inject_depend_property(cls, attr_name):
         dep = self.__dict__[member_name]
         if dep._status.tainted:
             dep._refresh()
+        if _recorder is not None:
+            _recorder.read(dep)
         return dep._value
 
     def setter(self, value):
