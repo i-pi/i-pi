@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 
-from ipi.engine.barostats import BaroSCR, dt_sinch
+from ipi.engine.barostats import BaroSCR, cell_propagators
 from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
@@ -478,16 +478,20 @@ def test_flexible_barostat_volume_constraint(simulation):
         assert sim.syslist[0].cell.V == pytest.approx(initial, rel=1e-12)
 
 
-def test_dt_sinch_matches_power_series():
-    """dt sinh(v dt)/(v dt) is correct both for cell velocities with zero
-    diagonal (Taylor branch) and with non-zero diagonal (eigendecomposition)"""
+def test_cell_propagators_match_power_series():
+    """exp(+-v dt) and dt sinh(v dt)/(v dt) are correct both for cell velocities
+    with zero diagonal (nilpotent) and with non-zero diagonal"""
 
     dt = 2.0
     shear = np.array([[0.0, 0.3, -0.2], [0.0, 0.0, 0.1], [0.0, 0.0, 0.0]])
+    # the scaling and squaring of the matrix exponential loses a few digits
+    tolerance = dict(rtol=1e-12, atol=1e-12)
     for v in (shear, shear + np.diag([1e-2, -2e-2, 3e-2])):
         x = v * dt
-        series = sum(
-            np.linalg.matrix_power(x, 2 * k) / math.factorial(2 * k + 1)
-            for k in range(12)
-        )
-        assert np.allclose(dt_sinch(v, dt), dt * series, rtol=1e-12, atol=1e-14)
+        powers = [np.linalg.matrix_power(x, k) / math.factorial(k) for k in range(25)]
+        expq, expp, sinh = cell_propagators(v, dt)
+        assert np.allclose(expq, sum(powers), **tolerance)
+        exp_minus = sum(c * (-1) ** k for k, c in enumerate(powers))
+        assert np.allclose(expp, exp_minus, **tolerance)
+        series = sum(powers[2 * k] / (2 * k + 1) for k in range(12))
+        assert np.allclose(sinh, dt * series, **tolerance)

@@ -14,6 +14,7 @@ import pytest
 import ipi.utils.array_backend as ab
 from ipi_tests.unit_tests.engine.test_backend_equivalence import (
     HARMONIC,
+    ISOTROPIC,
     NO_FORCES,
     write_input,
 )
@@ -53,6 +54,28 @@ def mts_input():
     )
 
 
+def nst_input():
+    """Classical dynamics at constant stress, with the anisotropic barostat."""
+
+    box = (8 / 0.05) ** (1.0 / 3.0)  # the box of write_input, in angstrom
+    return (
+        write_input("npt_isotropic", HARMONIC)
+        .replace(
+            "<pressure units='bar'>1</pressure>",
+            "<stress units='bar'>[1, 0, 0, 0, 1, 0, 0, 0, 1]</stress>",
+        )
+        .replace("mode='npt'", "mode='nst'")
+        .replace(
+            "<barostat mode='isotropic'>",
+            "<barostat mode='anisotropic'><h0 units='angstrom'>"
+            f"[{box}, 0, 0, 0, {box}, 0, 0, 0, {box}]</h0>",
+        )
+    )
+
+
+INPUTS = {"mts": mts_input, "nst": nst_input}
+
+
 def simulation(xml, cuda_graphs):
     from ipi.scripting import InteractiveSimulation
 
@@ -87,6 +110,10 @@ def test_cuda_graphs_require_torch_on_cuda():
         ("pimd_nvt", DUMMY, 5),
         ("pimd_nvt", DUMMY_BATCHED, 2),
         ("mts", None, 14),
+        ("npt_isotropic", HARMONIC, 2),
+        ("npt_flexible", HARMONIC, 2),
+        ("pimd_npt", HARMONIC, 2),
+        ("nst", None, 2),
     ],
 )
 def test_replay_matches_eager_steps(
@@ -98,7 +125,7 @@ def test_replay_matches_eager_steps(
     forcefields)"""
 
     monkeypatch.chdir(tmp_path)
-    xml = mts_input() if case == "mts" else write_input(case, forcefield)
+    xml = INPUTS[case]() if case in INPUTS else write_input(case, forcefield)
     try:
         eager, graph = simulation(xml, False), simulation(xml, True)
         for step in range(8):
@@ -108,9 +135,10 @@ def test_replay_matches_eager_steps(
                 np.testing.assert_allclose(
                     graph.properties(name), eager.properties(name), **TOLERANCE
                 )
-            a, b = eager.syslist[0].beads, graph.syslist[0].beads
-            torch.testing.assert_close(b.q, a.q, **TOLERANCE)
-            torch.testing.assert_close(b.p, a.p, **TOLERANCE)
+            a, b = eager.syslist[0], graph.syslist[0]
+            torch.testing.assert_close(b.beads.q, a.beads.q, **TOLERANCE)
+            torch.testing.assert_close(b.beads.p, a.beads.p, **TOLERANCE)
+            torch.testing.assert_close(b.cell.h, a.cell.h, **TOLERANCE)
         assert len(graph_step(graph).segments) == nsegments
     finally:
         ab.set_backend("numpy")
@@ -155,15 +183,24 @@ def test_unsupported_steps_are_eager(tmp_path, monkeypatch, device_random):
 
 
 @cuda
-def test_changed_parameters_stop_the_replay(tmp_path, monkeypatch, device_random):
+@pytest.mark.parametrize(
+    "case,owner,name",
+    [("nvt_langevin", "motion", "dt"), ("npt_isotropic", "ensemble", "pext")],
+)
+def test_changed_parameters_stop_the_replay(
+    case, owner, name, tmp_path, monkeypatch, device_random
+):
+    """The time step, and the pressure of the barostats, are fixed in the graphs"""
+
     from ipi.utils.cudagraphs import CUDAGraphError
 
     monkeypatch.chdir(tmp_path)
     try:
-        sim = simulation(write_input("nvt_langevin", HARMONIC), True)
+        sim = simulation(write_input(case, HARMONIC), True)
         for step in range(4):
             sim.run_step(step)
-        sim.syslist[0].motion.dt *= 1.1
+        obj = getattr(sim.syslist[0], owner)
+        setattr(obj, name, getattr(obj, name) * 1.1)
         with pytest.raises(CUDAGraphError, match="cannot change"):
             sim.run_step(4)
     finally:
@@ -515,7 +552,22 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     [
         ("nve", None, None),
         ("nvt_svr", None, "the thermostat 'ThermoSVR'"),
-        ("npt_isotropic", None, "the ensemble 'npt'"),
+        ("npt_flexible", None, None),
+        (
+            "npt_isotropic",
+            (ISOTROPIC, ISOTROPIC.replace("'langevin'", "'svr'")),
+            "the thermostat 'ThermoSVR' of the barostat",
+        ),
+        (
+            "npt_isotropic",
+            (
+                ISOTROPIC,
+                "<barostat mode='stochastic-rescaling'><tau units='femtosecond'>200"
+                "</tau><compressibility units='bar^-1'>4.5e-5</compressibility>"
+                "</barostat>",
+            ),
+            "the barostat 'BaroSCR'",
+        ),
         ("nvt_langevin", ("mode='dynamics'", "mode='dummy'"), "the motion class"),
         ("pimd_nvt", ("mode='nvt'", "mode='nvt-cc'"), "the ensemble 'nvt-cc'"),
         (
