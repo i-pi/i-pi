@@ -124,8 +124,10 @@ tox -e examples   # smoke-test all input examples
 ```
 
 `tox` builds a clean environment, installs i-PI plus the required test
-dependencies, and runs the suite. Run `tox list` to see all available
-environments.
+dependencies, and runs the suite. The tests run in parallel, with one
+[`pytest-xdist`](https://pytest-xdist.readthedocs.io/) worker per core
+(when calling `pytest` directly, use `pytest -n auto` with
+`OMP_NUM_THREADS=1`). Run `tox list` to see all available environments.
 
 See more details in the README file inside the `ipi_tests` folder.
 

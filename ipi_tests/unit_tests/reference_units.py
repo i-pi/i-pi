@@ -1,0 +1,19 @@
+"""Independent SI/CODATA anchors for numerical test expectations.
+
+CODATA 2022: https://physics.nist.gov/cuu/pdf/wall_2022.pdf
+The tolerances permit older CODATA values used by supported i-PI releases.
+Do not import i-PI conversion helpers here.
+"""
+
+BOHR_IN_ANGSTROM = 0.529177210544
+ANGSTROM_TO_BOHR = 1.0 / BOHR_IN_ANGSTROM
+HARTREE_IN_EV = 27.211386245981
+EV_TO_HARTREE = 1.0 / HARTREE_IN_EV
+HARTREE_IN_JOULE = 4.3597447222060e-18
+ATOMIC_PRESSURE_IN_PA = HARTREE_IN_JOULE / (BOHR_IN_ANGSTROM * 1e-10) ** 3
+INVERSE_CM_TO_HARTREE = 6.62607015e-34 * 299792458.0 * 100 / HARTREE_IN_JOULE
+FEMTOSECOND_TO_ATOMIC_TIME = (
+    1e-15 * HARTREE_IN_JOULE / (6.62607015e-34 / (2 * 3.141592653589793))
+)
+KELVIN_TO_HARTREE = 1.380649e-23 / HARTREE_IN_JOULE
+UNIT_RTOL = 2e-7

@@ -444,6 +444,14 @@ class NormalModes:
             dependencies=[self._vspring_and_fspring],
         )
 
+        if self.propagator == "cayley" and not np.array_equal(
+            dstrip(self.dynm3), dstrip(self.beads.m3)
+        ):
+            warning(
+                "Cayley propagation has not been tested with dynamical masses "
+                "different from the physical masses."
+            )
+
     def resolve_bosons(self):
         if not isinstance(self.bosons, tuple):
             return self.bosons

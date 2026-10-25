@@ -8,24 +8,16 @@
     <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
     <checkpoint stride="1000"/>
 </output>
-<total_steps> 1000</total_steps>
+<total_steps> 100</total_steps>
 <prng><seed>12345</seed></prng>
 
-<!-- Batched evaluation over a socket: all beads of the ring polymer are sent to
-     the `i-pi-py_driver` client in a single request, and the metatomic model
-     evaluates them together. The driver command is the same as for the
-     non-batched socket run (see input.xml); batching is requested here, via
-     <batch_size>, and announced to the driver in the INIT string:
-
-        i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
--->
-<ffsocket mode='unix' name='driver' pbc="false">
-    <address>metatomic</address>
-    <batch_size>4</batch_size>
-</ffsocket>
+<ffdirect name='driver'>
+    <pes> metatomic </pes>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,skin:2.0} </parameters>
+</ffdirect>
 
 <system>
-    <initialize nbeads="4">
+    <initialize nbeads="1">
         <file mode="ase" units="angstrom"> nickel.xyz </file>
         <velocities mode="thermal" units="kelvin"> 250.0 </velocities>
     </initialize>

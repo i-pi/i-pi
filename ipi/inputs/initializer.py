@@ -226,7 +226,8 @@ class InputInitMomenta(InputInitPositions):
         "help"
     ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 
         'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector. 
-        'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature."""
+        'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature.
+        A temperature of zero or a negative value uses the simulation temperature instead; zero does not request zero momenta or velocities."""
 
     default_label = "INITMOMENTA"
     default_help = "This is the class to initialize momenta."
