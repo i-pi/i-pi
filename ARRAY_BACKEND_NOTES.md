@@ -173,7 +173,12 @@ bugs pass, and are no longer marked.
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
   scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`), the
   Langevin step (`_langevin_step`, also used per mode by PILE_L) and the cell propagators of the flexible
-  barostats (`cell_propagators`). H100 (jobs 4662227, 4662508),
+  barostats (`cell_propagators`).
+- Normal-mode transforms on the H100 (job 4666371), round trip `b2nm` + `nm2b` recorded as a CUDA graph, us
+  (kernels): FFT 30-38 (15) at 100-1000 atoms and 4-256 beads, 36-718 at 10000 atoms; compiled FFT ~25% faster
+  (10 kernels); matrix 6-24 (2) at 100-1000 atoms, 9-185 at 10000 atoms, unchanged by compiling. The matrix
+  product is 3-6x faster than the FFT at all the sizes tested (up to 256 beads x 10000 atoms), and agrees with it
+  to 4e-13. With numpy (no PyFFTW, 16 cores) the matrix product was also faster at all these sizes. H100 (jobs 4662227, 4662508),
   classical_nvt_noff 100 atoms: 67 -> 39 kernels, 0.127 -> 0.059 ms/step (numpy 0.074); 1000 atoms 0.121 ->
   0.072 (numpy 0.217); PIMD-4/8 without forces, 100 atoms, 0.374 -> 0.234 / 0.296 ms (numpy 0.311 / 0.464).
   Replays then match eager steps to rounding errors (fused reductions), so the tests use a tolerance.
