@@ -104,6 +104,55 @@ bugs pass, and are no longer marked.
   model on the GPU, the overhead of 4-bead PIMD grows to 15 ms (1 BLAS thread) - 30 ms (16 threads) at 11000
   atoms, and was several times larger on a node shared with other jobs.
 
+### CUDA graphs (`--cuda-graphs`, branch feats/cuda-graphs)
+- `ipi/utils/cudagraphs.py` has the generic machinery: `GraphReplay` runs a function eagerly for the first
+  calls (two, and at least one in the calling thread, as cuBLAS creates handles per thread), records the next
+  one in segments separated by eager functions, and replays them. Code in the recorded function marks the
+  points where the recording may be interrupted with `cudagraphs.split(obj)`, and calls functions eagerly
+  with `cudagraphs.eager(func, *args)` (plain calls when not recording).
+- `ipi/engine/cudagraphs.py` decides which steps are replayed (`unsupported`), and `GraphStep` replaces the
+  step of the integrator: the recording is interrupted at each force evaluation (`ForceBead.queue` calls
+  `split`), with the forces of the component computed eagerly between the segments.
+- For non-threaded `FFDirect` forcefields whose driver takes backend arrays (metatomic, dummy), the requests
+  and the collection of the results are recorded too, and the segments end at the calls of the driver
+  (`eager(FFDirect._results, ...)`, which also applies the offset and parses the extras): on replay the driver is called
+  with the request tensors written by the graph, and its tensor results are copied (`torch._foreach_copy_`)
+  into those of the recorded call, which the next graph reads; the other items (extras) replace those of the
+  recorded result lists, which the depend objects hold. Drivers must not keep their input arrays.
+- The depend objects notify a recorder (`depend.set_recorder`) of reads, writes and taints while recording.
+  Before a replay, the objects that a segment reads before modifying them are refreshed, tensor scalars that
+  were replaced by new objects are copied into the ones read by the graph, and host values must be
+  unchanged (`CUDAGraphError` otherwise, e.g. if the temperature changes). After a replay, the taint status
+  of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
+  objects held by tensor scalars are restored as at the end of the recorded segment.
+- Replayed: `Dynamics` with NVE/NVT integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin or PILE_L
+  thermostat; not replayed (eager, with a warning): barostats, SVR, PILE_G, GLE, fixed atoms, open paths,
+  bosons, multi-system motions, systems stepped in threads.
+- Replayed trajectories and outputs are bit-identical to eager ones (`test_cuda_graphs.py`). The regression
+  tests run with graphs (scratch pytest plugin) pass, except the stochastic ones under `--ipi-backend torch`:
+  the conftest patch that draws Gaussian numbers with numpy and copies them to the device cannot be recorded.
+- P400, 64 atoms, eager -> replayed ms/step: NVE 0.29 -> 0.06, Langevin 0.75 -> 0.19, PIMD-4 2.7 -> 0.66 without
+  forces; with the dummy forcefield NVE 0.67 -> 0.44 and PIMD-4 4.0 -> 1.5: the eager force evaluation
+  (requests, driver call, gathers) is then the main cost, ~0.4 ms per evaluation for the dummy driver.
+- H100 (job 4659635), ms/step without forces, 100-10000 atoms, eager -> replayed (numpy): NVE 0.14 -> 0.05
+  (0.03-0.47), Langevin 0.37 -> 0.13 (0.07-1.7), PIMD-4 1.5 -> 0.37-0.46 (0.31-11.2), PIMD-8 2.1 -> 0.57-0.76
+  (0.46-20.4): replayed steps are faster than numpy above ~100-1000 atoms. With the nickel LJ metatomic model
+  the i-PI part of the step (total - driver alone) goes from 0.40 to 0.25 ms (NVE) and from 2.1 to 0.6 ms
+  (PIMD-4) at all sizes (32-10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.3 -> 14.7 ms, the larger PET
+  cases are dominated by the model.
+- Recording the force pipeline of direct forcefields (P400, dummy driver, 100 atoms, replayed ms/step): NVE
+  0.43 -> 0.16 (0.064 without forces, 0.032 for the driver alone), PIMD-4 1.37 -> 0.87, PIMD-8 2.19 -> 1.39;
+  a replayed step with the dummy driver makes no syncs, and launches 5 kernels outside the graphs.
+  H100 (job 4662134), replayed ms/step before -> after: dummy NVE 0.238 -> 0.085 (0.048 without forces,
+  0.017 driver), PIMD-4 (4 driver calls) 0.69 -> 0.51; nickel LJ, i-PI part (total - driver alone, eager /
+  before / after): NVE 0.45 / 0.31 / 0.12 ms at all sizes (32-10976 atoms), PIMD-4 2.23 / 0.73 / 0.47 (32
+  atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
+  14.1), dominated by the model.
+- Possible extensions: isotropic barostat (needs the tensor scalars staged as above, verified to replay
+  exactly), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
+  (now each component is computed when its first bead is queued), cheaper staging of the inputs (host
+  arrays such as `nmts` and `pdt` are compared with `np.array_equal` at each replay).
+
 ### Other backends
 - cupy and jax: `xp` comes from `array_api_compat`, the PRNG has one implementation per backend, and all
   writes to the state go through the depend objects (`set`, `__setitem__`, in-place operators), which is where

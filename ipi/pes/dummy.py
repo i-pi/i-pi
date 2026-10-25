@@ -17,7 +17,8 @@ class Dummy_driver(object):
 
     # whether `compute` also accepts the arrays of the i-PI array backend (e.g.
     # torch tensors on a GPU), returning results of the same kind, rather than
-    # only numpy arrays. Such inputs must not be modified.
+    # only numpy arrays. Such inputs must not be modified, nor kept after the
+    # call, as they may be overwritten (e.g. when replaying CUDA graphs).
     backend_arrays = False
 
     def __init__(self, verbose=False, *args, **kwargs):

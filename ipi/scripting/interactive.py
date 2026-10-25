@@ -46,16 +46,26 @@ class InteractiveSimulation(Simulation):
        `ipi.utils.array_backend.set_backend` is used (numpy by default).
     :param device: Optional(str), default "cpu". The device on which arrays are
        allocated when `backend` is given, e.g. "cuda" for the torch backend.
+    :param cuda_graphs: Optional(bool), default False. Whether the steps are
+       recorded as CUDA graphs and replayed when `backend` is given (torch
+       backend on a CUDA device only).
     """
 
-    def __init__(self, xml_input, custom_properties=None, backend=None, device="cpu"):
+    def __init__(
+        self,
+        xml_input,
+        custom_properties=None,
+        backend=None,
+        device="cpu",
+        cuda_graphs=False,
+    ):
         # not-so-great way to initialize from the class method-generated
         # Simulation object. one should probably reconsider how Simulation
         # is initialized as this hack might lead to issues further down
         # the line, but for the moment all looks good.
 
         if backend is not None:
-            set_backend(backend, device=device)
+            set_backend(backend, device=device, cuda_graphs=cuda_graphs)
         self._custom_properties = custom_properties or {}
         sim = Simulation.load_from_xml(
             xml_input, post_init_hook=self._add_custom_properties
