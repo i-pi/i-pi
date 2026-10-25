@@ -15,6 +15,7 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.array_backend import xp
+from ipi.utils.cudagraphs import compiled
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
@@ -252,6 +253,15 @@ class Dynamics(Motion):
 dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
 
 
+@compiled
+def _com_motion(p, com_weights, half_inv_mtot):
+    """Returns the momenta of the motion of the centre of mass, and its kinetic
+    energy."""
+
+    pcom = p.reshape(-1, 3).sum(axis=0)
+    return (com_weights * pcom).reshape(p.shape), (pcom @ pcom) * half_inv_mtot
+
+
 class DummyIntegrator:
     """No-op integrator for (PI)MD"""
 
@@ -399,11 +409,11 @@ class DummyIntegrator:
 
         beads = self.beads
         if self.fixcom:
-            pcom = beads.p.reshape(-1, 3).sum(axis=0)
-            beads._p -= (self.com_weights * pcom).reshape(beads.nbeads, -1)
-
-            # COM kinetic energy
-            self.ensemble.eens += (pcom @ pcom) * self.half_inv_mtot
+            # removes the momentum of the centre of mass, and adds its kinetic
+            # energy to the energy exchanged with the ensemble
+            dp, ecom = _com_motion(beads.p, self.com_weights, self.half_inv_mtot)
+            beads._p -= dp
+            self.ensemble.eens += ecom
 
         # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
         if len(self.fixatoms_dof) > 0:

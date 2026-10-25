@@ -27,6 +27,9 @@ DUMMY_BATCHED = (
     "<force forcefield='ff'/>",
 )
 PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
+# replays match eager steps to rounding errors, as the functions compiled for
+# the replays (see ipi.utils.cudagraphs.compiled) may sum in a different order
+TOLERANCE = dict(rtol=1e-12, atol=1e-14)
 
 
 def mts_input():
@@ -89,9 +92,10 @@ def test_cuda_graphs_require_torch_on_cuda():
 def test_replay_matches_eager_steps(
     case, forcefield, nsegments, tmp_path, monkeypatch, device_random
 ):
-    """The replayed steps give the same trajectory and outputs as eager steps,
-    with one CUDA graph per segment between eager force evaluations (of a
-    force component, or only of the driver for direct forcefields)"""
+    """The replayed steps give the same trajectory and outputs as eager steps
+    (to rounding errors), with one CUDA graph per segment between eager force
+    evaluations (of a force component, or only of the driver for direct
+    forcefields)"""
 
     monkeypatch.chdir(tmp_path)
     xml = mts_input() if case == "mts" else write_input(case, forcefield)
@@ -101,11 +105,12 @@ def test_replay_matches_eager_steps(
             eager.run_step(step)
             graph.run_step(step)
             for name in PROPERTIES:
-                np.testing.assert_array_equal(
-                    eager.properties(name), graph.properties(name)
+                np.testing.assert_allclose(
+                    graph.properties(name), eager.properties(name), **TOLERANCE
                 )
             a, b = eager.syslist[0].beads, graph.syslist[0].beads
-            assert torch.equal(a.q, b.q) and torch.equal(a.p, b.p)
+            torch.testing.assert_close(b.q, a.q, **TOLERANCE)
+            torch.testing.assert_close(b.p, a.p, **TOLERANCE)
         assert len(graph_step(graph).segments) == nsegments
     finally:
         ab.set_backend("numpy")
@@ -132,7 +137,8 @@ def test_recording_in_a_new_thread(tmp_path, monkeypatch, device_random):
                 executor.submit(graph.run_step, step).result()
         assert graph_step(graph).segments is not None
         a, b = eager.syslist[0].beads, graph.syslist[0].beads
-        assert torch.equal(a.q, b.q) and torch.equal(a.p, b.p)
+        torch.testing.assert_close(b.q, a.q, **TOLERANCE)
+        torch.testing.assert_close(b.p, a.p, **TOLERANCE)
     finally:
         ab.set_backend("numpy")
 
@@ -157,7 +163,7 @@ def test_changed_parameters_stop_the_replay(tmp_path, monkeypatch, device_random
         sim = simulation(write_input("nvt_langevin", HARMONIC), True)
         for step in range(4):
             sim.run_step(step)
-        sim.syslist[0].ensemble.temp *= 1.1
+        sim.syslist[0].motion.dt *= 1.1
         with pytest.raises(CUDAGraphError, match="cannot change"):
             sim.run_step(4)
     finally:
@@ -183,6 +189,33 @@ def test_driver_extras_are_updated(tmp_path, monkeypatch, device_random):
         for step in range(6):
             sim.run_step(step)
             assert sim.syslist[0].forces.extras["n"] == [len(calls)]
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
+@pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt"])
+def test_temperature_changes_are_replayed(case, tmp_path, monkeypatch, device_random):
+    """The coefficients of the Langevin thermostats are scalars on the device,
+    which the replays read: they follow a change of the temperature"""
+
+    monkeypatch.chdir(tmp_path)
+    xml = write_input(case, HARMONIC)
+    try:
+        eager, graph = simulation(xml, False), simulation(xml, True)
+        for step in range(8):
+            if step == 4:
+                eager.syslist[0].ensemble.temp *= 1.5
+                graph.syslist[0].ensemble.temp *= 1.5
+            eager.run_step(step)
+            graph.run_step(step)
+        assert graph_step(graph).segments is not None
+        for name in PROPERTIES:
+            np.testing.assert_allclose(
+                graph.properties(name), eager.properties(name), **TOLERANCE
+            )
+        a, b = eager.syslist[0].beads, graph.syslist[0].beads
+        torch.testing.assert_close(b.p, a.p, **TOLERANCE)
     finally:
         ab.set_backend("numpy")
 
@@ -250,6 +283,7 @@ def fake_cuda(monkeypatch):
     monkeypatch.setattr(torch.cuda, "graph_pool_handle", lambda: None)
     monkeypatch.setattr(torch.cuda, "CUDAGraph", FakeGraph)
     monkeypatch.setattr(cudagraphs, "_is_cuda_tensor", torch.is_tensor)
+    monkeypatch.setattr(cudagraphs, "_compiled", lambda func: func)
     ab.set_backend("torch", device="cpu")
     monkeypatch.setitem(ab._current, "cuda_graphs", True)
     yield
@@ -317,7 +351,7 @@ def test_changed_parameters_stop_the_fake_replay(tmp_path, monkeypatch, fake_cud
     sim = fake_simulation(write_input("nvt_langevin", HARMONIC))
     for step in range(4):
         sim.run_step(step)
-    sim.syslist[0].ensemble.temp *= 1.1
+    sim.syslist[0].motion.dt *= 1.1
     with pytest.raises(CUDAGraphError, match="cannot change"):
         sim.run_step(4)
 
