@@ -37,15 +37,17 @@ the function does something that cannot be recorded.
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+import functools
 import threading
 import warnings
 
 import numpy as np
 
 from ipi.utils import depend
-from ipi.utils.messages import info, verbosity
+from ipi.utils.array_backend import cuda_graphs
+from ipi.utils.messages import info, verbosity, warning
 
-__all__ = ["CUDAGraphError", "GraphReplay", "split", "eager"]
+__all__ = ["CUDAGraphError", "GraphReplay", "split", "eager", "compiled"]
 
 # eager calls before the recording, which fill the caches of the depend objects
 WARMUP_CALLS = 2
@@ -73,6 +75,37 @@ def eager(func, *args):
     if depend._recorder is None:
         return func(*args)
     return depend._recorder.call(func, *args)
+
+
+def compiled(func):
+    """Decorates a function of arrays, which is compiled with torch.compile when
+    the steps are replayed as CUDA graphs: its operations are then merged in
+    fewer kernels, which are faster to replay. It is called as it is otherwise,
+    or if torch.compile is not available. As the compiled function is specific
+    to the values of the Python scalars it is given, its arguments should be
+    arrays."""
+
+    @functools.wraps(func)
+    def wrapper(*args):
+        if cuda_graphs():
+            return _compiled(func)(*args)
+        return func(*args)
+
+    return wrapper
+
+
+@functools.cache
+def _compiled(func):
+    """Returns `func` compiled with torch.compile, or `func` if it cannot be
+    compiled."""
+
+    import torch
+
+    try:
+        return torch.compile(func, fullgraph=True, dynamic=False)
+    except RuntimeError as err:
+        warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
+        return func
 
 
 class GraphReplay:
@@ -289,8 +322,8 @@ def _stage(dep, recorded, copy):
 def _changed(dep, what):
     return CUDAGraphError(
         f"The value of <{dep._name}>, which is fixed in the CUDA graphs of the "
-        f"step, {what}: the parameters of the simulation (e.g. the temperature or "
-        "the time step) cannot change when running with --cuda-graphs"
+        f"step, {what}: the parameters of the simulation that are fixed in the "
+        "graphs (e.g. the time step) cannot change when running with --cuda-graphs"
     )
 
 

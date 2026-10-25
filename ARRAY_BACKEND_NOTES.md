@@ -146,7 +146,8 @@ bugs pass, and are no longer marked.
 - The depend objects notify a recorder (`depend.set_recorder`) of reads, writes and taints while recording.
   Before a replay, the objects that a segment reads before modifying them are refreshed, tensor scalars that
   were replaced by new objects are copied into the ones read by the graph, and host values must be
-  unchanged (`CUDAGraphError` otherwise, e.g. if the temperature changes). After a replay, the taint status
+  unchanged (`CUDAGraphError` otherwise, e.g. if the time step changes; the coefficients of the Langevin
+  thermostats are tensor scalars, so the temperature can change). After a replay, the taint status
   of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
   objects held by tensor scalars are restored as at the end of the recorded segment.
 - Replayed: `Dynamics` with NVE/NVT integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin or PILE_L
@@ -172,6 +173,15 @@ bugs pass, and are no longer marked.
   before / after): NVE 0.45 / 0.31 / 0.12 ms at all sizes (32-10976 atoms), PIMD-4 2.23 / 0.73 / 0.47 (32
   atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
   14.1), dominated by the model.
+- Kernel fusion: at ~100 atoms the replays are bound by the number of kernels (~1.9 us each on the H100).
+  `cudagraphs.compiled` compiles a function with torch.compile only when replaying CUDA graphs (plain call
+  otherwise, or if torch.compile is unavailable, e.g. torch 2.9 on Python 3.14); its arguments should be
+  arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
+  scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`) and the
+  Langevin step (`_langevin_step`, also used per mode by PILE_L). H100 (jobs 4662227, 4662508),
+  classical_nvt_noff 100 atoms: 67 -> 39 kernels, 0.127 -> 0.059 ms/step (numpy 0.074); 1000 atoms 0.121 ->
+  0.072 (numpy 0.217); PIMD-4/8 without forces, 100 atoms, 0.374 -> 0.234 / 0.296 ms (numpy 0.311 / 0.464).
+  Replays then match eager steps to rounding errors (fused reductions), so the tests use a tolerance.
 - Possible extensions: isotropic barostat (needs the tensor scalars staged as above, verified to replay
   exactly), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
   (now each component is computed when its first bead is queued), cheaper staging of the inputs (host

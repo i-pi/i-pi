@@ -13,6 +13,7 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 import numpy as np
 
 from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.cudagraphs import compiled
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import matrix_exp, stab_cholesky, root_herm
@@ -163,6 +164,21 @@ class Thermostat:
 dproperties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt"])
 
 
+@compiled
+def _langevin_step(p, t_on_sm, T2, S, noise, sm):
+    """Returns the momenta after a Langevin step, and the energy given to the
+    thermostat."""
+
+    # goes in a single step to mass scaled coordinates and applies damping
+    p = p * t_on_sm
+
+    deltah = (p @ p) / T2  # must correct for the "pre-damping"
+    p = p + S * noise  # random part (in ms coordinates)
+    deltah = deltah - p @ p  # new energy
+
+    return p * sm, deltah * 0.5  # back to physical momentum
+
+
 class ThermoLangevin(Thermostat):
     """Represents a langevin thermostat.
 
@@ -176,13 +192,19 @@ class ThermoLangevin(Thermostat):
     """
 
     def get_T(self):
-        """Calculates the coefficient of the overall drift of the velocities."""
+        """Calculates the coefficient of the overall drift of the velocities, as
+        a scalar of the array backend."""
 
-        return np.exp(-self.dt / self.tau)
+        return xp.asarray(np.exp(-self.dt / self.tau))
+
+    def get_T2(self):
+        """Calculates the square of T."""
+
+        return self.T**2
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
+        return xp.sqrt(Constants.kb * self.temp * (1 - self.T2))
 
     def get_T_on_sm(self):
         """Calculates the combined mass scaling and thermostat damping."""
@@ -206,8 +228,9 @@ class ThermoLangevin(Thermostat):
         self.T_ = depend_value(
             name="T", func=self.get_T, dependencies=[self.tau_, self.dt_]
         )
+        self.T2_ = depend_value(name="T2", func=self.get_T2, dependencies=[self.T_])
         self.S_ = depend_value(
-            name="S", func=self.get_S, dependencies=[self.temp_, self.T_]
+            name="S", func=self.get_S, dependencies=[self.temp_, self.T2_]
         )
 
     def bind(
@@ -239,18 +262,14 @@ class ThermoLangevin(Thermostat):
         # the change in kinetic energy is computed to accumulate the work made
         # by the thermostat
 
-        # goes in a single step to mass scaled coordinates and applies damping
-        p = self.p * self.T_on_sm
-
-        deltah = (p @ p) / (self.T**2)  # must correct for the "pre-damping"
-        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
-        deltah -= p @ p  # new energy
-
-        self.p_[:] = p * self.sm  # back to physical momentum and updates actual p
-        self.ethermo += deltah * 0.5
+        p = self.p
+        noise = self.prng.gvec(len(p))
+        p, deltah = _langevin_step(p, self.T_on_sm, self.T2, self.S, noise, self.sm)
+        self.p_[:] = p
+        self.ethermo += deltah
 
 
-dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
+dproperties(ThermoLangevin, ["tau", "T", "T2", "S", "T_on_sm"])
 
 
 class ThermoPILE_L(Thermostat):

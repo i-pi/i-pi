@@ -305,8 +305,8 @@ replays, while the requests and the collection of the results are part of the
 graphs. The steps are replayed for NVE and NVT dynamics (also path integral
 and with multiple time stepping) with the Langevin and PILE-L thermostats,
 while the other simulations run as usual. The parameters that are fixed in the
-recorded graphs, such as the temperature and the time step, cannot change
-while the steps are replayed: i-PI stops with an error if they do.
+recorded graphs, such as the time step, cannot change while the steps are
+replayed: i-PI stops with an error if they do.
 
 ``--backend jax`` (experimental) stores the arrays as
 `JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
