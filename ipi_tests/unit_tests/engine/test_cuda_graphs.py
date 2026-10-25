@@ -467,6 +467,19 @@ def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
         _stage(names, names._wvalue, copy)
 
 
+@pytest.mark.parametrize("capability,is_compiled", [((6, 1), False), ((9, 0), True)])
+def test_functions_are_compiled_on_recent_gpus(capability, is_compiled, monkeypatch):
+    from ipi.utils.cudagraphs import _compiled
+
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: capability)
+    monkeypatch.setattr(torch, "compile", lambda func, **kwargs: "compiled")
+
+    def func(x):
+        return x
+
+    assert (_compiled(func) == "compiled") == is_compiled
+
+
 def test_only_cuda_tensors_are_device_values():
     from ipi.utils.cudagraphs import _is_cuda_tensor
 
