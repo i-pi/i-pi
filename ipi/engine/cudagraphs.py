@@ -31,17 +31,30 @@ def unsupported(simulation, system):
     """Returns why the steps of `system` cannot be replayed as CUDA graphs, or
     None if they can."""
 
-    from ipi.engine.motion.dynamics import Dynamics, NVEIntegrator, NVTIntegrator
+    from ipi.engine.barostats import Barostat, BaroBZP, BaroMTK, BaroRGB
+    from ipi.engine.motion.dynamics import (
+        Dynamics,
+        NVEIntegrator,
+        NVTIntegrator,
+        NPTIntegrator,
+        NSTIntegrator,
+    )
     from ipi.engine.smotion import Smotion
     from ipi.engine.thermostats import ThermoLangevin, ThermoPILE_L, Thermostat
 
     motion = system.motion
     if type(motion) is not Dynamics:
         return f"the motion class '{type(motion).__name__}'"
-    if type(motion.integrator) not in (NVEIntegrator, NVTIntegrator):
+    integrators = (NVEIntegrator, NVTIntegrator, NPTIntegrator, NSTIntegrator)
+    if type(motion.integrator) not in integrators:
         return f"the ensemble '{motion.enstype}'"
     if type(motion.thermostat) not in (Thermostat, ThermoLangevin, ThermoPILE_L):
         return f"the thermostat '{type(motion.thermostat).__name__}'"
+    if type(motion.barostat) not in (Barostat, BaroBZP, BaroMTK, BaroRGB):
+        return f"the barostat '{type(motion.barostat).__name__}'"
+    if type(motion.barostat.thermostat) not in (Thermostat, ThermoLangevin):
+        name = type(motion.barostat.thermostat).__name__
+        return f"the thermostat '{name}' of the barostat"
     if len(motion.fixatoms_dof) > 0:
         return "fixed atoms"
     if len(system.nm.open_paths) > 0 or len(system.nm.bosons) > 0:

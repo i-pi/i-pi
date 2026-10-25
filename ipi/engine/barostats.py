@@ -21,11 +21,8 @@ from ipi.utils.array_backend import xp
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
-from ipi.utils.mathtools import (
-    matrix_exp,
-    sinch,
-    mat_taylor,
-)
+from ipi.utils.mathtools import matrix_exp
+from ipi.utils.cudagraphs import compiled
 from ipi.utils.messages import warning, verbosity
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
@@ -62,18 +59,22 @@ def mask_from_fix(fix):
     return hmask
 
 
-def dt_sinch(v, dt):
-    """Computes dt sinh(v dt) / (v dt) for a 3x3 upper-triangular matrix v,
-    which propagates the positions under a constant cell velocity v."""
+@compiled
+def cell_propagators(v, dt):
+    """Returns exp(v dt), exp(-v dt) and dt sinh(v dt) / (v dt) for a 3x3 cell
+    velocity v, which propagate the positions and momenta under a constant
+    cell velocity."""
 
-    if not bool(xp.any(xp.linalg.diagonal(v) != 0)):
-        # v is nilpotent and has no basis of eigenvectors: uses the Taylor series
-        return dt * mat_taylor(v * dt, function="sinhx/x")
-    eigvals, eigvecs = xp.linalg.eig(v)
-    # v is real, so the matrix function is real; eig may return complex
-    # conjugate pairs, leaving only numerical-noise imaginary parts.
-    # (eigvecs * s) @ inv(eigvecs) = eigvecs @ diag(s) @ inv(eigvecs)
-    return dt * xp.real((eigvecs * sinch(dt * eigvals)) @ xp.linalg.inv(eigvecs))
+    # exp([[x, 1], [0, 0]]) = [[exp(x), (exp(x) - 1) / x], [0, 1]], and the
+    # average of (exp(x) - 1) / x for x = v dt and x = -v dt is sinh(v dt) / (v dt)
+    blocks = xp.zeros((2, 6, 6))
+    blocks[0, :3, :3] = v * dt
+    blocks[1, :3, :3] = -v * dt
+    blocks[:, :3, 3:] = xp.eye(3)
+    # v dt is small (~1e-4), so a short series is accurate to rounding errors
+    exps = matrix_exp(blocks, ntaylor=8, nsquare=4)
+    sinh = 0.5 * dt * (exps[0, :3, 3:] + exps[1, :3, 3:])
+    return exps[0, :3, :3], exps[1, :3, :3], sinh
 
 
 class Barostat:
@@ -1312,14 +1313,7 @@ class BaroRGB(Barostat):
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
-        v = self.p / self.m[0]
-        halfdt = self.qdt
-        # compute in one go dt sinh v/v to handle zero-velocity cases
-        sinh = dt_sinch(v, halfdt)
-
-        vdt = v * halfdt
-        expq, expp = matrix_exp(xp.stack([vdt, -vdt]))
-        # oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
+        expq, expp, sinh = cell_propagators(self.p / self.m[0], self.qdt)
 
         q = self.nm.qnm[0].reshape(self.beads.natoms, 3)
         p = self.nm.pnm[0]
@@ -1569,14 +1563,7 @@ class BaroMTK(Barostat):
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
-        v = self.p / self.m[0]
-        halfdt = self.qdt
-        # compute in one go dt sinh v/v to handle zero-velocity cases
-        sinh = dt_sinch(v, halfdt)
-        vdt = v * halfdt
-        expq, expp = matrix_exp(xp.stack([vdt, -vdt]))
-
-        #        oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
+        expq, expp, sinh = cell_propagators(self.p / self.m[0], self.qdt)
 
         q = self.nm.qnm[0].reshape(self.beads.natoms, 3)
         p = self.nm.pnm[0]

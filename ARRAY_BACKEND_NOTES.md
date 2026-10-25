@@ -11,8 +11,9 @@ or because they were approved explicitly:
 - Normal modes: `nm_rescale.b2tob1` with open paths discarded the open-path transformation (for-else bug,
   since ece43207). Affects ring-polymer contraction combined with open paths.
 - Flexible/MTK barostats: when the cell velocity has an all-zero diagonal (e.g. `hfix` on xx, yy, zz) the
-  Taylor branch of dt sinh(v dt)/(v dt) missed the factor dt (since 33acc29a). Now a shared helper
-  `barostats.dt_sinch`, with a unit test.
+  Taylor branch of dt sinh(v dt)/(v dt) missed the factor dt (since 33acc29a). Now computed with
+  exp(+-v dt) by `barostats.cell_propagators`, from one exponential of 6x6 block matrices (no branch, no
+  `eig`), with a unit test.
 - Constrained dynamics could not run from an input file (fixatoms/fixatoms_dof mismatch, removed
   `Forces.forces_mts`), plus small issues in constrtools; see `CONSTRAINTS_REVIEW.md`. New unit test.
 - Planetary and Al6xxx KMC could not bind (`Forces.copy` is now `clone`; `Motion.__init__` was not called).
@@ -99,8 +100,7 @@ bugs pass, and are no longer marked.
 
 ### GPU performance and `torch.compile`
 - The cell and barostat state stay on the device, so that whole steps can be compiled. The remaining host
-  syncs in step code are graph breaks: the `dt_sinch` branch on the diagonal and `eig` (flexible/MTK
-  barostats), `float(K)` in the SVR thermostat, the scalar acceptance logic of stochastic cell rescaling, the
+  syncs in step code are graph breaks: `float(K)` in the SVR thermostat, the scalar acceptance logic of stochastic cell rescaling, the
   convergence loop of the constraint solver.
 - Fixed per-step cost on CUDA (Quadro P400): ~0.35 ms NVE, ~0.9 ms Langevin, ~2.7 ms NPT, 4-6.5 ms PIMD,
   independent of size (many small kernel launches). NPT on CUDA is slower than torch on CPU: fusing the 3x3
@@ -150,9 +150,27 @@ bugs pass, and are no longer marked.
   thermostats are tensor scalars, so the temperature can change). After a replay, the taint status
   of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
   objects held by tensor scalars are restored as at the end of the recorded segment.
-- Replayed: `Dynamics` with NVE/NVT integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin or PILE_L
-  thermostat; not replayed (eager, with a warning): barostats, SVR, PILE_G, GLE, fixed atoms, open paths,
-  bosons, multi-system motions, systems stepped in threads.
+- Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin or
+  PILE_L thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no or a
+  Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, SVR, PILE_G, GLE,
+  fixed atoms, open paths, bosons, multi-system motions, systems stepped in threads. The barostats read the
+  temperature and the pressure as host values, so changing them stops a replayed run with `CUDAGraphError`;
+  the external stress of the anisotropic barostat is a device array, and its changes are replayed.
+- NPT without forces (ms/step at 100 / 1000 / 10000 atoms): H100 (job 4665979), eager -> replayed (numpy):
+  isotropic 1.42 -> 0.30 / 0.32 / 0.35 (0.17 / 0.34 / 2.35), flexible 3.58 -> 0.81 / 0.75 / 0.75 (0.38 / 0.59
+  / 2.69), PIMD-8 isotropic 3.21 -> 0.55 / 0.60 / 0.83 (0.62 / 2.71 / 23.9). The replays are bound by the
+  number of kernels (~185 per step for the isotropic barostat, ~400 for the flexible one, of which roughly 160
+  are the two matrix exponentials of `cell_propagators`, with 20 Taylor terms and 10 squarings for arguments
+  of ~1e-4). On a P400 the 3xN @ Nx3 products of the kinetic stress take ~0.9 ms each (cuBLAS FP64 on a single
+  block), and dominate the replays above ~1000 atoms; they take ~10 us on the H100. Compiling (H100, job 4666020):
+  `cell_propagators` alone, recorded, takes 85 kernels / 160 us per call eagerly, 65 / 127 us with `matrix_exp`
+  compiled, 58 / 117 us compiled whole (the 6x6 matrix products stay cuBLAS calls), 43 / 78 us with 8 Taylor
+  terms and 4 squarings (9e-14 from the default series), 28 / 54 us with both; the replayed flexible step goes
+  from 0.76 to 0.69 ms with `matrix_exp` compiled, 0.67 ms with `cell_propagators` compiled (bit-identical).
+  `cell_propagators` now uses 8 Taylor terms and 4 squarings, and is compiled: replayed flexible step 0.81 / 0.75
+  / 0.75 -> 0.60 / 0.53 / 0.54 ms at 100 / 1000 / 10000 atoms, ~400 -> 287 kernels per step (job 4666196). Fusing the whole exponential
+  would need a custom kernel, or the series written on the six entries of the upper-triangular matrices
+  as scalars (element-wise, so Inductor could fuse it, but hundreds of operations when eager).
 - Replayed trajectories and outputs are bit-identical to eager ones (`test_cuda_graphs.py`). The regression
   tests run with graphs (scratch pytest plugin) pass, except the stochastic ones under `--ipi-backend torch`:
   the conftest patch that draws Gaussian numbers with numpy and copies them to the device cannot be recorded.
@@ -177,13 +195,13 @@ bugs pass, and are no longer marked.
   `cudagraphs.compiled` compiles a function with torch.compile only when replaying CUDA graphs (plain call
   otherwise, or if torch.compile is unavailable, e.g. torch 2.9 on Python 3.14); its arguments should be
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
-  scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`) and the
-  Langevin step (`_langevin_step`, also used per mode by PILE_L). H100 (jobs 4662227, 4662508),
+  scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`), the
+  Langevin step (`_langevin_step`, also used per mode by PILE_L) and the cell propagators of the flexible
+  barostats (`cell_propagators`). H100 (jobs 4662227, 4662508),
   classical_nvt_noff 100 atoms: 67 -> 39 kernels, 0.127 -> 0.059 ms/step (numpy 0.074); 1000 atoms 0.121 ->
   0.072 (numpy 0.217); PIMD-4/8 without forces, 100 atoms, 0.374 -> 0.234 / 0.296 ms (numpy 0.311 / 0.464).
   Replays then match eager steps to rounding errors (fused reductions), so the tests use a tolerance.
-- Possible extensions: isotropic barostat (needs the tensor scalars staged as above, verified to replay
-  exactly), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
+- Possible extensions: stochastic cell rescaling (host logic and `float` syncs), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
   (now each component is computed when its first bead is queued), cheaper staging of the inputs (host
   arrays such as `nmts` and `pdt` are compared with `np.array_equal` at each replay).
 
