@@ -74,6 +74,27 @@ def test_rotation_average_waits_for_all_member_results():
     assert not member.requests
 
 
+def test_rotation_average_polled_while_queued(monkeypatch):
+    """The polling thread may see a request as soon as it is queued, possibly
+    with all its member results: it must complete it only once queued."""
+
+    queue = ForceField.queue
+
+    def queue_and_poll(self, *args, **kwargs):
+        request = queue(self, *args, **kwargs)
+        if isinstance(self, FFRotations):
+            self.poll()
+        return request
+
+    monkeypatch.setattr(ForceField, "queue", queue_and_poll)
+    member = FFDebye(name="isotropic", H=np.eye(3), xref=np.zeros(3), threaded=False)
+    ff = FFRotations(ffdirect=member, random=True, prng=Random(seed=23), dopbc=False)
+    request = ff.queue(Atoms(1), Cell(np.eye(3) * 10))
+    ff.poll()
+    assert request["status"] == "Done"
+    assert not ff.requests
+
+
 @pytest.mark.parametrize(
     "extras,expected",
     [

@@ -1799,8 +1799,9 @@ class FFRotations(ForceField):
         req = ForceField.queue(
             self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
         )
-        req["status"] = "Running"
+        # the polling thread completes the request once it is running
         req["t_dispatched"] = time.time()
+        req["status"] = "Running"
         return req
 
     def check_finish(self, r):
@@ -1887,7 +1888,7 @@ class FFRotations(ForceField):
 
         with self._threadlock:
             for r in self.requests:
-                if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
+                if r["status"] == "Running" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
                     r["result"][0] -= self.offset
