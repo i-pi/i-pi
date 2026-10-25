@@ -31,7 +31,6 @@ def unsupported(simulation, system):
     """Returns why the steps of `system` cannot be replayed as CUDA graphs, or
     None if they can."""
 
-    from ipi.engine.barostats import Barostat
     from ipi.engine.motion.dynamics import Dynamics, NVEIntegrator, NVTIntegrator
     from ipi.engine.smotion import Smotion
     from ipi.engine.thermostats import ThermoLangevin, ThermoPILE_L, Thermostat
@@ -43,8 +42,6 @@ def unsupported(simulation, system):
         return f"the ensemble '{motion.enstype}'"
     if type(motion.thermostat) not in (Thermostat, ThermoLangevin, ThermoPILE_L):
         return f"the thermostat '{type(motion.thermostat).__name__}'"
-    if type(motion.barostat) is not Barostat:
-        return "a barostat"
     if len(motion.fixatoms_dof) > 0:
         return "fixed atoms"
     if len(system.nm.open_paths) > 0 or len(system.nm.bosons) > 0:
