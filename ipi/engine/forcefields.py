@@ -188,7 +188,7 @@ class ForceField:
             self.iactive = activehere
 
         if self.dopbc:
-            cell.array_pbc(pbcpos)
+            pbcpos = cell.array_pbc(pbcpos)
 
         # requests hold copies of the positions and of the cell, as numpy arrays
         # or, for forcefields that work on them directly, as backend arrays
@@ -2341,7 +2341,7 @@ class FFCavPhSocket(FFSocket):
             # Let's try to do PBC for the small regions
             if self.dopbc:
                 pbcpos_local = xp.asarray(pbcpos_local)
-                cell.array_pbc(pbcpos_local)
+                pbcpos_local = cell.array_pbc(pbcpos_local)
                 pbcpos_local = to_numpy(pbcpos_local)
             newreq_local = ForceRequest(
                 {

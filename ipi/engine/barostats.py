@@ -335,9 +335,8 @@ class Barostat:
             m = beads.m
             nbeads = beads.nbeads
 
-            kst[0, 0] += (pc[:, 0] @ (pc[:, 0] / m)) * nbeads
-            kst[1, 1] += (pc[:, 1] @ (pc[:, 1] / m)) * nbeads
-            kst[2, 2] += (pc[:, 2] @ (pc[:, 2] / m)) * nbeads
+            # adds the centroid kinetic energy to the diagonal
+            kst = kst + xp.eye(3) * ((nbeads / m) @ (pc * pc))
 
         return kst
 
@@ -395,13 +394,11 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        bvir = xp.zeros((3, 3))
+        stress = self.kstress_mts(level) + self.forces.mts_forces[level].vir
         if self.bias is not None and level == 0:
-            bvir[:] = self.bias.vir
+            stress = stress + self.bias.vir
 
-        return (
-            self.kstress_mts(level) + self.forces.mts_forces[level].vir + bvir
-        ) / self.cell.V
+        return stress / self.cell.V
 
     def pstep(self, level=0):
         """Dummy momenta propagator step."""
@@ -1129,7 +1126,9 @@ class BaroRGB(Barostat):
 
         # non-zero elements of the cell momentum are only
         # pxx pyy pzz pxy pxz pyz, but we want to access it either as a
-        # 6-vector or as a 3x3 upper triangular tensor, which are synchronized
+        # 6-vector or as a 3x3 upper triangular tensor, which are synchronized.
+        # The rows of `select6` pick these elements from the flattened tensor
+        self.select6 = xp.take(xp.eye(9), xp.asarray([0, 4, 8, 1, 2, 5]), axis=0)
         self._p = depend_array(name="p", value=xp.zeros((3, 3)))
         self._p6 = depend_array(name="p6", value=xp.zeros(6))
         dsynchro(self._p, self._p6, self.get_6to3x3, self.get_3x3to6)
@@ -1245,24 +1244,10 @@ class BaroRGB(Barostat):
         )
 
     def get_3x3to6(self):
-        rp = xp.zeros(6)
-        rp[0] = self.p[0, 0]
-        rp[1] = self.p[1, 1]
-        rp[2] = self.p[2, 2]
-        rp[3] = self.p[0, 1]
-        rp[4] = self.p[0, 2]
-        rp[5] = self.p[1, 2]
-        return rp
+        return self.select6 @ self.p.reshape(9)
 
     def get_6to3x3(self):
-        rp = xp.zeros((3, 3))
-        rp[0, 0] = self.p6[0]
-        rp[1, 1] = self.p6[1]
-        rp[2, 2] = self.p6[2]
-        rp[0, 1] = self.p6[3]
-        rp[0, 2] = self.p6[4]
-        rp[1, 2] = self.p6[5]
-        return rp
+        return (self.p6 @ self.select6).reshape(3, 3)
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
@@ -1407,7 +1392,9 @@ class BaroMTK(Barostat):
 
         # non-zero elements of the cell momentum are only
         # pxx pyy pzz pxy pxz pyz, but we want to access it either as a
-        # 6-vector or as a 3x3 upper triangular tensor, which are synchronized
+        # 6-vector or as a 3x3 upper triangular tensor, which are synchronized.
+        # The rows of `select6` pick these elements from the flattened tensor
+        self.select6 = xp.take(xp.eye(9), xp.asarray([0, 4, 8, 1, 2, 5]), axis=0)
         self._p = depend_array(name="p", value=xp.zeros((3, 3)))
         self._p6 = depend_array(name="p6", value=xp.zeros(6))
         dsynchro(self._p, self._p6, self.get_6to3x3, self.get_3x3to6)
@@ -1509,24 +1496,10 @@ class BaroMTK(Barostat):
         )
 
     def get_3x3to6(self):
-        rp = xp.zeros(6)
-        rp[0] = self.p[0, 0]
-        rp[1] = self.p[1, 1]
-        rp[2] = self.p[2, 2]
-        rp[3] = self.p[0, 1]
-        rp[4] = self.p[0, 2]
-        rp[5] = self.p[1, 2]
-        return rp
+        return self.select6 @ self.p.reshape(9)
 
     def get_6to3x3(self):
-        rp = xp.zeros((3, 3))
-        rp[0, 0] = self.p6[0]
-        rp[1, 1] = self.p6[1]
-        rp[2, 2] = self.p6[2]
-        rp[0, 1] = self.p6[3]
-        rp[0, 2] = self.p6[4]
-        rp[1, 2] = self.p6[5]
-        return rp
+        return (self.p6 @ self.select6).reshape(3, 3)
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""

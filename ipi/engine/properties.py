@@ -1918,24 +1918,7 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = xp.zeros((3, 3))
-        q = self.beads.q
-        qc = self.beads.qc
-        pc = self.beads.pc
-        m = self.beads.m
-        fall = self.forces.f + self.forces.fsc
-        na3 = 3 * self.beads.natoms
-
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ fall[b, j:na3:3]
-
-        # return the CV estimator MULTIPLIED BY NBEADS -- again for consistency with the virial, kstress_MD, etc...
-        for i in range(3):
-            kst[i, i] += self.beads.nbeads * (pc[i:na3:3] @ (pc[i:na3:3] / m))
-
-        return kst
+        return self.kstress_centroid_virial(self.forces.f + self.forces.fsc)
 
     def kstress_cv(self):
         """Calculates the quantum centroid virial kinetic stress tensor
@@ -1947,24 +1930,17 @@ class Properties:
            A 3*3 tensor with all the components of the tensor.
         """
 
-        kst = xp.zeros((3, 3))
-        q = self.beads.q
-        qc = self.beads.qc
-        pc = self.beads.pc
-        m = self.beads.m
-        fall = self.forces.f
-        na3 = 3 * self.beads.natoms
+        return self.kstress_centroid_virial(self.forces.f)
 
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ fall[b, j:na3:3]
+    def kstress_centroid_virial(self, fall):
+        """Upper triangle of the centroid virial kinetic stress tensor for the
+        forces `fall`, multiplied by the number of beads."""
 
+        qqc = (self.beads.q - self.beads.qc).reshape(-1, 3)
+        pc = self.beads.pc.reshape(-1, 3)
+        kst = -xp.triu(qqc.T @ fall.reshape(-1, 3))
         # return the CV estimator MULTIPLIED BY NBEADS -- again for consistency with the virial, kstress_MD, etc...
-        for i in range(3):
-            kst[i, i] += self.beads.nbeads * (pc[i:na3:3] @ (pc[i:na3:3] / m))
-
-        return kst
+        return kst + xp.eye(3) * ((self.beads.nbeads / self.beads.m) @ (pc * pc))
 
     def opening(self, bead):
         """Path opening function, used in linlin momentum distribution

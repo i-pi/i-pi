@@ -256,13 +256,11 @@ def invert_ut3x3(h):
        The inverse matrix of h.
     """
 
-    ih = xp.zeros((3, 3))
-    for i in range(3):
-        ih[i, i] = 1.0 / h[i, i]
-    ih[0, 1] = -ih[0, 0] * h[0, 1] * ih[1, 1]
-    ih[1, 2] = -ih[1, 1] * h[1, 2] * ih[2, 2]
-    ih[0, 2] = -ih[1, 2] * h[0, 1] * ih[0, 0] - ih[0, 0] * h[0, 2] * ih[2, 2]
-    return ih
+    # h = d (1 + m), with d diagonal and m strictly upper triangular, so m^3 = 0
+    d = xp.diagonal(h)
+    eye = xp.eye(3)
+    m = h / d[:, None] - eye
+    return (eye - m + m @ m) / d
 
 
 def eigensystem_ut3x3(p):

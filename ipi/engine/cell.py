@@ -96,7 +96,7 @@ class Cell:
         s = self.ih @ pos.reshape(-1, 3).T
         s = s - xp.round(s)
 
-        pos[:] = (self.h @ s).T.reshape(-1)
+        return (self.h @ s).T.reshape(pos.shape)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two

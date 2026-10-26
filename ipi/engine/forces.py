@@ -519,12 +519,8 @@ class ForceComponent:
            array for replica i of the system.
         """
 
-        newf = xp.zeros((self.nbeads, 3 * self.natoms))
         self.queue()
-        for b in range(self.nbeads):
-            newf[b] = self._forces[b].f
-
-        return newf
+        return xp.stack([self._forces[b].f for b in range(self.nbeads)])
 
     def get_vir(self):
         """Sums the virial of each replica.

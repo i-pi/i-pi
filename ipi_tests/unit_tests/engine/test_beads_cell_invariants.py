@@ -81,8 +81,7 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     np.testing.assert_allclose(
         cell.minimum_distance(atoms[0], atoms[1]), expected[0] - expected[1], atol=1e-12
     )
-    q = np.array(atoms.q)
-    cell.array_pbc(q)
+    q = cell.array_pbc(np.array(atoms.q))
     np.testing.assert_allclose(q.reshape(-1, 3), expected, atol=1e-12)
     clone = cell.clone()
     old_volume = cell.V

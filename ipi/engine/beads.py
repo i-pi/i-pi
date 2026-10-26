@@ -199,11 +199,7 @@ class Beads:
            to the mass associated with the appropriate degree of freedom in q.
         """
 
-        m3 = xp.zeros((self.nbeads, 3 * self.natoms))
-        m3[:, 0 : 3 * self.natoms : 3] = self.m
-        m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
-        m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
-        return m3
+        return xp.ones((self.nbeads, 1)) * xp.repeat(self.m, 3)
 
     def get_qc(self):
         """Gets the centroid coordinates."""

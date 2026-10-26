@@ -232,11 +232,7 @@ class Atoms:
            by the mass.
         """
 
-        m3 = xp.zeros(3 * self.natoms)
-        m3[0 : 3 * self.natoms : 3] = self.m
-        m3[1 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
-        m3[2 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
-        return m3
+        return xp.repeat(self.m, 3)
 
     def get_kin(self):
         """Calculates the total kinetic energy of the system."""

@@ -43,6 +43,12 @@ or because they were approved explicitly:
   keeps the arrays of the backend on their device, and converts them to numpy only when a checkpoint is
   written, so storing no longer waits for the GPU. Stored scalars of the backend are copies, as the live
   ones can be updated in place.
+- Arrays that were built by filling an array in place are computed with whole-array operations, which also
+  work with arrays that cannot be modified (JAX): `mtom3`, `f_gather`, `invert_ut3x3`, `get_prop_pq_ms`,
+  `kstress_mts`/`stress_mts`, the 3x3 <-> 6 conversions of the flexible barostats (a product with a constant
+  selection matrix, which also avoids copying index arrays to the device at each call), the centroid-virial
+  kinetic stress estimators. Results change at the level of rounding errors. `Cell.array_pbc` returns the
+  wrapped positions instead of modifying its argument.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

@@ -153,7 +153,7 @@ class AlKMC(Motion):
             for j in range(self.nsites):
                 rij[3 * j : 3 * j + 3] -= self.sites[i]
             rij = xp.asarray(rij)
-            self.dcell.array_pbc(rij)
+            rij = self.dcell.array_pbc(rij)
             rij = to_numpy(rij)
             rij = rij.reshape(self.nsites, 3)
             for j in range(i):
@@ -365,7 +365,7 @@ class AlKMC(Motion):
         qend = self.qcache[nstr].reshape(self.natoms, 3)[midx].reshape(3 * self.natoms)
 
         qts = qend - qstart
-        self.dcell.array_pbc(qts)  # use pbc!
+        qts = self.dcell.array_pbc(qts)  # use pbc!
         qts *= 0.5
         qts += qstart
         self.dbeads[ieval]._q[0, :] = qts
@@ -675,5 +675,5 @@ class AlKMC(Motion):
             iuid = ruidx[self.idx[i]]
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]
         newq -= oldq
-        self.cell.array_pbc(newq)
+        newq = self.cell.array_pbc(newq)
         self.beads._q[0] += newq

@@ -550,12 +550,12 @@ class NormalModes:
         """Combines the propagator with the atom masses to make a single array
         that can be multiplied to propagate the normal modes dynamics"""
 
-        pq_ms = xp.zeros((2, 2, self.nbeads, self.natoms * 3))
-        pq_ms[...] = xp.permute_dims(self.prop_pq, (1, 2, 0))[:, :, :, None]
-        pq_ms[0, 1] *= self.beads.m3
-        pq_ms[1, 0] /= self.beads.m3
-
-        return pq_ms
+        m3 = self.beads.m3
+        pq = xp.permute_dims(self.prop_pq, (1, 2, 0))[:, :, :, None] * xp.ones_like(m3)
+        # the p-from-q terms are multiplied by the masses, the q-from-p ones divided
+        return xp.stack(
+            [xp.stack([pq[0, 0], pq[0, 1] * m3]), xp.stack([pq[1, 0] / m3, pq[1, 1]])]
+        )
 
     def get_o_prop_pq(self):
         """Gets the normal mode propagator matrix for the open case.
