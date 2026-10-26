@@ -173,15 +173,22 @@ bugs pass, and are no longer marked.
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
   scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`), the
   Langevin step (`_langevin_step`, also used per mode by PILE_L) and the cell propagators of the flexible
-  barostats (`cell_propagators`).
+  barostats (`cell_propagators`). H100 (jobs 4662227, 4662508),
+  classical_nvt_noff 100 atoms: 67 -> 39 kernels, 0.127 -> 0.059 ms/step (numpy 0.074); 1000 atoms 0.121 ->
+  0.072 (numpy 0.217); PIMD-4/8 without forces, 100 atoms, 0.374 -> 0.234 / 0.296 ms (numpy 0.311 / 0.464).
+  Replays then match eager steps to rounding errors (fused reductions), so the tests use a tolerance.
 - Normal-mode transforms on the H100 (job 4666371), round trip `b2nm` + `nm2b` recorded as a CUDA graph, us
   (kernels): FFT 30-38 (15) at 100-1000 atoms and 4-256 beads, 36-718 at 10000 atoms; compiled FFT ~25% faster
   (10 kernels); matrix 6-24 (2) at 100-1000 atoms, 9-185 at 10000 atoms, unchanged by compiling. The matrix
   product is 3-6x faster than the FFT at all the sizes tested (up to 256 beads x 10000 atoms), and agrees with it
-  to 4e-13. With numpy (no PyFFTW, 16 cores) the matrix product was also faster at all these sizes. H100 (jobs 4662227, 4662508),
-  classical_nvt_noff 100 atoms: 67 -> 39 kernels, 0.127 -> 0.059 ms/step (numpy 0.074); 1000 atoms 0.121 ->
-  0.072 (numpy 0.217); PIMD-4/8 without forces, 100 atoms, 0.374 -> 0.234 / 0.296 ms (numpy 0.311 / 0.464).
-  Replays then match eager steps to rounding errors (fused reductions), so the tests use a tolerance.
+  to 4e-13. With numpy (no PyFFTW, 16 cores) the matrix product was also faster at all these sizes.
+  A PIMD NVT step with PILE_L does 7 transforms (6 without forces): the momenta go from beads to normal modes
+  for each thermostat step and for the free ring-polymer step, and back for each COM removal and force kick.
+  `transform='matrix'` in PIMD NVT without forces (job 4666942), ms/step fft -> matrix at 100/10000 atoms:
+  replayed 4 beads 0.23 -> 0.16 / 0.31 -> 0.23, 8 beads 0.29 -> 0.22 / 0.47 -> 0.35, 32 beads 0.63 -> 0.55 /
+  1.53 -> 1.28; eager 1.48 -> 1.07 (4 beads), 2.01 -> 1.61 (8), 5.26 -> 4.94 (32); numpy 8 beads 0.47 -> 0.33 /
+  20.2 -> 15.2, 32 beads 1.35 -> 1.14 / 84.5 -> 65.8. With PET-MAD-xs (water, 384 and 768 atoms, 4 and 8
+  beads, 25-74 ms/step) no difference within noise.
 - Possible extensions: stochastic cell rescaling (host logic and `float` syncs), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
   (now each component is computed when its first bead is queued), cheaper staging of the inputs (host
   arrays such as `nmts` and `pdt` are compared with `np.array_equal` at each replay).
