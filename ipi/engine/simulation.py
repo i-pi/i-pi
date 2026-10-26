@@ -20,7 +20,7 @@ from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_wri
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
-from ipi.utils.array_backend import cuda_graphs
+from ipi.utils.array_backend import cuda_graphs, jit
 from ipi.engine.cudagraphs import replay_steps
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
@@ -248,7 +248,7 @@ class Simulation:
             # binds important computation engines
             s.bind(self)
 
-        if cuda_graphs():
+        if cuda_graphs() or jit():
             replay_steps(self)
 
         if read_only:  # returns before we open the sockets

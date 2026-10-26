@@ -42,13 +42,15 @@ class InteractiveSimulation(Simulation):
             (default 'undefined', could be 'length', 'energy', etc.)
          - 'help': Optional(str), a help string describing the property
     :param backend: Optional(str) The library used to store and process arrays,
-       "numpy" or "torch". If not given, the one selected with
+       "numpy", "torch" or "jax". If not given, the one selected with
        `ipi.utils.array_backend.set_backend` is used (numpy by default).
     :param device: Optional(str), default "cpu". The device on which arrays are
        allocated when `backend` is given, e.g. "cuda" for the torch backend.
     :param cuda_graphs: Optional(bool), default False. Whether the steps are
        recorded as CUDA graphs and replayed when `backend` is given (torch
        backend on a CUDA device only).
+    :param jit: Optional(bool), default False. Whether the steps are compiled
+       with jax.jit when `backend` is given (jax backend only).
     """
 
     def __init__(
@@ -58,6 +60,7 @@ class InteractiveSimulation(Simulation):
         backend=None,
         device="cpu",
         cuda_graphs=False,
+        jit=False,
     ):
         # not-so-great way to initialize from the class method-generated
         # Simulation object. one should probably reconsider how Simulation
@@ -65,7 +68,7 @@ class InteractiveSimulation(Simulation):
         # the line, but for the moment all looks good.
 
         if backend is not None:
-            set_backend(backend, device=device, cuda_graphs=cuda_graphs)
+            set_backend(backend, device=device, cuda_graphs=cuda_graphs, jit=jit)
         self._custom_properties = custom_properties or {}
         sim = Simulation.load_from_xml(
             xml_input, post_init_hook=self._add_custom_properties

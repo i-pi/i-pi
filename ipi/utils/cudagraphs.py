@@ -404,8 +404,7 @@ class _Recorder:
 
     def segment(self, graph, after):
         """Returns the recorded segment, with the state of the depend objects
-        at its end: the status of all the objects that may have been tainted,
-        i.e. of the dependants of those that have been modified."""
+        at its end."""
 
         if self.host_writes:
             raise CUDAGraphError(
@@ -414,6 +413,21 @@ class _Recorder:
         for dep in self.values:
             if not _is_cuda_tensor(dep._value) and id(dep._value) not in self.outputs:
                 raise CUDAGraphError(f"The step modifies the host value <{dep._name}>")
+
+        statuses, synchros = self.final_state()
+        return _Segment(
+            graph,
+            list(self.inputs.values()),
+            statuses,
+            synchros,
+            [(dep, dep._value) for dep in self.values],
+            after,
+        )
+
+    def final_state(self):
+        """Returns the taint status of all the objects that may have been
+        tainted, i.e. of the dependants of those that have been modified, and
+        the state of their synchronizations."""
 
         statuses, synchros = set(), set(self.synchros)
         stack = list(self.statuses)
@@ -430,11 +444,7 @@ class _Recorder:
                 synchros.add(status.synchro)
                 stack.extend(peer._status for peer in status.synchro.peers)
 
-        return _Segment(
-            graph,
-            list(self.inputs.values()),
+        return (
             [(status, status.tainted) for status in statuses],
             [(synchro, synchro.manual) for synchro in synchros],
-            [(dep, dep._value) for dep in self.values],
-            after,
         )

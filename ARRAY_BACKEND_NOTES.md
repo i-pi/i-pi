@@ -240,6 +240,26 @@ bugs pass, and are no longer marked.
   (`zeros_like`), against <1 us with numpy; the depend helpers are <10% of the step. Performance needs
   jit of whole steps, which would need the depend state passed in and out of the traced function (as the
   CUDA-graph replay does).
+- JAX, jit of the MD steps (`--jit`, branch `feat/jax-jit`, CUDA graphs rebased on `feat/jax-backend`):
+  `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
+  restoration of the taint status, the `split`/`eager` markers, `unsupported` and the warmup steps). The
+  second eager step is observed to find the depend objects read before being written; the third is traced
+  with these (and the PRNG key) as arguments of `jax.jit`, returning the values of the objects it writes,
+  compiled ahead of time (`lower().compile()`, so it never retraces), and replayed: inputs brought up to
+  date with `get()`, host inputs (`dt`, `nmts`, `splitting`, ...) compared with their traced values
+  (`JitError` if they change), outputs stored, statuses restored. depend changes: the root `_value` of
+  `depend_immutable` notifies reads (in-place operators and writes through views read without `get`), and
+  full assignments replace the stored array without reading it. Unlike CUDA graphs, a trace cannot be
+  split: the driver calls marked with `eager` are traced, so only direct forcefields whose potential works
+  on JAX arrays (`dummy`) are compiled; other forcefields leave the steps eager, with a warning (they would
+  need `jax.pure_callback`, i.e. a host round trip). Same trajectories as eager JAX to ~1e-15, same keys:
+  NVE, NVT Langevin, PIMD PILE_L, NPT isotropic and flexible. CPU, 100 atoms, dummy forcefield, ms/step
+  numpy / jax eager / jax jit: NVE 0.14 / 1.8 / 0.078, NVT 0.22 / 3.0 / 0.19, PIMD-4 0.93 / 16 / 0.78; at
+  1000 atoms jit is slower than numpy with thermostats (NVT 0.43 vs 0.86, PIMD-4 2.6 vs 4.9), partly as
+  XLA draws float64 Gaussian numbers ~30x slower than numpy (160 us for 3000).
+  torch.compile and jax.jit do not overlap: with torch the steps are CUDA graphs and only the functions
+  marked `@compiled` are compiled (whole-step torch.compile breaks on the depend locks and the lazy forces);
+  with JAX the whole step is one XLA program and `@compiled` functions are traced inline.
 
 ### Testing
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on

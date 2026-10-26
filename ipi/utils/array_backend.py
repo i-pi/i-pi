@@ -41,6 +41,7 @@ __all__ = [
     "backend",
     "device",
     "cuda_graphs",
+    "jit",
     "to_numpy",
     "synchronize",
 ]
@@ -48,7 +49,7 @@ __all__ = [
 xp = types.SimpleNamespace()
 xp_size = array_api_compat.size
 
-_current = {"backend": None, "device": None, "cuda_graphs": False}
+_current = {"backend": None, "device": None, "cuda_graphs": False, "jit": False}
 
 
 def _creation_functions(namespace, device, dtype):
@@ -86,7 +87,7 @@ def _creation_functions(namespace, device, dtype):
     return functions
 
 
-def set_backend(name="numpy", device="cpu", cuda_graphs=False):
+def set_backend(name="numpy", device="cpu", cuda_graphs=False, jit=False):
     """Selects the array library and the device used to store arrays.
 
     Args:
@@ -96,10 +97,15 @@ def set_backend(name="numpy", device="cpu", cuda_graphs=False):
         cuda_graphs: If True, the steps of the simulations that support it are
             recorded as CUDA graphs and replayed (torch backend on a CUDA
             device only, see `ipi.engine.cudagraphs`).
+        jit: If True, the steps of the simulations that support it are
+            compiled with jax.jit (jax backend only, see
+            `ipi.engine.cudagraphs`).
     """
 
     if cuda_graphs and (name != "torch" or not device.startswith("cuda")):
         raise ValueError("CUDA graphs require the torch backend on a CUDA device")
+    if jit and name != "jax":
+        raise ValueError("jit requires the jax backend")
 
     if name == "numpy":
         if device != "cpu":
@@ -138,6 +144,7 @@ def set_backend(name="numpy", device="cpu", cuda_graphs=False):
     _current["backend"] = name
     _current["device"] = device
     _current["cuda_graphs"] = cuda_graphs
+    _current["jit"] = jit
 
 
 def backend():
@@ -156,6 +163,12 @@ def cuda_graphs():
     """True if the steps of the simulations are replayed as CUDA graphs."""
 
     return _current["cuda_graphs"]
+
+
+def jit():
+    """True if the steps of the simulations are compiled with jax.jit."""
+
+    return _current["jit"]
 
 
 def to_numpy(x):

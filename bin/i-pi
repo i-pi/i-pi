@@ -59,7 +59,7 @@ def main(fn_input, options):
             raise ImportError('Profiling requires the `yappi` package.')            
 
     # selects the library used to store and process arrays
-    set_backend(options.backend, device=options.device, cuda_graphs=options.cuda_graphs)
+    set_backend(options.backend, device=options.device, cuda_graphs=options.cuda_graphs, jit=options.jit)
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
@@ -119,6 +119,9 @@ if __name__ == '__main__':
 
     parser.add_option('--cuda-graphs', dest='cuda_graphs', action='store_true', default=False,
                       help='Records the MD steps as CUDA graphs and replays them, for the simulations that support it (torch backend on a CUDA device only).')
+
+    parser.add_option('--jit', dest='jit', action='store_true', default=False,
+                      help='Compiles the MD steps with jax.jit, for the simulations that support it (jax backend only).')
 
     options, args = parser.parse_args()
 

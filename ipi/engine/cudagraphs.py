@@ -1,4 +1,5 @@
-"""Replay of the MD steps as CUDA graphs (see ipi.utils.cudagraphs).
+"""Replay of the MD steps as CUDA graphs (see ipi.utils.cudagraphs), or as
+functions compiled by JAX (see ipi.utils.jaxjit).
 
 The step of the integrator of a system is recorded as CUDA graphs, and
 replayed at the following steps. Force evaluations are not recorded, as they
@@ -13,6 +14,11 @@ those it returned while the step was recorded.
 Only the dynamics that are known to work in this way are replayed (see
 `unsupported`), and a `CUDAGraphError` stops the simulation if a host value
 read by a graph changes.
+
+With JAX, the whole step is compiled, including the requests to direct
+forcefields whose driver works on the arrays of the backend (e.g. the `dummy`
+potential), which must then be written with JAX operations. The steps that
+need forces from other forcefields run eagerly.
 """
 
 # This file is part of i-PI.
@@ -21,7 +27,9 @@ read by a graph changes.
 
 from functools import partial
 
+from ipi.utils.array_backend import backend
 from ipi.utils.cudagraphs import CUDAGraphError, GraphReplay
+from ipi.utils.jaxjit import JitReplay
 from ipi.utils.messages import verbosity, warning
 
 __all__ = ["replay_steps"]
@@ -67,16 +75,16 @@ def unsupported(simulation, system):
 
 
 def replay_steps(simulation):
-    """Replays the steps of the systems of `simulation` as CUDA graphs, for the
-    systems that support it."""
+    """Replays the steps of the systems of `simulation` as CUDA graphs, or
+    compiles them with JAX, for the systems that support it."""
 
     for system in simulation.syslist:
         reason = unsupported(simulation, system)
         if reason is None:
-            GraphStep(system)
+            JitStep(system) if backend() == "jax" else GraphStep(system)
         else:
             warning(
-                f"The steps are not replayed as CUDA graphs: {reason} is not supported",
+                f"The steps are not recorded and replayed: {reason} is not supported",
                 verbosity.low,
             )
 
@@ -133,3 +141,21 @@ def _compute(component):
     component.f_.get()
     component.pots_.get()
     component.virs_.get()
+
+
+class JitStep(JitReplay):
+    """Replaces the step of the integrator of a system: runs the first steps
+    eagerly, compiles the next one with jax.jit, and calls the compiled step
+    at all the following steps."""
+
+    def __init__(self, system):
+        integrator = system.motion.integrator
+        super().__init__(integrator.step, system.prng)
+        integrator.step = self
+
+    def split(self, bead):
+        """The forces on `bead` are computed in the compiled step only if the
+        driver of its forcefield works on the arrays of the backend."""
+
+        if bead.ufvx_.tainted() and not _eager_driver(bead.ff):
+            self.cannot(f"the forces of the forcefield '{bead.ff.name}' are needed")

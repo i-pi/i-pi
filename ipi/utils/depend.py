@@ -47,6 +47,7 @@ stored by `depend_immutable` objects, which replace them when they are written.
 
 
 import functools
+import types
 import weakref
 import threading
 
@@ -516,8 +517,8 @@ class _reshaped:
 
 @functools.cache
 def _jax_indexing():
-    """Jitted functions that read and update parts of JAX arrays, given basic
-    indices or shapes (as JAX is much slower at indexing eagerly)."""
+    """Jitted functions that read, update and fill JAX arrays, given basic
+    indices, shapes or types (as JAX is much slower at indexing eagerly)."""
 
     import jax
     import jax.numpy as jnp
@@ -528,29 +529,49 @@ def _jax_indexing():
         v = v.reshape(v.shape[max(v.ndim - a[index].ndim, 0) :])
         return a.at[index].set(v)
 
-    take = jax.jit(lambda a, index: a[index], static_argnums=1)
-    reshape = jax.jit(lambda a, shape: a.reshape(shape), static_argnums=1)
-    return take, jax.jit(put, static_argnums=1), put, reshape
+    def fill(v, shape, dtype):
+        return jnp.broadcast_to(jnp.asarray(v, dtype), shape)
+
+    return types.SimpleNamespace(
+        take=jax.jit(lambda a, index: a[index], static_argnums=1),
+        put=jax.jit(put, static_argnums=1),
+        put_eagerly=put,
+        reshape=jax.jit(lambda a, shape: a.reshape(shape), static_argnums=1),
+        fill=jax.jit(fill, static_argnums=(1, 2)),
+    )
 
 
 def _take(value, index):
     """Returns the part of `value` selected by `index`."""
 
-    take, _, _, reshape = _jax_indexing()
+    jx = _jax_indexing()
     if type(index) is _reshaped:
-        return reshape(value, index.shape)
-    return take(value, index) if _is_basic_index(index) else value[index]
+        return jx.reshape(value, index.shape)
+    return jx.take(value, index) if _is_basic_index(index) else value[index]
 
 
 def _put(value, index, part):
     """Returns `value` with the part selected by `index` replaced by `part`."""
 
-    _, put, put_eagerly, reshape = _jax_indexing()
+    jx = _jax_indexing()
     if type(index) is _reshaped:
-        return reshape(part, value.shape)
+        return jx.reshape(part, value.shape)
     if _is_basic_index(index):
-        return put(value, index, part)
-    return put_eagerly(value, index, part)
+        return jx.put(value, index, part)
+    return jx.put_eagerly(value, index, part)
+
+
+def _fill(like, part):
+    """Returns an array with the shape and type of `like`, whose values are not
+    read, filled with `part`."""
+
+    if (
+        array_api_compat.is_jax_array(part)
+        and part.shape == like.shape
+        and part.dtype == like.dtype
+    ):
+        return part  # arrays are immutable, so it can be shared
+    return _jax_indexing().fill(part, like.shape, like.dtype)
 
 
 class depend_immutable(depend_array):
@@ -566,6 +587,9 @@ class depend_immutable(depend_array):
     @property
     def _value(self):
         if self._parent is None:
+            # also the reads made by the writes, which use the stored array
+            if _recorder is not None:
+                _recorder.read(self)
             return self._wvalue
         return _take(self._parent._value, self._index)
 
@@ -584,7 +608,11 @@ class depend_immutable(depend_array):
         return self._value
 
     def _assign(self, index, value):
-        self._store(_put(self._value, index, value))
+        if index is Ellipsis and self._parent is None:
+            # replaces the stored array without reading it
+            self._store(_fill(self._wvalue, value))
+        else:
+            self._store(_put(self._value, index, value))
 
     def _apply(self, op, other):
         self._store(op(self._value, other))

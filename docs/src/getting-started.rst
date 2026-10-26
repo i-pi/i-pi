@@ -314,8 +314,14 @@ if they do.
 `JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
 runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
 instantons, bosonic exchange, open paths or the GLE thermostats, and it is
-much slower than numpy, as JAX executes the operations one at a time
-(the integrators are not compiled with ``jax.jit``).
+much slower than numpy, as JAX executes the operations one at a time. With
+``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
+steps, for the same dynamics that are replayed as CUDA graphs, if the forces
+are computed by a direct forcefield whose potential works with JAX arrays
+(e.g. ``dummy``): the whole step, including the force evaluation, is then
+compiled. Otherwise, the steps run as usual. As with ``--cuda-graphs``, the
+parameters that are fixed in the compiled step, such as the time step,
+cannot change.
 
 .. _runningclients:
 
