@@ -111,7 +111,7 @@ if __name__ == '__main__':
                       help='Prefix for profiler files.')
 
     parser.add_option('--backend', dest='backend', default='numpy',
-                      choices=['numpy', 'torch'],
+                      choices=['numpy', 'torch', 'jax'],
                       help='Library used to store and process arrays.')
 
     parser.add_option('--device', dest='device', default='cpu',

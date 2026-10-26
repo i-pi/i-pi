@@ -398,7 +398,8 @@ GPU. The namespace of the current backend is ``xp``
 (``from ipi.utils.array_backend import xp``): it is the numpy module with the
 numpy backend, and a wrapper of torch that follows the
 `array API standard <https://data-apis.org/array-api/>`_ (from
-``array_api_compat``) with the torch backend. ``xp`` is updated in place when
+``array_api_compat``) with the torch backend, and ``jax.numpy`` with the jax
+backend. ``xp`` is updated in place when
 the backend is selected, so it can be imported at module level, but arrays
 must not be created at import time (module constants, default arguments).
 
@@ -430,13 +431,19 @@ must not be created at import time (module constants, default arguments).
   the MD step, and prefer array operations (e.g. ``xp.where``).
 * ``prng.gvec`` and ``prng.gfill`` produce backend arrays (drawn on the device
   with torch), while scalar draws (``prng.u``, ``prng.g``, ``prng.gamma``, ...)
-  are Python or numpy numbers.
+  are Python or numpy numbers. ``prng.gfill`` is not available with JAX.
+* JAX arrays cannot be modified in place. Depend objects hide this: with the
+  ``jax`` backend, writes (``obj.x_[i] = v``, ``obj.x_ += v``, also through
+  views such as ``obj.x_[i]``) replace the stored array. Other arrays must not
+  be written in place: build them with whole-array operations (``xp.stack``,
+  ``xp.concat``, ``xp.where``, ``@`` with a constant matrix) rather than by
+  filling an array created with ``xp.zeros``.
 
 The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
-check that the torch backend reproduces the numpy trajectories and that an MD
-step does not synchronize with the GPU. The regression tests and the examples
-can be run with another backend with ``pytest --ipi-backend torch
-[--ipi-device cuda]``. In these runs (and in the tests that use the
+check that the torch and JAX backends reproduce the numpy trajectories and
+that an MD step does not synchronize with the GPU. The regression tests and
+the examples can be run with another backend with ``pytest --ipi-backend torch
+[--ipi-device cuda]`` or ``--ipi-backend jax``. In these runs (and in the tests that use the
 ``strict_torch`` fixture) implicit conversions of torch tensors to numpy
 arrays raise an error also on the CPU, as they do on GPUs, so that missing
 ``to_numpy`` calls are detected without a GPU.

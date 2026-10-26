@@ -1,5 +1,5 @@
-"""Checks that the numpy and torch backends give the same dynamics, and that
-an MD step does not synchronize the host with a CUDA device."""
+"""Checks that the numpy, torch and JAX backends give the same dynamics, and
+that an MD step does not synchronize the host with a CUDA device."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2026 i-PI developers
@@ -11,8 +11,12 @@ import pytest
 import ipi.utils.array_backend as ab
 from ipi.utils.prng import Random
 
-torch = pytest.importorskip("torch")
-cuda_available = torch.cuda.is_available()
+try:
+    import torch
+
+    cuda_available = torch.cuda.is_available()
+except ImportError:
+    cuda_available = False
 
 LANGEVIN = "<thermostat mode='langevin'><tau units='femtosecond'>100</tau></thermostat>"
 SVR = "<thermostat mode='svr'><tau units='femtosecond'>100</tau></thermostat>"
@@ -86,8 +90,8 @@ def write_input(case, forcefield, natoms=8):
 
 @pytest.fixture
 def numpy_draws(monkeypatch):
-    """Makes the torch backend draw the same Gaussian numbers as numpy,
-    and restores the numpy backend afterwards."""
+    """Makes the torch and JAX backends draw the same Gaussian numbers as
+    numpy, and restores the numpy backend afterwards."""
 
     def gvec(self, shape):
         return ab.xp.asarray(self.gvec_serial(shape))
@@ -97,6 +101,7 @@ def numpy_draws(monkeypatch):
 
     monkeypatch.setattr(Random, "gvec_torch", gvec)
     monkeypatch.setattr(Random, "gfill_torch", gfill)
+    monkeypatch.setattr(Random, "gvec_jax", gvec)
     yield
     ab.set_backend("numpy")
 
@@ -122,20 +127,28 @@ def trajectory(xml, backend, device, nsteps):
     return frames
 
 
-devices = ["cpu"] + (["cuda"] if cuda_available else [])
+BACKENDS = [("torch", "cpu"), ("jax", "cpu")] + (
+    [("torch", "cuda")] if cuda_available else []
+)
 
 
-@pytest.mark.parametrize("device", devices)
+@pytest.mark.parametrize("backend,device", BACKENDS)
 @pytest.mark.parametrize("case", list(CASES))
 def test_backend_equivalence(
-    case, device, numpy_draws, strict_torch, tmp_path, monkeypatch
+    case, backend, device, numpy_draws, request, tmp_path, monkeypatch
 ):
-    """torch follows the numpy trajectory when it draws the same random numbers"""
+    """torch and JAX follow the numpy trajectory when they draw the same
+    random numbers"""
 
+    pytest.importorskip(backend)
+    if backend == "torch":
+        request.getfixturevalue("strict_torch")
+    if backend == "jax" and case == "nvt_gle":
+        pytest.xfail("the GLE thermostat modifies its auxiliary momenta in place")
     monkeypatch.chdir(tmp_path)
     xml = write_input(case, HARMONIC)
     reference = trajectory(xml, "numpy", "cpu", 10)
-    result = trajectory(xml, "torch", device, 10)
+    result = trajectory(xml, backend, device, 10)
     for ref, res in zip(reference, result):
         for a, b in zip(ref, res):
             assert np.allclose(a, b, rtol=1e-10, atol=1e-12)

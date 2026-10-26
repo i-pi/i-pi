@@ -288,6 +288,13 @@ significant. For small systems the overhead of launching many small
 operations on the GPU (or of PyTorch on the CPU) makes the numpy backend
 faster.
 
+``--backend jax`` (experimental) stores the arrays as
+`JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
+runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
+instantons, bosonic exchange, open paths or the GLE thermostats, and it is
+much slower than numpy, as JAX executes the operations one at a time
+(the integrators are not compiled with ``jax.jit``).
+
 .. _runningclients:
 
 Running the client code

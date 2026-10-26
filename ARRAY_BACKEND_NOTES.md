@@ -132,6 +132,25 @@ bugs pass, and are no longer marked.
 - cupy and jax: `xp` comes from `array_api_compat`, the PRNG has one implementation per backend, and all
   writes to the state go through the depend objects (`set`, `__setitem__`, in-place operators), which is where
   jax would need functional updates.
+- JAX, eager (experiment on `jax-backend`): `set_backend("jax")` enables 64-bit types; depend arrays holding
+  JAX arrays become `depend_immutable`, whose writes replace the stored array and whose views (per-bead
+  Atoms, thermostat `bind`s, `obj.x_[i] op= v`) read the parent at each access and write through it; masks and
+  arrays of indices select copies, as with the other backends.
+  `depend_array` writes go through two hooks (`_assign`, `_apply`), the only change for numpy/torch
+  (~0.05 us per write, within noise in the benchmarks). Indexing views uses jitted take/put with the index as
+  static argument (9-15 us), as eager JAX indexing costs 60-400 us. The PRNG splits a stored key per draw,
+  in a single jitted call with the draw (40 us instead of 150 us). Only these array operations are jitted,
+  not the algorithms. The MD path builds no arrays in place (see the behaviour changes above).
+  Equivalence with numpy (same Gaussian draws, 1e-10): NVE, NVT Langevin/SVR, NPT isotropic/flexible, PIMD
+  NVT/NPT; GLE xfails (`stab_cholesky` and the auxiliary momenta `s` are modified in place). Regression tests
+  with `--ipi-backend jax`: 47/69 pass (all MD), and the MD restart tests; the others stop at plain-array writes in geometry
+  optimizers, NEB, phonons, instantons, exchange, open paths and `stab_cholesky`.
+  Eager JAX is slow: ms/step without forces, CPU, numpy / torch / jax, 100 atoms: NVE 0.049 / 0.12 / 0.78,
+  NVT 0.11 / 0.29 / 1.8, PIMD-4 0.56 / 1.4 / 11.8, NPT 0.29 / 0.98 / 6.3, NPT flexible 0.93 / 2.6 / 13.4; at
+  10000 atoms PIMD-4 28.9 / 26.5 / 34.8. Each eager JAX operation costs 11-16 us (arithmetic), 26 us (reshape), 40-85 us (indexing), 70 us
+  (`zeros_like`), against <1 us with numpy; the depend helpers are <10% of the step. Performance needs
+  jit of whole steps, which would need the depend state passed in and out of the traced function (as the
+  CUDA-graph replay does).
 
 ### Testing
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on

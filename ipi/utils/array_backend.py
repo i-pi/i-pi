@@ -12,12 +12,14 @@ a simulation:
 so it also affects the modules that have already imported it, but it does not
 convert existing arrays: it must be called before a simulation is created.
 
-Supported backends are "numpy" (the default) and "torch". For numpy, `xp`
-contains the numpy namespace. For torch, it contains the array-API compatible
-namespace from `array_api_compat`, with the array-creation functions
-allocating on the selected device, and choosing the type of the arrays like
-numpy does, i.e. with float64 as the floating-point type. The global default
-type of torch is left unchanged.
+Supported backends are "numpy" (the default), "torch" and "jax". For numpy,
+`xp` contains the numpy namespace. For torch, it contains the array-API
+compatible namespace from `array_api_compat`, and for JAX the `jax.numpy`
+namespace, with the array-creation functions allocating on the selected device,
+and choosing the type of the arrays like numpy does, i.e. with float64 as the
+floating-point type. The global default type of torch is left unchanged, while
+JAX is configured to use 64-bit types. JAX arrays cannot be modified in place:
+the depend objects that store them replace them when they are written.
 
 Input and output, sockets and forcefields use numpy arrays: `to_numpy` converts
 backend arrays at these boundaries.
@@ -87,7 +89,7 @@ def set_backend(name="numpy", device="cpu"):
     """Selects the array library and the device used to store arrays.
 
     Args:
-        name: "numpy" or "torch".
+        name: "numpy", "torch" or "jax".
         device: The device on which arrays are allocated, e.g. "cpu" or
             "cuda". The numpy backend only supports "cpu".
     """
@@ -110,6 +112,17 @@ def set_backend(name="numpy", device="cpu"):
             # concurrently from several threads fails
             torch.cuda.init()
             torch.linalg.eigh(torch.eye(2, device=device))
+    elif name == "jax":
+        import jax
+        import jax.numpy as namespace
+
+        jax.config.update("jax_enable_x64", True)
+        platform, _, index = device.partition(":")
+        jax_device = jax.devices("cpu" if platform == "cpu" else "gpu")[int(index or 0)]
+        # also the arrays created by JAX itself, e.g. random numbers
+        jax.config.update("jax_default_device", jax_device)
+        members = dict(vars(namespace))
+        members.update(_creation_functions(namespace, jax_device, namespace.float64))
     else:
         raise ValueError(f"Unknown array backend '{name}'")
 
@@ -139,6 +152,8 @@ def to_numpy(x):
     if array_api_compat.is_torch_array(x):
         # explicit conversion, which does not go through Tensor.__array__
         return x.cpu().numpy()
+    if array_api_compat.is_jax_array(x):
+        return np.asarray(x)
     if array_api_compat.is_array_api_obj(x):
         x = array_api_compat.to_device(x, "cpu")
     return np.asarray(x)
@@ -151,6 +166,10 @@ def synchronize():
         import torch
 
         torch.cuda.synchronize()
+    elif _current["backend"] == "jax":
+        # the operations of a device run in order, so waiting for a new one
+        # waits for all
+        (xp.zeros(()) + 0).block_until_ready()
 
 
 set_backend("numpy")

@@ -7,6 +7,7 @@
 import pytest
 
 # methods of Random that draw on the device, replaced with --ipi-backend torch
+# or jax
 _device_random = {}
 
 
@@ -14,7 +15,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ipi-backend",
         default="numpy",
-        choices=["numpy", "torch"],
+        choices=["numpy", "torch", "jax"],
         help="array backend used to run i-PI in the regression tests and examples",
     )
     parser.addoption(
@@ -37,16 +38,18 @@ def pytest_configure(config):
     test_tools.ipi_backend = config.getoption("--ipi-backend")
     test_tools.ipi_device = config.getoption("--ipi-device")
 
-    if test_tools.ipi_backend == "torch":
+    if test_tools.ipi_backend in ("torch", "jax"):
         # the reference outputs are generated with numpy: the Gaussian arrays
-        # are drawn from the numpy generator also with torch, so that runs
-        # in the same process follow the reference trajectories
-        import torch
+        # are drawn from the numpy generator also with torch and JAX, so that
+        # runs in the same process follow the reference trajectories
         from ipi.utils import array_backend
         from ipi.utils.prng import Random
 
         def gvec(self, shape):
             return array_backend.xp.asarray(self.gvec_serial(shape))
+
+    if test_tools.ipi_backend == "torch":
+        import torch
 
         def gfill(self, out):
             out[...] = array_backend.xp.asarray(self.gvec_serial(tuple(out.shape)))
@@ -64,11 +67,18 @@ def pytest_configure(config):
         # fail also on the CPU, so that tests on the CPU detect them
         torch.Tensor.__array__ = _no_implicit_numpy
 
+    if test_tools.ipi_backend == "jax":
+        _device_random.update(gvec_jax=Random.gvec_jax)
+        Random.gvec_jax = gvec
+        # eager JAX is much slower than numpy for the small systems of the tests
+        test_tools.TIMEOUT = 10 * test_tools.TIMEOUT
+
 
 @pytest.fixture
 def device_random(monkeypatch):
-    """Draws the Gaussian arrays with the torch generator, on the device, also
-    when they are drawn from the numpy generator (--ipi-backend torch)."""
+    """Draws the Gaussian arrays with the generator of torch or JAX, on the
+    device, also when they are drawn from the numpy generator (--ipi-backend
+    torch or jax)."""
 
     from ipi.utils.prng import Random
 

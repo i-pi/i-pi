@@ -37,7 +37,8 @@ with `_load`.
 Arrays are stored using the array backend selected in
 `ipi.utils.array_backend`. Arrays stored as numpy arrays are read as
 non-writeable views, so modifying them without going through the depend
-object raises an error.
+object raises an error. JAX arrays, which cannot be modified in place, are
+stored by `depend_immutable` objects, which replace them when they are written.
 """
 
 # This file is part of i-PI.
@@ -45,6 +46,7 @@ object raises an error.
 # See the "licenses" directory for full license information.
 
 
+import functools
 import weakref
 import threading
 
@@ -52,6 +54,7 @@ from copy import deepcopy
 
 import operator as _op
 
+import array_api_compat
 import numpy as np
 
 from ipi.utils.array_backend import xp
@@ -342,6 +345,8 @@ class depend_array(depend_base):
         if isinstance(value, np.ndarray) and not value.flags.writeable:
             value = value.copy()
         wvalue = np.asarray(value) if host else xp.asarray(value)
+        if array_api_compat.is_jax_array(wvalue):
+            self.__class__ = depend_immutable
         self._wvalue = wvalue
         self._value = _readonly(wvalue)
         self._parent = None
@@ -401,10 +406,16 @@ class depend_array(depend_base):
                 return
             value = value._value
         with status.lock:
-            self._wvalue[index] = value
+            self._assign(index, value)
             if status.synchro is not None or self._func is not None:
                 self.update_man()
             self.taint(taintme=False)
+
+    def _assign(self, index, value):
+        self._wvalue[index] = value
+
+    def _apply(self, op, other):
+        op(self._wvalue, other)
 
     def set(self, value, manual=True):
         """Full-array assignment. `manual=False` is used by `update_auto`.
@@ -416,7 +427,7 @@ class depend_array(depend_base):
             value = value._value
         status = self._status
         with status.lock:
-            self._wvalue[...] = value
+            self._assign(Ellipsis, value)
             if manual and (status.synchro is not None or self._func is not None):
                 self.update_man()
             self.taint(taintme=False)
@@ -456,7 +467,7 @@ def _make_inplace(op):
         with status.lock:
             if status.tainted:
                 self._refresh()
-            op(self._wvalue, other)
+            self._apply(op, other)
             if status.synchro is not None or self._func is not None:
                 self.update_man()
             self.taint(taintme=False)
@@ -473,6 +484,118 @@ for _name, _fn in (
     ("__itruediv__", _op.itruediv),
 ):
     setattr(depend_array, _name, _make_inplace(_fn))
+
+
+class _reshaped:
+    """Index of the views obtained by reshaping an immutable array."""
+
+    __slots__ = ("shape",)
+
+    def __init__(self, shape):
+        self.shape = shape
+
+
+@functools.cache
+def _jax_indexing():
+    """Jitted functions that read and update parts of JAX arrays, given basic
+    indices or shapes (as JAX is much slower at indexing eagerly)."""
+
+    import jax
+    import jax.numpy as jnp
+
+    def put(a, index, v):
+        # like numpy, ignores the leading dimensions of size one of v
+        v = jnp.asarray(v)
+        v = v.reshape(v.shape[max(v.ndim - a[index].ndim, 0) :])
+        return a.at[index].set(v)
+
+    take = jax.jit(lambda a, index: a[index], static_argnums=1)
+    reshape = jax.jit(lambda a, shape: a.reshape(shape), static_argnums=1)
+    return take, jax.jit(put, static_argnums=1), put, reshape
+
+
+def _take(value, index):
+    """Returns the part of `value` selected by `index`."""
+
+    take, _, _, reshape = _jax_indexing()
+    if type(index) is _reshaped:
+        return reshape(value, index.shape)
+    return take(value, index) if _is_basic_index(index) else value[index]
+
+
+def _put(value, index, part):
+    """Returns `value` with the part selected by `index` replaced by `part`."""
+
+    _, put, put_eagerly, reshape = _jax_indexing()
+    if type(index) is _reshaped:
+        return reshape(part, value.shape)
+    if _is_basic_index(index):
+        return put(value, index, part)
+    return put_eagerly(value, index, part)
+
+
+class depend_immutable(depend_array):
+    """depend_array storing an array that cannot be modified in place (JAX).
+
+    Writes replace the stored array with an updated copy. Views do not share
+    memory with their parent: they read their value from the parent at each
+    access, and write by replacing the value of the parent.
+    """
+
+    __slots__ = ()
+
+    @property
+    def _value(self):
+        if self._parent is None:
+            return self._wvalue
+        return _take(self._parent._value, self._index)
+
+    @_value.setter
+    def _value(self, value):
+        pass  # held by `_wvalue`, or by the parent of a view
+
+    def _store(self, value):
+        if self._parent is None:
+            self._wvalue = value
+        else:
+            parent = self._parent
+            parent._store(_put(parent._value, self._index, value))
+
+    def _load(self):
+        return self._value
+
+    def _assign(self, index, value):
+        self._store(_put(self._value, index, value))
+
+    def _apply(self, op, other):
+        self._store(op(self._value, other))
+
+    def _view(self, index):
+        view = depend_immutable.__new__(depend_immutable)
+        view._status = self._status
+        view._func = None
+        view._name = self._name
+        view._parent = self
+        view._index = index
+        return view
+
+    def __getitem__(self, index):
+        if self._status.tainted:
+            self._refresh()
+        value = self._value
+        if _is_scalar_index(index, value.ndim) or not _is_basic_index(index):
+            # scalars, and the copies selected by masks or arrays of indices
+            return _take(value, index)
+        return self._view(index)
+
+    def reshape(self, *shape):
+        return self._view(_reshaped(shape[0] if len(shape) == 1 else shape))
+
+    def __deepcopy__(self, memo):
+        return depend_base.__deepcopy__(self, memo)
+
+    def __setstate__(self, state):
+        depend_base.__setstate__(self, state)
 
 
 def dpipe(dfrom, dto, item=-1):
