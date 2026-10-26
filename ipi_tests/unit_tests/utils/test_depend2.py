@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 import ipi.engine.atoms
+import ipi.utils.array_backend as ab
 import ipi.utils.depend as dp
 
 
@@ -96,6 +97,26 @@ def test_indexed_inplace_operators():
     assert np.array_equal(a.get(), np.ones((2, 3)))
     with pytest.raises(NameError):
         h._y[0:2] += 1.0
+
+
+@pytest.mark.parametrize("backend", ["numpy", "torch"])
+@pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
+def test_advanced_index_inplace_operators(backend, index):
+    """Depend: `obj._x[i] op= v` with a mask or an array of indices, which
+    select a copy rather than a view, updates the array and taints dependants"""
+    if backend == "torch":
+        pytest.importorskip("torch")
+    ab.set_backend(backend)
+    try:
+        index = ab.xp.asarray(index)
+        h = Holder()
+        h._x[index] += 2.0
+        assert np.array_equal(ab.to_numpy(h.y), [4.0, 0.0, 4.0, 0.0])
+        a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
+        a[:, index] *= 3.0
+        assert np.array_equal(ab.to_numpy(a.get()), [[3.0, 1.0, 3.0, 1.0]] * 2)
+    finally:
+        ab.set_backend("numpy")
 
 
 def test_computed_cannot_be_set():

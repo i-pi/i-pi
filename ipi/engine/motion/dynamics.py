@@ -313,8 +313,12 @@ class DummyIntegrator:
             self.activeatoms_mask = False
 
         # total number of iteration in the inner-most MTS loop
-        self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
-        self._nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
+        self._inmts = depend_value(
+            name="inmts", func=lambda: np.prod(self.nmts), dependencies=[self._nmts]
+        )
+        self._nmtslevels = depend_value(
+            name="nmtslevels", func=lambda: len(self.nmts), dependencies=[self._nmts]
+        )
         # these are the time steps to be used for the different parts of the integrator
         self._qdt = depend_value(
             name="qdt",
@@ -325,6 +329,7 @@ class DummyIntegrator:
             name="qdt_on_m",
             value=np.zeros(3 * self.beads.natoms),
             func=lambda: self.qdt / self.beads.m3[0],
+            dependencies=[self._qdt, self.beads._m3],
         )
         # to remove the centre-of-mass momentum, each atom loses a fraction m/M
         # of the total momentum, M being the total mass of all the beads

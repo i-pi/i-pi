@@ -32,6 +32,39 @@ def test_nve_tracks_exact_harmonic_motion(simulation, threading):
         assert sim.syslist[0].ensemble.time == pytest.approx(time)
 
 
+def test_nve_with_fixed_atoms_tracks_harmonic_motion(simulation):
+    """With a fixed atom, the free atom follows the analytic oscillator."""
+    xml = harmonic_input(timestep=0.01).replace(
+        "<fixcom>False</fixcom>", "<fixcom>False</fixcom><fixatoms>[1]</fixatoms>"
+    )
+    with simulation(xml) as sim:
+        beads = sim.syslist[0].beads
+        q0, p0, masses = beads.q.copy(), beads.p.copy(), beads.m3.copy()
+        frequency = np.sqrt(0.5 / masses)
+        sim.run(steps=20, write_outputs=False)
+        time = 0.2
+        expected_q = q0 * np.cos(frequency * time) + p0 / (masses * frequency) * np.sin(
+            frequency * time
+        )
+        np.testing.assert_allclose(beads.q[:, :3], expected_q[:, :3], atol=5e-7)
+        np.testing.assert_array_equal(beads.q[:, 3:], q0[:, 3:])
+
+
+def test_integrator_constants_follow_parameters(simulation):
+    """The time steps of the integrator follow changes of the time step, of the
+    masses and of the multiple time steps."""
+    with simulation(harmonic_input()) as sim:
+        motion, beads = sim.syslist[0].motion, sim.syslist[0].beads
+        integrator = motion.integrator
+        qdt = integrator.qdt
+        np.testing.assert_allclose(integrator.qdt_on_m, qdt / beads.m3[0])
+        motion.dt = 2 * motion.dt
+        beads.m = 3 * beads.m
+        np.testing.assert_allclose(integrator.qdt_on_m, 2 * qdt / beads.m3[0])
+        motion.nmts = [2]
+        assert integrator.inmts == 2 and integrator.qdt == pytest.approx(qdt)
+
+
 @pytest.mark.parametrize("nbeads", [1, 4])
 def test_nve_time_reversal(simulation, nbeads):
     """Reversing momenta retraces classical and ring-polymer trajectories."""

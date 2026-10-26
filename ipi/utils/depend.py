@@ -21,7 +21,8 @@ stored as `obj._x`, reading `obj.x` returns the current value (recomputed if
 needed) and `obj.x = value` overwrites it. The depend object `obj._x` is used
 to declare dependencies, to modify an array in place (`obj._x[i] = value`,
 `obj._x += value`), and to obtain views of parts of an array that stay
-connected to the dependency graph (`obj._x[i]`, `obj._x.flatten()`).
+connected to the dependency graph (`obj._x[i]`, `obj._x.flatten()`). Indexing
+with masks or arrays of indices gives copies, as for the arrays themselves.
 
 Arrays are stored using the array backend selected in
 `ipi.utils.array_backend`. Arrays stored as numpy arrays are read as
@@ -267,6 +268,15 @@ def _is_scalar_index(index, ndim):
     return ndim <= 1
 
 
+def _is_basic_index(index):
+    """True if `array[index]` is a view of the array, i.e. if the index only holds
+    integers, slices, Ellipsis and None."""
+    for item in index if type(index) is tuple else (index,):
+        if not (item is None or item is Ellipsis or type(item) in (int, slice)):
+            return False
+    return True
+
+
 def _readonly(array):
     """Returns a non-writeable view of a numpy array, and other arrays as they are."""
 
@@ -350,6 +360,10 @@ class depend_array(depend_base):
         value = self._value[index]
         if _is_scalar_index(index, self._value.ndim):
             return value
+        if not _is_basic_index(index):
+            # masks and arrays of indices select a copy, which `obj._x[i] op= v`
+            # then writes back
+            return self._view(value, value)
         wvalue = value if self._wvalue is self._value else self._wvalue[index]
         return self._view(value, wvalue, index)
 
