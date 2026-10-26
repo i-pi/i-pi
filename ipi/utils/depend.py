@@ -515,6 +515,23 @@ class _reshaped:
         self.shape = shape
 
 
+class _static:
+    """Hashable wrapper of a basic index, given to jitted functions as a static
+    argument (slices are hashable only from Python 3.12)."""
+
+    __slots__ = ("index", "key")
+
+    def __init__(self, index):
+        self.index = index
+        self.key = repr(index)
+
+    def __hash__(self):
+        return hash(self.key)
+
+    def __eq__(self, other):
+        return self.key == other.key
+
+
 @functools.cache
 def _jax_indexing():
     """Jitted functions that read, update and fill JAX arrays, given basic
@@ -529,12 +546,15 @@ def _jax_indexing():
         v = v.reshape(v.shape[max(v.ndim - a[index].ndim, 0) :])
         return a.at[index].set(v)
 
+    def put_static(a, index, v):
+        return put(a, index.index, v)
+
     def fill(v, shape, dtype):
         return jnp.broadcast_to(jnp.asarray(v, dtype), shape)
 
     return types.SimpleNamespace(
-        take=jax.jit(lambda a, index: a[index], static_argnums=1),
-        put=jax.jit(put, static_argnums=1),
+        take=jax.jit(lambda a, index: a[index.index], static_argnums=1),
+        put=jax.jit(put_static, static_argnums=1),
         put_eagerly=put,
         reshape=jax.jit(lambda a, shape: a.reshape(shape), static_argnums=1),
         fill=jax.jit(fill, static_argnums=(1, 2)),
@@ -547,7 +567,9 @@ def _take(value, index):
     jx = _jax_indexing()
     if type(index) is _reshaped:
         return jx.reshape(value, index.shape)
-    return jx.take(value, index) if _is_basic_index(index) else value[index]
+    if _is_basic_index(index):
+        return jx.take(value, _static(index))
+    return value[index]
 
 
 def _put(value, index, part):
@@ -557,7 +579,7 @@ def _put(value, index, part):
     if type(index) is _reshaped:
         return jx.reshape(part, value.shape)
     if _is_basic_index(index):
-        return jx.put(value, index, part)
+        return jx.put(value, _static(index), part)
     return jx.put_eagerly(value, index, part)
 
 
