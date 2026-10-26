@@ -67,10 +67,11 @@ def cell_propagators(v, dt):
 
     # exp([[x, 1], [0, 0]]) = [[exp(x), (exp(x) - 1) / x], [0, 1]], and the
     # average of (exp(x) - 1) / x for x = v dt and x = -v dt is sinh(v dt) / (v dt)
-    blocks = xp.zeros((2, 6, 6))
-    blocks[0, :3, :3] = v * dt
-    blocks[1, :3, :3] = -v * dt
-    blocks[:, :3, 3:] = xp.eye(3)
+    vdt = v * dt
+    eye, zeros = xp.eye(3), xp.zeros((3, 6))
+    blocks = xp.stack(
+        [xp.concat([xp.concat([x, eye], axis=1), zeros]) for x in (vdt, -vdt)]
+    )
     # v dt is small (~1e-4), so a short series is accurate to rounding errors
     exps = matrix_exp(blocks, ntaylor=8, nsquare=4)
     sinh = 0.5 * dt * (exps[0, :3, 3:] + exps[1, :3, 3:])
