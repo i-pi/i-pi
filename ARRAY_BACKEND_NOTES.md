@@ -256,7 +256,14 @@ bugs pass, and are no longer marked.
   NVE, NVT Langevin, PIMD PILE_L, NPT isotropic and flexible. CPU, 100 atoms, dummy forcefield, ms/step
   numpy / jax eager / jax jit: NVE 0.14 / 1.8 / 0.078, NVT 0.22 / 3.0 / 0.19, PIMD-4 0.93 / 16 / 0.78; at
   1000 atoms jit is slower than numpy with thermostats (NVT 0.43 vs 0.86, PIMD-4 2.6 vs 4.9), partly as
-  XLA draws float64 Gaussian numbers ~30x slower than numpy (160 us for 3000).
+  XLA draws float64 Gaussian numbers 4x slower than numpy on the CPU (160 vs 40 us for 3000).
+  H100 (kuma jobs 4679488, 4679541; Python 3.11, torch 2.12.1, JAX 0.10.2), ms/step without forces / with the
+  dummy forcefield, 100 -> 10000 atoms: NVE graphs 0.031-0.036 / 0.078-0.084, jit 0.085-0.082 / 0.102-0.104;
+  PIMD-8 (PILE_L) graphs 0.30-0.48 / 0.51-0.85, jit 0.30-0.35 / 0.43-0.48 (numpy 0.47-19.5 / 0.76-22.6, eager
+  JAX 19-27). jit is 13-78x faster than eager JAX; CUDA graphs have the lower fixed cost (classical MD), jit
+  scales better with beads and atoms (one XLA program, forces included). Jit PIMD is slower at 3162 atoms than
+  at 10000 (not investigated). Jit vs eager JAX on the GPU: 2e-16 to 3e-15 after 10 steps, same keys.
+  Full tables: report.md (untracked, repository root).
   torch.compile and jax.jit do not overlap: with torch the steps are CUDA graphs and only the functions
   marked `@compiled` are compiled (whole-step torch.compile breaks on the depend locks and the lazy forces);
   with JAX the whole step is one XLA program and `@compiled` functions are traced inline.
