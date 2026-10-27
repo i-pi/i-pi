@@ -1040,7 +1040,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         dpipe(self._dt, t._dt)
         dpipe(self._tau, t._tau)
 
-        self._ethermo.add_dependency(t._ethermo)
+        ddeps(self._ethermo, [t._ethermo])
         self._thermos.append(t)
 
 

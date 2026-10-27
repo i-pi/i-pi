@@ -196,8 +196,8 @@ class ValueConstraintBase(ConstraintBase):
     def bind(self, beads):
         super(ValueConstraintBase, self).bind(beads)
 
-        self._g.add_dependency(self._constraint_values)
-        self._Dg.add_dependency(self._constraint_values)
+        ddeps(self._g, [self._constraint_values])
+        ddeps(self._Dg, [self._constraint_values])
 
 
 dproperties(ValueConstraintBase, ["constraint_values"])
@@ -351,8 +351,8 @@ class EckartConstraint(ConstraintBase):
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
             self._qref[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
-        self._g.add_dependency(self._constraint_values)
-        self._Dg.add_dependency(self._constraint_values)
+        ddeps(self._g, [self._constraint_values])
+        ddeps(self._Dg, [self._constraint_values])
 
         # Total mass of the group of atoms
         self._mtot = depend_value(
@@ -386,10 +386,8 @@ class EckartConstraint(ConstraintBase):
             dependencies=[self._qref_rel, self._m3],
         )
         # Make constraint function and gradient depend on the parameters
-        self._g.add_dependency(self._qref)
-        self._g.add_dependency(self._m3)
-        self._Dg.add_dependency(self._qref)
-        self._Dg.add_dependency(self._m3)
+        ddeps(self._g, [self._qref, self._m3])
+        ddeps(self._Dg, [self._qref, self._m3])
 
     def gfunc(self):
         """
@@ -482,10 +480,10 @@ class ConstraintList(ConstraintBase):
             c.bind(beads)
             # deal with constraint functions
             dcompute(c._q, make_qgetter(ic), [self._q])
-            self._g.add_dependency(c._g)
+            ddeps(self._g, [c._g])
             # ...and their gradients
             dcompute(c._qprev, make_qprevgetter(ic), [self._qprev])
-            self._Dg.add_dependency(c._Dg)
+            ddeps(self._Dg, [c._Dg])
 
     def gfunc(self):
         """

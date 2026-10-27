@@ -12,7 +12,8 @@ list of dependants to notify on change, and an optional `depend_synchro`
 that links two representations of the same data (e.g. cartesian and
 normal-mode bead coordinates), created with `dsynchro`. An object is
 computed if it is created with `func`, or later made computed with `dcompute`
-(or `dpipe`, to follow the value of another object).
+(or `dpipe`, to follow the value of another object). A computed object can be
+given more dependencies with `ddeps`.
 
 Values are recomputed lazily: when an access finds the tainted flag set,
 `_func` is called and the cached value is refreshed. Writes push: they
@@ -58,6 +59,7 @@ __all__ = [
     "depend_value",
     "depend_array",
     "dcompute",
+    "ddeps",
     "dpipe",
     "dsynchro",
     "dproperties",
@@ -126,8 +128,7 @@ class depend_base(object):
         self._name = name
         self._status = depend_status()
         if dependencies is not None:
-            for item in dependencies:
-                self.add_dependency(item, tainted=False)
+            _add_dependencies(self, dependencies)
         # computed objects start tainted, primitive objects start clean
         self._status.tainted = func is not None
 
@@ -153,14 +154,6 @@ class depend_base(object):
     def __setstate__(self, state):
         for member, value in state.items():
             setattr(self, member, value)
-
-    def add_dependant(self, newdep, tainted=True):
-        newdep.add_dependency(self, tainted=tainted)
-
-    def add_dependency(self, newdep, tainted=True):
-        newdep._status.dependants.append(weakref.ref(self))
-        if tainted:
-            self.taint(taintme=True)
 
     def taint(self, taintme=True):
         """Plain directed acyclic graph walk: taint dependants, optionally self."""
@@ -248,6 +241,13 @@ def _slot_names(cls):
         for s in getattr(c, "__slots__", ())
         if s != "__weakref__"
     ]
+
+
+def _add_dependencies(dep, dependencies):
+    """Makes `dep` a dependant of each object in `dependencies`."""
+
+    for item in dependencies:
+        item._status.dependants.append(weakref.ref(dep))
 
 
 class depend_value(depend_base):
@@ -511,8 +511,21 @@ def dcompute(dep, func, dependencies):
         dep._func is None and dep._status.synchro is None and dep._root() is dep
     ), f"<{dep._name}> is computed, synchronized, or a view"
     dep._func = func
-    for item in dependencies:
-        dep.add_dependency(item, tainted=False)
+    _add_dependencies(dep, dependencies)
+    dep.taint(taintme=True)
+
+
+def ddeps(dep, dependencies):
+    """Adds dependencies to a computed depend object, e.g. ones that are only
+    known when it is bound, so that it is also recomputed when they change.
+
+    Args:
+        dep: The depend object. It must be computed.
+        dependencies: The depend objects to add to its dependencies.
+    """
+
+    assert dep._func is not None, f"<{dep._name}> is not computed"
+    _add_dependencies(dep, dependencies)
     dep.taint(taintme=True)
 
 

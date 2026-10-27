@@ -182,13 +182,17 @@ class Ensemble:
             output_maker=self.output_maker,
         )
 
-        self._econs = depend_value(name="econs", func=self.get_econs)
-        # dependencies of the conserved quantity
-        self._econs.add_dependency(self.nm._kin)
-        self._econs.add_dependency(self.forces._pot)
-        self._econs.add_dependency(self.bias._pot)
-        self._econs.add_dependency(self.nm._vspring)
-        self._econs.add_dependency(self._eens)
+        self._econs = depend_value(
+            name="econs",
+            func=self.get_econs,
+            dependencies=[
+                self.nm._kin,
+                self.forces._pot,
+                self.bias._pot,
+                self.nm._vspring,
+                self._eens,
+            ],
+        )
 
         # pipes the weights to the list of weight vectors
         i = 0
@@ -227,12 +231,16 @@ class Ensemble:
             self.add_econs(e)
 
         self._lpens = depend_value(
-            name="lpens", func=self.get_lpens, dependencies=[self._temp]
+            name="lpens",
+            func=self.get_lpens,
+            dependencies=[
+                self._temp,
+                self.nm._kin,
+                self.forces._pot,
+                self.bias._pot,
+                self.nm._vspring,
+            ],
         )
-        self._lpens.add_dependency(self.nm._kin)
-        self._lpens.add_dependency(self.forces._pot)
-        self._lpens.add_dependency(self.bias._pot)
-        self._lpens.add_dependency(self.nm._vspring)
 
         # extended Lagrangian terms for the ensemble
         self._xlpot = []
@@ -245,15 +253,15 @@ class Ensemble:
 
     def add_econs(self, e):
         self._elist.append(e)
-        self._econs.add_dependency(e)
+        ddeps(self._econs, [e])
 
     def add_xlpot(self, p):
         self._xlpot.append(p)
-        self._lpens.add_dependency(p)
+        ddeps(self._lpens, [p])
 
     def add_xlkin(self, k):
         self._xlkin.append(k)
-        self._lpens.add_dependency(k)
+        ddeps(self._lpens, [k])
 
     def get_econs(self):
         """Calculates the conserved energy quantity for constant energy

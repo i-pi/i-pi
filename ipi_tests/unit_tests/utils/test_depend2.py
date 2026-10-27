@@ -252,6 +252,22 @@ def test_dcompute():
         dp.dpipe(h._x, a)
 
 
+def test_ddeps():
+    """Depend: ddeps adds dependencies to a computed object"""
+    h = Holder()
+    z = dp.depend_value(name="z", value=1.0)
+    h.y
+    dp.ddeps(h._y, [z])
+    assert h._y.tainted()
+    h.y
+    z.set(2.0)
+    assert h._y.tainted()
+    # primitive objects and views cannot be given dependencies
+    for dep in (h._x, h._y[1:]):
+        with pytest.raises(AssertionError):
+            dp.ddeps(dep, [z])
+
+
 def test_load_and_root():
     """Depend: _load returns the stored value without refreshing it, and
     _root returns the array that views belong to"""

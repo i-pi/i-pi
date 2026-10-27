@@ -375,13 +375,13 @@ class ConstrainedIntegrator(DummyIntegrator):
         else:
             self._nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
 
-        self._qdt.add_dependency(self._nsteps_geo)
+        ddeps(self._qdt, [self._nsteps_geo])
         if motion.nsteps_o is None:
             self._nsteps_o = depend_value(name="nsteps_o", value=1)
         else:
             self._nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
 
-        self._tdt.add_dependency(self._nsteps_o)
+        ddeps(self._tdt, [self._nsteps_o])
         self.csolver = motion.csolver
         dpipe(self._qdt, self.csolver._dt)
 

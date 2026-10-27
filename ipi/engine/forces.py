@@ -117,8 +117,7 @@ class ForceBead:
         self.ff = ff
 
         # ufvx depends on the atomic positions and on the cell
-        self._ufvx.add_dependency(self.atoms._q)
-        self._ufvx.add_dependency(self.cell._h)
+        ddeps(self._ufvx, [self.atoms._q, self.cell._h])
 
         # potential and virial are to be extracted very simply from ufvx
         self._pot = depend_value(
@@ -659,10 +658,8 @@ class MTSForces:
             if (len(mts_weights) == 0 and level == 0) or (
                 len(mts_weights) > level and mts_weights[level] != 0
             ):
-                self._f.add_dependency(ff._f)
-                self._f.add_dependency(ff._weight)
-                self._virs.add_dependency(ff._virs)
-                self._virs.add_dependency(ff._weight)
+                ddeps(self._f, [ff._f, ff._weight])
+                ddeps(self._virs, [ff._virs, ff._weight])
 
     def queue_mts(self):
         """Submits all the required force calculations to the forcefields."""
@@ -762,10 +759,10 @@ class Forces:
         self.mbeads.append(nbeads)
         self.mforces.append(nforces)
         self.nforces += 1
-        self._f.add_dependency(nforces._f)
-        self._pots.add_dependency(nforces._pots)
-        self._virs.add_dependency(nforces._virs)
-        self._extras.add_dependency(nforces._extras)
+        ddeps(self._f, [nforces._f])
+        ddeps(self._pots, [nforces._pots])
+        ddeps(self._virs, [nforces._virs])
+        ddeps(self._extras, [nforces._extras])
 
     def bind(self, beads, cell, fcomponents, fflist, open_paths, output_maker):
         """Binds beads, cell and forces to the forcefield.
@@ -1008,10 +1005,10 @@ class Forces:
         # Add dependencies from the force weights, that are applied here when the total
         # force is assembled from its components
 
-        for fc in self.mforces:
-            self._f.add_dependency(fc._weight)
-            self._pots.add_dependency(fc._weight)
-            self._virs.add_dependency(fc._weight)
+        weights = [fc._weight for fc in self.mforces]
+        ddeps(self._f, weights)
+        ddeps(self._pots, weights)
+        ddeps(self._virs, weights)
 
     def clone(self, beads, cell):
         """Duplicates the force object, so that it can be used to compute forces
@@ -1108,7 +1105,6 @@ class Forces:
 
             for b in range(mself.nbeads):
                 mself._forces[b]._ufvx.set(fb[b], manual=False)
-                mself._forces[b]._ufvx.taint(taintme=False)
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,
@@ -1171,7 +1167,6 @@ class Forces:
                     mx[key] = mextra[key][b]
                 ufvx = [mv[b], mf[b], vir, mx]
                 mself._forces[b]._ufvx.set(ufvx, manual=False)
-                mself._forces[b]._ufvx.taint(taintme=False)
 
     def run(self):
         """Makes the socket start looking for driver codes.

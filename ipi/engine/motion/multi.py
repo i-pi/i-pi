@@ -23,10 +23,12 @@ class MultiMotion(Motion):
         self.exit_status = None
         self.exit_message = ""
 
-        self._dt = depend_value(name="dt", func=self.get_totdt)
+        self._dt = depend_value(
+            name="dt",
+            func=self.get_totdt,
+            dependencies=[m._dt for m in motionlist],
+        )
         self.mlist = motionlist
-        for m in self.mlist:
-            m._dt.add_dependant(self._dt)
         a = (  # noqa
             self.dt
         )  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED

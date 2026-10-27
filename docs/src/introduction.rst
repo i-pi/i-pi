@@ -231,7 +231,7 @@ at runtime, to the value of the other object. A typical usage pattern is
 .. code-block:: python
 
    # NB: this is meant to be run after the previous code snippet
-   from ipi.utils.depend import depend_array
+   from ipi.utils.depend import depend_array, ddeps
    import numpy as np
 
    class DOther:
@@ -246,8 +246,8 @@ at runtime, to the value of the other object. A typical usage pattern is
          self._scaled = depend_array(value=np.ones(4), name="vec",
                                     func=self.get_scaled, dependencies=[self._vec])
 
-         # dependencies (or dependants) can also be added after object creation
-         self._scaled.add_dependency(self.factor._double)
+         # dependencies can also be added after object creation
+         ddeps(self._scaled, [self.factor._double])
 
       def get_scaled(self):
          # computes a scaled version of the vector
@@ -297,7 +297,8 @@ as ``obj.x``:
    * - in-place update of a whole array
      - ``obj._x += v`` (faster than ``obj._x[:] += v``)
    * - declare a dependency
-     - ``dependencies=[other._y]`` or ``obj._x.add_dependency(other._y)``
+     - ``dependencies=[other._y]``, or ``ddeps(obj._x, [other._y])`` after
+       creating a computed object
    * - read the value of a depend object that is not a class member
      - ``dep.get()``
    * - keep a view of part of an array that stays connected to the
