@@ -136,7 +136,9 @@ class Ensemble:
         # weights of the Hamiltonian scaling
         if hweights is None:
             hweights = np.ones(0)
-        self.hweights = np.asarray(hweights)
+        self.hweights_ = depend_array(
+            name="hweights", value=np.asarray(hweights), host=True
+        )
 
         # Internal time counter
         self.time_ = depend_value(name="time", value=time)
@@ -206,11 +208,9 @@ class Ensemble:
 
         # add Hamiltonian REM bias components
         if len(self.hweights) == 0:
-            self.hweights = np.ones(len(self.forces.mforces))
-
-        self.hweights_ = depend_array(
-            name="hweights", value=np.asarray(self.hweights), host=True
-        )
+            self.hweights_ = depend_array(
+                name="hweights", value=np.ones(len(self.forces.mforces)), host=True
+            )
         self.has_bias_ = depend_value(
             name="has_bias",
             func=lambda: (
@@ -302,6 +302,7 @@ dproperties(
         "pext",
         "eens",
         "bweights",
+        "hweights",
         "time",
         "econs",
         "has_bias",

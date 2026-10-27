@@ -32,6 +32,14 @@ or because they were approved explicitly:
 - SCP and VSCF with `nparallel > 1` failed at bind (a 1-bead system cloned to more beads). SCP now evaluates
   `nparallel` configurations per step on `nparallel` copies of the system; VSCF, which evaluates one
   configuration at a time, ignores `nparallel` with a warning.
+- Hamiltonian replica exchange: the Hamiltonian weights of the ensemble were a plain array, separate from the
+  depend array that the scaled force components depend on (since 5e863291), so exchanging them did not change
+  the bias: the acceptance used the weights before the exchange, and each replica kept its Hamiltonian. They
+  are now a depend array, exposed as `hweights`. New unit test.
+- Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
+  was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
+  date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
+  the forces of other positions. They are now recomputed when read. Unit test extended.
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
 - Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as

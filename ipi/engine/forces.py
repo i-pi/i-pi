@@ -1059,7 +1059,10 @@ class Forces:
 
             bead_forces = []
             for b in range(mself.nbeads):
-                bead_forces.append(deepcopy(mself._forces[b].ufvx_._load()))
+                ufvx = mself._forces[b].ufvx_
+                # forces that are not up to date (e.g. those of components with
+                # zero weight, that are not computed) are not stored
+                bead_forces.append(None if ufvx.tainted() else deepcopy(ufvx._load()))
             force_data.append(
                 (
                     # will also need bead positions, see _load_state
@@ -1104,7 +1107,10 @@ class Forces:
                 )
 
             for b in range(mself.nbeads):
-                mself._forces[b].ufvx_.set(fb[b], manual=False)
+                if fb[b] is None:
+                    mself._forces[b].ufvx_.taint()
+                else:
+                    mself._forces[b].ufvx_.set(fb[b], manual=False)
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,

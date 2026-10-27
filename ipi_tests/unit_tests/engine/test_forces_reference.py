@@ -278,6 +278,10 @@ def test_weighted_centroid_force_and_saved_state(simulation, weight):
         s.beads.q_[:] = q
         s.forces.load_state(snapshot)
         np.testing.assert_allclose(s.forces.f, expected_force)
+        # with zero weight, the component was not computed when the state was saved
+        np.testing.assert_allclose(
+            s.forces.forces_component(1, False, False), [-0.5 * centroid]
+        )
         s.beads.q_[:] = q * 3
         np.testing.assert_allclose(s.forces.f, 3 * expected_force)
         np.testing.assert_allclose(s.forces.pots, 9 * expected_pots)
