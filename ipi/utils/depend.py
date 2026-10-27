@@ -24,8 +24,9 @@ stored as `obj.x_`, reading `obj.x` returns the current value (recomputed if
 needed) and `obj.x = value` overwrites it. The depend object `obj.x_` is used
 to declare dependencies, to modify an array in place (`obj.x_[i] = value`,
 `obj.x_ += value`), and to obtain views of parts of an array that stay
-connected to the dependency graph (`obj.x_[i]`, `obj.x_.flatten()`). Indexing
-with masks or arrays of indices gives copies, as for the arrays themselves.
+connected to the dependency graph (`obj.x_[i]`, `obj.x_.flatten()`). As for
+numpy arrays, indexing with masks or arrays of indices gives a copy, which is
+a plain array: `obj.x_[mask] op= value` writes it back.
 
 The value read from `obj.x` (or with `get()`) must not be modified, and is
 valid until the object is written or recomputed: depending on the backend,
@@ -291,7 +292,12 @@ def _is_basic_index(index):
     """True if `array[index]` is a view of the array, i.e. if the index only holds
     integers, slices, Ellipsis and None."""
     for item in index if type(index) is tuple else (index,):
-        if not (item is None or item is Ellipsis or type(item) in (int, slice)):
+        if not (
+            item is None
+            or item is Ellipsis
+            or type(item) in (int, slice)
+            or isinstance(item, np.integer)
+        ):
             return False
     return True
 
@@ -377,12 +383,10 @@ class depend_array(depend_base):
         if self._status.tainted:
             self._refresh()
         value = self._value[index]
-        if _is_scalar_index(index, self._value.ndim):
+        if _is_scalar_index(index, self._value.ndim) or not _is_basic_index(index):
+            # scalars, and the copies selected by masks or arrays of indices, are
+            # returned as they are: `obj.x_[i] op= v` then writes them back
             return value
-        if not _is_basic_index(index):
-            # masks and arrays of indices select a copy, which `obj.x_[i] op= v`
-            # then writes back
-            return self._view(value, value)
         wvalue = value if self._wvalue is self._value else self._wvalue[index]
         return self._view(value, wvalue, index)
 

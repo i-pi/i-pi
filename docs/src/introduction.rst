@@ -274,7 +274,10 @@ shares the memory of the full array, writing through it updates the
 dependants of the full array, and reading a stale view recomputes the
 full array. Views are used, for instance, to expose the positions of each
 replica of a ring polymer as a separate ``Atoms`` object, or to bind a
-thermostat to the momenta of one normal mode.
+thermostat to the momenta of one normal mode. As for numpy arrays, indexing
+with a mask or an array of indices gives a copy of the selected elements,
+which is a plain array: ``myoth.vec_[mask] += 1`` updates the array, but
+modifying the copy does not.
 
 Rules of thumb
 ^^^^^^^^^^^^^^

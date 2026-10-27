@@ -30,14 +30,16 @@ dp.dproperties(Holder, ["x", "y"])
 
 
 def test_slicing():
-    """Depend: indexing a depend_array returns live views or raw scalars"""
+    """Depend: indexing a depend_array returns live views, or raw scalars and
+    copies where the array itself does"""
     a = dp.depend_array(name="a", value=np.zeros((2, 2), float))
     d1 = dp.depend_array(name="d1", value=np.zeros(6))
     assert isinstance(a[0], dp.depend_array)
+    assert isinstance(a[np.int64(0)], dp.depend_array)
     assert isinstance(d1[2:5], dp.depend_array)
     assert isinstance(a[...], dp.depend_array)
     assert isinstance(a[0, :], dp.depend_array)
-    assert isinstance(d1[[0, 2, 4]], dp.depend_array)
+    assert not isinstance(d1[[0, 2, 4]], dp.depend_array)
     assert not isinstance(a[0, 0], dp.depend_array)
     assert not isinstance(d1[2], dp.depend_array)
 
@@ -103,7 +105,8 @@ def test_indexed_inplace_operators():
 @pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
 def test_advanced_index_inplace_operators(backend, index):
     """Depend: `obj.x_[i] op= v` with a mask or an array of indices, which
-    select a copy rather than a view, updates the array and taints dependants"""
+    select a copy rather than a view, updates the array and taints dependants,
+    while modifying the copy does not"""
     if backend == "torch":
         pytest.importorskip("torch")
     ab.set_backend(backend)
@@ -115,6 +118,10 @@ def test_advanced_index_inplace_operators(backend, index):
         a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
         a[:, index] *= 3.0
         assert np.array_equal(ab.to_numpy(a.get()), [[3.0, 1.0, 3.0, 1.0]] * 2)
+        selection = h.x_[index]
+        selection[0] = 5.0
+        assert not h.y_.tainted()
+        assert np.array_equal(ab.to_numpy(h.x), [2.0, 0.0, 2.0, 0.0])
     finally:
         ab.set_backend("numpy")
 
