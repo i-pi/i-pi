@@ -40,7 +40,7 @@ class AtomSwap(Motion):
         self.names = names
         self.nxc = nxc
 
-        self._ealc = depend_value(name="ealc")
+        self.ealc_ = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -63,7 +63,7 @@ class AtomSwap(Motion):
         """
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(self._ealc)
+        self.ensemble.add_econs(self.ealc_)
         self.dbeads = self.beads.clone()
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
@@ -115,9 +115,9 @@ class AtomSwap(Motion):
 
             old_energy = self.forces.pot
             # swap the atom positions
-            self.dbeads._q[:] = self.beads.q[:]
-            self.dbeads._q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
-            self.dbeads._q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
+            self.dbeads.q_[:] = self.beads.q[:]
+            self.dbeads.q_[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
+            self.dbeads.q_[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
             new_energy = self.dforces.pot
             pexchange = np.exp(-betaP * float(new_energy - old_energy))
 
@@ -126,7 +126,7 @@ class AtomSwap(Motion):
                 nexch += 1
 
                 # copy the exchanged beads position
-                self.beads._q[:] = self.dbeads.q[:]
+                self.beads.q_[:] = self.dbeads.q[:]
                 # transfers the (already computed) status of the force, so we don't need to recompute
                 self.forces.transfer_forces(self.dforces)
 

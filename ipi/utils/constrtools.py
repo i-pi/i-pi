@@ -83,53 +83,53 @@ class ConstraintBase:
 
         # masses of the atoms involved in the constraint - repeated 3
         # times to vectorize operations on 3-vectors
-        self._m3 = depend_array(
+        self.m3_ = depend_array(
             name="m3",
             value=np.zeros(self.n_unique * 3),
             func=(lambda: self.beads.m3[0, self.i3_unique]),
-            dependencies=[self.beads._m3],
+            dependencies=[self.beads.m3_],
         )
 
         # The constraint function is computed at iteratively updated
         # coordinates during geodesic integration; this array holds such
         # updates. this is useful to avoid messing with the beads q
         # until they can be updated
-        self._q = depend_array(name="q", value=np.zeros(self.n_unique * 3))
-        self._g = depend_array(
+        self.q_ = depend_array(name="q", value=np.zeros(self.n_unique * 3))
+        self.g_ = depend_array(
             name="g",
             value=np.zeros(self.ncons),
             func=self.gfunc,
-            dependencies=[self._q],
+            dependencies=[self.q_],
         )
 
         # The gradient of the constraint function is computed at the configuration
         # obtained from the previous converged SHAKE step; this array holds
         # a local copy of that configuration
-        self._qprev = depend_array(name="qprev", value=np.zeros(self.n_unique * 3))
+        self.qprev_ = depend_array(name="qprev", value=np.zeros(self.n_unique * 3))
 
-        self._Dg = depend_array(
+        self.Dg_ = depend_array(
             name="Dg",
             value=np.zeros((self.ncons, self.n_unique * 3)),
             func=self.Dgfunc,
-            dependencies=[self._qprev],
+            dependencies=[self.qprev_],
         )
-        self._Gram = depend_array(
+        self.Gram_ = depend_array(
             name="Gram",
             value=np.zeros((self.ncons, self.ncons)),
             func=self.Gfunc,
-            dependencies=[self._Dg],
+            dependencies=[self.Dg_],
         )
         if use_cho_factor():
             # scipy cho_factor returns both c and lower, so we need to have a depend tuple
-            self._GramChol = depend_value(
-                name="GramChol", value=(), func=self.GCfunc, dependencies=[self._Gram]
+            self.GramChol_ = depend_value(
+                name="GramChol", value=(), func=self.GCfunc, dependencies=[self.Gram_]
             )
         else:
-            self._GramChol = depend_array(
+            self.GramChol_ = depend_array(
                 name="GramChol",
                 value=np.zeros((self.ncons, self.ncons)),
                 func=self.GCfunc,
-                dependencies=[self._Gram],
+                dependencies=[self.Gram_],
             )
 
     def gfunc(self):
@@ -179,13 +179,13 @@ class ValueConstraintBase(ConstraintBase):
         if len(constraint_values) != 0:
             self.ncons = len(constraint_values)
             self._calc_cons = False
-            self._constraint_values = depend_array(
+            self.constraint_values_ = depend_array(
                 name="constraint_values", value=np.asarray(constraint_values).copy()
             )
         elif ncons != 0:
             self.ncons = ncons
             self._calc_cons = True
-            self._constraint_values = depend_array(
+            self.constraint_values_ = depend_array(
                 name="constraint_values", value=np.zeros(ncons)
             )
         else:
@@ -196,8 +196,8 @@ class ValueConstraintBase(ConstraintBase):
     def bind(self, beads):
         super(ValueConstraintBase, self).bind(beads)
 
-        ddeps(self._g, [self._constraint_values])
-        ddeps(self._Dg, [self._constraint_values])
+        ddeps(self.g_, [self.constraint_values_])
+        ddeps(self.Dg_, [self.constraint_values_])
 
 
 dproperties(ValueConstraintBase, ["constraint_values"])
@@ -327,7 +327,7 @@ class EckartConstraint(ConstraintBase):
     def __init__(self, constrained_indices, constraint_values):
         super(EckartConstraint, self).__init__(constrained_indices, 6)
         self.constrained_indices = self.constrained_indices.reshape(-1)
-        self._constraint_values = depend_array(
+        self.constraint_values_ = depend_array(
             name="constraint_values", value=np.zeros(self.ncons)
         )
 
@@ -337,12 +337,12 @@ class EckartConstraint(ConstraintBase):
         self.i3_indirect = self.i3_indirect.reshape((-1, 3))
         if len(constraint_values) == 0:
             self._calc_cons = True
-            self._qref = depend_array(
+            self.qref_ = depend_array(
                 name="qref", value=np.zeros_like(self.i3_indirect, float)
             )
         else:
             self._calc_cons = False
-            self._qref = depend_array(
+            self.qref_ = depend_array(
                 name="qref",
                 value=np.reshape(constraint_values, self.i3_indirect.shape).copy(),
             )
@@ -350,44 +350,44 @@ class EckartConstraint(ConstraintBase):
     def bind(self, beads):
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
-            self._qref[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
-        ddeps(self._g, [self._constraint_values])
-        ddeps(self._Dg, [self._constraint_values])
+            self.qref_[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
+        ddeps(self.g_, [self.constraint_values_])
+        ddeps(self.Dg_, [self.constraint_values_])
 
         # Total mass of the group of atoms
-        self._mtot = depend_value(
+        self.mtot_ = depend_value(
             name="mtot",
             value=1.0,
             func=(lambda: self.m3[::3].sum()),
-            dependencies=[self._m3],
+            dependencies=[self.m3_],
         )
 
         # Coords of reference centre of mass
-        self._qref_com = depend_array(
+        self.qref_com_ = depend_array(
             name="qref_com",
             value=np.zeros(3, float),
             func=(
                 lambda: (self.qref * self.m3.reshape((-1, 3))).sum(axis=0) / self.mtot
             ),
-            dependencies=[self._m3, self._qref],
+            dependencies=[self.m3_, self.qref_],
         )
         # qref in its centre of mass frame
-        self._qref_rel = depend_array(
+        self.qref_rel_ = depend_array(
             name="qref_rel",
             value=xp.zeros_like(self.qref),
             func=(lambda: self.qref - self.qref_com),
-            dependencies=[self._qref, self._qref_com],
+            dependencies=[self.qref_, self.qref_com_],
         )
         # qref in the CoM frame, mass-weighted
-        self._mqref_rel = depend_array(
+        self.mqref_rel_ = depend_array(
             name="mqref_rel",
             value=xp.zeros_like(self.qref),
             func=(lambda: self.qref_rel * self.m3.reshape((-1, 3))),
-            dependencies=[self._qref_rel, self._m3],
+            dependencies=[self.qref_rel_, self.m3_],
         )
         # Make constraint function and gradient depend on the parameters
-        ddeps(self._g, [self._qref, self._m3])
-        ddeps(self._Dg, [self._qref, self._m3])
+        ddeps(self.g_, [self.qref_, self.m3_])
+        ddeps(self.Dg_, [self.qref_, self.m3_])
 
     def gfunc(self):
         """
@@ -479,11 +479,11 @@ class ConstraintList(ConstraintBase):
         for ic, c in enumerate(self.constraint_list):
             c.bind(beads)
             # deal with constraint functions
-            dcompute(c._q, make_qgetter(ic), [self._q])
-            ddeps(self._g, [c._g])
+            dcompute(c.q_, make_qgetter(ic), [self.q_])
+            ddeps(self.g_, [c.g_])
             # ...and their gradients
-            dcompute(c._qprev, make_qprevgetter(ic), [self._qprev])
-            ddeps(self._Dg, [c._Dg])
+            dcompute(c.qprev_, make_qprevgetter(ic), [self.qprev_])
+            ddeps(self.Dg_, [c.Dg_])
 
     def gfunc(self):
         """

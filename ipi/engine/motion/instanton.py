@@ -370,9 +370,9 @@ class PesMapper(object):
 
         # Create reduced bead and force object and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
-        reduced_b._q[:] = full_q[indexes]
-        reduced_b._m[:] = self.dbeads.m
-        reduced_b._names[:] = self.dbeads.names
+        reduced_b.q_[:] = full_q[indexes]
+        reduced_b.m_[:] = self.dbeads.m
+        reduced_b.names_[:] = self.dbeads.names
 
         reduced_cell = self.dcell.clone()
         reduced_forces = self.dforces.clone(reduced_b, reduced_cell)
@@ -402,7 +402,7 @@ class PesMapper(object):
         full_q = xp.asarray(x, copy=True)
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces = self.interpolation(full_q, full_mspath)
-        self.dbeads._q[:] = x[:]
+        self.dbeads.q_[:] = x[:]
 
         self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
         info("UPDATE of forces and extras", verbosity.debug)
@@ -673,7 +673,7 @@ class FrictionMapper(PesMapper):
         )
 
         # This forces the update of the forces and the extras
-        self.dbeads._q[:] = x[:]
+        self.dbeads.q_[:] = x[:]
         self.dforces.transfer_forces_manual(
             [full_q], [full_pot], [full_forces], [full_extras]
         )
@@ -1083,7 +1083,7 @@ class DummyOptimizer:
         imvector = fix_onebead.get_full_vector(active_imvector, 1).reshape(-1)
 
         for i in range(self.beads.nbeads):
-            self.beads._q[i, :] += (
+            self.beads.q_[i, :] += (
                 self.optarrays["delta"]
                 * np.cos(i * np.pi / float(self.beads.nbeads - 1))
                 * imvector[:]
@@ -1197,7 +1197,7 @@ class DummyOptimizer:
     def update_pos_for(self):
         """Update positions and forces"""
 
-        self.beads._q[:] = self.mapper.gm.dbeads.q[:]
+        self.beads.q_[:] = self.mapper.gm.dbeads.q[:]
 
         # This forces the update of the forces
         self.forces.transfer_forces(self.mapper.gm.dforces)

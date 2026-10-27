@@ -88,12 +88,12 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto")
     ForceField.start(ff)
     try:
         atoms = Atoms(2)
-        atoms._q[:] = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+        atoms.q_[:] = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         cell = Cell(np.eye(3) * 10.0)
         positions = [atoms.q.copy() + i for i in range(batch_size + 1)]
         requests = []
         for index, position in enumerate(positions):
-            atoms._q[:] = position
+            atoms.q_[:] = position
             requests.append(ff.queue(atoms, cell, reqid=index))
 
         deadline = time.time() + 30

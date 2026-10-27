@@ -38,126 +38,126 @@ class ExchangePotential:
         self.beads = beads
         self.ensemble = ensemble
 
-        self._omegan2 = depend_value(name="omegan2", value=0.0)
-        dpipe(nm._omegan2, self._omegan2)
+        self.omegan2_ = depend_value(name="omegan2", value=0.0)
+        dpipe(nm.omegan2_, self.omegan2_)
 
-        self._bosons = depend_array(
+        self.bosons_ = depend_array(
             name="bosons", value=np.zeros(self.nbosons, dtype=int), host=True
         )
-        dpipe(nm._bosons, self._bosons)
+        dpipe(nm.bosons_, self.bosons_)
 
-        self._betaP = depend_value(
+        self.betaP_ = depend_value(
             "betaP",
             func=lambda: 1.0
             / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp),
-            dependencies=[self.ensemble._temp],
+            dependencies=[self.ensemble.temp_],
         )
 
         # the boson mass is assumed to be that of the first particle
-        self._boson_m = depend_value(
+        self.boson_m_ = depend_value(
             name="boson_m",
             func=self.get_boson_mass,
-            dependencies=[self.beads._m, self._bosons],
+            dependencies=[self.beads.m_, self.bosons_],
         )
 
         # boson coordinates are just a slice of the beads coordinates
-        self._qbosons = depend_array(
+        self.qbosons_ = depend_array(
             name="qbosons",
             value=np.zeros((self.nbeads, self.nbosons, 3)),
             func=lambda: self.beads.q.reshape(self.nbeads, -1, 3)[:, self.bosons],
-            dependencies=[self.beads._q, self._bosons],
+            dependencies=[self.beads.q_, self.bosons_],
         )
 
         # self.bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
-        self._bead_diff_intra = depend_array(
+        self.bead_diff_intra_ = depend_array(
             name="bead_diff_intra",
             value=np.zeros((self.nbeads - 1, self.nbosons, 3)),
             func=lambda: self.qbosons[1:] - self.qbosons[:-1],
-            dependencies=[self._qbosons],
+            dependencies=[self.qbosons_],
         )
 
         # self.bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
-        self._bead_diff_inter_first_last_bead = depend_array(
+        self.bead_diff_inter_first_last_bead_ = depend_array(
             name="bead_diff_inter_first_last_bead",
             value=np.zeros((self.nbosons, self.nbosons, 3)),
             func=lambda: (
                 self.qbosons[0, :, None, :] - self.qbosons[self.nbeads - 1, None, :, :]
             ),
-            dependencies=[self._qbosons],
+            dependencies=[self.qbosons_],
         )
         # cycle energies:
         # self.cycle_energies[u, v] is the ring polymer energy of the cycle on particle indices u,...,v
         # the cycle energies and the potentials derived from them are small
         # arrays computed by sequential recursions, which run on the host
-        self._cycle_energies = depend_array(
+        self.cycle_energies_ = depend_array(
             name="cycle_energies",
             value=np.zeros((self.nbosons, self.nbosons), dtype=float, order="F"),
             func=self.get_cycle_energies,
             dependencies=[
-                self._boson_m,
-                self._omegan2,
-                self._bead_diff_intra,
-                self._bead_diff_inter_first_last_bead,
+                self.boson_m_,
+                self.omegan2_,
+                self.bead_diff_intra_,
+                self.bead_diff_inter_first_last_bead_,
             ],
             host=True,
         )
         # prefix potentials:
         # self.prefix_V[l] = V^[1,l+1]
-        self._prefix_V = depend_array(
+        self.prefix_V_ = depend_array(
             name="V",
             func=self.get_prefix_V,
             value=np.zeros(self.nbosons + 1, float),
-            dependencies=[self._cycle_energies, self._betaP],
+            dependencies=[self.cycle_energies_, self.betaP_],
             host=True,
         )
 
         # suffix potentials:
         # self.suffix_V[l] = V^[l+1, N]
-        self._suffix_V = depend_value(
+        self.suffix_V_ = depend_value(
             name="V",
             func=self.get_suffix_V,
             value=np.zeros(self.nbosons + 1, float),
-            dependencies=[self._cycle_energies, self._betaP],
+            dependencies=[self.cycle_energies_, self.betaP_],
         )
 
         # this is the main quantity used outside this
-        self._vspring_and_fspring = depend_value(
+        self.vspring_and_fspring_ = depend_value(
             name="vspring_and_fspring",
             func=self.get_vspring_and_fspring,
             dependencies=[
-                self._betaP,
-                self._omegan2,
-                self._prefix_V,
-                self._suffix_V,
-                self._bead_diff_intra,
-                self._cycle_energies,
-                self._bead_diff_inter_first_last_bead,
+                self.betaP_,
+                self.omegan2_,
+                self.prefix_V_,
+                self.suffix_V_,
+                self.bead_diff_intra_,
+                self.cycle_energies_,
+                self.bead_diff_inter_first_last_bead_,
             ],
         )
 
         # properties
-        self._kinetic_td = depend_value(
+        self.kinetic_td_ = depend_value(
             name="kinetic_td",
             func=self.get_kinetic_td,
-            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+            dependencies=[self.betaP_, self.prefix_V_, self.cycle_energies_],
         )
 
-        self._fermionic_sign = depend_value(
+        self.fermionic_sign_ = depend_value(
             name="fermionic_sign",
             func=self.get_fermionic_sign,
-            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+            dependencies=[self.betaP_, self.prefix_V_, self.cycle_energies_],
         )
 
-        self._longest_probability = depend_value(
+        self.longest_probability_ = depend_value(
             name="longest_probability",
             func=self.get_longest_probability,
-            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+            dependencies=[self.betaP_, self.prefix_V_, self.cycle_energies_],
         )
 
-        self._distinct_probability = depend_value(
+        self.distinct_probability_ = depend_value(
             name="distinct_probability",
             func=self.get_distinct_probability,
-            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+            dependencies=[self.betaP_, self.prefix_V_, self.cycle_energies_],
         )
 
     def get_boson_mass(self):

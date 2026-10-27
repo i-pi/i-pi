@@ -35,7 +35,7 @@ def test_request_lifecycle(provider, threaded, monkeypatch):
         pars={"label": "reference"},
     )
     atoms = Atoms(2)
-    atoms._q[:] = [11, 0, 0, 0, -12, 0]
+    atoms.q_[:] = [11, 0, 0, 0, -12, 0]
     cell = Cell(np.eye(3) * 10)
     ff.start()
     try:
@@ -45,8 +45,8 @@ def test_request_lifecycle(provider, threaded, monkeypatch):
         request = ff.queue(atoms, cell, reqid=7, template={"extra": "preserved"})
         duplicate = ff.queue(atoms, cell, reqid=7)
         assert not (request == duplicate)
-        atoms._q[:] = 0
-        cell._h[:] *= 2
+        atoms.q_[:] = 0
+        cell.h_[:] *= 2
         assert request._event_done.wait(timeout=5)
         # release must join an evaluation worker before its result is consumed.
         ff.release(request)
@@ -113,7 +113,7 @@ def test_composite_forcefields_complete_threaded_requests(kind, monkeypatch):
     ff.start()
     try:
         atoms = Atoms(1)
-        atoms._q[:] = [0.2, -0.3, 0.4]
+        atoms.q_[:] = [0.2, -0.3, 0.4]
         request = ff.queue(atoms, Cell(np.eye(3) * 10))
         assert request._event_done.wait(timeout=5)
         assert request["result"][0] == pytest.approx(0.29, abs=1e-12)

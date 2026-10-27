@@ -164,14 +164,14 @@ class InteractiveSimulation(Simulation):
             if system.beads.nbeads == 1:
                 structures = [structures]
             for b, struc in enumerate(structures):
-                system.beads._q[b] = xp.asarray(
+                system.beads.q_[b] = xp.asarray(
                     struc.positions.flatten() * unit_to_internal("length", "ase", 1.0)
                 )
                 system.cell.h = xp.asarray(
                     np.array(struc.cell).T * unit_to_internal("length", "ase", 1.0)
                 )
                 if "momenta" in struc.arrays:
-                    system.beads._p[b] = xp.asarray(
+                    system.beads.p_[b] = xp.asarray(
                         struc.arrays["momenta"].flatten()
                         * unit_to_internal("momentum", "ase", 1.0)
                     )
@@ -189,7 +189,7 @@ class InteractiveSimulation(Simulation):
             s.ensemble.eens += s.nm.kin
 
             # initialize in the nm basis to handle PIMD mass scaling
-            s.nm._pnm[:] = (
+            s.nm.pnm_[:] = (
                 self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
                 * np.sqrt(s.nm.dynm3)
                 * np.sqrt(s.beads.nbeads * temperature * Constants.kb)

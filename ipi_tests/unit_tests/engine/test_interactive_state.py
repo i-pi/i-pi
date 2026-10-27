@@ -67,7 +67,7 @@ def test_custom_motion_replaces_step_and_can_be_restored(simulation):
         q = sim.syslist[0].beads.q.copy()
 
         def translate(motion, step=None):
-            motion.beads._q[:] += 0.1
+            motion.beads.q_[:] += 0.1
 
         sim.set_motion_step(translate)
         sim.run(steps=2, write_outputs=False)

@@ -404,15 +404,15 @@ class Initializer:
                             "Rescaling momenta to make up for changed mass",
                             verbosity.medium,
                         )
-                        simul.beads._p /= (
+                        simul.beads.p_ /= (
                             simul.beads.sm3
                         )  # go to mass-scaled momenta, that are mass-invariant
                     if v.index < 0:
                         simul.beads.m = xp.asarray(rm)
                     else:  # we are initializing a specific atom
-                        simul.beads._m[v.index : v.index + 1] = xp.asarray(rm)
+                        simul.beads.m_[v.index : v.index + 1] = xp.asarray(rm)
                     if fmom and fmass:  # finishes correcting the momenta
-                        simul.beads._p *= simul.beads.sm3  # back to normal momenta
+                        simul.beads.p_ *= simul.beads.sm3  # back to normal momenta
                 else:
                     raise ValueError("Cannot change the mass of a single bead")
                 fmass = True
@@ -433,7 +433,7 @@ class Initializer:
                     if v.index < 0:
                         simul.beads.names = rn
                     else:  # we are initializing a specific atom
-                        simul.beads._names[v.index : v.index + 1] = rn
+                        simul.beads.names_[v.index : v.index + 1] = rn
                 else:
                     raise ValueError("Cannot change the label of a single bead")
                 flab = True
@@ -456,7 +456,7 @@ class Initializer:
                         )
                     simul.beads.resize(natoms, self.nbeads)
 
-                set_vector(v, simul.beads._q, rq)
+                set_vector(v, simul.beads.q_, rq)
                 fpos = True
 
             elif (
@@ -497,9 +497,9 @@ class Initializer:
                     rnatoms = simul.beads.natoms
                 rbeads = Beads(rnatoms, simul.beads.nbeads)
                 if v.index < 0:
-                    rbeads._m[:] = simul.beads.m
+                    rbeads.m_[:] = simul.beads.m
                 else:
-                    rbeads._m[:] = simul.beads.m[v.index]
+                    rbeads.m_[:] = simul.beads.m[v.index]
                 rnm = NormalModes(
                     mode=simul.nm.mode,
                     transform_method=simul.nm.transform_method,
@@ -520,7 +520,7 @@ class Initializer:
                 if v.index < 0:
                     simul.beads.p = rbeads.p
                 else:
-                    simul.beads._p[:, 3 * v.index : 3 * (v.index + 1)] = rbeads.p
+                    simul.beads.p_[:, 3 * v.index : 3 * (v.index + 1)] = rbeads.p
                 fmom = True
 
             elif k == "momenta":
@@ -542,7 +542,7 @@ class Initializer:
                     simul.beads.resize(natoms, self.nbeads)
 
                 rp = rp * np.sqrt(self.nbeads / nbeads)
-                set_vector(v, simul.beads._p, rp)
+                set_vector(v, simul.beads.p_, rp)
                 fmom = True
             elif k == "velocities":
                 if fmom:
@@ -568,7 +568,7 @@ class Initializer:
                 else:
                     rv = rv * simul.beads.m3[0]
                 rv = rv * np.sqrt(self.nbeads / nbeads)
-                set_vector(v, simul.beads._p, rv)
+                set_vector(v, simul.beads.p_, rv)
                 fmom = True
             elif k == "gle":
                 pass  # thermostats must be initialised in a second stage

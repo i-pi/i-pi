@@ -23,7 +23,7 @@ def bead_with_virial(vir, ffname):
 
     bead = ForceBead()
     bead.ff = MockForceField(ffname)
-    bead._ufvx = depend_value(name="ufvx", value=[0.0, np.zeros(3), vir, {}])
+    bead.ufvx_ = depend_value(name="ufvx", value=[0.0, np.zeros(3), vir, {}])
     return bead
 
 

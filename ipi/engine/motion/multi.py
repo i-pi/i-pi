@@ -23,10 +23,10 @@ class MultiMotion(Motion):
         self.exit_status = None
         self.exit_message = ""
 
-        self._dt = depend_value(
+        self.dt_ = depend_value(
             name="dt",
             func=self.get_totdt,
-            dependencies=[m._dt for m in motionlist],
+            dependencies=[m.dt_ for m in motionlist],
         )
         self.mlist = motionlist
         a = (  # noqa

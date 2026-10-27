@@ -131,13 +131,13 @@ class ReplicaExchange(Smotion):
                 # which means that the exchange is done only relative to the potential energy part.
                 if self.rescalekin:
                     # also rescales the velocities -- should do the same with cell velocities
-                    sl[i].beads._p *= np.sqrt(tj / ti)
-                    sl[j].beads._p *= np.sqrt(ti / tj)
+                    sl[i].beads.p_ *= np.sqrt(tj / ti)
+                    sl[j].beads.p_ *= np.sqrt(ti / tj)
                     try:  # if motion has a barostat, and barostat has a momentum, does the swap
                         # also note that the barostat has a hidden T dependence inside the mass, so
                         # as a matter of fact <p^2> \propto T^2
-                        sl[i].motion.barostat._p *= tj / ti
-                        sl[j].motion.barostat._p *= ti / tj
+                        sl[i].motion.barostat.p_ *= tj / ti
+                        sl[j].motion.barostat.p_ *= ti / tj
                     except AttributeError:
                         pass
 
@@ -145,8 +145,8 @@ class ReplicaExchange(Smotion):
                     # as that when there are very different pressures, the cell should reflect the
                     # pressure/temperature dependence. this also changes the barostat conserved quantities
                     bjh = xp.asarray(sl[j].motion.barostat.h0.h, copy=True)
-                    sl[j].motion.barostat.h0._h[:] = sl[i].motion.barostat.h0.h[:]
-                    sl[i].motion.barostat.h0._h[:] = bjh
+                    sl[j].motion.barostat.h0.h_[:] = sl[i].motion.barostat.h0.h[:]
+                    sl[i].motion.barostat.h0.h_[:] = bjh
                 except AttributeError:
                     pass
 
@@ -187,17 +187,17 @@ class ReplicaExchange(Smotion):
 
                     # undoes the kinetic scaling
                     if self.rescalekin:
-                        sl[i].beads._p *= np.sqrt(ti / tj)
-                        sl[j].beads._p *= np.sqrt(tj / ti)
+                        sl[i].beads.p_ *= np.sqrt(ti / tj)
+                        sl[j].beads.p_ *= np.sqrt(tj / ti)
                         try:
-                            sl[i].motion.barostat._p *= ti / tj
-                            sl[j].motion.barostat._p *= tj / ti
+                            sl[i].motion.barostat.p_ *= ti / tj
+                            sl[j].motion.barostat.p_ *= tj / ti
                         except AttributeError:
                             pass
                     try:
                         bjh = xp.asarray(sl[j].motion.barostat.h0.h, copy=True)
-                        sl[j].motion.barostat.h0._h[:] = sl[i].motion.barostat.h0.h[:]
-                        sl[i].motion.barostat.h0._h[:] = bjh
+                        sl[j].motion.barostat.h0.h_[:] = sl[i].motion.barostat.h0.h[:]
+                        sl[i].motion.barostat.h0.h_[:] = bjh
                     except AttributeError:
                         pass
 

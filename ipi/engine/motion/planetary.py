@@ -140,7 +140,7 @@ class Planetary(Motion):
             self.dnm.mode = "manual"
 
         self.dnm.bind(ens, self, beads=self.dbeads, forces=self.dforces)
-        self.dnm._qnm[:] = (
+        self.dnm.qnm_[:] = (
             nm.qnm[: self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(beads.nbeads)
         )
         self.dens = ens.copy()
@@ -220,7 +220,7 @@ class Planetary(Motion):
 
         # Initialize positions to the actual positions, possibly with contraction
 
-        self.dnm._qnm[:] = (
+        self.dnm.qnm_[:] = (
             self.basenm.qnm[: self.nbeads]
             * np.sqrt(self.nbeads)
             / np.sqrt(self.basebeads.nbeads)
@@ -232,7 +232,7 @@ class Planetary(Motion):
             * xp.sqrt(self.dnm.dynm3)
             * np.sqrt(self.dens.temp * self.dbeads.nbeads * Constants.kb)
         )
-        self.dnm._pnm[0] = 0.0
+        self.dnm.pnm_[0] = 0.0
 
         # Resets the frequency matrix
         self.omega2[:] = 0.0

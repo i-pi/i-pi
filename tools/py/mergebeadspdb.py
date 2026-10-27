@@ -39,7 +39,7 @@ def main(prefix, suffix="pos", unitconv="1.0"):
                 if natoms == 0:
                     natoms = pos.natoms
                     beads = Beads(natoms, nbeads)
-                cell._h *= float(unitconv)
+                cell.h_ *= float(unitconv)
                 beads[i].q = pos.q * float(unitconv)
                 beads.names = pos.names
         except EOFError:  # finished reading files

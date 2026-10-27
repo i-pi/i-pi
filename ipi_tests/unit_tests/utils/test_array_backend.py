@@ -78,14 +78,14 @@ def test_depend_storage(torch_backend):
 
     class Holder:
         def __init__(self):
-            self._x = dp.depend_array(name="x", value=np.zeros(4))
-            self._y = dp.depend_array(
+            self.x_ = dp.depend_array(name="x", value=np.zeros(4))
+            self.y_ = dp.depend_array(
                 name="y",
                 value=np.zeros(4),
                 func=lambda: 2 * self.x,
-                dependencies=[self._x],
+                dependencies=[self.x_],
             )
-            self._names = dp.depend_array(
+            self.names_ = dp.depend_array(
                 name="names", value=np.zeros(4, np.dtype("|U6")), host=True
             )
 
@@ -94,8 +94,8 @@ def test_depend_storage(torch_backend):
     h = Holder()
     assert isinstance(h.x, torch_backend.Tensor)
     assert type(h.names) is np.ndarray
-    h._x[1:3] += 1.0
-    h._x[0] = 3.0
+    h.x_[1:3] += 1.0
+    h.x_[0] = 3.0
     assert np.array_equal(ab.to_numpy(h.y), [6.0, 2.0, 2.0, 0.0])
     h.x = xp.ones(4)
     assert np.array_equal(ab.to_numpy(h.y), 2 * np.ones(4))

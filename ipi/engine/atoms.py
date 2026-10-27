@@ -46,11 +46,11 @@ class Atom:
               list. Note that indices start from 0.
         """
 
-        self._p = system._p[3 * index : 3 * index + 3]
-        self._q = system._q[3 * index : 3 * index + 3]
-        self._m = system._m[index : index + 1]
-        self._name = system._names[index : index + 1]
-        self._m3 = system._m3[3 * index : 3 * index + 3]
+        self.p_ = system.p_[3 * index : 3 * index + 3]
+        self.q_ = system.q_[3 * index : 3 * index + 3]
+        self.m_ = system.m_[index : index + 1]
+        self.name_ = system.names_[index : index + 1]
+        self.m3_ = system.m3_[3 * index : 3 * index + 3]
 
     @property
     def kin(self):
@@ -115,31 +115,31 @@ class Atoms:
         self.natoms = natoms
 
         if _prebind is None:
-            self._q = depend_array(name="q", value=np.zeros(3 * natoms, float))
-            self._p = depend_array(name="p", value=np.zeros(3 * natoms, float))
-            self._m = depend_array(name="m", value=np.zeros(natoms, float))
-            self._names = depend_array(
+            self.q_ = depend_array(name="q", value=np.zeros(3 * natoms, float))
+            self.p_ = depend_array(name="p", value=np.zeros(3 * natoms, float))
+            self.m_ = depend_array(name="m", value=np.zeros(natoms, float))
+            self.names_ = depend_array(
                 name="names", value=np.zeros(natoms, np.dtype("|U6")), host=True
             )
         else:
-            self._q = _prebind[0]
-            self._p = _prebind[1]
-            self._m = _prebind[2]
-            self._names = _prebind[3]
+            self.q_ = _prebind[0]
+            self.p_ = _prebind[1]
+            self.m_ = _prebind[2]
+            self.names_ = _prebind[3]
 
-        self._m3 = depend_array(
+        self.m3_ = depend_array(
             name="m3",
             value=np.zeros(3 * natoms, float),
             func=self.mtom3,
-            dependencies=[self._m],
+            dependencies=[self.m_],
         )
 
-        self._M = depend_value(name="M", func=self.get_msum, dependencies=[self._m])
-        self._kin = depend_value(
-            name="kin", func=self.get_kin, dependencies=[self._p, self._m3]
+        self.M_ = depend_value(name="M", func=self.get_msum, dependencies=[self.m_])
+        self.kin_ = depend_value(
+            name="kin", func=self.get_kin, dependencies=[self.p_, self.m3_]
         )
-        self._kstress = depend_value(
-            name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
+        self.kstress_ = depend_value(
+            name="kstress", func=self.get_kstress, dependencies=[self.p_, self.m_]
         )
 
     def clone(self):
@@ -150,10 +150,10 @@ class Atoms:
         """
 
         newat = Atoms(self.natoms)
-        newat._q[:] = self.q
-        newat._p[:] = self.p
-        newat._m[:] = self.m
-        newat._names[:] = self.names
+        newat.q_[:] = self.q
+        newat.p_[:] = self.p
+        newat.m_[:] = self.m
+        newat.names_[:] = self.names
         return newat
 
     def __len__(self):

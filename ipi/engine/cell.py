@@ -42,14 +42,14 @@ class Cell:
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
-        self._ih = depend_array(
+        self.h_ = depend_array(name="h", value=h)
+        self.ih_ = depend_array(
             name="ih",
             value=np.zeros((3, 3), float),
             func=self.get_ih,
-            dependencies=[self._h],
+            dependencies=[self.h_],
         )
-        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
+        self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
 
     def clone(self):
         return Cell(xp.asarray(self.h, copy=True))
@@ -144,14 +144,14 @@ class GenericCell(Cell):
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
-        self._ih = depend_array(
+        self.h_ = depend_array(name="h", value=h)
+        self.ih_ = depend_array(
             name="ih",
             value=np.zeros((3, 3), float),
             func=self.get_ih,
-            dependencies=[self._h],
+            dependencies=[self.h_],
         )
-        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
+        self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
 
     def clone(self):
         return GenericCell(xp.asarray(self.h, copy=True))

@@ -44,7 +44,7 @@ class AlchemyMC(Motion):
         self.names = names
         self.nxc = nxc
 
-        self._ealc = depend_value(name="ealc")
+        self.ealc_ = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -67,7 +67,7 @@ class AlchemyMC(Motion):
         """
 
         super(AlchemyMC, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(self._ealc)
+        self.ensemble.add_econs(self.ealc_)
 
     def AXlist(self, atomtype):
         """This compile a list of atoms ready for exchanges."""
@@ -137,19 +137,19 @@ class AlchemyMC(Motion):
 
                 # swap names
                 nameswap = self.beads.names[axlist[i]]
-                self.beads._names[axlist[i]] = self.beads.names[axlist[j]]
-                self.beads._names[axlist[j]] = nameswap
+                self.beads.names_[axlist[i]] = self.beads.names[axlist[j]]
+                self.beads.names_[axlist[j]] = nameswap
 
                 # change masses
                 massratio = float(self.beads.m[axlist[i]] / self.beads.m[axlist[j]])
-                self.beads._m[axlist[i]] /= massratio
-                self.beads._m[axlist[j]] *= massratio
+                self.beads.m_[axlist[i]] /= massratio
+                self.beads.m_[axlist[j]] *= massratio
 
                 # adjust the (classical) momenta to conserve ke
-                self.beads._p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
+                self.beads.p_[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
                     massratio
                 )
-                self.beads._p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
+                self.beads.p_[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
                     massratio
                 )
 

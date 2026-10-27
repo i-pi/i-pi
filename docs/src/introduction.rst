@@ -195,18 +195,18 @@ This is a minimal example of how to implement dependencies in a class
 
    class DObject:
       def __init__(self):
-         # depend objects are created using an underscore prefix. 
+         # depend objects are stored in attributes with a trailing underscore.
          # this is a "primitive" value that doesn't depend on anything
-         self._scalar = depend_value(value=1, name="scalar")
+         self.scalar_ = depend_value(value=1, name="scalar")
 
          # this is a dependent object. the definition contains a function that
          # is called to determine the value, and specification of what objects
          # it depend on. 
-         self._double = depend_value(func=lambda: 2*self.scalar, name="double", 
-                                     dependencies=[self._scalar])
+         self.double_ = depend_value(func=lambda: 2*self.scalar, name="double", 
+                                     dependencies=[self.scalar_])
 
    # after the definition of a class, this helper function should be called to
-   # create property getters and setters (use the names with no leading underscore)
+   # create property getters and setters (use the names with no trailing underscore)
    # note that property accessors are added to the class, not to the instances
    dproperties(DObject, ["scalar", "double"])
 
@@ -238,16 +238,16 @@ at runtime, to the value of the other object. A typical usage pattern is
       def __init__(self):
          
          # depend arrays must be initialized with storage space
-         self._vec = depend_array(value=np.ones(4), name="vec") 
+         self.vec_ = depend_array(value=np.ones(4), name="vec") 
 
       def bind(self, factor):
 
          self.factor = factor # stores a reference to the object holding the value
-         self._scaled = depend_array(value=np.ones(4), name="vec",
-                                    func=self.get_scaled, dependencies=[self._vec])
+         self.scaled_ = depend_array(value=np.ones(4), name="vec",
+                                    func=self.get_scaled, dependencies=[self.vec_])
 
          # dependencies can also be added after object creation
-         ddeps(self._scaled, [self.factor._double])
+         ddeps(self.scaled_, [self.factor.double_])
 
       def get_scaled(self):
          # computes a scaled version of the vector
@@ -263,12 +263,12 @@ at runtime, to the value of the other object. A typical usage pattern is
 
    # reading `myoth.vec` returns a read-only array. parts of a depend_array
    # are modified through the depend object, which updates the dependencies
-   myoth._vec[3] = 0
+   myoth.vec_[3] = 0
    print(myoth.scaled) # prints [0,8,16,0]
-   myoth._vec += 1 # in-place operations are also done on the depend object
+   myoth.vec_ += 1 # in-place operations are also done on the depend object
    print(myoth.scaled) # prints [8,16,24,8]
 
-Indexing a depend object, e.g. ``myoth._vec[1:3]``, returns a view of
+Indexing a depend object, e.g. ``myoth.vec_[1:3]``, returns a view of
 part of the array that remains connected to the dependency graph: it
 shares the memory of the full array, writing through it updates the
 dependants of the full array, and reading a stale view recomputes the
@@ -279,7 +279,7 @@ thermostat to the momenta of one normal mode.
 Rules of thumb
 ^^^^^^^^^^^^^^
 
-For a depend member stored as ``obj._x`` and exposed with ``dproperties``
+For a depend member stored as ``obj.x_`` and exposed with ``dproperties``
 as ``obj.x``:
 
 .. list-table::
@@ -293,31 +293,31 @@ as ``obj.x``:
    * - overwrite the whole value
      - ``obj.x = v``
    * - modify part of an array
-     - ``obj._x[i] = v``
+     - ``obj.x_[i] = v``
    * - in-place update of a whole array
-     - ``obj._x += v`` (faster than ``obj._x[:] += v``)
+     - ``obj.x_ += v`` (faster than ``obj.x_[:] += v``)
    * - declare a dependency
-     - ``dependencies=[other._y]``, or ``ddeps(obj._x, [other._y])`` after
+     - ``dependencies=[other.y_]``, or ``ddeps(obj.x_, [other.y_])`` after
        creating a computed object
    * - read the value of a depend object that is not a class member
      - ``dep.get()``
    * - keep a view of part of an array that stays connected to the
        dependency graph (e.g. to bind a thermostat to some of the momenta)
-     - ``obj._x[i]``, ``obj._x.flatten()``
+     - ``obj.x_[i]``, ``obj.x_.flatten()``
    * - make an existing depend object computed from other ones
-     - ``dcompute(obj._x, func, [other._y])``, ``dpipe(other._y, obj._x)``
+     - ``dcompute(obj.x_, func, [other.y_])``, ``dpipe(other.y_, obj.x_)``
 
 Common pitfalls:
 
 * Arrays read as ``obj.x`` are read-only, so ``obj.x[i] = v`` and
-  ``obj.x += v`` raise an error: modify the array through ``obj._x``.
+  ``obj.x += v`` raise an error: modify the array through ``obj.x_``.
 * A value read as ``obj.x`` is only valid until ``x`` is written or
   recomputed: depending on the array backend, these may or may not change
-  it. To keep track of ``x``, store the depend object ``obj._x`` (or a view
+  it. To keep track of ``x``, store the depend object ``obj.x_`` (or a view
   of it) instead.
 * A ``depend_value`` that holds an array is not protected: modifying the
   array in place does not update its dependants.
-* Depend objects are not arrays: use ``obj.x`` (or ``obj._x.get()``) when
+* Depend objects are not arrays: use ``obj.x`` (or ``obj.x_.get()``) when
   the value is needed.
 * Functions that compute a value should not modify other depend objects:
   they are called at unpredictable times, whenever a stale value is read.
@@ -338,12 +338,12 @@ share the temperature between the ensemble and the thermostats:
 
    class Thermo:
       def __init__(self):
-         self._temp = depend_value(name="temp", value=0.0)
+         self.temp_ = depend_value(name="temp", value=0.0)
 
    dproperties(Thermo, ["temp"])
 
    thermo = Thermo()
-   dpipe(myobj._double, thermo._temp) # thermo.temp follows myobj.double
+   dpipe(myobj.double_, thermo.temp_) # thermo.temp follows myobj.double
    myobj.scalar = 5
    print(thermo.temp) # prints `10`
 
@@ -371,9 +371,9 @@ is synchronized as well.
 
    class Length:
       def __init__(self):
-         self._meters = depend_array(name="meters", value=np.zeros(3))
-         self._feet = depend_array(name="feet", value=np.zeros(3))
-         dsynchro(self._meters, self._feet,
+         self.meters_ = depend_array(name="meters", value=np.zeros(3))
+         self.feet_ = depend_array(name="feet", value=np.zeros(3))
+         dsynchro(self.meters_, self.feet_,
                   lambda: self.feet * 0.3048,    # meters from feet
                   lambda: self.meters / 0.3048)  # feet from meters
 
@@ -382,7 +382,7 @@ is synchronized as well.
    length = Length()
    length.meters = np.ones(3)
    print(length.feet) # prints [3.2808399 3.2808399 3.2808399]
-   length._feet[0] = 0.0
+   length.feet_[0] = 0.0
    print(length.meters) # prints [0. 1. 1.]
 
 Array backends

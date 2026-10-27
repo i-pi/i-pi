@@ -125,8 +125,8 @@ def process_units(
     # Return data as i-PI structures
     cell = Cell(cell)
     atoms = Atoms(natoms)
-    atoms._q[:] = xp.asarray(data)
-    atoms._names[:] = names
-    atoms._m[:] = xp.asarray(masses)
+    atoms.q_[:] = xp.asarray(data)
+    atoms.names_[:] = names
+    atoms.m_[:] = xp.asarray(masses)
 
     return {"atoms": atoms, "cell": cell, "comment": comment}

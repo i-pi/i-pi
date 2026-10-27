@@ -20,11 +20,11 @@ Values are recomputed lazily: when an access finds the tainted flag set,
 taint all downstream dependants eagerly.
 
 Classes expose their depend members through `dproperties`. For a member
-stored as `obj._x`, reading `obj.x` returns the current value (recomputed if
-needed) and `obj.x = value` overwrites it. The depend object `obj._x` is used
-to declare dependencies, to modify an array in place (`obj._x[i] = value`,
-`obj._x += value`), and to obtain views of parts of an array that stay
-connected to the dependency graph (`obj._x[i]`, `obj._x.flatten()`). Indexing
+stored as `obj.x_`, reading `obj.x` returns the current value (recomputed if
+needed) and `obj.x = value` overwrites it. The depend object `obj.x_` is used
+to declare dependencies, to modify an array in place (`obj.x_[i] = value`,
+`obj.x_ += value`), and to obtain views of parts of an array that stay
+connected to the dependency graph (`obj.x_[i]`, `obj.x_.flatten()`). Indexing
 with masks or arrays of indices gives copies, as for the arrays themselves.
 
 The value read from `obj.x` (or with `get()`) must not be modified, and is
@@ -380,7 +380,7 @@ class depend_array(depend_base):
         if _is_scalar_index(index, self._value.ndim):
             return value
         if not _is_basic_index(index):
-            # masks and arrays of indices select a copy, which `obj._x[i] op= v`
+            # masks and arrays of indices select a copy, which `obj.x_[i] op= v`
             # then writes back
             return self._view(value, value)
         wvalue = value if self._wvalue is self._value else self._wvalue[index]
@@ -390,8 +390,8 @@ class depend_array(depend_base):
         status = self._status
         if isinstance(value, depend_base):
             if getattr(value, "_parent", None) is self and value._index is index:
-                # `obj._x[i] op= v` stores back the view obtained from
-                # `obj._x[i]`, which has already been updated in place
+                # `obj.x_[i] op= v` stores back the view obtained from
+                # `obj.x_[i]`, which has already been updated in place
                 if status.synchro is None and self._func is not None:
                     self.update_man()  # raises, as the value is computed
                 return
@@ -556,26 +556,26 @@ def dsynchro(first, second, first_from_second, second_from_first):
 
 def _inject_depend_property(cls, attr_name):
     """Adds a property `<attr_name>` to `cls` that reads and writes the value of
-    the depend member `_<attr_name>`."""
+    the depend member `<attr_name>_`."""
 
-    private_name = f"_{attr_name}"
+    member_name = f"{attr_name}_"
 
     def getter(self):
-        dep = self.__dict__[private_name]
+        dep = self.__dict__[member_name]
         if dep._status.tainted:
             dep._refresh()
         return dep._value
 
     def setter(self, value):
-        self.__dict__[private_name].set(value)
+        self.__dict__[member_name].set(value)
 
     setattr(cls, attr_name, property(getter, setter))
 
 
 def dproperties(cls, attr_names):
-    """Expose depend members `_<name>` as attributes `<name>` on `cls`.
+    """Expose depend members `<name>_` as attributes `<name>` on `cls`.
 
-    Example: `dproperties(A, ["val"])` on a class with `self._val =
+    Example: `dproperties(A, ["val"])` on a class with `self.val_ =
     depend_value(...)` makes `obj.val` read/write the value.
     """
     if not isinstance(attr_names, list):

@@ -282,7 +282,7 @@ class AlKMC(Motion):
 
         if not f_restart:
             # also sets global q so we can use it further down
-            self.beads._q[0, :] = xp.asarray(self.sites[self.idx].flatten())
+            self.beads.q_[0, :] = xp.asarray(self.sites[self.idx].flatten())
 
         self.dbeads = [None] * self.neval
         self.dforces = [None] * self.neval
@@ -368,7 +368,7 @@ class AlKMC(Motion):
         qts = self.dcell.array_pbc(qts)  # use pbc!
         qts *= 0.5
         qts += qstart
-        self.dbeads[ieval]._q[0, :] = qts
+        self.dbeads[ieval].q_[0, :] = qts
 
         tspot = self.dforces[ieval].pot
         io.print_file(
@@ -396,7 +396,7 @@ class AlKMC(Motion):
             units="angstrom",
             cell_units="angstrom",
         )
-        self.dbeads[ieval]._q[0] = qend
+        self.dbeads[ieval].q_[0] = qend
         io.print_file(
             "xyz",
             self.dbeads[ieval][0],
@@ -504,7 +504,7 @@ class AlKMC(Motion):
         )  # this is a unique id string that charactrizes the current state
         self.tscache[ostr] = {}
         if ostr not in self.ecache:
-            self.dbeads[0]._q[0, :] = xp.asarray(
+            self.dbeads[0].q_[0, :] = xp.asarray(
                 self.sites[self.unique_idx(self.state)].flatten()
             )
             rv = [0, 0, 0, 0, 0]
@@ -553,7 +553,7 @@ class AlKMC(Motion):
 
                     ieval = self.find_eval(ethreads)
                     # launches evaluator
-                    self.dbeads[ieval]._q[0, :] = xp.asarray(
+                    self.dbeads[ieval].q_[0, :] = xp.asarray(
                         self.sites[self.unique_idx(nstate)].flatten()
                     )
 
@@ -676,4 +676,4 @@ class AlKMC(Motion):
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]
         newq -= oldq
         newq = self.cell.array_pbc(newq)
-        self.beads._q[0] += newq
+        self.beads.q_[0] += newq

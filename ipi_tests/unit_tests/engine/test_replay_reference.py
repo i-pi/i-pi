@@ -28,8 +28,8 @@ def test_replay_reads_known_frames_in_bead_order(simulation, tmp_path, mode, sep
             for frame in range(2):
                 for bead in ([i] if separate else range(3)):
                     atoms = IAtoms(2)
-                    atoms._names[:] = ["H", "O"]
-                    atoms._q[:] = q[frame, bead]
+                    atoms.names_[:] = ["H", "O"]
+                    atoms.q_[:] = q[frame, bead]
                     print_file(
                         mode,
                         atoms,

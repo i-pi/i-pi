@@ -92,10 +92,10 @@ def reference_system():
         )
         masses = np.array([2.0, 3.0])
         h = np.array([[6.0, 1.0, 0.5], [0.0, 5.0, 0.7], [0.0, 0.0, 4.0]])
-        s.beads._q[:] = q
-        s.beads._p[:] = p
-        s.beads._m[:] = masses
-        s.cell._h[:] = h
+        s.beads.q_[:] = q
+        s.beads.p_[:] = p
+        s.beads.m_[:] = masses
+        s.cell.h_[:] = h
         s.forces.alpha = alpha
         return s, SimpleNamespace(
             q=q,

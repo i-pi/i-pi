@@ -438,8 +438,8 @@ if __name__ == "__main__":
         for i in range(nbeads_new):
             # copy() is necessary, otherwise they all point to the same obj.
             newpath.append(prototype.copy())
-            newpath[i]._q[:] = q[i]
-            newpath[i]._q[fixmask] = masked_new_q[i]
+            newpath[i].q_[:] = q[i]
+            newpath[i].q_[fixmask] = masked_new_q[i]
     else:  # If nbeads changes, we put fixed atoms from the bead 0 to all beads.
         if activelist is not None:
             print(
@@ -447,7 +447,7 @@ if __name__ == "__main__":
             )
         for i in range(nbeads_new):
             newpath.append(prototype.copy())
-            newpath[i]._q[fixmask] = masked_new_q[i]
+            newpath[i].q_[fixmask] = masked_new_q[i]
 
     if args.units != "None":
         units = cell_units = args.units

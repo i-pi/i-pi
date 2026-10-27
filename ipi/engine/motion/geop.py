@@ -217,7 +217,7 @@ class LineMapper(object):
         determines new position (x0+d*x)"""
 
         self.fcount += 1
-        self.dbeads._q[:, self.fixatoms_mask] = (
+        self.dbeads.q_[:, self.fixatoms_mask] = (
             self.x0[:, self.fixatoms_mask] + self.d * x
         )
         e = self.dforces.pot  # Energy
@@ -256,7 +256,7 @@ class GradientMapper(object):
         """computes energy and gradient for optimization step"""
 
         self.fcount += 1
-        self.dbeads._q[:, self.fixatoms_mask] = x
+        self.dbeads.q_[:, self.fixatoms_mask] = x
         e = self.dforces.pot  # Energy
         g = -self.dforces.f[:, self.fixatoms_mask]  # Gradient
         return e, g

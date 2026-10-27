@@ -196,10 +196,10 @@ def test_init_chk_skips_checkpoint_forcefields(tmp_path):
 def initialized_system():
     """A valid two-atom path; individual tests replace only the requested data."""
     beads = Beads(2, 4)
-    beads._q[:] = np.arange(24).reshape(4, 6) / 10
-    beads._p[:] = np.arange(1, 25).reshape(4, 6) / 10
-    beads._m[:] = [2, 8]
-    beads._names[:] = ["H", "He"]
+    beads.q_[:] = np.arange(24).reshape(4, 6) / 10
+    beads.p_[:] = np.arange(1, 25).reshape(4, 6) / 10
+    beads.m_[:] = [2, 8]
+    beads.names_[:] = ["H", "He"]
     return SimpleNamespace(beads=beads, cell=Cell(np.eye(3) * 5))
 
 
@@ -315,11 +315,11 @@ def test_missing_initial_state_is_rejected(initialized_system, missing, message)
     if missing == "positions":
         system.beads = Beads(0, 0)
     elif missing == "cell":
-        system.cell._h[:] = 0
+        system.cell.h_[:] = 0
     elif missing == "masses":
-        system.beads._m[0] = 0
+        system.beads.m_[0] = 0
     else:
-        system.beads._names[0] = ""
+        system.beads.names_[0] = ""
     with pytest.raises(ValueError, match=message):
         initializer.Initializer(4).init_stage1(system)
 
@@ -452,9 +452,9 @@ def test_path_resizing_is_fourier_projection(tmp_path, source, target, kind):
         initializer.set_vector(initializer.InitIndexed(), target_q, values)
         np.testing.assert_allclose(target_q.get(), expected, atol=1e-13)
     system = SimpleNamespace(beads=Beads(2, target), cell=Cell(np.eye(3) * 10))
-    system.beads._m[:] = [2, 5]
-    system.beads._names[:] = ["H", "He"]
-    system.beads._q[:] = 1
+    system.beads.m_[:] = [2, 5]
+    system.beads.names_[:] = ["H", "He"]
+    system.beads.q_[:] = 1
     if kind == "velocities":
         expected *= np.repeat([2.0, 5.0], 3)
     if kind != "positions":
@@ -495,10 +495,10 @@ def test_thermal_momenta_with_mode_masses(
     monkeypatch, style, frequencies, index, thermal_temperature
 ):
     beads = Beads(2, 4)
-    beads._m[:] = [2, 5]
-    beads._names[:] = ["H", "He"]
-    beads._q[:] = 0.1
-    beads._p[:] = 7
+    beads.m_[:] = [2, 5]
+    beads.names_[:] = ["H", "He"]
+    beads.q_[:] = 0.1
+    beads.p_[:] = 7
     system = SimpleNamespace(
         beads=beads,
         cell=Cell(np.eye(3) * 10),
@@ -548,9 +548,9 @@ def test_mass_cell_and_velocity_unit_conversion(tmp_path):
         "2\nvelocities{m/s}\nH 100000 -200000 300000\nHe -100000 200000 -300000\n"
     )
     system = SimpleNamespace(beads=Beads(2, 1), cell=Cell())
-    system.beads._m[:] = [1, 1]
-    system.beads._names[:] = ["H", "He"]
-    system.beads._q[:] = 1
+    system.beads.m_[:] = [1, 1]
+    system.beads.names_[:] = ["H", "He"]
+    system.beads.q_[:] = 1
     queue = [
         (
             "masses",

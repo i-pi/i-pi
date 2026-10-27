@@ -953,8 +953,8 @@ class FFPlumed(FFEval):
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
-            myatoms._q *= unit_to_internal("length", self.init_file.units, 1.0)
-            mycell._h *= unit_to_internal("length", self.init_file.units, 1.0)
+            myatoms.q_ *= unit_to_internal("length", self.init_file.units, 1.0)
+            mycell.h_ *= unit_to_internal("length", self.init_file.units, 1.0)
         else:
             raise ValueError(
                 "Unsupported init file format for FFPlumed: "
@@ -1776,7 +1776,7 @@ class FFRotations(ForceField):
 
             rot_atoms = atoms.clone()
             rot_cell = GenericCell(xR @ cell.h)  # NB we need generic cell orientation
-            rot_atoms._q[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
+            rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
             rots.append((R, w))
             ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1788,7 +1788,7 @@ class FFRotations(ForceField):
 
                 rot_cell = GenericCell(xR @ cell.h)
                 rot_atoms = atoms.clone()
-                rot_atoms._q[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
+                rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
                 rots.append((R, w))
                 ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))

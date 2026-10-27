@@ -26,7 +26,7 @@ def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
         dopbc=False,
     )
     atoms = Atoms(1)
-    atoms._q[:] = [0.3, -0.2, 0.1]
+    atoms.q_[:] = [0.3, -0.2, 0.1]
     request = ff.queue(atoms, Cell(np.eye(3) * 10))
     ff.poll()
     assert request["status"] == "Done"

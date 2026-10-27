@@ -1992,9 +1992,9 @@ class Properties:
                 continue
 
             mass = self.beads.m[i]
-            self.dbeads._q[:] = q
+            self.dbeads.q_[:] = q
             for b in range(nb):
-                self.dbeads._q[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
+                self.dbeads.q_[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
             dV = self.dforces.pot - self.forces.pot
 
             n0 = xp.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
@@ -2026,7 +2026,7 @@ class Properties:
         q = self.beads.q
 
         self.dcell.h = self.cell.h
-        self.dbeads._q[::2] = self.beads.q[::2] + eps * (q - qc)[::2]
+        self.dbeads.q_[::2] = self.beads.q[::2] + eps * (q - qc)[::2]
 
         vir1 = xp.sum((q - qc)[::2] * self.forces.f[::2]) / self.beads.nbeads * 2.0
         vir2 = (
@@ -2256,9 +2256,9 @@ class Properties:
             ni += 1
 
             # arranges coordinate-scaled beads in a auxiliary beads object
-            self.dbeads._q[:] = q[:]
+            self.dbeads.q_[:] = q[:]
             for b in range(self.beads.nbeads):
-                self.dbeads._q[b, 3 * i : 3 * (i + 1)] = qc[
+                self.dbeads.q_[b, 3 * i : 3 * (i + 1)] = qc[
                     3 * i : 3 * (i + 1)
                 ] + np.sqrt(1.0 / alpha) * (
                     q[b, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]
@@ -2551,7 +2551,7 @@ class Properties:
 
             for b in range(self.beads.nbeads):
                 for j in range(3 * i, 3 * (i + 1)):
-                    self.dbeads._q[b, j] = (
+                    self.dbeads.q_[b, j] = (
                         qc[j] * (1.0 - scalefactor) + scalefactor * q[b, j]
                     )
 
@@ -2746,11 +2746,11 @@ class Properties:
 
             ni += 1
 
-            self.dbeads._q[:] = q
+            self.dbeads.q_[:] = q
             # shifts beads positions
             for b in range(self.beads.nbeads):
                 for j in range(3 * i, 3 * (i + 1)):
-                    self.dbeads._q[b, j] = (
+                    self.dbeads.q_[b, j] = (
                         qc[j] * (1.0 - scalefactor) + scalefactor * q[b, j]
                     )
 
@@ -2793,7 +2793,7 @@ class Properties:
             chinexpsum += chinexp
             tiexpsum += tiexp
 
-        self.dbeads._q[:] = q[:]
+        self.dbeads.q_[:] = q[:]
         if ni == 0:
             raise IndexError(
                 "Couldn't find an atom which matched the argument of isotope_zetasc"
@@ -3325,7 +3325,7 @@ class Trajectories:
 
             for b in range(nb):
                 for j in range(3 * i, 3 * (i + 1)):
-                    self.dbeads._q[b, j] = (
+                    self.dbeads.q_[b, j] = (
                         qc[j] * (1.0 - scalefactor) + scalefactor * q[b, j]
                     )
             zetasc[i, 0] = float(self.dforces.pot / nb - v0)

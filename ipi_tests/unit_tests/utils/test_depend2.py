@@ -20,9 +20,9 @@ class Holder:
     """Exposes depend members through dproperties."""
 
     def __init__(self):
-        self._x = dp.depend_array(name="x", value=np.zeros(4))
-        self._y = dp.depend_array(
-            name="y", value=np.zeros(4), func=lambda: 2 * self.x, dependencies=[self._x]
+        self.x_ = dp.depend_array(name="x", value=np.zeros(4))
+        self.y_ = dp.depend_array(
+            name="y", value=np.zeros(4), func=lambda: 2 * self.x, dependencies=[self.x_]
         )
 
 
@@ -56,17 +56,17 @@ def test_handle_is_not_an_array():
     """Depend: depend objects cannot be used as arrays"""
     h = Holder()
     with pytest.raises(TypeError):
-        np.asarray(h._x)
+        np.asarray(h.x_)
 
 
 def test_writes_taint_dependants():
     """Depend: writes through the handle, its views and the property taint dependants"""
     h = Holder()
     assert np.array_equal(h.y, np.zeros(4))
-    h._x[1] = 1.0
-    assert h._y.tainted()
+    h.x_[1] = 1.0
+    assert h.y_.tainted()
     assert np.array_equal(h.y, [0.0, 2.0, 0.0, 0.0])
-    h._x[2:][0] = 3.0
+    h.x_[2:][0] = 3.0
     assert np.array_equal(h.y, [0.0, 2.0, 6.0, 0.0])
     h.x = np.ones(4)
     assert np.array_equal(h.y, 2 * np.ones(4))
@@ -76,19 +76,19 @@ def test_inplace_operators():
     """Depend: in-place operators modify the buffer and taint dependants"""
     h = Holder()
     buffer = h.x
-    h._x += 1.0
-    h._x *= 3.0
+    h.x_ += 1.0
+    h.x_ *= 3.0
     assert np.array_equal(h.y, 6 * np.ones(4))
     # the array is updated in place
     assert np.array_equal(buffer, 3 * np.ones(4))
-    h._x[0] -= 3.0
+    h.x_[0] -= 3.0
     assert np.array_equal(h.y, [0.0, 6.0, 6.0, 6.0])
 
 
 def test_indexed_inplace_operators():
-    """Depend: `obj._x[i] op= v` updates the array and taints dependants"""
+    """Depend: `obj.x_[i] op= v` updates the array and taints dependants"""
     h = Holder()
-    h._x[1:3] += 2.0
+    h.x_[1:3] += 2.0
     assert np.array_equal(h.y, [0.0, 4.0, 4.0, 0.0])
     a = dp.depend_array(name="a", value=np.zeros((2, 3)))
     a[1] += 1.0
@@ -96,13 +96,13 @@ def test_indexed_inplace_operators():
     a[0] = a[1]
     assert np.array_equal(a.get(), np.ones((2, 3)))
     with pytest.raises(NameError):
-        h._y[0:2] += 1.0
+        h.y_[0:2] += 1.0
 
 
 @pytest.mark.parametrize("backend", ["numpy", "torch"])
 @pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
 def test_advanced_index_inplace_operators(backend, index):
-    """Depend: `obj._x[i] op= v` with a mask or an array of indices, which
+    """Depend: `obj.x_[i] op= v` with a mask or an array of indices, which
     select a copy rather than a view, updates the array and taints dependants"""
     if backend == "torch":
         pytest.importorskip("torch")
@@ -110,7 +110,7 @@ def test_advanced_index_inplace_operators(backend, index):
     try:
         index = ab.xp.asarray(index)
         h = Holder()
-        h._x[index] += 2.0
+        h.x_[index] += 2.0
         assert np.array_equal(ab.to_numpy(h.y), [4.0, 0.0, 4.0, 0.0])
         a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
         a[:, index] *= 3.0
@@ -226,30 +226,30 @@ def test_dcompute():
     z = dp.depend_value(name="z", value=5.0)
     zz = dp.depend_value(name="zz", func=lambda: 2 * z.get(), dependencies=[z])
     assert zz.get() == 10.0
-    dp.dcompute(z, lambda: h.x.sum(), [h._x])
+    dp.dcompute(z, lambda: h.x.sum(), [h.x_])
     # the current value is discarded, and the dependants are tainted
     assert z.tainted() and zz.tainted()
     assert z.get() == 0.0
-    h._x[0] = 1.0
+    h.x_[0] = 1.0
     assert zz.get() == 2.0
     with pytest.raises(NameError):
         z.set(3.0)
     w = dp.depend_value(name="w", value=0.0)
-    dp.dpipe(h._y, w, item=0)
+    dp.dpipe(h.y_, w, item=0)
     assert w.get() == 2.0
     # an object that follows another one can be piped again
     dp.dpipe(zz, w)
     assert w.get() == 2.0
-    h._x[0] = 2.0
+    h.x_[0] = 2.0
     assert w.get() == 4.0
     # computed objects, views, and synchronized objects cannot be made computed
-    for dep in (z, h._x[1:]):
+    for dep in (z, h.x_[1:]):
         with pytest.raises(AssertionError):
             dp.dcompute(dep, lambda: 0.0, [])
     a = dp.depend_array(name="a", value=np.ones(3))
     dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
     with pytest.raises(AssertionError):
-        dp.dpipe(h._x, a)
+        dp.dpipe(h.x_, a)
 
 
 def test_ddeps():
@@ -257,13 +257,13 @@ def test_ddeps():
     h = Holder()
     z = dp.depend_value(name="z", value=1.0)
     h.y
-    dp.ddeps(h._y, [z])
-    assert h._y.tainted()
+    dp.ddeps(h.y_, [z])
+    assert h.y_.tainted()
     h.y
     z.set(2.0)
-    assert h._y.tainted()
+    assert h.y_.tainted()
     # primitive objects and views cannot be given dependencies
-    for dep in (h._x, h._y[1:]):
+    for dep in (h.x_, h.y_[1:]):
         with pytest.raises(AssertionError):
             dp.ddeps(dep, [z])
 
@@ -273,9 +273,9 @@ def test_load_and_root():
     _root returns the array that views belong to"""
     h = Holder()
     h.y
-    h._x[0] = 1.0
-    assert h._y._load()[0] == 0.0 and h._y.tainted()
-    view = h._x[1:][1:]
-    assert view._root() is h._x and h._x._root() is h._x
+    h.x_[0] = 1.0
+    assert h.y_._load()[0] == 0.0 and h.y_.tainted()
+    view = h.x_[1:][1:]
+    assert view._root() is h.x_ and h.x_._root() is h.x_
     v = dp.depend_value(name="v", value=1.0)
     assert v._load() == 1.0 and v._root() is v

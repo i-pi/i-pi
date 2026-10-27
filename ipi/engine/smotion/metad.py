@@ -97,5 +97,5 @@ class MetaDyn(Smotion):
                             for fb in fc._forces:
                                 # this open-heart surgery on a depend object is fugly
                                 # but can't se a better way
-                                fb._ufvx._load()[0] -= mtd_work
-                                fb._ufvx.taint(taintme=False)
+                                fb.ufvx_._load()[0] -= mtd_work
+                                fb.ufvx_.taint(taintme=False)

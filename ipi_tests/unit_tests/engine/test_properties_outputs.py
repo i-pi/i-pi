@@ -78,7 +78,7 @@ def test_atom_and_centroid_outputs(reference_system, atom):
 def test_centroid_center_of_mass_velocity(harmonic_system, species, indices):
     s = harmonic_system
     momenta = np.arange(24).reshape(4, 2, 3) / 10
-    s.beads._p[:] = momenta.reshape(4, 6)
+    s.beads.p_[:] = momenta.reshape(4, 6)
     expected = (
         momenta.mean(axis=0)[indices].sum(axis=0) / np.array([2.0, 3.0])[indices].sum()
     )

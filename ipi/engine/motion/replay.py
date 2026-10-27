@@ -120,9 +120,9 @@ class Replay(Motion):
                             myframe = read_file("xyz", self.rfile)
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
-                        myatoms._q *= unit_to_internal("length", self.intraj.units, 1.0)
-                        mycell._h *= unit_to_internal("length", self.intraj.units, 1.0)
-                        b._q[:] = myatoms.q
+                        myatoms.q_ *= unit_to_internal("length", self.intraj.units, 1.0)
+                        mycell.h_ *= unit_to_internal("length", self.intraj.units, 1.0)
+                        b.q_[:] = myatoms.q
                 elif self.intraj.mode == "pdb":
                     for bindex, b in enumerate(self.beads):
                         if wildcard_used:
@@ -131,9 +131,9 @@ class Replay(Motion):
                             myframe = read_file("pdb", self.rfile)
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
-                        myatoms._q *= unit_to_internal("length", self.intraj.units, 1.0)
-                        mycell._h *= unit_to_internal("length", self.intraj.units, 1.0)
-                        b._q[:] = myatoms.q
+                        myatoms.q_ *= unit_to_internal("length", self.intraj.units, 1.0)
+                        mycell.h_ *= unit_to_internal("length", self.intraj.units, 1.0)
+                        b.q_[:] = myatoms.q
                 elif self.intraj.mode == "ase":
                     for bindex, b in enumerate(self.beads):
                         if wildcard_used:
@@ -144,7 +144,7 @@ class Replay(Motion):
                             myframe = read_file("ase", self.rfile, dimension="length")
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
-                        b._q[:] = myatoms.q
+                        b.q_[:] = myatoms.q
 
                 elif self.intraj.mode == "chk" or self.intraj.mode == "checkpoint":
                     # TODO: Adapt the new `Simulation.load_from_xml`?
@@ -157,12 +157,12 @@ class Replay(Motion):
                     simchk.parse(xmlchk.fields[0][1])
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
-                    self.beads._q[:] = mybeads.q
+                    self.beads.q_[:] = mybeads.q
                     self.finish(status="success", message=" # Read single checkpoint")
                     return
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
                 if mycell.V > 0:
-                    self.cell._h[:] = mycell.h
+                    self.cell.h_[:] = mycell.h
             except EOFError:
                 self.finish(
                     status="success", message=" # Finished reading re-run trajectory"

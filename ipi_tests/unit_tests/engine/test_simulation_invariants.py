@@ -72,7 +72,7 @@ def test_nve_time_reversal(simulation, nbeads):
         beads = sim.syslist[0].beads
         q0, p0 = beads.q.copy(), beads.p.copy()
         sim.run(steps=7, write_outputs=False)
-        beads._p[:] *= -1
+        beads.p_[:] *= -1
         sim.run(steps=7, write_outputs=False)
         np.testing.assert_allclose(beads.q, q0, rtol=1e-12, atol=1e-12)
         np.testing.assert_allclose(beads.p, -p0, rtol=1e-12, atol=1e-12)
@@ -130,7 +130,7 @@ def test_read_only_initialization_starts_no_services(tmp_path, monkeypatch, sour
 
     def initialize(sim):
         observed.append(sim.chk)
-        sim.syslist[0].beads._q[:] = 2
+        sim.syslist[0].beads.q_[:] = 2
 
     sim = Simulation.load_from_xml(
         xml if source == "string" else io.StringIO(xml),
@@ -181,7 +181,7 @@ def test_multiple_systems_have_independent_state_and_outputs(simulation):
         assert first.beads is not second.beads
         assert first.forces.pot == pytest.approx(0.25 * 0.43)
         assert second.forces.pot == pytest.approx(1.5)
-        first.beads._q[:] = 0
+        first.beads.q_[:] = 0
         np.testing.assert_array_equal(second.beads.q, 1)
         assert {out.filename for out in sim.outputs} == {
             "first_initial.energy",

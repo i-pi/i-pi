@@ -77,20 +77,20 @@ class DrivenDynamics(Dynamics):
         self.Electric_Field = efield
         self.Born_Charges = bec
         self.Electric_Dipole = ElectricDipole()
-        self._time = depend_value(name="time", value=0)
-        self._asr_threshold = depend_value(name="asr_threshold", value=asr_threshold)
+        self.time_ = depend_value(name="time", value=0)
+        self.asr_threshold_ = depend_value(name="asr_threshold", value=asr_threshold)
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-        dpipe(dfrom=ens._time, dto=self._time)
+        dpipe(dfrom=ens.time_, dto=self.time_)
         super().bind(ens, beads, nm, cell, bforce, prng, omaker)
         self.Electric_Dipole.bind(ens)
         self.Electric_Field.bind(self, self.enstype)
-        self.Born_Charges.bind(ens, self.enstype, self._asr_threshold)
+        self.Born_Charges.bind(ens, self.enstype, self.asr_threshold_)
 
 
 dproperties(
     DrivenDynamics,
-    ["dt", "nmts", "splitting", "ntemp", "time", "efield_time", "asr_threshold"],
+    ["dt", "nmts", "splitting", "ntemp", "time", "asr_threshold"],
 )
 
 
@@ -101,12 +101,12 @@ class EDAIntegrator(DummyIntegrator):
 
     def __init__(self):
         super().__init__()
-        self._time = depend_value(name="time", value=0)
+        self.time_ = depend_value(name="time", value=0)
 
     def bind(self, motion: DrivenDynamics):
         """bind variables"""
         super().bind(motion)
-        dpipe(dfrom=motion._time, dto=self._time)
+        dpipe(dfrom=motion.time_, dto=self.time_)
         self.Born_Charges: BEC = motion.Born_Charges
         self.Electric_Field: ElectricField = motion.Electric_Field
 
@@ -124,7 +124,7 @@ class EDAIntegrator(DummyIntegrator):
             )
 
         edaforces = self.EDAforces(time)
-        self.beads._p += edaforces * self.pdt[level]
+        self.beads.p_ += edaforces * self.pdt[level]
         self.pconstraints()
 
         pass
@@ -194,7 +194,7 @@ class BEC:
     # in units of the elementary charge, i.e. Z^*_{ij} = 1/q_e \frac{\partial d_i }{\partial R_j}
     # The dipole is a vector of shape (3), while the nuclear positions have shape (3xNatoms)
     # The BEC tensors have then shape (3xNatoms,3).
-    # A tensor of this shape is stored for each bead --> self._bec.shape = (self.nbeads, 3 * self.natoms, 3)
+    # A tensor of this shape is stored for each bead --> self.bec.shape = (self.nbeads, 3 * self.natoms, 3)
     #
     # If an external time-dependent electric field E(t) is applied, this couples to the dipole of the system,
     # and the resulting additional term to the forces is given by q_e Z^* @ E(t) --> have a look at EDAIntegrator.EDAforces
@@ -208,29 +208,29 @@ class BEC:
         self.cbec = cbec
         if bec is None:
             bec = np.full((0, 3), np.nan)
-        self._bec = depend_array(name="bec", value=bec)
+        self.bec_ = depend_array(name="bec", value=bec)
         self.mode = mode
-        self._asr_threshold = depend_value(name="asr_threshold", value=asr_threshold)
+        self.asr_threshold_ = depend_value(name="asr_threshold", value=asr_threshold)
 
     def bind(self, ensemble, enstype, asr_threshold):
         self.enstype = enstype
         self.nbeads = ensemble.beads.nbeads
         self.natoms = ensemble.beads.natoms
         self.forces = ensemble.forces
-        dpipe(dfrom=asr_threshold, dto=self._asr_threshold)
+        dpipe(dfrom=asr_threshold, dto=self.asr_threshold_)
 
         if self.enstype in DrivenDynamics.driven_integrators and self.cbec:
-            self._bec = depend_array(
+            self.bec_ = depend_array(
                 name="bec",
                 value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan),
                 func=self._get_driver_BEC,
-                dependencies=[ensemble.beads._q],
+                dependencies=[ensemble.beads.q_],
             )
         elif self.enstype in DrivenDynamics.driven_integrators:
             temp = self._get_fixed_BEC()  # reshape the BEC once and for all
-            self._bec = depend_array(name="bec", value=temp)
+            self.bec_ = depend_array(name="bec", value=temp)
         else:
-            self._bec = depend_array(
+            self.bec_ = depend_array(
                 name="bec", value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
             )
 
@@ -324,16 +324,16 @@ class ElectricDipole:
         pass
 
     def bind(self, ensemble):
-        self._nbeads = depend_value(name="nbeads", value=ensemble.beads.nbeads)
+        self.nbeads_ = depend_value(name="nbeads", value=ensemble.beads.nbeads)
 
         self.ens = ensemble
 
         val = np.full((self.nbeads, 3), np.nan)
-        self._dipole = depend_array(
+        self.dipole_ = depend_array(
             name="dipole",
             func=lambda: xp.asarray(self._get_dipole()),
             value=val,
-            dependencies=[ensemble.beads._q],
+            dependencies=[ensemble.beads.q_],
         )
 
         pass
@@ -393,22 +393,22 @@ class ElectricDipole:
             return np.full((self.nbeads, 3), np.nan)
 
 
-dproperties(ElectricDipole, ["dipole", "nbeads", "forces"])
+dproperties(ElectricDipole, ["dipole", "nbeads"])
 
 
 class ElectricField:
     """Class to handle the time dependent electric field when performing driven dynamics (with 'eda-nve' and 'eda-nvt')"""
 
     def __init__(self, amp=None, freq=None, phase=None, peak=None, sigma=None):
-        self._amp = depend_array(
+        self.amp_ = depend_array(
             name="amp", value=amp if amp is not None else np.zeros(3)
         )
-        self._freq = depend_value(name="freq", value=freq if freq is not None else 0.0)
-        self._phase = depend_value(
+        self.freq_ = depend_value(name="freq", value=freq if freq is not None else 0.0)
+        self.phase_ = depend_value(
             name="phase", value=phase if phase is not None else 0.0
         )
-        self._peak = depend_value(name="peak", value=peak if peak is not None else 0.0)
-        self._sigma = depend_value(
+        self.peak_ = depend_value(name="peak", value=peak if peak is not None else 0.0)
+        self.sigma_ = depend_value(
             name="sigma", value=sigma if sigma is not None else np.inf
         )
         self.enabled = True

@@ -8,8 +8,8 @@ from ipi.utils.phonontools import apply_asr
 
 def _nonlinear_beads():
     beads = Beads(3, 1)
-    beads._m[:] = [1.0, 1.0, 1.0]
-    beads._q[:] = [[-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0]]
+    beads.m_[:] = [1.0, 1.0, 1.0]
+    beads.q_[:] = [[-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0]]
     return beads
 
 

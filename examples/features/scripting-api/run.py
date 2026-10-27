@@ -77,9 +77,9 @@ print(
 # of the i-PI internals)
 def vv_obabo(self, step=None):
     self.thermostat.step()
-    self.beads._p += self.forces.f * self.dt * 0.5
-    self.beads._q += self.beads.p / self.beads.m3 * self.dt
-    self.beads._p += self.forces.f * self.dt * 0.5
+    self.beads.p_ += self.forces.f * self.dt * 0.5
+    self.beads.q_ += self.beads.p / self.beads.m3 * self.dt
+    self.beads.p_ += self.forces.f * self.dt * 0.5
     self.thermostat.step()
     self.ensemble.time += self.dt
 

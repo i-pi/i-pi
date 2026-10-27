@@ -7,16 +7,16 @@ import time
 
 class A:
     def __init__(self):
-        self._scalar = depend_value(name="a_scalar", value=1)
-        self._vector = depend_array(name="a_vector", value=np.zeros(10))
+        self.scalar_ = depend_value(name="a_scalar", value=1)
+        self.vector_ = depend_array(name="a_vector", value=np.zeros(10))
 
-        self._dscalar = depend_value(
-            name="d_scalar", func=self.get_scalar, dependencies=[self._scalar]
+        self.dscalar_ = depend_value(
+            name="d_scalar", func=self.get_scalar, dependencies=[self.scalar_]
         )
-        self._dvector = depend_value(
+        self.dvector_ = depend_value(
             name="d_vector",
             func=self.get_vector,
-            dependencies=[self._dscalar, self._vector],
+            dependencies=[self.dscalar_, self.vector_],
         )
 
     def get_scalar(self):
@@ -31,20 +31,20 @@ dproperties(A, ["scalar", "vector", "dscalar", "dvector"])
 
 class B:
     def __init__(self):
-        self._scalar = depend_value(name="b_scalar", value=1)
-        self._vector = depend_array(name="b_vector", value=np.zeros(10))
+        self.scalar_ = depend_value(name="b_scalar", value=1)
+        self.vector_ = depend_array(name="b_vector", value=np.zeros(10))
 
     def bind(self, A):
         self.A = A
-        self._dscalar = depend_value(
+        self.dscalar_ = depend_value(
             name="db_scalar",
             func=self.get_scalar,
-            dependencies=[self._scalar, A._dscalar],
+            dependencies=[self.scalar_, A.dscalar_],
         )
-        self._dvector = depend_value(
+        self.dvector_ = depend_value(
             name="db_vector",
             func=self.get_vector,
-            dependencies=[self._dscalar, self._vector],
+            dependencies=[self.dscalar_, self.vector_],
         )
 
     def get_scalar(self):
@@ -64,11 +64,11 @@ mbs = 2
 mbv = 3
 
 myA.scalar = mas
-myA._vector[:] = mav
+myA.vector_[:] = mav
 
 myB = B()
 myB.scalar = mbs
-myB._vector[:] = mbv
+myB.vector_[:] = mbv
 myB.bind(myA)
 
 

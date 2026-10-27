@@ -138,9 +138,9 @@ class SCPhononsMover(Motion):
         # nparallel copies of the system to evaluate several configurations at once.
         self.dof = 3 * self.beads.natoms
         self.dbeads = Beads(self.beads.natoms, self.nparallel)
-        self.dbeads._q[:] = self.beads.q
-        self.dbeads._m[:] = self.beads.m
-        self.dbeads._names[:] = self.beads.names
+        self.dbeads.q_[:] = self.beads.q
+        self.dbeads.m_[:] = self.beads.m
+        self.dbeads.names_[:] = self.beads.names
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
@@ -503,7 +503,7 @@ class SCPhononator(DummyPhononator):
             k = self.weighted_hessian()
 
             # Displaces.
-            self.dm.beads._q += (self.dm.D @ f) * self.dm.tau
+            self.dm.beads.q_ += (self.dm.D @ f) * self.dm.tau
 
             # Calculates the new dynamical matrix.
             self.dm.dynmatrix = self.dm.isqM @ (((k + k.T) / 2.0) @ self.dm.isqM)
@@ -535,7 +535,7 @@ class SCPhononator(DummyPhononator):
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
-            self.dm.beads._q += self.dm.iK @ f
+            self.dm.beads.q_ += self.dm.iK @ f
 
             # Calculates the new dynamical matrix.
             k = self.weighted_hessian()
@@ -593,7 +593,7 @@ class SCPhononator(DummyPhononator):
             dqnm = iKfnm
             dqnm[self.z] = 0.0
 
-            self.dm.beads._q += self.dm.V @ dqnm
+            self.dm.beads.q_ += self.dm.V @ dqnm
 
             # Calculates the new forces.
             f, f_err, batch_w = self.weighted_force()
@@ -669,7 +669,7 @@ class SCPhononator(DummyPhononator):
                     dqnm[xp.abs(fnm) < fnm_err] = 0.0
                     dqnm[self.z] = 0.0
 
-                    self.dm.beads._q += self.dm.V @ dqnm
+                    self.dm.beads.q_ += self.dm.V @ dqnm
                     info(
                         " @SCP: <f> =  %10.8f +/-  %10.8f : number of batch weights > %10.8f =  %8d / %8d : largest batch weight = %10.8e"
                         % (

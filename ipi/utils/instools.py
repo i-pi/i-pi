@@ -351,9 +351,9 @@ class Fix(object):
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
         self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
-        self.fixbeads._q[:] = self.get_active_vector(beads.clone().q, 1)
-        self.fixbeads._m[:] = self.get_active_vector(beads.clone().m, 0)
-        self.fixbeads._names[:] = self.get_active_vector(beads.clone().names, 0)
+        self.fixbeads.q_[:] = self.get_active_vector(beads.clone().q, 1)
+        self.fixbeads.m_[:] = self.get_active_vector(beads.clone().m, 0)
+        self.fixbeads.names_[:] = self.get_active_vector(beads.clone().names, 0)
 
         mask3a = np.ones(9 * self.natoms, dtype=bool)
         for i in range(9):

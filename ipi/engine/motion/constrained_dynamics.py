@@ -83,7 +83,7 @@ class ConstrainedDynamics(Dynamics):
             "Constrained dynamics: This feature is not maintained and can have bugs."
         )
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
-        self._dt = depend_value(name="dt", value=timestep)
+        self.dt_ = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -91,11 +91,11 @@ class ConstrainedDynamics(Dynamics):
             self.thermostat = thermostat
 
         if nmts is None or len(nmts) == 0:
-            self._nmts = depend_array(
+            self.nmts_ = depend_array(
                 name="nmts", value=np.asarray([1], int), host=True
             )
         else:
-            self._nmts = depend_array(
+            self.nmts_ = depend_array(
                 name="nmts", value=np.asarray(nmts, int), host=True
             )
 
@@ -117,7 +117,7 @@ class ConstrainedDynamics(Dynamics):
             )
 
         # splitting mode for the integrators
-        self._splitting = depend_value(name="splitting", value=splitting)
+        self.splitting_ = depend_value(name="splitting", value=splitting)
 
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
@@ -205,7 +205,7 @@ class ConstraintSolverBase:
         self.constraint_list = constraint_list
 
         # time step - will have to be linked to the dynamics time step
-        self._dt = depend_value(name="dt", value=dt)
+        self.dt_ = depend_value(name="dt", value=dt)
 
     def bind(self, beads):
         if beads.nbeads > 1:
@@ -286,7 +286,7 @@ class ConstraintSolver(ConstraintSolverBase):
                 x = xp.linalg.solve(constr.Gram, b)
 
             p[ic] -= dg.T @ x
-        self.beads._p[0] = p
+        self.beads.p_[0] = p
 
     def proj_manifold(self):
         """Iteratively enforce the constraints onto the positions by finding
@@ -338,8 +338,8 @@ class ConstraintSolver(ConstraintSolverBase):
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
-        self.beads._p[0] = p
-        self.beads._q[0] = q
+        self.beads.p_[0] = p
+        self.beads.q_[0] = q
 
 
 class ConstrainedIntegrator(DummyIntegrator):
@@ -371,19 +371,19 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         self.constraint_list = motion.constraint_list
         if motion.nsteps_geo is None:
-            self._nsteps_geo = depend_value(name="nsteps_geo", value=1)
+            self.nsteps_geo_ = depend_value(name="nsteps_geo", value=1)
         else:
-            self._nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
+            self.nsteps_geo_ = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
 
-        ddeps(self._qdt, [self._nsteps_geo])
+        ddeps(self.qdt_, [self.nsteps_geo_])
         if motion.nsteps_o is None:
-            self._nsteps_o = depend_value(name="nsteps_o", value=1)
+            self.nsteps_o_ = depend_value(name="nsteps_o", value=1)
         else:
-            self._nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
+            self.nsteps_o_ = depend_value(name="nsteps_o", value=motion.nsteps_o)
 
-        ddeps(self._tdt, [self._nsteps_o])
+        ddeps(self.tdt_, [self.nsteps_o_])
         self.csolver = motion.csolver
-        dpipe(self._qdt, self.csolver._dt)
+        dpipe(self.qdt_, self.csolver.dt_)
 
     def proj_cotangent(self):
         self.csolver.proj_cotangent()
@@ -404,11 +404,11 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
     def step_A(self):
         """Unconstrained A-step (coordinate integration)"""
-        self.beads._q[0] += self.beads.p[0] / self.beads.m3[0] * self.qdt
+        self.beads.q_[0] += self.beads.p[0] / self.beads.m3[0] * self.qdt
 
     def step_B(self, level=0):
         """Unconstrained B-step (momentum integration)"""
-        self.beads._p[0] += self.forces.mts_forces[level].f[0] * self.pdt[level]
+        self.beads.p_[0] += self.forces.mts_forces[level].f[0] * self.pdt[level]
 
     def step_Bc(self, level=0):
         """Unconstrained B-step (momentum integration)

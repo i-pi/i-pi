@@ -56,6 +56,9 @@ or because they were approved explicitly:
   bound to them), but now raises for synchronized objects and views, whose function it used to overwrite.
   Dependencies added after an object is created go through `ddeps`, which raises if the object is not
   computed; the `add_dependency`/`add_dependant` methods are removed.
+- Depend objects are stored in attributes with a trailing underscore, `obj.x_` instead of `obj._x`, and
+  `dproperties` exposes their value as `obj.x`. Entries of `dproperties` with no depend object behind them
+  (they raised a `KeyError` when read) are removed.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

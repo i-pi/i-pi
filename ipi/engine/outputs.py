@@ -627,12 +627,12 @@ class TrajectoryOutput(BaseOutput):
             "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
-            fatom._names[:] = self.system.beads.names
-            fatom._q[:] = xp.asarray(data[b])
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data[b])
         else:
             fatom = Atoms(self.system.beads.natoms)
-            fatom._names[:] = self.system.beads.names
-            fatom._q[:] = xp.asarray(data)
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data)
 
         fcell = Cell()
         fcell.h = self.system.cell.h
@@ -689,7 +689,7 @@ class CheckpointOutput:
 
         self.filename = filename
         self.stride = stride
-        self._step = depend_value(name="step", value=step)
+        self.step_ = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._continued = False
 

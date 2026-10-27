@@ -167,7 +167,7 @@ def test_temperature_counts_constrained_degrees_of_freedom(
     if "coordinate" in constraint:
         mode_p[:, [1, 4]] = 0
         removed[:, [1, 4]] = 4
-    s.beads._p[:] = fourier_matrix(4).T @ mode_p
+    s.beads.p_[:] = fourier_matrix(4).T @ mode_p
     modes = range(4) if mode == "" else [int(mode)]
     energy = sum(
         np.sum(mode_p[k, selected] ** 2 / (2 * np.repeat(r.masses, 3)[selected]))
@@ -239,7 +239,7 @@ def test_cross_atom_kinetic_tensor(reference_system, first, second):
 def test_gyration_and_kinetic_tensors_from_path_covariance(atom, indices):
     s = harmonic_system()
     q = np.arange(24).reshape(4, 6) / 20
-    s.beads._q[:] = q
+    s.beads.q_[:] = q
     centered = (q - q.mean(axis=0)).reshape(4, 2, 3)
     covariance = np.einsum("bai,baj->aij", centered, centered) / 4
     variances = np.diagonal(covariance, axis1=1, axis2=2)
@@ -528,8 +528,8 @@ def test_fourth_order_isotope_weights(reference_system, mass_ratio, atom):
 )
 def test_unit_mass_ratio_recovers_mean_kinetic_estimator(estimator, spring):
     s = harmonic_system(spring=spring)
-    s.beads._q[:, 0] = [-2, -1, 1, 2]
-    s.beads._q[:, 3] = [-4, -2, 2, 4]
+    s.beads.q_[:, 0] = [-2, -1, 1, 2]
+    s.beads.q_[:, 3] = [-4, -2, 2, 4]
     q = s.beads.q.copy()
     estimate = getattr(s.properties, estimator)(alpha="1")
     # The atoms' x variances are 2.5 and 10. The mean virial term is k*12.5/4.
@@ -549,7 +549,7 @@ def test_isotope_reweighting_at_changed_mass(estimator, alpha):
     positions = np.zeros((4, 6))
     positions[:, 0] = [-0.2, -0.1, 0.1, 0.2]
     positions[:, 3] = [-0.4, -0.2, 0.2, 0.4]
-    s.beads._q[:] = positions
+    s.beads.q_[:] = positions
     variance = np.array([0.025, 0.1])
     if estimator == "get_isotope_yama":
         # Scaling x by 1/sqrt(alpha) scales its variance by 1/alpha.
@@ -598,7 +598,7 @@ def test_exchange_estimators_sum_both_permutations(separation):
     ).syslist[0]
     q = np.arange(24).reshape(4, 2, 3) * 0.013
     q[:, 1] += separation
-    s.beads._q[:] = q.reshape(4, 6)
+    s.beads.q_[:] = q.reshape(4, 6)
     ref = permutation_reference(q, 2, 0.4)
     for key, expected in [
         ("exchange_distinct_prob", ref["distinct"]),

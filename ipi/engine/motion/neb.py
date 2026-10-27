@@ -60,7 +60,7 @@ class NEBGradientMapper(object):
 
         # Create reduced bead and force object
         self.rbeads = Beads(ens.beads.natoms, ens.beads.nbeads - 2)
-        self.rbeads._q[:] = ens.beads.q[1:-1]
+        self.rbeads.q_[:] = ens.beads.q[1:-1]
         self.rforces = ens.forces.clone(self.rbeads, self.dcell)
 
     def __call__(self, x):
@@ -72,10 +72,10 @@ class NEBGradientMapper(object):
         # Touch positions only if they have changed (to avoid triggering forces)
         # I need both dbeads and rbeads because of the endpoint tangents.
         if (self.rbeads.q[:, self.fixatoms_mask] != x).any():
-            self.rbeads._q[:, self.fixatoms_mask] = x
+            self.rbeads.q_[:, self.fixatoms_mask] = x
         rbq = self.rbeads.q[:, self.fixatoms_mask]
         # We need all beads, but only reduced number is being updated.
-        self.dbeads._q[1:-1, self.fixatoms_mask] = rbq
+        self.dbeads.q_[1:-1, self.fixatoms_mask] = rbq
         bq = self.dbeads.q[:, self.fixatoms_mask]
 
         # Bead energies (needed for improved tangents)
@@ -258,7 +258,7 @@ class NEBClimbGrMapper(object):
         info("@NEB_CLIMB: NEBClimbGrMapper.x.shape: %s" % str(x.shape), verbosity.debug)
         # Touch positions only if they have changed (to avoid triggering forces)
         if (self.rbeads.q[:, self.fixatoms_mask] != x).any():
-            self.rbeads._q[:, self.fixatoms_mask] = x
+            self.rbeads.q_[:, self.fixatoms_mask] = x
         # Compared to NEBGradientMapper, I need to flatten here,
         # otherwise it's (1, 3N) instead of just 3N.
         rbq = self.rbeads.q[:, self.fixatoms_mask].reshape(-1)
@@ -502,7 +502,7 @@ class NEBMover(Motion):
         if cl_indx in [0, self.beads.nbeads - 1]:
             self.finish(status="bad", message="ERROR: climbing bead is the endpoint.")
             return None
-        self.climbgm.rbeads._q[:] = self.beads.q[cl_indx]
+        self.climbgm.rbeads.q_[:] = self.beads.q[cl_indx]
         self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
         info(
@@ -727,7 +727,7 @@ class NEBMover(Motion):
                 )
 
             # Update positions
-            self.beads._q[:] = self.nebgm.dbeads.q
+            self.beads.q_[:] = self.nebgm.dbeads.q
             info(" @NEB: bead positions transferred from mapper.", verbosity.debug)
 
             # Recalculation won't be triggered because the position is the same.
@@ -910,7 +910,7 @@ class NEBMover(Motion):
                 return
 
             # Update positions
-            self.beads._q[self.cl_indx] = self.climbgm.rbeads.q
+            self.beads.q_[self.cl_indx] = self.climbgm.rbeads.q
             info(" @NEB_CLIMB: climb beads positions updated.", verbosity.debug)
 
             self.nebpot, self.nebgrad = self.climbgm(

@@ -23,8 +23,8 @@ class MockNormalModes:
     """Normal-mode positions and momenta, with the masses of the modes."""
 
     def __init__(self, qnm, pnm, dynm3):
-        self._qnm = depend_array(name="qnm", value=qnm)
-        self._pnm = depend_array(name="pnm", value=pnm)
+        self.qnm_ = depend_array(name="qnm", value=qnm)
+        self.pnm_ = depend_array(name="pnm", value=pnm)
         self.dynm3 = dynm3
 
 
@@ -46,7 +46,7 @@ class OrthorhombicCell:
     """Minimal cell object for testing the SCR coordinate map."""
 
     def __init__(self, lengths):
-        self._h = depend_array(name="h", value=np.diag(np.asarray(lengths, float)))
+        self.h_ = depend_array(name="h", value=np.diag(np.asarray(lengths, float)))
 
     @property
     def V(self):
@@ -332,7 +332,7 @@ def test_scr_trotter_map_and_effective_energy():
     momenta = np.asarray([[0.8, -0.4, 0.2, 0.3, 0.5, -0.6]])
     masses = np.asarray([[1.0, 1.0, 1.0, 2.0, 2.0, 2.0]])
     barostat.nm = MockNormalModes(positions.copy(), momenta.copy(), masses)
-    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
+    barostat.qdt_ = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     old_volume = barostat.cell.V
     old_lambda = np.sqrt(old_volume)
@@ -422,7 +422,7 @@ def test_scr_rejects_nonpositive_proposed_volume():
     barostat.cell = OrthorhombicCell([1.0, 1.0, 1.0])
     barostat.prng = FixedGaussian(-10.0)
     barostat.get_lambda_force = lambda: 0.0
-    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
+    barostat.qdt_ = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     with pytest.raises(ValueError, match="non-positive or non-finite sqrt"):
         barostat.prepare()

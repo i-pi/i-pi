@@ -1438,9 +1438,9 @@ class VSCF(IMF):
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
                 # Adds two extra points required later for solid spline fitting at edges.
-                self.imm.dbeads._q -= dev
+                self.imm.dbeads.q_ -= dev
                 v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
-                self.imm.dbeads._q -= dev
+                self.imm.dbeads.q_ -= dev
                 v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
                 break
 
@@ -1460,9 +1460,9 @@ class VSCF(IMF):
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
                 # add two extra points required later for solid spline fitting at edges
-                self.imm.dbeads._q += dev
+                self.imm.dbeads.q_ += dev
                 v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
-                self.imm.dbeads._q += dev
+                self.imm.dbeads.q_ += dev
                 v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
                 break
 
