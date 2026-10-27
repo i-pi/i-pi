@@ -10,7 +10,9 @@ Both share the machinery defined in `depend_base`: an optional recompute
 function `_func`, and a `depend_status` object holding a tainted flag, the
 list of dependants to notify on change, and an optional `depend_synchro`
 that links two representations of the same data (e.g. cartesian and
-normal-mode bead coordinates), created with `dsynchro`.
+normal-mode bead coordinates), created with `dsynchro`. An object is
+computed if it is created with `func`, or later made computed with `dcompute`
+(or `dpipe`, to follow the value of another object).
 
 Values are recomputed lazily: when an access finds the tainted flag set,
 `_func` is called and the cached value is refreshed. Writes push: they
@@ -23,6 +25,12 @@ to declare dependencies, to modify an array in place (`obj._x[i] = value`,
 `obj._x += value`), and to obtain views of parts of an array that stay
 connected to the dependency graph (`obj._x[i]`, `obj._x.flatten()`). Indexing
 with masks or arrays of indices gives copies, as for the arrays themselves.
+
+The value read from `obj.x` (or with `get()`) must not be modified, and is
+valid until the object is written or recomputed: depending on the backend,
+later writes may or may not change it. Code that needs the stored value
+without refreshing it (e.g. a stale value, to seed a new calculation) reads it
+with `_load`.
 
 Arrays are stored using the array backend selected in
 `ipi.utils.array_backend`. Arrays stored as numpy arrays are read as
@@ -49,6 +57,7 @@ from ipi.utils.array_backend import xp
 __all__ = [
     "depend_value",
     "depend_array",
+    "dcompute",
     "dpipe",
     "dsynchro",
     "dproperties",
@@ -218,6 +227,16 @@ class depend_base(object):
             if status.tainted:
                 self.update_auto()
                 self.taint(taintme=False)
+
+    def _root(self):
+        """Returns the object that holds the stored value."""
+
+        return self
+
+    def _load(self):
+        """Returns the stored value, without recomputing it."""
+
+        return self._value
 
 
 def _slot_names(cls):
@@ -411,12 +430,18 @@ class depend_array(depend_base):
         return self.reshape(-1)
 
     def _refresh(self):
-        """Refreshes a view by recomputing the parent, which owns the full data."""
+        """Refreshes a view by recomputing the root array, which owns the full data."""
 
-        if self._parent is not None:
-            self._parent._refresh()
-        else:
-            super()._refresh()
+        depend_base._refresh(self._root())
+
+    def _root(self):
+        dep = self
+        while dep._parent is not None:
+            dep = dep._parent
+        return dep
+
+    def _load(self):
+        return self._wvalue
 
 
 def _make_inplace(op):
@@ -456,15 +481,39 @@ def dpipe(dfrom, dto, item=-1):
 
     Args:
         dfrom: The object that is depend on.
-        dto: The object that depends on the former one.
+        dto: The object that depends on the former one. If it already follows
+            another object, it follows `dfrom` instead (e.g. the time step of
+            the normal modes, which follows the one of the motion until a
+            dynamics is bound).
         item: If non-negative, `dto` takes the value of `dfrom[item]`.
     """
 
+    dto._func = None
     if item < 0:
-        dto._func = dfrom.get
+        dcompute(dto, dfrom.get, [dfrom])
     else:
-        dto._func = lambda: dfrom.get()[item]
-    dto.add_dependency(dfrom)
+        dcompute(dto, lambda: dfrom.get()[item], [dfrom])
+
+
+def dcompute(dep, func, dependencies):
+    """Makes a depend object computed, as if it had been created with `func`
+    and `dependencies`. Its current value is discarded, and it can no longer
+    be written.
+
+    Args:
+        dep: The depend object. It must not be computed already, be
+            synchronized with another object, or be a view of an array.
+        func: Function computing the value.
+        dependencies: The depend objects the value is computed from.
+    """
+
+    assert (
+        dep._func is None and dep._status.synchro is None and dep._root() is dep
+    ), f"<{dep._name}> is computed, synchronized, or a view"
+    dep._func = func
+    for item in dependencies:
+        dep.add_dependency(item, tainted=False)
+    dep.taint(taintme=True)
 
 
 def dsynchro(first, second, first_from_second, second_from_first):

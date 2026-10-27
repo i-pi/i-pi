@@ -303,14 +303,17 @@ as ``obj.x``:
    * - keep a view of part of an array that stays connected to the
        dependency graph (e.g. to bind a thermostat to some of the momenta)
      - ``obj._x[i]``, ``obj._x.flatten()``
+   * - make an existing depend object computed from other ones
+     - ``dcompute(obj._x, func, [other._y])``, ``dpipe(other._y, obj._x)``
 
 Common pitfalls:
 
 * Arrays read as ``obj.x`` are read-only, so ``obj.x[i] = v`` and
   ``obj.x += v`` raise an error: modify the array through ``obj._x``.
-* Storing ``obj.x`` in another variable keeps the array as it is: if ``x``
-  is computed, the stored array is not recomputed when its dependencies
-  change. Store the depend object ``obj._x`` (or a view of it) instead.
+* A value read as ``obj.x`` is only valid until ``x`` is written or
+  recomputed: depending on the array backend, these may or may not change
+  it. To keep track of ``x``, store the depend object ``obj._x`` (or a view
+  of it) instead.
 * A ``depend_value`` that holds an array is not protected: modifying the
   array in place does not update its dependants.
 * Depend objects are not arrays: use ``obj.x`` (or ``obj._x.get()``) when
@@ -342,6 +345,15 @@ share the temperature between the ensemble and the thermostats:
    dpipe(myobj._double, thermo._temp) # thermo.temp follows myobj.double
    myobj.scalar = 5
    print(thermo.temp) # prints `10`
+
+More generally, ``dcompute(dep, func, dependencies)`` makes an existing
+depend object computed, as if it had been created with ``func`` and
+``dependencies``, which is useful when the function is only known when
+objects are bound together. Its current value is discarded, and it can no
+longer be written. ``dpipe(dfrom, dto)`` is the same as
+``dcompute(dto, dfrom.get, [dfrom])``, except that it can also make an object
+that already follows another one follow ``dfrom`` instead, and
+``dpipe(dfrom, dto, item=i)`` makes ``dto`` follow ``dfrom[i]``.
 
 ``dsynchro`` links two representations of the same data, that can both be
 modified, such as the bead and normal-mode coordinates of a ring polymer.

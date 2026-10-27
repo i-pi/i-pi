@@ -481,14 +481,10 @@ class ConstraintList(ConstraintBase):
         for ic, c in enumerate(self.constraint_list):
             c.bind(beads)
             # deal with constraint functions
-            dq = c._q
-            dq.add_dependency(self._q)
-            dq._func = make_qgetter(ic)
+            dcompute(c._q, make_qgetter(ic), [self._q])
             self._g.add_dependency(c._g)
             # ...and their gradients
-            dqprev = c._qprev
-            dqprev.add_dependency(self._qprev)
-            dqprev._func = make_qprevgetter(ic)
+            dcompute(c._qprev, make_qprevgetter(ic), [self._qprev])
             self._Dg.add_dependency(c._Dg)
 
     def gfunc(self):

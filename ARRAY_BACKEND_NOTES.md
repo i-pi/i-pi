@@ -49,6 +49,11 @@ or because they were approved explicitly:
   selection matrix, which also avoids copying index arrays to the device at each call), the centroid-virial
   kinetic stress estimators. Results change at the level of rounding errors. `Cell.array_pbc` returns the
   wrapped positions instead of modifying its argument.
+- Depend objects that become computed after they are created (thermostats of the normal modes, constraints,
+  contracted beads, bias scaling) are wired with `dcompute` or `dpipe` instead of setting `_func` by hand.
+  `dcompute` raises an `AssertionError` if the object is already computed, synchronized, or a view. `dpipe`
+  still replaces an earlier pipe (the time step of the normal modes follows the motion, then each dynamics
+  bound to them), but now raises for synchronized objects and views, whose function it used to overwrite.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

@@ -218,3 +218,48 @@ def test_synchronizer():
     assert np.array_equal(a.get(), [2.5, 0.5, 2.5])
     with pytest.raises(AssertionError):
         dp.dsynchro(a, dp.depend_array(name="c", value=np.zeros(3)), None, None)
+
+
+def test_dcompute():
+    """Depend: dcompute and dpipe make a primitive object computed"""
+    h = Holder()
+    z = dp.depend_value(name="z", value=5.0)
+    zz = dp.depend_value(name="zz", func=lambda: 2 * z.get(), dependencies=[z])
+    assert zz.get() == 10.0
+    dp.dcompute(z, lambda: h.x.sum(), [h._x])
+    # the current value is discarded, and the dependants are tainted
+    assert z.tainted() and zz.tainted()
+    assert z.get() == 0.0
+    h._x[0] = 1.0
+    assert zz.get() == 2.0
+    with pytest.raises(NameError):
+        z.set(3.0)
+    w = dp.depend_value(name="w", value=0.0)
+    dp.dpipe(h._y, w, item=0)
+    assert w.get() == 2.0
+    # an object that follows another one can be piped again
+    dp.dpipe(zz, w)
+    assert w.get() == 2.0
+    h._x[0] = 2.0
+    assert w.get() == 4.0
+    # computed objects, views, and synchronized objects cannot be made computed
+    for dep in (z, h._x[1:]):
+        with pytest.raises(AssertionError):
+            dp.dcompute(dep, lambda: 0.0, [])
+    a = dp.depend_array(name="a", value=np.ones(3))
+    dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
+    with pytest.raises(AssertionError):
+        dp.dpipe(h._x, a)
+
+
+def test_load_and_root():
+    """Depend: _load returns the stored value without refreshing it, and
+    _root returns the array that views belong to"""
+    h = Holder()
+    h.y
+    h._x[0] = 1.0
+    assert h._y._load()[0] == 0.0 and h._y.tainted()
+    view = h._x[1:][1:]
+    assert view._root() is h._x and h._x._root() is h._x
+    v = dp.depend_value(name="v", value=1.0)
+    assert v._load() == 1.0 and v._root() is v

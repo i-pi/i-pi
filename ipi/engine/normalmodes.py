@@ -186,7 +186,6 @@ class NormalModes:
 
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
-        dpipe(motion._dt, self._dt)
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
@@ -473,7 +472,7 @@ class NormalModes:
             # seeds the fit with the previous solution (the stale value held in
             # the depend array), which speeds up re-fits when temperature changes
             y0 = (
-                to_numpy(self._omegak._value[1 : self.nbeads // 2 + 1])
+                to_numpy(self._omegak._load()[1 : self.nbeads // 2 + 1])
                 * self.nbeads
                 / self.omegan
             )

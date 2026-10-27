@@ -369,9 +369,6 @@ class ThermoPILE_L(Thermostat):
 
         # must pipe all the dependencies in such a way that values for the nm thermostats
         # are automatically updated based on the "main" thermostat
-        def make_taugetter(k):
-            return lambda: self.tauk[k - 1]
-
         it = 0
         for t in self._thermos:
             if t is None:
@@ -395,15 +392,11 @@ class ThermoPILE_L(Thermostat):
             # pipes dt
             dpipe(self._dt, t._dt)
 
-            # for tau it is slightly more complex
+            # the non-centroid modes take their tau from tauk
             if it == 0:
                 dpipe(self._tau, t._tau)
             else:
-                # Here we manually connect _thermos[i].tau to tauk[i].
-                # Simple and clear.
-                t._tau.add_dependency(self._tauk)
-                t._tau._func = make_taugetter(it)
-            self._ethermo.add_dependency(t._ethermo)
+                dpipe(self._tauk, t._tau, item=it - 1)
             it += 1
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
@@ -412,7 +405,11 @@ class ThermoPILE_L(Thermostat):
         if bindcentroid:
             for t in self._thermos:
                 t.ethermo = prev_ethermo / nm.nbeads
-            self._ethermo._func = self.get_ethermo
+            dcompute(
+                self._ethermo,
+                self.get_ethermo,
+                [t._ethermo for t in self._thermos],
+            )
             # if we are not binding the centroid just yet, this bit of the piping
             # is delegated to the function which is actually calling this
 
@@ -616,12 +613,11 @@ class ThermoPILE_G(ThermoPILE_L):
 
         dpipe(self._dt, t._dt)
         dpipe(self._tau, t._tau)
-        self._ethermo.add_dependency(t._ethermo)
 
         # splits any previous ethermo between the thermostats, and finishes to bind ethermo to the sum function
         for t in self._thermos:
             t.ethermo = prev_ethermo / nm.nbeads
-        self._ethermo._func = self.get_ethermo
+        dcompute(self._ethermo, self.get_ethermo, [t._ethermo for t in self._thermos])
 
 
 class ThermoGLE(Thermostat):
@@ -941,12 +937,6 @@ class ThermoNMGLE(Thermostat):
 
         # must pipe all the dependencies in such a way that values for the nm
         # thermostats are automatically updated based on the "main" thermostat
-        def make_Agetter(k):
-            return lambda: self.A[k]
-
-        def make_Cgetter(k):
-            return lambda: self.C[k]
-
         it = 0
         for t in self._thermos:
             t.s = self.s[it]  # gets the s's as a slice of self.s
@@ -959,11 +949,8 @@ class ThermoNMGLE(Thermostat):
             dpipe(self._dt, t._dt)
 
             # here we pipe the A and C of individual NM to the "main" arrays
-            t._A.add_dependency(self._A)
-            t._A._func = make_Agetter(it)
-            t._C.add_dependency(self._C)
-            t._C._func = make_Cgetter(it)
-            self._ethermo.add_dependency(t._ethermo)
+            dpipe(self._A, t._A, item=it)
+            dpipe(self._C, t._C, item=it)
             it += 1
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
@@ -972,7 +959,7 @@ class ThermoNMGLE(Thermostat):
         for t in self._thermos:
             t.ethermo = prev_ethermo / self.nb
 
-        self._ethermo._func = self.get_ethermo
+        dcompute(self._ethermo, self.get_ethermo, [t._ethermo for t in self._thermos])
 
     def step(self):
         """Updates the thermostat in NM representation by looping over the
@@ -1330,9 +1317,7 @@ class MultiThermo(Thermostat):
         # just binds all the sub-thermostats
         for t in self.tlist:
             t.bind(beads=beads, atoms=atoms, pm=pm, nm=nm, prng=prng, fixdof=fixdof)
-            self._ethermo.add_dependency(t._ethermo)
-
-        self._ethermo._func = self.get_ethermo
+        dcompute(self._ethermo, self.get_ethermo, [t._ethermo for t in self.tlist])
 
     def step(self):
         """Steps through all sub-thermostats."""
