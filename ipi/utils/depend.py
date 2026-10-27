@@ -253,15 +253,21 @@ class depend_base(object):
 
         return self._value
 
+    def _store(self, value):
+        """Replaces the stored value, without tainting the dependants."""
+
+        self._value = value
+
 
 def _slot_names(cls):
-    """Names of all the slots defined by `cls` and its bases, except `__weakref__`."""
+    """Names of all the slots defined by `cls` and its bases, except `__weakref__`
+    and those replaced by a property (the value of `depend_immutable`)."""
 
     return [
         s
         for c in cls.__mro__
         for s in getattr(c, "__slots__", ())
-        if s != "__weakref__"
+        if s != "__weakref__" and not isinstance(getattr(cls, s), property)
     ]
 
 
@@ -365,10 +371,9 @@ class depend_array(depend_base):
         wvalue = np.asarray(value) if host else xp.asarray(value)
         if array_api_compat.is_jax_array(wvalue):
             self.__class__ = depend_immutable
-        self._wvalue = wvalue
-        self._value = _readonly(wvalue)
         self._parent = None
         self._index = _NO_INDEX
+        self._store(wvalue)
         super().__init__(name, func, dependencies)
 
     def _view(self, value, wvalue, index=_NO_INDEX):
@@ -386,12 +391,12 @@ class depend_array(depend_base):
 
     def __deepcopy__(self, memo):
         newone = super().__deepcopy__(memo)
-        newone._value = _readonly(newone._wvalue)
+        newone._store(newone._wvalue)
         return newone
 
     def __setstate__(self, state):
         super().__setstate__(state)
-        self._value = _readonly(self._wvalue)
+        self._store(self._wvalue)
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
@@ -477,6 +482,10 @@ class depend_array(depend_base):
 
     def _load(self):
         return self._wvalue
+
+    def _store(self, value):
+        self._wvalue = value
+        self._value = _readonly(value)
 
 
 def _make_inplace(op):
@@ -614,10 +623,6 @@ class depend_immutable(depend_array):
                 _recorder.read(self)
             return self._wvalue
         return _take(self._parent._value, self._index)
-
-    @_value.setter
-    def _value(self, value):
-        pass  # held by `_wvalue`, or by the parent of a view
 
     def _store(self, value):
         if self._parent is None:

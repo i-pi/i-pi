@@ -102,7 +102,7 @@ class JitReplay:
 
         def traced(key, arrays):
             for dep, value in zip(self.arrays, arrays):
-                _set(dep, value)
+                dep._store(value)
             if key is not None:
                 self.prng._jax_key = key
             self.recorder = _TraceRecorder(self, {dep._status for dep in self.inputs})
@@ -122,7 +122,7 @@ class JitReplay:
             ) from err
         finally:
             for dep, value in zip(self.arrays, arrays):
-                _set(dep, value)
+                dep._store(value)
         self.statuses, self.synchros = self.recorder.final_state()
         self.run(key, arrays)
         info(
@@ -165,7 +165,7 @@ class JitReplay:
         for dep, value in zip(
             self.outputs, jax.tree_util.tree_unflatten(self.treedef, leaves)
         ):
-            _set(dep, value)
+            dep._store(value)
 
     def replay(self):
         """Calls the compiled function on the current values of the inputs, and
@@ -228,9 +228,7 @@ class _TraceRecorder(_Recorder):
     def tainted(self, dep, taintme):
         super().tainted(dep, taintme)
         if not taintme and isinstance(dep, depend.depend_array):
-            while dep._parent is not None:
-                dep = dep._parent
-            self.arrays[dep] = None
+            self.arrays[dep._root()] = None
 
 
 def _get(dep):
@@ -239,13 +237,6 @@ def _get(dep):
     if isinstance(dep, depend.depend_array):
         return dep._wvalue
     return dep._value
-
-
-def _set(dep, value):
-    if isinstance(dep, depend.depend_array):
-        dep._wvalue = value
-    else:
-        dep._value = value
 
 
 def _is_jax(value):

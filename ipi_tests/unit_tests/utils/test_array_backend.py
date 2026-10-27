@@ -4,6 +4,9 @@
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+import pickle
+from copy import deepcopy
+
 import numpy as np
 import pytest
 
@@ -180,6 +183,20 @@ def test_jax_views_follow_parent(jax_backend):
     assert np.array_equal(ab.to_numpy(c.get()[1]), [10.0, 4.0, 8.0])
     c.set(np.zeros((2, 3)))
     assert np.array_equal(ab.to_numpy(row.get()), np.zeros(3))
+
+
+def test_jax_depend_copies(jax_backend):
+    """depend_arrays holding JAX arrays can be deep-copied and pickled, and their
+    value cannot be replaced by assigning it"""
+
+    a = dp.depend_array(name="a", value=np.arange(3.0))
+    for b in (deepcopy(a), pickle.loads(pickle.dumps(a))):
+        assert type(b) is dp.depend_immutable
+        b[0] = 5.0
+        assert np.array_equal(ab.to_numpy(b.get()), [5.0, 1.0, 2.0])
+    assert np.array_equal(ab.to_numpy(a.get()), [0.0, 1.0, 2.0])
+    with pytest.raises(AttributeError):
+        a._value = xp.zeros(3)
 
 
 def test_jax_random_state(jax_backend):
