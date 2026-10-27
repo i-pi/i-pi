@@ -18,7 +18,7 @@ from contextlib import nullcontext
 import numpy as np
 
 from ipi.engine.cell import GenericCell
-from ipi.utils import cudagraphs
+from ipi.utils import jit
 from ipi.utils.prng import Random
 from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.softexit import softexit
@@ -625,7 +625,7 @@ class FFDirect(ForceField):
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
         # the driver is not part of the CUDA graphs that record a step
-        results_batch = cudagraphs.eager(self._results, cell_batch, pos_batch)
+        results_batch = jit.eager(self._results, cell_batch, pos_batch)
         for results, request in zip(results_batch, self.request_batch):
             self._finish(request, results)
         self.request_batch = []
@@ -634,7 +634,7 @@ class FFDirect(ForceField):
     def evaluate(self, request):
         if self.batch_size == 1:
             # the driver is not part of the CUDA graphs that record a step
-            results = cudagraphs.eager(
+            results = jit.eager(
                 self._results, request["cell"][0], request["pos"].reshape(-1, 3)
             )
             self._finish(request, results)

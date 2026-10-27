@@ -45,6 +45,16 @@ def test_numpy_default():
         ab.set_backend("unknown")
 
 
+def test_jit_requires_jax_or_torch_on_cuda():
+    """Compiling the steps requires the jax backend, or torch on a CUDA device"""
+
+    with pytest.raises(ValueError):
+        ab.set_backend("numpy", jit=True)
+    with pytest.raises(ValueError):
+        ab.set_backend("torch", device="cpu", jit=True)
+    assert ab.backend() == "numpy" and not ab.jit()
+
+
 def test_switch_updates_imported_namespace(torch_backend):
     """Modules that imported `xp` see the selected backend"""
 

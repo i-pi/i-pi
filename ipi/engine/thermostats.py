@@ -13,7 +13,7 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 import numpy as np
 
 from ipi.utils.array_backend import xp, to_numpy
-from ipi.utils.cudagraphs import compiled
+from ipi.utils.jit import compiled
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import matrix_exp, stab_cholesky, root_herm

@@ -15,7 +15,7 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.array_backend import xp
-from ipi.utils.cudagraphs import compiled
+from ipi.utils.jit import compiled
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity

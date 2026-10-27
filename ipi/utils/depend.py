@@ -71,7 +71,7 @@ __all__ = [
 ]
 
 # object notified of the reads and writes of depend objects while a function
-# is recorded as CUDA graphs (see ipi.utils.cudagraphs), None otherwise
+# is recorded to be compiled (see ipi.utils.jit), None otherwise
 _recorder = None
 
 

@@ -40,7 +40,6 @@ __all__ = [
     "set_backend",
     "backend",
     "device",
-    "cuda_graphs",
     "jit",
     "to_numpy",
     "synchronize",
@@ -49,7 +48,7 @@ __all__ = [
 xp = types.SimpleNamespace()
 xp_size = array_api_compat.size
 
-_current = {"backend": None, "device": None, "cuda_graphs": False, "jit": False}
+_current = {"backend": None, "device": None, "jit": False}
 
 
 def _creation_functions(namespace, device, dtype):
@@ -87,25 +86,23 @@ def _creation_functions(namespace, device, dtype):
     return functions
 
 
-def set_backend(name="numpy", device="cpu", cuda_graphs=False, jit=False):
+def set_backend(name="numpy", device="cpu", jit=False):
     """Selects the array library and the device used to store arrays.
 
     Args:
         name: "numpy", "torch" or "jax".
         device: The device on which arrays are allocated, e.g. "cpu" or
             "cuda". The numpy backend only supports "cpu".
-        cuda_graphs: If True, the steps of the simulations that support it are
-            recorded as CUDA graphs and replayed (torch backend on a CUDA
-            device only, see `ipi.engine.cudagraphs`).
         jit: If True, the steps of the simulations that support it are
-            compiled with jax.jit (jax backend only, see
-            `ipi.engine.cudagraphs`).
+            compiled: recorded as CUDA graphs and replayed with the torch
+            backend (on a CUDA device only), compiled with jax.jit with the jax
+            backend (see `ipi.engine.jit`).
     """
 
-    if cuda_graphs and (name != "torch" or not device.startswith("cuda")):
-        raise ValueError("CUDA graphs require the torch backend on a CUDA device")
-    if jit and name != "jax":
-        raise ValueError("jit requires the jax backend")
+    if jit and name != "jax" and (name != "torch" or not device.startswith("cuda")):
+        raise ValueError(
+            "jit requires the jax backend, or the torch backend on a CUDA device"
+        )
 
     if name == "numpy":
         if device != "cpu":
@@ -143,7 +140,6 @@ def set_backend(name="numpy", device="cpu", cuda_graphs=False, jit=False):
     xp.__dict__.update(members)
     _current["backend"] = name
     _current["device"] = device
-    _current["cuda_graphs"] = cuda_graphs
     _current["jit"] = jit
 
 
@@ -159,14 +155,9 @@ def device():
     return _current["device"]
 
 
-def cuda_graphs():
-    """True if the steps of the simulations are replayed as CUDA graphs."""
-
-    return _current["cuda_graphs"]
-
-
 def jit():
-    """True if the steps of the simulations are compiled with jax.jit."""
+    """True if the steps of the simulations are compiled: replayed as CUDA graphs
+    with torch, compiled with jax.jit with JAX."""
 
     return _current["jit"]
 

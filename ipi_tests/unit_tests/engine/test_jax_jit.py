@@ -39,7 +39,7 @@ def simulation(xml, jit):
 def jit_step(sim):
     """The object compiling the steps of the first system, if any."""
 
-    from ipi.engine.cudagraphs import JitStep
+    from ipi.engine.jit import JitStep
 
     step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
     return step if isinstance(step, JitStep) else None
@@ -51,13 +51,6 @@ def assert_same_state(a, b):
     a, b = a.syslist[0], b.syslist[0]
     for x, y in [(a.beads.q, b.beads.q), (a.beads.p, b.beads.p), (a.cell.h, b.cell.h)]:
         np.testing.assert_allclose(ab.to_numpy(y), ab.to_numpy(x), **TOLERANCE)
-
-
-def test_jit_requires_jax():
-    with pytest.raises(ValueError):
-        ab.set_backend("numpy", jit=True)
-    with pytest.raises(ValueError):
-        ab.set_backend("torch", jit=True)
 
 
 @pytest.mark.parametrize(
@@ -130,7 +123,7 @@ def test_changed_parameters_stop_the_compiled_steps(
     """The time step, and the pressure of the barostats, are fixed in the
     compiled step"""
 
-    from ipi.utils.jaxjit import JitError
+    from ipi.utils.jit import JitError
 
     monkeypatch.chdir(tmp_path)
     sim = simulation(write_input(case, NO_FORCES), True)

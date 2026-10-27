@@ -1,5 +1,5 @@
-"""Replay of the MD steps as CUDA graphs (see ipi.utils.cudagraphs), or as
-functions compiled by JAX (see ipi.utils.jaxjit).
+"""Compilation of the MD steps (`--jit`): replay as CUDA graphs with torch (see
+ipi.utils.cudagraphs), or as functions compiled by JAX (see ipi.utils.jaxjit).
 
 The step of the integrator of a system is recorded as CUDA graphs, and
 replayed at the following steps. Force evaluations are not recorded, as they
@@ -12,8 +12,8 @@ of the results are recorded, and the results of the driver are copied into
 those it returned while the step was recorded.
 
 Only the dynamics that are known to work in this way are replayed (see
-`unsupported`), and a `CUDAGraphError` stops the simulation if a host value
-read by a graph changes.
+`unsupported`), and a `JitError` stops the simulation if a host value read by
+a graph changes.
 
 With JAX, the whole step is compiled, including the requests to direct
 forcefields whose driver works on the arrays of the backend (e.g. the `dummy`
@@ -28,8 +28,9 @@ need forces from other forcefields run eagerly.
 from functools import partial
 
 from ipi.utils.array_backend import backend
-from ipi.utils.cudagraphs import CUDAGraphError, GraphReplay
+from ipi.utils.cudagraphs import GraphReplay
 from ipi.utils.jaxjit import JitReplay
+from ipi.utils.jit import JitError
 from ipi.utils.messages import verbosity, warning
 
 __all__ = ["replay_steps"]
@@ -123,7 +124,7 @@ class GraphStep(GraphReplay):
             self.segments is not None
             and self.prng.torch_generator is not self.generator
         ):
-            raise CUDAGraphError("The random number generator has been replaced")
+            raise JitError("The random number generator has been replaced")
         super().__call__(step)
 
     def split(self, bead):

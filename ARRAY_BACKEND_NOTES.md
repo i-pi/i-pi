@@ -128,13 +128,14 @@ bugs pass, and are no longer marked.
   model on the GPU, the overhead of 4-bead PIMD grows to 15 ms (1 BLAS thread) - 30 ms (16 threads) at 11000
   atoms, and was several times larger on a node shared with other jobs.
 
-### CUDA graphs (`--cuda-graphs`, branch feats/cuda-graphs)
+### CUDA graphs (`--jit` with torch on CUDA, branch feats/cuda-graphs)
 - `ipi/utils/cudagraphs.py` has the generic machinery: `GraphReplay` runs a function eagerly for the first
   calls (two, and at least one in the calling thread, as cuBLAS creates handles per thread), records the next
   one in segments separated by eager functions, and replays them. Code in the recorded function marks the
-  points where the recording may be interrupted with `cudagraphs.split(obj)`, and calls functions eagerly
-  with `cudagraphs.eager(func, *args)` (plain calls when not recording).
-- `ipi/engine/cudagraphs.py` decides which steps are replayed (`unsupported`), and `GraphStep` replaces the
+  points where the recording may be interrupted with `jit.split(obj)`, and calls functions eagerly
+  with `jit.eager(func, *args)` (plain calls when not recording); these markers, the recording of the
+  operations on the depend objects and `JitError` are in `ipi/utils/jit.py`, shared with jax.jit.
+- `ipi/engine/jit.py` decides which steps are replayed (`unsupported`), and `GraphStep` replaces the
   step of the integrator: the recording is interrupted at each force evaluation (`ForceBead.queue` calls
   `split`), with the forces of the component computed eagerly between the segments.
 - For non-threaded `FFDirect` forcefields whose driver takes backend arrays (metatomic, dummy), the requests
@@ -146,7 +147,7 @@ bugs pass, and are no longer marked.
 - The depend objects notify a recorder (`depend.set_recorder`) of reads, writes and taints while recording.
   Before a replay, the objects that a segment reads before modifying them are refreshed, tensor scalars that
   were replaced by new objects are copied into the ones read by the graph, and host values must be
-  unchanged (`CUDAGraphError` otherwise, e.g. if the time step changes; the coefficients of the Langevin
+  unchanged (`JitError` otherwise, e.g. if the time step changes; the coefficients of the Langevin
   thermostats are tensor scalars, so the temperature can change). After a replay, the taint status
   of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
   objects held by tensor scalars are restored as at the end of the recorded segment.
@@ -154,7 +155,7 @@ bugs pass, and are no longer marked.
   PILE_L thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no or a
   Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, SVR, PILE_G, GLE,
   fixed atoms, open paths, bosons, multi-system motions, systems stepped in threads. The barostats read the
-  temperature and the pressure as host values, so changing them stops a replayed run with `CUDAGraphError`;
+  temperature and the pressure as host values, so changing them stops a replayed run with `JitError`;
   the external stress of the anisotropic barostat is a device array, and its changes are replayed.
 - NPT without forces (ms/step at 100 / 1000 / 10000 atoms): H100 (job 4665979), eager -> replayed (numpy):
   isotropic 1.42 -> 0.30 / 0.32 / 0.35 (0.17 / 0.34 / 2.35), flexible 3.58 -> 0.81 / 0.75 / 0.75 (0.38 / 0.59
@@ -192,7 +193,7 @@ bugs pass, and are no longer marked.
   atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
   14.1), dominated by the model.
 - Kernel fusion: at ~100 atoms the replays are bound by the number of kernels (~1.9 us each on the H100).
-  `cudagraphs.compiled` compiles a function with torch.compile only when replaying CUDA graphs (plain call
+  `jit.compiled` compiles a function with torch.compile only when replaying CUDA graphs (plain call
   otherwise, or if torch.compile is unavailable, e.g. torch 2.9 on Python 3.14); its arguments should be
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
   scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`), the
@@ -240,7 +241,7 @@ bugs pass, and are no longer marked.
   (`zeros_like`), against <1 us with numpy; the depend helpers are <10% of the step. Performance needs
   jit of whole steps, which would need the depend state passed in and out of the traced function (as the
   CUDA-graph replay does).
-- JAX, jit of the MD steps (`--jit`, branch `feat/jax-jit`, CUDA graphs rebased on `feat/jax-backend`):
+- JAX, jit of the MD steps (`--jit` with JAX, branch `feat/jax-jit`, CUDA graphs rebased on `feat/jax-backend`):
   `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
   restoration of the taint status, the `split`/`eager` markers, `unsupported` and the warmup steps). The
   second eager step is observed to find the depend objects read before being written; the third is traced
@@ -267,6 +268,9 @@ bugs pass, and are no longer marked.
   torch.compile and jax.jit do not overlap: with torch the steps are CUDA graphs and only the functions
   marked `@compiled` are compiled (whole-step torch.compile breaks on the depend locks and the lazy forces);
   with JAX the whole step is one XLA program and `@compiled` functions are traced inline.
+- One option, `--jit` (`set_backend(..., jit=True)`, `InteractiveSimulation(jit=True)`), compiles the steps
+  with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX (it was `--cuda-graphs` for
+  torch); with numpy, or torch on the CPU, it is an error.
 
 ### Testing
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on

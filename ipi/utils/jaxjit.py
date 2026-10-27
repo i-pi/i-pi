@@ -3,7 +3,7 @@ replay of the compiled function instead of the function.
 
 This is the counterpart of the CUDA graphs of `ipi.utils.cudagraphs` for the
 JAX backend, and it uses the same recording of the operations on the depend
-objects. The function runs eagerly for the first calls, and the last of them
+objects (see `ipi.utils.jit`). The function runs eagerly for the first calls, and the last of them
 is recorded to find the depend objects that it reads before writing them, i.e.
 its inputs. The next call traces the function with jax.jit: the inputs that
 hold JAX arrays are the arguments of the traced function, which returns the
@@ -27,14 +27,10 @@ compiled if it must be interrupted at a `split`.
 import numpy as np
 
 from ipi.utils import depend
-from ipi.utils.cudagraphs import WARMUP_CALLS, _Recorder
+from ipi.utils.jit import WARMUP_CALLS, JitError, _Recorder
 from ipi.utils.messages import info, verbosity, warning
 
-__all__ = ["JitError", "JitReplay"]
-
-
-class JitError(RuntimeError):
-    """Raised when a function cannot be compiled and replayed with jax.jit."""
+__all__ = ["JitReplay"]
 
 
 class JitReplay:

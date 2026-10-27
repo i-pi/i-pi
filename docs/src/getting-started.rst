@@ -289,13 +289,13 @@ barostats) becomes significant. For small systems the overhead of launching
 many small operations on the GPU (or of PyTorch on the CPU) makes the numpy
 backend faster.
 
-This overhead is reduced by ``--cuda-graphs``, with which i-PI records the
+This overhead is reduced by ``--jit``, with which i-PI records the
 operations of an MD step as CUDA graphs after the first few steps, and then
 replays them, running the integrator several times faster:
 
 .. code-block::
 
-    > i-pi --backend torch --device cuda --cuda-graphs input_file.xml
+    > i-pi --backend torch --device cuda --jit input_file.xml
 
 The forces are still computed as usual, between the replays of the parts of
 the step that precede and follow each force evaluation, so any forcefield can
@@ -316,10 +316,10 @@ runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
 instantons, bosonic exchange, open paths or the GLE thermostats, and it is
 much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
-steps, for the same dynamics that are replayed as CUDA graphs, if the forces
-are computed by a direct forcefield whose potential works with JAX arrays
-(e.g. ``dummy``): the whole step, including the force evaluation, is then
-compiled. Otherwise, the steps run as usual. As with ``--cuda-graphs``, the
+steps, for the same dynamics that are replayed as CUDA graphs with torch, if
+the forces are computed by a direct forcefield whose potential works with JAX
+arrays (e.g. ``dummy``): the whole step, including the force evaluation, is
+then compiled. Otherwise, the steps run as usual. As with torch, the
 parameters that are fixed in the compiled step, such as the time step,
 cannot change.
 

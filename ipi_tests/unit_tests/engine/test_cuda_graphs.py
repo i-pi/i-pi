@@ -1,4 +1,4 @@
-"""Replay of the MD steps as CUDA graphs (`--cuda-graphs`)."""
+"""Replay of the MD steps as CUDA graphs (`--jit` with the torch backend)."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2026 i-PI developers
@@ -29,7 +29,7 @@ DUMMY_BATCHED = (
 )
 PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
 # replays match eager steps to rounding errors, as the functions compiled for
-# the replays (see ipi.utils.cudagraphs.compiled) may sum in a different order
+# the replays (see ipi.utils.jit.compiled) may sum in a different order
 TOLERANCE = dict(rtol=1e-12, atol=1e-14)
 
 
@@ -76,29 +76,19 @@ def nst_input():
 INPUTS = {"mts": mts_input, "nst": nst_input}
 
 
-def simulation(xml, cuda_graphs):
+def simulation(xml, jit):
     from ipi.scripting import InteractiveSimulation
 
-    return InteractiveSimulation(
-        xml, backend="torch", device="cuda", cuda_graphs=cuda_graphs
-    )
+    return InteractiveSimulation(xml, backend="torch", device="cuda", jit=jit)
 
 
 def graph_step(sim):
     """The object replaying the steps of the first system, if any."""
 
-    from ipi.engine.cudagraphs import GraphStep
+    from ipi.engine.jit import GraphStep
 
     step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
     return step if isinstance(step, GraphStep) else None
-
-
-def test_cuda_graphs_require_torch_on_cuda():
-    with pytest.raises(ValueError):
-        ab.set_backend("numpy", cuda_graphs=True)
-    with pytest.raises(ValueError):
-        ab.set_backend("torch", device="cpu", cuda_graphs=True)
-    ab.set_backend("numpy")
 
 
 @cuda
@@ -192,7 +182,7 @@ def test_changed_parameters_stop_the_replay(
 ):
     """The time step, and the pressure of the barostats, are fixed in the graphs"""
 
-    from ipi.utils.cudagraphs import CUDAGraphError
+    from ipi.utils.jit import JitError
 
     monkeypatch.chdir(tmp_path)
     try:
@@ -201,7 +191,7 @@ def test_changed_parameters_stop_the_replay(
             sim.run_step(step)
         obj = getattr(sim.syslist[0], owner)
         setattr(obj, name, getattr(obj, name) * 1.1)
-        with pytest.raises(CUDAGraphError, match="cannot change"):
+        with pytest.raises(JitError, match="cannot change"):
             sim.run_step(4)
     finally:
         ab.set_backend("numpy")
@@ -311,7 +301,7 @@ def fake_cuda(monkeypatch):
     """Replays the steps with the torch backend on the CPU, with fake CUDA
     streams and graphs, and CPU tensors in place of CUDA tensors."""
 
-    from ipi.utils import cudagraphs
+    from ipi.utils import cudagraphs, jit
 
     monkeypatch.setattr(torch.cuda, "Stream", FakeStream)
     monkeypatch.setattr(torch.cuda, "current_stream", FakeStream)
@@ -320,9 +310,9 @@ def fake_cuda(monkeypatch):
     monkeypatch.setattr(torch.cuda, "graph_pool_handle", lambda: None)
     monkeypatch.setattr(torch.cuda, "CUDAGraph", FakeGraph)
     monkeypatch.setattr(cudagraphs, "_is_cuda_tensor", torch.is_tensor)
-    monkeypatch.setattr(cudagraphs, "_compiled", lambda func: func)
+    monkeypatch.setattr(jit, "_compiled", lambda func: func)
     ab.set_backend("torch", device="cpu")
-    monkeypatch.setitem(ab._current, "cuda_graphs", True)
+    monkeypatch.setitem(ab._current, "jit", True)
     yield
     ab.set_backend("numpy")
 
@@ -382,26 +372,26 @@ def test_replays_call_the_driver(tmp_path, monkeypatch, fake_cuda):
 
 
 def test_changed_parameters_stop_the_fake_replay(tmp_path, monkeypatch, fake_cuda):
-    from ipi.utils.cudagraphs import CUDAGraphError
+    from ipi.utils.jit import JitError
 
     monkeypatch.chdir(tmp_path)
     sim = fake_simulation(write_input("nvt_langevin", HARMONIC))
     for step in range(4):
         sim.run_step(step)
     sim.syslist[0].motion.dt *= 1.1
-    with pytest.raises(CUDAGraphError, match="cannot change"):
+    with pytest.raises(JitError, match="cannot change"):
         sim.run_step(4)
 
 
 def test_replaced_generator_stops_the_replay(tmp_path, monkeypatch, fake_cuda):
-    from ipi.utils.cudagraphs import CUDAGraphError
+    from ipi.utils.jit import JitError
 
     monkeypatch.chdir(tmp_path)
     sim = fake_simulation(write_input("nvt_langevin", NO_FORCES))
     for step in range(3):
         sim.run_step(step)
     sim.syslist[0].prng._torch_rng = torch.Generator()
-    with pytest.raises(CUDAGraphError, match="generator"):
+    with pytest.raises(JitError, match="generator"):
         sim.run_step(3)
 
 
@@ -446,7 +436,8 @@ def test_inputs_of_a_segment(fake_cuda):
 
 @pytest.mark.parametrize("kind", ["array", "value"])
 def test_host_writes_cannot_be_recorded(kind, fake_cuda):
-    from ipi.utils.cudagraphs import CUDAGraphError, GraphReplay
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.jit import JitError
     from ipi.utils.depend import depend_array, depend_value
 
     if kind == "array":
@@ -457,7 +448,7 @@ def test_host_writes_cannot_be_recorded(kind, fake_cuda):
         replay = GraphReplay(lambda: dep.set(2.0))
     replay()
     replay()
-    with pytest.raises(CUDAGraphError, match="cannot be replayed") as info:
+    with pytest.raises(JitError, match="cannot be replayed") as info:
         replay()
     assert "host" in str(info.value.__cause__)
 
@@ -466,7 +457,8 @@ def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
     """Before a replay, scalars replaced by new objects are copied into those
     read by the graph, and the values fixed in the graph must be unchanged"""
 
-    from ipi.utils.cudagraphs import CUDAGraphError, _stage
+    from ipi.utils.cudagraphs import _stage
+    from ipi.utils.jit import JitError
     from ipi.utils.depend import depend_array, depend_value
 
     recorded = torch.tensor(1.0, dtype=torch.float64)
@@ -477,36 +469,36 @@ def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
     _stage(scalar, recorded, None)
     assert float(recorded) == 3.0
     scalar.set(torch.zeros(2, dtype=torch.float64))
-    with pytest.raises(CUDAGraphError, match="changed shape"):
+    with pytest.raises(JitError, match="changed shape"):
         _stage(scalar, recorded, None)
 
     host = depend_value(name="host", value=[1.0, 2.0])
     _stage(host, [1.0, 2.0], None)
     for value in [[1.0, 3.0], [1.0, 2.0, 3.0]]:
         host.set(value)
-        with pytest.raises(CUDAGraphError, match="has changed"):
+        with pytest.raises(JitError, match="has changed"):
             _stage(host, [1.0, 2.0], None)
     held = np.zeros(2)
     host.set(held)
     copy = held.copy()
     held[0] = 1.0
-    with pytest.raises(CUDAGraphError, match="has changed"):
+    with pytest.raises(JitError, match="has changed"):
         _stage(host, held, copy)
 
     array = depend_array(name="array", value=torch.zeros(3, dtype=torch.float64))
     _stage(array, array._wvalue, None)
-    with pytest.raises(CUDAGraphError, match="has been replaced"):
+    with pytest.raises(JitError, match="has been replaced"):
         _stage(array, torch.zeros(3, dtype=torch.float64), None)
     names = depend_array(name="names", value=np.zeros(3), host=True)
     copy = names._wvalue.copy()
     names[0] = 1.0
-    with pytest.raises(CUDAGraphError, match="has changed"):
+    with pytest.raises(JitError, match="has changed"):
         _stage(names, names._wvalue, copy)
 
 
 @pytest.mark.parametrize("capability,is_compiled", [((6, 1), False), ((9, 0), True)])
 def test_functions_are_compiled_on_recent_gpus(capability, is_compiled, monkeypatch):
-    from ipi.utils.cudagraphs import _compiled
+    from ipi.utils.jit import _compiled
 
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: capability)
     monkeypatch.setattr(torch, "compile", lambda func, **kwargs: "compiled")
@@ -524,7 +516,8 @@ def test_only_cuda_tensors_are_device_values():
 
 
 def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
-    from ipi.utils.cudagraphs import CUDAGraphError, _Call
+    from ipi.utils.cudagraphs import _Call
+    from ipi.utils.jit import JitError
 
     results = iter(
         [
@@ -541,9 +534,9 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     call()
     assert recorded[0][0] is scalar and float(scalar) == 2.0
     assert recorded[0][1] == "second"
-    with pytest.raises(CUDAGraphError, match="changed shape"):
+    with pytest.raises(JitError, match="changed shape"):
         call()
-    with pytest.raises(CUDAGraphError, match="changed structure"):
+    with pytest.raises(JitError, match="changed structure"):
         call()
 
 
@@ -590,7 +583,7 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     ],
 )
 def test_unsupported_steps(case, change, reason, tmp_path, monkeypatch):
-    from ipi.engine.cudagraphs import replay_steps, unsupported
+    from ipi.engine.jit import replay_steps, unsupported
     from ipi.scripting import InteractiveSimulation
 
     monkeypatch.chdir(tmp_path)
@@ -632,7 +625,7 @@ def two_systems(xml, threading, smotion=""):
 def test_unsupported_multiple_systems(
     threading, smotion, reason, tmp_path, monkeypatch
 ):
-    from ipi.engine.cudagraphs import unsupported
+    from ipi.engine.jit import unsupported
     from ipi.scripting import InteractiveSimulation
 
     monkeypatch.chdir(tmp_path)

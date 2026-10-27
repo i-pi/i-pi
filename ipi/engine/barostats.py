@@ -22,7 +22,7 @@ from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import matrix_exp
-from ipi.utils.cudagraphs import compiled
+from ipi.utils.jit import compiled
 from ipi.utils.messages import warning, verbosity
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell

@@ -21,7 +21,7 @@ import numpy as np
 
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
-from ipi.utils import cudagraphs
+from ipi.utils import jit
 from ipi.utils.depend import *
 from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils.nmtransform import nm_rescale
@@ -154,8 +154,8 @@ class ForceBead:
         """
 
         # the recording of a step as CUDA graphs may be interrupted here, to
-        # compute the forces eagerly (see ipi.engine.cudagraphs)
-        cudagraphs.split(self)
+        # compute the forces eagerly (see ipi.engine.jit)
+        jit.split(self)
 
         # only dispatches a request if the forcefield needs it
         with self._threadlock:

@@ -46,11 +46,10 @@ class InteractiveSimulation(Simulation):
        `ipi.utils.array_backend.set_backend` is used (numpy by default).
     :param device: Optional(str), default "cpu". The device on which arrays are
        allocated when `backend` is given, e.g. "cuda" for the torch backend.
-    :param cuda_graphs: Optional(bool), default False. Whether the steps are
-       recorded as CUDA graphs and replayed when `backend` is given (torch
-       backend on a CUDA device only).
     :param jit: Optional(bool), default False. Whether the steps are compiled
-       with jax.jit when `backend` is given (jax backend only).
+       when `backend` is given: recorded as CUDA graphs and replayed with the
+       torch backend (on a CUDA device only), compiled with jax.jit with the
+       jax backend.
     """
 
     def __init__(
@@ -59,7 +58,6 @@ class InteractiveSimulation(Simulation):
         custom_properties=None,
         backend=None,
         device="cpu",
-        cuda_graphs=False,
         jit=False,
     ):
         # not-so-great way to initialize from the class method-generated
@@ -68,7 +66,7 @@ class InteractiveSimulation(Simulation):
         # the line, but for the moment all looks good.
 
         if backend is not None:
-            set_backend(backend, device=device, cuda_graphs=cuda_graphs, jit=jit)
+            set_backend(backend, device=device, jit=jit)
         self._custom_properties = custom_properties or {}
         sim = Simulation.load_from_xml(
             xml_input, post_init_hook=self._add_custom_properties
