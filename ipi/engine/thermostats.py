@@ -12,7 +12,7 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 
 import numpy as np
 
-from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.utils.jit import compiled
 from ipi.utils.depend import *
 from ipi.utils.units import *
@@ -124,23 +124,23 @@ class Thermostat:
             self.p_ = atoms.p_
             self.m_ = atoms.m3_
         elif pm is not None:
-            self.p_ = pm[
-                0
-            ].flatten()  # MR this should allow to simply pass the cell momenta in the anisotropic barostat
-            self.m_ = pm[1].flatten()
+            # the momenta keep their shape, e.g. one row per normal mode for the
+            # PILE thermostats
+            self.p_ = pm[0]
+            self.m_ = pm[1]
         else:
             raise TypeError(
                 "Thermostat.bind expects either Beads, Atoms, NormalModes, or a (p,m) tuple to bind to"
             )
 
         if fixdof is None:
-            self.ndof = len(self.p)
+            self.ndof = xp_size(self.p)
         else:
-            self.ndof = float(len(self.p) - fixdof)
+            self.ndof = float(xp_size(self.p) - fixdof)
 
         self.sm_ = depend_array(
             name="sm",
-            value=np.zeros(len(self.m)),
+            value=np.zeros(tuple(self.m.shape)),
             func=self.get_sm,
             dependencies=[self.m_],
         )
@@ -167,14 +167,21 @@ dproperties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt"])
 @compiled
 def _langevin_step(p, t_on_sm, T2, S, noise, sm):
     """Returns the momenta after a Langevin step, and the energy given to the
-    thermostat."""
+    thermostat. The momenta can have several rows (e.g. normal modes), with
+    T2 and S columns with one value per row."""
 
     # goes in a single step to mass scaled coordinates and applies damping
     p = p * t_on_sm
 
-    deltah = (p @ p) / T2  # must correct for the "pre-damping"
+    # must correct for the "pre-damping", with the T of each row
+    if p.ndim == 1:
+        deltah = (p @ p) / T2
+    else:
+        deltah = ((p[:, None, :] @ p[:, :, None])[:, :, 0] / T2).sum()
+
     p = p + S * noise  # random part (in ms coordinates)
-    deltah = deltah - p @ p  # new energy
+    flat = p if p.ndim == 1 else p.reshape(-1)
+    deltah = deltah - flat @ flat  # new energy
 
     return p * sm, deltah * 0.5  # back to physical momentum
 
@@ -184,16 +191,18 @@ class ThermoLangevin(Thermostat):
 
     Depend objects:
        tau: Thermostat damping time scale. Larger values give a less strongly
-          coupled thermostat.
+          coupled thermostat. A scalar, or a column with one value per row of
+          the momenta (e.g. per normal mode).
        T: Coefficient of the diffusive contribution of the thermostat, i.e. the
           drift back towards equilibrium. Depends on tau and the time step.
        S: Coefficient of the stochastic contribution of the thermostat, i.e.
-          the uncorrelated Gaussian noise. Depends on T and the temperature.
+          the uncorrelated Gaussian noise. Depends on T and the temperature
+          (which can also have one value per row of the momenta).
     """
 
     def get_T(self):
         """Calculates the coefficient of the overall drift of the velocities, as
-        a scalar of the array backend."""
+        an array of the backend."""
 
         return xp.asarray(np.exp(-self.dt / self.tau))
 
@@ -263,7 +272,7 @@ class ThermoLangevin(Thermostat):
         # by the thermostat
 
         p = self.p
-        noise = self.prng.gvec(len(p))
+        noise = self.prng.gvec(p.shape)
         p, deltah = _langevin_step(p, self.T_on_sm, self.T2, self.S, noise, self.sm)
         self.p_[:] = p
         self.ethermo += deltah
@@ -276,8 +285,8 @@ class ThermoPILE_L(Thermostat):
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
-       _thermos: The list of the different thermostats for all the ring polymer
-          normal modes.
+       _thermos: The thermostats of the ring polymer normal modes: a Langevin
+          thermostat acting on all of them (but the centroid for PILE_G).
        nm: A normal modes object to attach the thermostat to.
        prng: Random number generator used in the stochastic integration
           algorithms.
@@ -368,14 +377,6 @@ class ThermoPILE_L(Thermostat):
             self.prng = prng
 
         prev_ethermo = self.ethermo
-
-        # creates a set of thermostats to be applied to individual normal modes
-        self._thermos = [ThermoLangevin(temp=1, dt=1, tau=1) for b in range(nm.nbeads)]
-        # optionally does not bind the centroid, so we can re-use all of this
-        # in the PILE_G case
-        if not bindcentroid:
-            self._thermos[0] = None
-
         self.nm = nm
 
         self.tauk_ = depend_array(
@@ -386,44 +387,28 @@ class ThermoPILE_L(Thermostat):
             host=True,
         )
 
-        # must pipe all the dependencies in such a way that values for the nm thermostats
-        # are automatically updated based on the "main" thermostat
-        it = 0
-        for t in self._thermos:
-            if t is None:
-                it += 1
-                continue
-            if it > 0:
-                fixdof = None  # only the centroid thermostat may have constraints
-
-            # bind thermostat t to the it-th bead
-
-            t.bind(pm=(nm.pnm_[it, :], nm.dynm3_[it, :]), prng=self.prng, fixdof=fixdof)
-            if it == 0:
-                # the following lines pipe a different temperature to the centroid, if requested
-                if self.pilect > 0.0:
-                    dpipe(self.npilect_, t.temp_)
-                else:
-                    dpipe(self.temp_, t.temp_)
-            else:
-                # pipes temp
-                dpipe(self.temp_, t.temp_)
-            # pipes dt
+        # a single Langevin thermostat acts on all the normal modes, with one
+        # time scale and temperature per mode. The centroid is optionally left
+        # out, so that the PILE_G thermostat can bind its own
+        first = 0 if bindcentroid else 1
+        self._thermos = []
+        if nm.nbeads > first:
+            t = ThermoLangevin()
+            t.bind(pm=(nm.pnm_[first:], nm.dynm3_[first:]), prng=self.prng)
             dpipe(self.dt_, t.dt_)
-
-            # the non-centroid modes take their tau from tauk
-            if it == 0:
-                dpipe(self.tau_, t.tau_)
-            else:
-                dpipe(self.tauk_, t.tau_, item=it - 1)
-            it += 1
+            dcompute(t.tau_, lambda: self.get_taus()[first:], [self.tau_, self.tauk_])
+            dcompute(
+                t.temp_,
+                lambda: self.get_temps()[first:],
+                [self.temp_, self.npilect_],
+            )
+            self._thermos.append(t)
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
-        # one has to split
-        # any previously-stored value between the sub-thermostats
+        # any previously-stored value is split between them
         if bindcentroid:
             for t in self._thermos:
-                t.ethermo = prev_ethermo / nm.nbeads
+                t.ethermo = prev_ethermo / len(self._thermos)
             dcompute(
                 self.ethermo_,
                 self.get_ethermo,
@@ -442,7 +427,22 @@ class ThermoPILE_L(Thermostat):
 
         # Also include an optional scaling factor to reduce the intensity of NM thermostats
         dynomegak = to_numpy(self.nm.dynomegak)
-        return 1.0 / (2 * self.pilescale * dynomegak[1 : len(self._thermos)])
+        return 1.0 / (2 * self.pilescale * dynomegak[1:])
+
+    def get_taus(self):
+        """Returns the damping time scales of all the normal modes, as a column:
+        tau for the centroid, tauk for the others."""
+
+        return np.concatenate([[self.tau], self.tauk])[:, np.newaxis]
+
+    def get_temps(self):
+        """Returns the temperatures of all the normal modes, as a column of the
+        array backend: npilect for the centroid if it is set, temp otherwise."""
+
+        temps = np.full((self.nm.nbeads, 1), self.temp)
+        if self.pilect > 0.0:
+            temps[0] = self.npilect
+        return xp.asarray(temps)
 
     def get_ethermo(self):
         """Computes the total energy transferred to the heat bath for all the
@@ -619,7 +619,7 @@ class ThermoPILE_G(ThermoPILE_L):
         )
 
         # centroid thermostat
-        self._thermos[0] = ThermoSVR(temp=1, dt=1, tau=1)
+        t = ThermoSVR(temp=1, dt=1, tau=1)
 
         # the centroid sees one bead's worth of fixed-atom DOFs, plus the
         # COM constraint (which lives entirely on the centroid mode).
@@ -630,7 +630,6 @@ class ThermoPILE_G(ThermoPILE_L):
         ncom = 3 if fixcom else 0
         fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
 
-        t = self._thermos[0]
         t.bind(pm=(nm.pnm_[0, :], nm.dynm3_[0, :]), prng=self.prng, fixdof=fixdof0)
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
@@ -640,10 +639,12 @@ class ThermoPILE_G(ThermoPILE_L):
 
         dpipe(self.dt_, t.dt_)
         dpipe(self.tau_, t.tau_)
+        # the centroid thermostat comes first, as for the order of the random draws
+        self._thermos.insert(0, t)
 
         # splits any previous ethermo between the thermostats, and finishes to bind ethermo to the sum function
         for t in self._thermos:
-            t.ethermo = prev_ethermo / nm.nbeads
+            t.ethermo = prev_ethermo / len(self._thermos)
         dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
 
 

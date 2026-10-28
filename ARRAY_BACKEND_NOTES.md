@@ -54,6 +54,14 @@ or because they were approved explicitly:
 - With one bead, the positions are propagated in the bead representation (`qcstep`), which avoids copying
   positions and momenta between beads and normal modes at each step (identical results; numpy NVE 6-20%
   faster, NVT Langevin 2-11%, torch eager NVE 21% on the P400).
+- The PILE_L and PILE_G thermostats use one Langevin thermostat for all the normal modes (all but the
+  centroid for PILE_G), with one time scale and temperature per mode, instead of one thermostat per mode: the
+  noise of all the modes is drawn at once, and a PIMD step launches the same number of kernels whatever the
+  number of beads (Quadro P400, 100 atoms, no forces: 78 instead of 156 / 260 for 4 / 8 beads; `--jit`
+  0.48 -> 0.28 / 0.88 -> 0.33 ms/step; numpy 17-35% faster at 100 atoms). `T_on_sm` has the shape of the
+  momenta, `T2` and `S` one value per mode. With numpy the trajectories are the same as before (only the
+  thermostat energy changes, at the level of rounding errors); with torch and JAX the random numbers change.
+  The thermostat energy is no longer kept per mode: a stored value goes to the single thermostat on restart.
 - The SVR thermostat (also on the centroid of PILE_G) runs on the device: the kinetic energy, the sign of the
   scaling and the random numbers stay on the device (the gamma variate from `Random.gammavec`, with
   `torch._standard_gamma` and the torch generator, or `jax.random.gamma`), so that its steps can be compiled

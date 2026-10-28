@@ -74,8 +74,8 @@ def test_finite_temperature_langevin_matches_published_update(monkeypatch):
     atoms.p_[:] = initial
     prng = Random(seed=37)
 
-    def fixed_gaussian_values(size):
-        assert size == draws.size
+    def fixed_gaussian_values(shape):
+        assert shape == draws.shape
         return draws.copy()
 
     monkeypatch.setattr(prng, "gvec", fixed_gaussian_values)
