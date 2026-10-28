@@ -97,7 +97,9 @@ def graph_step(sim):
     [
         ("nve", NO_FORCES, 1),
         ("nvt_langevin", HARMONIC, 2),
+        ("nvt_svr", HARMONIC, 2),
         ("pimd_nvt", DUMMY, 5),
+        ("pimd_pile_g", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 2),
         ("mts", None, 14),
         ("npt_isotropic", HARMONIC, 2),
@@ -165,7 +167,7 @@ def test_recording_in_a_new_thread(tmp_path, monkeypatch, device_random):
 def test_unsupported_steps_are_eager(tmp_path, monkeypatch, device_random):
     monkeypatch.chdir(tmp_path)
     try:
-        sim = simulation(write_input("nvt_svr", HARMONIC), True)
+        sim = simulation(write_input("nvt_gle", HARMONIC), True)
         assert graph_step(sim) is None
         sim.run_step(0)
     finally:
@@ -328,7 +330,9 @@ def fake_simulation(xml):
     [
         ("nve", NO_FORCES, 1),
         ("nvt_langevin", HARMONIC, 2),
+        ("nvt_svr", HARMONIC, 2),
         ("pimd_nvt", DUMMY, 5),
+        ("pimd_pile_g", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 2),
         ("mts", None, 14),
     ],
@@ -544,7 +548,9 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     "case,change,reason",
     [
         ("nve", None, None),
-        ("nvt_svr", None, "the thermostat 'ThermoSVR'"),
+        ("nvt_svr", None, None),
+        ("pimd_pile_g", None, None),
+        ("nvt_gle", None, "the thermostat 'ThermoGLE'"),
         ("npt_flexible", None, None),
         (
             "npt_isotropic",

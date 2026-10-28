@@ -354,6 +354,19 @@ class DummyIntegrator:
             func=lambda: 1.5 / self.beads.m3.sum(),
             dependencies=[self.beads.m3_],
         )
+        # the same for the centroid normal mode, which holds the sum of the
+        # momenta of the beads divided by the square root of their number
+        self.centroid_com_weights_ = depend_array(
+            name="centroid_com_weights",
+            value=np.zeros((self.beads.natoms, 3)),
+            func=lambda: self.com_weights[: self.beads.natoms] * self.beads.nbeads,
+            dependencies=[self.com_weights_],
+        )
+        self.centroid_half_inv_mtot_ = depend_value(
+            name="centroid_half_inv_mtot",
+            func=lambda: self.half_inv_mtot * self.beads.nbeads,
+            dependencies=[self.half_inv_mtot_],
+        )
         self.pdt_ = depend_array(
             name="pdt",
             func=self.get_pdt,
@@ -415,9 +428,19 @@ class DummyIntegrator:
         beads = self.beads
         if self.fixcom:
             # removes the momentum of the centre of mass, and adds its kinetic
-            # energy to the energy exchanged with the ensemble
-            dp, ecom = _com_motion(beads.p, self.com_weights, self.half_inv_mtot)
-            beads.p_ -= dp
+            # energy to the energy exchanged with the ensemble. Only the
+            # centroid normal mode changes, so it is modified instead of the
+            # beads when the momenta are held in normal modes
+            if beads.p_.tainted():
+                dp, ecom = _com_motion(
+                    self.nm.pnm[0],
+                    self.centroid_com_weights,
+                    self.centroid_half_inv_mtot,
+                )
+                self.nm.pnm_[0] -= dp
+            else:
+                dp, ecom = _com_motion(beads.p, self.com_weights, self.half_inv_mtot)
+                beads.p_ -= dp
             self.ensemble.eens += ecom
 
         # Here we remove momenta in the nm basis because it is equivalent to cartesian but ensures we treat CMD setups consistently.
@@ -445,6 +468,8 @@ dproperties(
         "qdt_on_m",
         "com_weights",
         "half_inv_mtot",
+        "centroid_com_weights",
+        "centroid_half_inv_mtot",
     ],
 )
 
@@ -487,7 +512,12 @@ class NVEIntegrator(DummyIntegrator):
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        self.nm.qnm_[0, :] += self.nm.pnm[0, :] * self.qdt_on_m
+        if self.beads.nbeads == 1:
+            # the centroid is the only bead: avoids the copies of the
+            # positions and momenta between beads and normal modes
+            self.beads.q_ += self.beads.p * self.qdt_on_m
+        else:
+            self.nm.qnm_[0, :] += self.nm.pnm[0, :] * self.qdt_on_m
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have

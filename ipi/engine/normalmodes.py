@@ -18,10 +18,21 @@ from ipi.utils.depend import *
 from ipi.utils import units
 from ipi.utils import nmtransform
 from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.jit import compiled
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.exchange import *
 
 __all__ = ["NormalModes"]
+
+
+@compiled
+def _free_rp_step(pnm, qnm, prop_pq_ms):
+    """Returns the momenta and positions of the normal modes other than the
+    centroid after a step of the free ring polymer, given those of all the
+    modes and the propagator combined with the masses."""
+
+    p, q, prop = pnm[1:], qnm[1:], prop_pq_ms[:, :, 1:]
+    return p * prop[0, 0] + q * prop[0, 1], p * prop[1, 0] + q * prop[1, 1]
 
 
 class NormalModes:
@@ -860,38 +871,9 @@ class NormalModes:
                     "@Normalmodes : Bosonic forces not compatible right now with the exact or Cayley propagators."
                 )
 
-            """
-            if len(self.open_paths) > 0:
-                # if there are open paths, make a copy to preserve the original values
-                pnm = pnm.copy()
-                qnm = qnm.copy()
-
-            # uses the buffer to apply the propagator in one go
-            pq_buffer = self.pq_buffer
-
-            for k in range(1, self.nbeads):
-                # goes in mass-scaled coordinates and then applies
-                pq_buffer[0] = pnm[k] / sm[k]
-                pq_buffer[1] = qnm[k] * sm[k]
-                pnm[k], qnm[k] = noddot(prop_pq[k], pq_buffer)                
-            res1 = self.pnm[1:] * self.prop_pq_ms[0,0,1:] + self.qnm[1:] * self.prop_pq_ms[0,1,1:]
-            res2 = self.pnm[1:] * self.prop_pq_ms[1,0,1:] + self.qnm[1:] * self.prop_pq_ms[1,1,1:]
-            
-            print("check, ", np.linalg.norm( pnm[1:] * sm[1:] - res1), 
-            np.linalg.norm( qnm[1:] / sm[1:] - res2))
-            # back to non-scaled coordinates, and update the actual arrays
-            self.pnm[1:] = pnm[1:] * sm[1:]
-            self.qnm[1:] = qnm[1:] / sm[1:]
-
-            """
-
-            # detach arrays
             pnm = self.pnm
             qnm = self.qnm
-
-            prop_pq_ms = self.prop_pq_ms
-            new_pnm = pnm[1:] * prop_pq_ms[0, 0, 1:] + qnm[1:] * prop_pq_ms[0, 1, 1:]
-            new_qnm = pnm[1:] * prop_pq_ms[1, 0, 1:] + qnm[1:] * prop_pq_ms[1, 1, 1:]
+            new_pnm, new_qnm = _free_rp_step(pnm, qnm, self.prop_pq_ms)
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation. NB this will be slow, will probably need some optimization
@@ -907,17 +889,6 @@ class NormalModes:
                     pnm[1:, opc] * o_prop_pq_ms[1, 0, 1:]
                     + qnm[1:, opc] * o_prop_pq_ms[1, 1, 1:]
                 )
-                """
-                pq = np.zeros(2)
-                for j in self.open_paths:
-                    for a in range(3 * j, 3 * (j + 1)):
-                        for k in range(1, self.nbeads):
-                            pq[0] = self.pnm[k, a] / sm[k, a]
-                            pq[1] = self.qnm[k, a] * sm[k, a]
-                            pq = np.dot(o_prop_pq[k], pq)
-                            new_pnm[k, a] = pq[0] * sm[k,a]
-                            new_qnm[k, a] = pq[1] / sm[k,a]
-                """
             # updates the "real" vectors
             self.pnm_[1:] = new_pnm
             self.qnm_[1:] = new_qnm

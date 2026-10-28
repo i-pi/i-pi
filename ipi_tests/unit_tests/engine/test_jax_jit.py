@@ -58,7 +58,9 @@ def assert_same_state(a, b):
     [
         ("nve", DUMMY),
         ("nvt_langevin", NO_FORCES),
+        ("nvt_svr", NO_FORCES),
         ("pimd_nvt", DUMMY),
+        ("pimd_pile_g", DUMMY),
         ("npt_isotropic", DUMMY),
         ("npt_flexible", NO_FORCES),
     ],

@@ -46,6 +46,20 @@ or because they were approved explicitly:
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
   beads on CPUs, and from 32-64 beads on GPUs with slow double precision (Quadro P400). Results change at the
   level of rounding errors (the two agree to ~4e-13).
+- When the momenta are held in normal modes (after the PILE thermostats), the motion of the centre of mass
+  is removed from the centroid normal mode, which is the only one it changes (also with open paths), instead
+  of transforming the momenta to beads and back: a PIMD NVT step with PILE_L does 4 normal-mode
+  transformations instead of 6 (numpy PIMD-4/8, 1000 atoms: 14-17% faster). Results change at the level of
+  rounding errors. The free ring-polymer step is `@compiled` (fused when the steps are replayed as CUDA graphs).
+- With one bead, the positions are propagated in the bead representation (`qcstep`), which avoids copying
+  positions and momenta between beads and normal modes at each step (identical results; numpy NVE 6-20%
+  faster, NVT Langevin 2-11%, torch eager NVE 21% on the P400).
+- The SVR thermostat (also on the centroid of PILE_G) runs on the device: the kinetic energy, the sign of the
+  scaling and the random numbers stay on the device (the gamma variate from `Random.gammavec`, with
+  `torch._standard_gamma` and the torch generator, or `jax.random.gamma`), so that its steps can be compiled
+  with `--jit`. With numpy the random numbers are the same as before (also in order); with torch and JAX they
+  come from the device generator, so trajectories change for a given seed. The thermostat no longer skips the
+  draws when the kinetic energy is zero.
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
 - Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as
@@ -156,9 +170,9 @@ bugs pass, and are no longer marked.
   thermostats are tensor scalars, so the temperature can change). After a replay, the taint status
   of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
   objects held by tensor scalars are restored as at the end of the recorded segment.
-- Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin or
-  PILE_L thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no or a
-  Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, SVR, PILE_G, GLE,
+- Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR,
+  PILE_L or PILE_G thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no
+  or a Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, GLE,
   fixed atoms, open paths, bosons, multi-system motions, systems stepped in threads. The barostats read the
   temperature and the pressure as host values, so changing them stops a replayed run with `JitError`;
   the external stress of the anisotropic barostat is a device array, and its changes are replayed.
@@ -273,6 +287,16 @@ bugs pass, and are no longer marked.
   torch.compile and jax.jit do not overlap: with torch the steps are CUDA graphs and only the functions
   marked `@compiled` are compiled (whole-step torch.compile breaks on the depend locks and the lazy forces);
   with JAX the whole step is one XLA program and `@compiled` functions are traced inline.
+- Normal modes on the H100 (job 4713726), ms/step without forces, 92a241d8 (FFT) -> matrix by default ->
+  also the centre of mass removed from the centroid mode and the fused free ring-polymer step; NVT Langevin
+  unchanged in all modes. PIMD-4 / PIMD-8 with PILE_L at 100 / 1000 / 10000 atoms: torch `--jit` 0.233 ->
+  0.162 -> 0.129 / 0.258 -> 0.180 -> 0.151 / 0.308 -> 0.223 -> 0.194 and 0.289 -> 0.215 -> 0.187 / 0.337 ->
+  0.245 -> 0.220 / 0.483 -> 0.346 -> 0.307; JAX `--jit` 0.235 -> 0.185 -> 0.181 / 0.255 -> 0.172 -> 0.176 /
+  0.258 -> 0.202 -> 0.204 and 0.300 -> 0.253 -> 0.251 / 0.375 -> 0.264 -> 0.258 / 0.336 -> 0.290 -> 0.285;
+  torch eager 1.46 -> 1.08 -> 1.04 and 2.06 -> 1.63 -> 1.59 (all sizes); numpy (1 thread) 0.312 -> 0.192 ->
+  0.175 / 1.36 -> 0.81 -> 0.68 / 10.8 -> 6.8 -> 5.6 and 0.455 -> 0.322 -> 0.286 / 2.27 -> 1.59 -> 1.29 / 19.6 ->
+  14.3 -> 11.4. 32-bead NPT at 100 / 1000 atoms: torch `--jit` 0.89 -> 0.78 -> 0.75 / 1.04 -> 0.91 -> 0.89,
+  numpy 1.55 -> 1.30 -> 1.14 / 8.54 -> 7.75 -> 5.88.
 - One option, `--jit` (`set_backend(..., jit=True)`, `InteractiveSimulation(jit=True)`), compiles the steps
   with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX (it was `--cuda-graphs` for
   torch); with numpy, or torch on the CPU, it is an error.

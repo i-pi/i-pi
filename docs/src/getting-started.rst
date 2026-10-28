@@ -303,8 +303,8 @@ be used. For direct forcefields whose potential works with the arrays of the
 backend, such as ``metatomic``, only the potential is evaluated between the
 replays, while the requests and the collection of the results are part of the
 graphs. The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
-integral and with multiple time stepping) with the Langevin and PILE-L
-thermostats and the isotropic, flexible and anisotropic barostats, while the
+integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
+PILE-G thermostats and the isotropic, flexible and anisotropic barostats, while the
 other simulations run as usual. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
 barostat, cannot change while the steps are replayed: i-PI stops with an error

@@ -109,14 +109,18 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
         def __init__(self):
             self.values = iter(draws)
 
-        @property
-        def g(self):
-            return next(self.values)
+        def gvec(self, shape):
+            return np.array([next(self.values) for _ in range(shape)])
 
-        def gamma(self, shape):
-            # Gamma(shape, scale=1) = half a sum of 2*shape squared
-            # standard Gaussian variables, for the integer shapes used here.
-            return 0.5 * sum(next(self.values) ** 2 for _ in range(int(2 * shape)))
+        def gammavec(self, k, shape):
+            # Gamma(k, scale=1) = half a sum of 2*k squared standard
+            # Gaussian variables, for the integer values of 2*k used here.
+            return np.array(
+                [
+                    0.5 * sum(next(self.values) ** 2 for _ in range(int(2 * k)))
+                    for _ in range(shape)
+                ]
+            )
 
     # Atomic units: kB=1. The positive first draw gives a positive scale.
     kinetic = np.sum(initial**2 / (2 * np.repeat(masses, 3)))

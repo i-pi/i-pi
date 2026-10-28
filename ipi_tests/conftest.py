@@ -48,6 +48,9 @@ def pytest_configure(config):
         def gvec(self, shape):
             return array_backend.xp.asarray(self.gvec_serial(shape))
 
+        def gammavec(self, k, shape):
+            return array_backend.xp.asarray(Random.gammavec(self, k, shape))
+
     if test_tools.ipi_backend == "torch":
         import torch
 
@@ -55,10 +58,13 @@ def pytest_configure(config):
             out[...] = array_backend.xp.asarray(self.gvec_serial(tuple(out.shape)))
 
         _device_random.update(
-            gvec_torch=Random.gvec_torch, gfill_torch=Random.gfill_torch
+            gvec_torch=Random.gvec_torch,
+            gfill_torch=Random.gfill_torch,
+            gammavec_torch=Random.gammavec_torch,
         )
         Random.gvec_torch = gvec
         Random.gfill_torch = gfill
+        Random.gammavec_torch = gammavec
 
         # torch is slower than numpy for the small systems of the tests
         test_tools.TIMEOUT = 4 * test_tools.TIMEOUT
@@ -68,8 +74,11 @@ def pytest_configure(config):
         torch.Tensor.__array__ = _no_implicit_numpy
 
     if test_tools.ipi_backend == "jax":
-        _device_random.update(gvec_jax=Random.gvec_jax)
+        _device_random.update(
+            gvec_jax=Random.gvec_jax, gammavec_jax=Random.gammavec_jax
+        )
         Random.gvec_jax = gvec
+        Random.gammavec_jax = gammavec
         # eager JAX is much slower than numpy for the small systems of the tests
         test_tools.TIMEOUT = 10 * test_tools.TIMEOUT
 

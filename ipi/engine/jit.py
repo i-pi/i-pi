@@ -49,7 +49,13 @@ def unsupported(simulation, system):
         NSTIntegrator,
     )
     from ipi.engine.smotion import Smotion
-    from ipi.engine.thermostats import ThermoLangevin, ThermoPILE_L, Thermostat
+    from ipi.engine.thermostats import (
+        ThermoLangevin,
+        ThermoPILE_G,
+        ThermoPILE_L,
+        ThermoSVR,
+        Thermostat,
+    )
 
     motion = system.motion
     if type(motion) is not Dynamics:
@@ -57,7 +63,8 @@ def unsupported(simulation, system):
     integrators = (NVEIntegrator, NVTIntegrator, NPTIntegrator, NSTIntegrator)
     if type(motion.integrator) not in integrators:
         return f"the ensemble '{motion.enstype}'"
-    if type(motion.thermostat) not in (Thermostat, ThermoLangevin, ThermoPILE_L):
+    thermostats = (Thermostat, ThermoLangevin, ThermoSVR, ThermoPILE_L, ThermoPILE_G)
+    if type(motion.thermostat) not in thermostats:
         return f"the thermostat '{type(motion.thermostat).__name__}'"
     if type(motion.barostat) not in (Barostat, BaroBZP, BaroMTK, BaroRGB):
         return f"the barostat '{type(motion.barostat).__name__}'"

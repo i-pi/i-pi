@@ -469,6 +469,23 @@ class ThermoPILE_L(Thermostat):
 dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])
 
 
+@compiled
+def _svr_step(p, m, K_target, et, r1, rg):
+    """Returns the scaling of the momenta in a stochastic velocity rescaling
+    step, and the energy given to the thermostat, given the random numbers r1
+    (normal) and rg (chi-squared with one degree of freedom fewer than p)."""
+
+    K = (p @ (p / m)) * 0.5
+    # with zero kinetic energy (p = 0) any finite scaling leaves p unchanged
+    ratio = K_target / (K + (K == 0))
+    r1, rg = r1[0], rg[0]
+    alpha2 = (
+        et + ratio * (1 - et) * (r1**2 + rg) + 2.0 * r1 * (ratio * et * (1 - et)) ** 0.5
+    )
+    flip = r1 + (2 * K / K_target * et / (1 - et)) ** 0.5 < 0
+    return alpha2**0.5 * (1 - 2 * flip), K * (1 - alpha2)
+
+
 class ThermoSVR(Thermostat):
     """Represents a stochastic velocity rescaling thermostat.
 
@@ -482,13 +499,15 @@ class ThermoSVR(Thermostat):
     """
 
     def get_et(self):
-        """Calculates the damping term in the propagator."""
+        """Calculates the damping term in the propagator, as a scalar of the
+        array backend (a numpy scalar, faster than a 0-d array, with numpy)."""
 
-        return np.exp(-self.dt / self.tau)
+        return xp.asarray(np.exp(-self.dt / self.tau))[()]
 
     def get_K(self):
-        """Calculates the average kinetic energy per degree of freedom."""
-        return Constants.kb * self.temp * 0.5
+        """Calculates the average kinetic energy per degree of freedom, as a
+        scalar of the array backend."""
+        return xp.asarray(Constants.kb * self.temp * 0.5)[()]
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoSVR.
@@ -515,29 +534,18 @@ class ThermoSVR(Thermostat):
         Journal of Chemical Physics 126, 014101 (2007)
         """
 
-        K = float(self.p @ (self.p / self.m)) * 0.5
-
-        # rescaling is un-defined if the KE is zero
-        if K == 0.0:
-            return
-
         # gets the stochastic term (basically a Gamma distribution for the kinetic energy)
-        r1 = self.prng.g
+        r1 = self.prng.gvec(1)
         if (self.ndof - 1) % 2 == 0:
-            rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
+            rg = 2.0 * self.prng.gammavec((self.ndof - 1) / 2, 1)
         else:
-            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g**2
+            rg = (
+                2.0 * self.prng.gammavec((self.ndof - 2) / 2, 1)
+                + self.prng.gvec(1) ** 2
+            )
 
-        alpha2 = (
-            self.et
-            + self.K / K * (1 - self.et) * (r1**2 + rg)
-            + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
-        )
-        alpha = np.sqrt(alpha2)
-        if (r1 + np.sqrt(2 * K / self.K * self.et / (1 - self.et))) < 0:
-            alpha *= -1
-
-        self.ethermo += K * (1 - alpha2)
+        alpha, deltah = _svr_step(self.p, self.m, self.K, self.et, r1, rg)
+        self.ethermo += deltah
         self.p_ *= alpha
 
 

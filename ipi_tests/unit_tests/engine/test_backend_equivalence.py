@@ -21,6 +21,7 @@ except ImportError:
 LANGEVIN = "<thermostat mode='langevin'><tau units='femtosecond'>100</tau></thermostat>"
 SVR = "<thermostat mode='svr'><tau units='femtosecond'>100</tau></thermostat>"
 PILE_L = "<thermostat mode='pile_l'><tau units='femtosecond'>100</tau></thermostat>"
+PILE_G = "<thermostat mode='pile_g'><tau units='femtosecond'>100</tau></thermostat>"
 GLE = """<thermostat mode='gle'><A shape='(3,3)'>
   [ 1e-3, 2e-3, 1e-4, -2e-3, 3e-3, 1e-4, -1e-4, -1e-4, 2e-3 ]</A></thermostat>"""
 ISOTROPIC = f"<barostat mode='isotropic'><tau units='femtosecond'>200</tau>{LANGEVIN}</barostat>"
@@ -37,6 +38,7 @@ CASES = {
     "npt_isotropic": (1, "npt", LANGEVIN, ISOTROPIC),
     "npt_flexible": (1, "npt", LANGEVIN, FLEXIBLE),
     "pimd_nvt": (4, "nvt", PILE_L, ""),
+    "pimd_pile_g": (4, "nvt", PILE_G, ""),
     "pimd_npt": (4, "npt", PILE_L, ISOTROPIC),
 }
 
@@ -90,11 +92,14 @@ def write_input(case, forcefield, natoms=8):
 
 @pytest.fixture
 def numpy_draws(monkeypatch):
-    """Makes the torch and JAX backends draw the same Gaussian numbers as
+    """Makes the torch and JAX backends draw the same random numbers as
     numpy, and restores the numpy backend afterwards."""
 
     def gvec(self, shape):
         return ab.xp.asarray(self.gvec_serial(shape))
+
+    def gammavec(self, k, shape):
+        return ab.xp.asarray(Random.gammavec(self, k, shape))
 
     def gfill(self, out):
         out[...] = ab.xp.asarray(self.gvec_serial(tuple(out.shape)))
@@ -102,6 +107,8 @@ def numpy_draws(monkeypatch):
     monkeypatch.setattr(Random, "gvec_torch", gvec)
     monkeypatch.setattr(Random, "gfill_torch", gfill)
     monkeypatch.setattr(Random, "gvec_jax", gvec)
+    monkeypatch.setattr(Random, "gammavec_torch", gammavec)
+    monkeypatch.setattr(Random, "gammavec_jax", gammavec)
     yield
     ab.set_backend("numpy")
 
@@ -156,7 +163,16 @@ def test_backend_equivalence(
 
 @pytest.mark.skipif(not cuda_available, reason="CUDA not available")
 @pytest.mark.parametrize(
-    "case", ["nve", "nvt_langevin", "pimd_nvt", "pimd_npt", "npt_flexible"]
+    "case",
+    [
+        "nve",
+        "nvt_langevin",
+        "nvt_svr",
+        "pimd_nvt",
+        "pimd_pile_g",
+        "pimd_npt",
+        "npt_flexible",
+    ],
 )
 def test_cuda_step_is_sync_free(case, tmp_path, monkeypatch, device_random):
     """An MD step without force evaluation does not wait for the device"""

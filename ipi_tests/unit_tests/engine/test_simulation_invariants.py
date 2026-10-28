@@ -78,6 +78,30 @@ def test_nve_time_reversal(simulation, nbeads):
         np.testing.assert_allclose(beads.p, -p0, rtol=1e-12, atol=1e-12)
 
 
+def test_com_removal_from_beads_or_normal_modes(simulation):
+    """The motion of the centre of mass is removed in the same way from the
+    momenta of the beads and from those of the normal modes."""
+    xml = harmonic_input(nbeads=4).replace("<fixcom>False", "<fixcom>True")
+    with simulation(xml) as sim:
+        s = sim.syslist[0]
+        p = np.random.default_rng(0).normal(size=s.beads.p.shape)
+        results = []
+        for in_normal_modes in (False, True):
+            if in_normal_modes:
+                s.nm.pnm = s.nm.transform.b2nm(p)
+            else:
+                s.beads.p = p
+            assert s.beads.p_.tainted() == in_normal_modes
+            eens = s.ensemble.eens
+            s.motion.integrator.pconstraints()
+            results.append((s.beads.p.copy(), s.ensemble.eens - eens))
+        np.testing.assert_allclose(results[1][0], results[0][0], atol=1e-14)
+        assert results[1][1] == pytest.approx(results[0][1], rel=1e-12)
+        np.testing.assert_allclose(
+            results[0][0].reshape(-1, 3).sum(axis=0), 0, atol=1e-14
+        )
+
+
 @pytest.mark.parametrize("threading", [False, True])
 def test_output_stride_matches_completed_steps(simulation, threading):
     """Output rows hold the step and energies of the state at that step."""

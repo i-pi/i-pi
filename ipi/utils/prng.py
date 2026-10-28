@@ -82,6 +82,7 @@ class Random(object):
                 int(np.random.SeedSequence(seed).generate_state(1)[0])
             )
             self.gvec = self.gvec_jax
+            self.gammavec = self.gammavec_jax
         elif backend() == "torch":
             import torch
 
@@ -93,6 +94,7 @@ class Random(object):
             )
             self.gvec = self.gvec_torch
             self.gfill = self.gfill_torch
+            self.gammavec = self.gammavec_torch
         elif self.n_threads == 1:
             self.gvec = self.gvec_serial
             self.gfill = self.gfill_serial
@@ -213,6 +215,17 @@ class Random(object):
         """
 
         return self.rng[0].gamma(k, theta, size)
+
+    def gammavec(self, k, shape):
+        """Returns an array of random numbers from a gamma distribution with
+        shape `k` and scale 1, drawn with the generator of the backend.
+
+        Args:
+            k: Shape parameter for the gamma distribution.
+            shape: The shape of the array to be returned.
+        """
+
+        return self.rng[0].gamma(k, 1.0, shape)
 
     def poisson(self, lam=1.0, size=None):
         """Interface to the standard poisson() function.
@@ -365,6 +378,22 @@ class Random(object):
         self._jax_key, rvec = _jax_normal()(self._jax_key, shape)
         return rvec
 
+    def gammavec_torch(self, k, shape):
+        """Returns an array of gamma-distributed random numbers drawn with the
+        torch generator, on its device (see `gammavec`)."""
+
+        import torch
+
+        alpha = torch.empty(shape, dtype=torch.float64, device=self._torch_rng.device)
+        return torch._standard_gamma(alpha.fill_(k), generator=self._torch_rng)
+
+    def gammavec_jax(self, k, shape):
+        """Returns an array of gamma-distributed random numbers drawn with a new
+        key split from the JAX key (see `gammavec`)."""
+
+        self._jax_key, rvec = _jax_gamma()(self._jax_key, k, shape)
+        return rvec
+
 
 @functools.cache
 def _jax_normal():
@@ -379,3 +408,18 @@ def _jax_normal():
         return key, jax.random.normal(subkey, shape, dtype=jax.numpy.float64)
 
     return jax.jit(normal, static_argnums=1)
+
+
+@functools.cache
+def _jax_gamma():
+    """Returns a jitted function that splits `key` and draws an array of shape
+    `shape` from a gamma distribution with shape `k`, with one of the two keys,
+    returning the other key and the array."""
+
+    import jax
+
+    def gamma(key, k, shape):
+        key, subkey = jax.random.split(key)
+        return key, jax.random.gamma(subkey, k, shape, dtype=jax.numpy.float64)
+
+    return jax.jit(gamma, static_argnums=(1, 2))
