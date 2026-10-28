@@ -82,7 +82,7 @@ class NormalModes:
     def __init__(
         self,
         mode="rpmd",
-        transform_method="fft",
+        transform_method="matrix",
         propagator="exact",
         freqs=None,
         open_paths=None,

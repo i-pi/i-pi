@@ -41,6 +41,11 @@ or because they were approved explicitly:
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
   the forces of other positions. They are now recomputed when read. Unit test extended.
+- The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
+  an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
+  on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
+  beads on CPUs, and from 32-64 beads on GPUs with slow double precision (Quadro P400). Results change at the
+  level of rounding errors (the two agree to ~4e-13).
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
 - Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as
