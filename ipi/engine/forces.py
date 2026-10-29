@@ -37,6 +37,12 @@ fbuid = 0
 _checked_virials = set()
 
 
+def _stack(arrays):
+    """Stacks the arrays of the beads, as a view of a single one."""
+
+    return arrays[0][None] if len(arrays) == 1 else xp.stack(arrays)
+
+
 def _check_virial_symmetry(vir, ffname):
     """Warns if a forcefield returns a full virial that is not symmetric,
     as only its upper triangular part is used."""
@@ -461,7 +467,7 @@ class ForceComponent:
         self.queue()
         if self.ff.backend_arrays:
             # backend scalars, possibly on a device
-            return xp.stack([xp.asarray(b.pot) for b in self._forces])
+            return _stack([xp.asarray(b.pot) for b in self._forces])
         return xp.asarray([float(b.pot) for b in self._forces])
 
     def extra_gather(self):
@@ -513,7 +519,7 @@ class ForceComponent:
         """
 
         self.queue()
-        return xp.stack([b.vir for b in self._forces])
+        return _stack([b.vir for b in self._forces])
 
     def f_gather(self):
         """Obtains the force vector for each replica.
@@ -524,7 +530,7 @@ class ForceComponent:
         """
 
         self.queue()
-        return xp.stack([self._forces[b].f for b in range(self.nbeads)])
+        return _stack([b.f for b in self._forces])
 
     def get_vir(self):
         """Sums the virial of each replica.
@@ -685,8 +691,7 @@ class MTSForces:
         level = self.level
         self.queue_mts()
 
-        fk = xp.zeros((self.nbeads, 3 * self.natoms))
-
+        fk = None
         mforces = self.mforces
         mrpc = self.mrpc
         for index in range(len(mforces)):
@@ -696,7 +701,15 @@ class MTSForces:
             if (len(mts_weights) == 0 and level == 0) or (
                 len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
-                fk += weight * mts_weights[level] * mrpc[index].b2tob1(mforces[index].f)
+                f = mforces[index].f
+                # expands the forces of a contracted ring polymer
+                if not mrpc[index].noop:
+                    f = mrpc[index].b2tob1(f)
+                f = weight * mts_weights[level] * f
+                # a single component is not added to an array of zeros
+                fk = f if fk is None else fk + f
+        if fk is None:
+            fk = xp.zeros((self.nbeads, 3 * self.natoms))
         return fk
 
     def get_vir_mts(self):
@@ -809,6 +822,9 @@ class Forces:
         # a "function factory" to generate functions to automatically update
         # contracted paths
         def make_rpc(rpc, beads):
+            if rpc.noop:
+                # the positions are copied when stored in the contracted beads
+                return lambda: beads.q
             return lambda: rpc.b1tob2(beads.q)
 
         # creates new force objects, possibly acting on contracted path
@@ -1467,16 +1483,19 @@ class Forces:
         """Obtains the total force vector."""
 
         self.queue()
-        rf = xp.zeros((self.nbeads, 3 * self.natoms))
+        rf = None
         for k in range(self.nforces):
             # "expand" to the total number of beads the forces from the
             # contracted one
             if self.mforces[k].weight != 0:
-                rf += (
-                    self.mforces[k].weight
-                    * self.mforces[k].mts_weights.sum()
-                    * self.mrpc[k].b2tob1(self.mforces[k].f)
-                )
+                f = self.mforces[k].f
+                if not self.mrpc[k].noop:
+                    f = self.mrpc[k].b2tob1(f)
+                f = self.mforces[k].weight * self.mforces[k].mts_weights.sum() * f
+                # a single component is not added to an array of zeros
+                rf = f if rf is None else rf + f
+        if rf is None:
+            rf = xp.zeros((self.nbeads, 3 * self.natoms))
         return rf
 
     def fvir_4th_order_combine(self):
