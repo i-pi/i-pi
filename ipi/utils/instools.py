@@ -447,34 +447,17 @@ class Fix(object):
 
             return full_vector
         elif t == 4:
+            m = self.get_mask(1)
             full_vector = np.zeros(
                 (self.nbeads, 3 * self.natoms, 3 * self.natoms, 3 * self.natoms)
             )
-            ii = 0
-            jj = 0
-            kk = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    for k in self.get_mask(1):
-                        full_vector[:, i, j, k] = vector[
-                            :, ii, jj, kk
-                        ]  # Yes, this can be improved
-                        kk += 1
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m, m)] = vector
             return full_vector
 
         elif t == 5:
+            m = self.get_mask(1)
             full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms))
-            ii = 0
-            jj = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    full_vector[:, i, j] = vector[
-                        :, ii, jj
-                    ]  # Yes, this can be improved
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m)] = vector
             return full_vector
 
         else:

@@ -132,30 +132,7 @@ def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     )
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        1,
-        2,
-        3,
-        pytest.param(
-            4,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=IndexError,
-                reason="Friction Hessian expansion does not reset inner indices",
-            ),
-        ),
-        pytest.param(
-            5,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=IndexError,
-                reason="Friction matrix expansion does not reset inner index",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("kind", [1, 2, 3, 4, 5])
 def test_fixed_atom_reduction_and_expansion_roundtrip(kind):
     beads = Beads(2, 3)
     beads.m_[:] = [2, 3]
