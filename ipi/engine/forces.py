@@ -1569,7 +1569,8 @@ class Forces:
                                 for ib in range(self.nbeads):
                                     re["raw"][ib] += v[ib]
                             else:
-                                re["raw"] = v
+                                # a copy, as the strings of the other components are appended
+                                re["raw"] = list(v)
                         else:
                             if e in re:
                                 warning(

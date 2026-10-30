@@ -42,6 +42,9 @@ or because they were approved explicitly:
   differed from 1 (since 5e863291), so the replicas evolved with the unscaled Hamiltonian, and with no explicit
   bias, while the conserved quantity, the exchange acceptance and the barostat included them. This changes
   the results of Hamiltonian replica exchange runs. New unit test.
+- Combining the extras of several force components appended the raw strings of the other components to
+  those of the first component (since cf4419b5), so `extras_component_raw(0)` printed the strings of all the
+  components once the combined extras had been computed. Unit test extended.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
