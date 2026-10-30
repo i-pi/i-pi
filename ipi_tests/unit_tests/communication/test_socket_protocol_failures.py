@@ -280,6 +280,35 @@ def test_request_roundtrip_sends_active_atoms_and_expands_forces(connection):
     assert_completed(first)
 
 
+def test_sendextra_timeout_marks_client_for_retry(connection, monkeypatch):
+    """A timed-out EXTRA send leaves the client in the retryable timeout state."""
+    driver, _ = connection
+    driver.status = Status.Up | Status.NeedExtra
+    timeout = sockets.TIMEOUT
+
+    def fail_sendall(_):
+        raise socket.timeout
+
+    monkeypatch.setattr(driver, "sendall", fail_sendall)
+    driver.sendextra('{"field": [1, 0, 0]}')
+
+    assert driver.status == Status.Timeout
+    assert sockets.TIMEOUT == 2 * timeout
+
+
+def test_sendextra_propagates_unexpected_send_failure(connection, monkeypatch):
+    """Non-timeout failures remain visible to the caller."""
+    driver, _ = connection
+    driver.status = Status.Up | Status.NeedExtra
+
+    def fail_sendall(_):
+        raise OSError("injected send failure")
+
+    monkeypatch.setattr(driver, "sendall", fail_sendall)
+    with pytest.raises(OSError, match="injected send failure"):
+        driver.sendextra("")
+
+
 def test_batch_is_padded_and_results_keep_request_order(connection):
     driver, peer = connection
     driver.batch_size = 3
