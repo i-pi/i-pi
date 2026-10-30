@@ -188,7 +188,7 @@ class Random(object):
             out: The array to be filled.
         """
 
-        out_flat = out.flatten()
+        out_flat = out.reshape(-1)  # a view of out whenever out is contiguous
         step_size = np.ceil(len(out_flat) / self.n_threads).astype(int)
         if step_size < _MIN_STEP_THREADED:
             # falls back to serial if the vector is too small
@@ -204,6 +204,8 @@ class Random(object):
                     )
                 ] = i
             concurrent.futures.wait(futures)
+            if not np.may_share_memory(out_flat, out):
+                out[...] = out_flat.reshape(out.shape)
 
     def gvec_serial(self, shape):
         """Interface to the standard_normal array function.

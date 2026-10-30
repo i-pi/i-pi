@@ -32,6 +32,8 @@ features/ffdieletric/mace-polar+E-ramp-server       # covered by .github/workflo
 features/ffdieletric/mace-polar+E-client-socket     # requires MACE-POLAR and a socket client
 features/ffdieletric/mace-polar+E-resonant-client-socket # requires MACE-POLAR and a socket client
 
+clients/mace/polar # covered by .github/workflows/mace.ym
+clients/metatomic  # covered by .github/workflows/metatomic.yml
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel

@@ -285,13 +285,13 @@ class Input(object):
         rstr += ">"
         rstr += text
         for f in self.instancefields:
-            # only write out fields that are not defaults
-
+            # only write out fields that are not defaults. each field is written
+            # once, with a placeholder indent that is removed to compare with the
+            # default (written without indent), and replaced by the actual indent
+            fstr = self.__dict__[f].write(f, "   %%INDENT%%")
             defstr = self.__dict__[f]._defwrite.replace("%%NAME%%", f)
-            if defstr != self.__dict__[f].write(
-                f
-            ):  # here we must compute the write string twice not to be confused by indents.
-                rstr += self.__dict__[f].write(f, "   " + indent)
+            if fstr.replace("   %%INDENT%%", "") != defstr:
+                rstr += fstr.replace("%%INDENT%%", indent)
 
         for f, v in self.extra:
             # also write out extended (dynamic) fields if present

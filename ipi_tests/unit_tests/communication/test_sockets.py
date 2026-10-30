@@ -59,7 +59,7 @@ def _client(mode, address, port):
     )
 
 
-def _exchange_one_force(mode, consolidate=True, batch_size=1):
+def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto"):
     """Round-trips a single force evaluation through the chosen transport."""
     address = (
         "localhost"
@@ -74,6 +74,7 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1):
         mode=mode,
         consolidate_messages=consolidate,
         batch_size=batch_size,
+        match_mode=match_mode,
     )
     ff = FFSocket(latency=1e-4, name="ut", interface=iface, dopbc=False)
 
@@ -89,29 +90,42 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1):
         atoms = Atoms(2)
         atoms.q[:] = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         cell = Cell(np.eye(3) * 10.0)
-        req = ff.queue(atoms, cell, reqid=0)
+        positions = [atoms.q.copy() + i for i in range(batch_size + 1)]
+        requests = []
+        for index, position in enumerate(positions):
+            atoms.q[:] = position
+            requests.append(ff.queue(atoms, cell, reqid=index))
 
         deadline = time.time() + 30
-        while req["status"] != "Done":
+        while any(req["status"] != "Done" for req in requests):
             if time.time() > deadline:
                 raise AssertionError("{}: no force returned within 30 s".format(mode))
             time.sleep(0.01)
 
-        pot, force, vir, extra = req["result"]
-        return float(pot), np.array(force), atoms.q.copy()
+        assert all(req._event_done.is_set() for req in requests)
+        potentials = np.array([req["result"][0] for req in requests])
+        forces = np.array([req["result"][1] for req in requests])
+        for req in requests:
+            ff.release(req)
+        assert not ff.requests
+        return potentials, forces, np.array(positions)
     finally:
         ff.stop()
+        ff._thread.join(timeout=5)
+        assert not ff._thread.is_alive()
         client.join(timeout=10)
         if client.is_alive():
             client.terminate()
+            client.join(timeout=5)
 
 
 @fork_only
 @pytest.mark.parametrize("mode", ["unix", "inet", "shm"])
-def test_transport_roundtrip(mode):
-    pot, force, q = _exchange_one_force(mode)
+@pytest.mark.parametrize("match_mode", ["auto", "any"])
+def test_transport_roundtrip(mode, match_mode):
+    pot, force, q = _exchange_one_force(mode, match_mode=match_mode)
     assert np.allclose(force, -K * q)
-    assert np.isclose(pot, 0.5 * K * (q**2).sum())
+    np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
 
 @fork_only
@@ -119,6 +133,7 @@ def test_unix_batched():
     # batch_size>1 exercises the batched dispatch/receive path
     pot, force, q = _exchange_one_force("unix", batch_size=4)
     assert np.allclose(force, -K * q)
+    np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
 
 @fork_only
@@ -126,10 +141,14 @@ def test_shm_batched():
     # batch_size>1 over shared memory exercises the SHM batched payload path
     pot, force, q = _exchange_one_force("shm", batch_size=4)
     assert np.allclose(force, -K * q)
+    np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
 
 @fork_only
-def test_unix_threaded_dispatch():
+@pytest.mark.parametrize("mode", ["unix", "shm"])
+@pytest.mark.parametrize("match_mode", ["auto", "any"])
+def test_threaded_dispatch(mode, match_mode):
     # consolidate_messages=False exercises the per-request worker-thread path
-    pot, force, q = _exchange_one_force("unix", consolidate=False)
+    pot, force, q = _exchange_one_force(mode, consolidate=False, match_mode=match_mode)
     assert np.allclose(force, -K * q)
+    np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))

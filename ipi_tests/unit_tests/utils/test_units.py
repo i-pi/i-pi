@@ -19,3 +19,12 @@ def test_dimensionless_units_are_unchanged():
     """Dimensionless quantities pass through the unit converter unchanged."""
     assert units.unit_to_internal("dimensionless", "", 2.5) == 2.5
     assert units.unit_to_internal("dimensionless", "atomic_unit", 2.5) == 2.5
+
+    
+def test_inverse_pressure_roundtrip():
+    """Common compressibility units convert to and from atomic units."""
+
+    value = 4.5e-5
+    internal = units.unit_to_internal("inverse-pressure", "bar^-1", value)
+    converted = units.unit_to_user("inverse-pressure", "bar^-1", internal)
+    assert abs(converted - value) < 1e-15

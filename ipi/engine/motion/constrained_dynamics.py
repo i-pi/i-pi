@@ -77,6 +77,9 @@ class ConstrainedDynamics(Dynamics):
                 motion will be constrained or not. Defaults to False.
         """
 
+        warning(
+            "Constrained dynamics: This feature is not maintained and can have bugs."
+        )
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
         self._dt = depend_value(name="dt", value=timestep)
 

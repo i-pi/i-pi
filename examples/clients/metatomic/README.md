@@ -1,117 +1,53 @@
-# Metatomic example
+# PET-MAD through the metatomic driver
 
-Runs an example of a metatomic model, implementing a basic Lennard-Jones model
-with the parameters for Nickel.
-
-This driver can be used with any model following the
-[metatomic](https://docs.metatensor.org/metatomic) interface. This can be used
-for classical force-fields, but it more intended for machine learning
-potentials.
+Runs short simulations of 32 water molecules with the universal
+[PET-MAD](https://github.com/lab-cosmo/upet) machine-learning potential
+(version 1.6, size "xs"), using the metatomic driver.
+The `lj/` folder contains further examples based on a simple Lennard-Jones
+model, which do not need any download.
 
 ## Installation
 
-The code requires additional dependencies, which you can install with
+Install the pinned metatomic/upet dependency set in the same environment as i-PI:
 
 ```bash
-pip install metatomic-torch vesin ase
+python -m pip install -r ../../../requirements/metatomic.txt
 ```
 
-## Running the example
+Then export the model to a TorchScript file, `pet-mad-xs-v1.6.0.pt`:
 
 ```bash
-i-pi input.xml & sleep 1
-i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
-
-# with all the optional parameters:
-i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt,device=cpu,extensions=some-extensions-dir/,check_consistency=True
+bash getmodel.sh
 ```
 
-The options (after `-o`) are as follow:
+## Running the examples
 
-- the path to a template file, we will use it to get the types for all atoms in
-  the system
-- the path to the model file
-- `device` controls which torch device to use to run the model
-- `extensions` is the path to a directory containing TorchScript extensions. If
-  the model requires such extensions, we will try to load them from this
-  directory first
-- `check_consistency` controls whether we should run some extra internal
-  consistency checks about data given to the model and data returned by the
-  model.
-- `energy_ensemble` is a bool specifying whether to compute (if available in
-  the model) an ensemble of energy predictions
-- `force_virial_ensemble` is a bool specifying whether to also compute
-  an ensemble of force predictions
-- `skin` is a float indicating that the neighbor list should use a Verlet skin
-  to avoid unnecessary re-calculations
-
-NB: the model nickel-lj.pt pre-build model should be compatible with modern torch and 
-metatomic APIs. If it is not, you can try to build a version based on your 
-environment running `python create-model.py`.
-
-## Running with FFDirect
-
-It is also possible to use the metatomic PES directly, without the need for an
-external driver. To do so, you need to use a `<ffdirect>` clause in the input,
-and specify the appropriate options as a dictionary. Then, you can simply run
+`input.xml` runs path-integral MD with four beads, using a `<ffdirect>` force
+field that evaluates all beads as a single batch. The batch is split between two
+model instances running in parallel threads (`device:cpu;cpu`; on GPUs you would
+use e.g. `device:cuda:0;cuda:1`). The per-atom energy uncertainty is written to
+`simulation.uq_*`, and a warning is printed if it exceeds `uncertainty_threshold`.
 
 ```bash
-i-pi input-direct.xml
+i-pi input.xml
 ```
 
-## Running with a scripting interface
-
-To see how to use the metatomic driver through the interactive Python interface,
-check the `run.py` script
+`input-socket.xml` runs the same simulation over a UNIX socket. All beads are
+sent to `i-pi-py_driver` in one batched request. The driver also computes an
+ensemble of energies, which is written to `socket.committee_pot_*`.
 
 ```bash
-python run.py
+i-pi input-socket.xml & sleep 5
+i-pi-py_driver -a pet-mad -u -m metatomic \
+    -o template=init.xyz,model=pet-mad-xs-v1.6.0.pt,energy_ensemble=True
 ```
 
-## Running with an ensemble output
-
-Metatomic models can compute ensemble of predictions for uncertainty
-quantification. An example of how to do this is given in `input-ensemble.xml`,
-which you can run with
-
-```bash
-i-pi input-ensemble.xml
-```
-
-## Batched evaluation
-
-Metatomic models can be evaluated in a batched mode - useful when using a simulation
-that evaluates many structures per step and that does not saturate the GPU.
-Check how to use it in
+`input-rotations.xml` uses the fast, non-conservative forces predicted directly by
+PET-MAD. These are neither conservative nor exactly rotationally equivariant, so
+they are wrapped in `<ffrotations>`. At every step it evaluates a random rotation of
+the structure and its inversion as a single batch, and averages the two predictions.
+A strong Langevin thermostat absorbs the resulting noise.
 
 ```bash
-i-pi input-batched.xml
-```
-
-and, for ensembles
-
-```bash
-i-pi input-batched-ensemble.xml
-```
-
-The examples above batch the structures inside i-PI through a `<ffdirect>`
-clause. The same batching is also available over a socket, using the
-`i-pi-py_driver` path: set `<batch_size>` on the `<ffsocket>` clause and i-PI
-will send a batch of structures (e.g. all beads of the ring polymer) to the
-client in a single request. The driver command is unchanged — batching is
-announced to it through the INIT string:
-
-```bash
-i-pi input-batched-socket.xml & sleep 1
-i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
-```
-
-## Model variants
-
-Metatomic allows specifying different versions of the energy output, e.g. pbe0 or r2scan 
-energies for a mixture-of-experts model. This is achieved by specifying the
-option `energy_variant:XXXX` to the initialization parameters.
-
-```bash
-i-pi input-ensemble-variant.xml
+i-pi input-rotations.xml
 ```
