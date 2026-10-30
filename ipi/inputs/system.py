@@ -193,6 +193,7 @@ class InputSystem(Input):
 
         self.prefix.store(psys.prefix)
         self.forces.store(psys.fcomp)
+        self.forces.vary_weight.store(psys.forces.vary_weight)
         self.ensemble.store(psys.ensemble)
         self.motion.store(psys.motion)
         self.beads.store(psys.beads)
@@ -222,6 +223,7 @@ class InputSystem(Input):
             nm=self.normal_modes.fetch(),
             cell=self.cell.fetch(),
             fcomponents=self.forces.fetch(),
+            vary_weight=self.forces.vary_weight.fetch(),
             ensemble=self.ensemble.fetch(),
             motion=self.motion.fetch(),
             prefix=self.prefix.fetch(),

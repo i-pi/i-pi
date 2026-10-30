@@ -154,6 +154,21 @@ class InputForces(Input):
         "force": (InputForceComponent, {"help": InputForceComponent.default_help})
     }
 
+    attribs = {
+        "vary_weight": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "If set to the forcefield name of one of the two force components, enables "
+                "linearly-varying weights mode. That component starts at weight=1 and decreases "
+                "by 1/total_steps each step, while the other component (which must start at weight=0) "
+                "increases by the same amount. Storing the forcefield name (rather than inferring "
+                "from initial weights) makes restarts unambiguous. Leave empty to disable.",
+            },
+        ),
+    }
+
     default_help = "Deals with creating all the necessary forcefield objects."
     default_label = "FORCES"
 
