@@ -327,10 +327,6 @@ def force_system():
             request._event_done.set()
 
     def create(components, nbeads=4, extra_values=None):
-        # Match the input schema's default: one outer MTS level with unit weight.
-        for component in components:
-            if len(component.mts_weights) == 0:
-                component.mts_weights = np.array([1.0])
         beads = Beads(1, nbeads)
         beads.m_[:] = 2
         beads.names_[:] = ["H"]
@@ -388,6 +384,17 @@ def test_extras_and_virials_follow_component_weights(force_system, contracted, w
     np.testing.assert_allclose(
         forces.mforces[0].vir, np.sum([-np.triu(np.outer(a, a)) for a in q], axis=0)
     )
+
+
+def test_component_defaults_to_one_outer_mts_level(force_system):
+    """A force component created without MTS weights contributes with unit
+    weight to the total force and to the outer (only) MTS level, as with the
+    default of the input"""
+    beads, _, forces = force_system([ForceComponent("first")])
+    assert forces.nmtslevels == 1
+    np.testing.assert_allclose(forces.f, -beads.q)
+    np.testing.assert_allclose(forces.mts_forces[0].f, -beads.q)
+    assert forces.pot == pytest.approx(0.5 * np.sum(beads.q**2))
 
 
 def test_extras_follow_weight_changes(force_system):
