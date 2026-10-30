@@ -6,79 +6,135 @@
 
 
 import pickle
+from copy import deepcopy
 
 import numpy as np
+import pytest
 
 import ipi.engine.atoms
+import ipi.utils.array_backend as ab
 import ipi.utils.depend as dp
 
-a = dp.depend_array(name="a", value=np.zeros((2, 2), float))
-b = dp.depend_array(name="b", value=np.zeros((2, 2), float))
+
+class Holder:
+    """Exposes depend members through dproperties."""
+
+    def __init__(self):
+        self.x_ = dp.depend_array(name="x", value=np.zeros(4))
+        self.y_ = dp.depend_array(
+            name="y", value=np.zeros(4), func=lambda: 2 * self.x, dependencies=[self.x_]
+        )
+
+
+dp.dproperties(Holder, ["x", "y"])
 
 
 def test_slicing():
-    """Depend: Slicing test"""
-    # Integer index into a 2D array returns a row (sub-array), not a scalar
-    c = a[0]
-    print((type(c)))
-    assert isinstance(c, dp.depend_array)
-    # Slice of a 1D array must also return a depend_array, not a plain ndarray
+    """Depend: indexing a depend_array returns live views, or raw scalars and
+    copies where the array itself does"""
+    a = dp.depend_array(name="a", value=np.zeros((2, 2), float))
     d1 = dp.depend_array(name="d1", value=np.zeros(6))
-    s = d1[2:5]
-    assert isinstance(
-        s, dp.depend_array
-    ), f"1D slice returned {type(s)}, expected depend_array"
-    # Ellipsis on a 2D array returns a depend_array view, not a scalar
+    assert isinstance(a[0], dp.depend_array)
+    assert isinstance(a[np.int64(0)], dp.depend_array)
+    assert isinstance(d1[2:5], dp.depend_array)
     assert isinstance(a[...], dp.depend_array)
-    # Tuple-with-slice on a 2D array returns a depend_array view
     assert isinstance(a[0, :], dp.depend_array)
-    # Fancy indexing on a 1D array returns a depend_array
-    assert isinstance(d1[[0, 2, 4]], dp.depend_array)
-    # Full multidim integer index on a 2D array returns a raw scalar
+    assert not isinstance(d1[[0, 2, 4]], dp.depend_array)
     assert not isinstance(a[0, 0], dp.depend_array)
-    # Integer index on a 1D array returns a raw scalar
     assert not isinstance(d1[2], dp.depend_array)
 
 
-def test_addition():
-    """Depend: Addition test"""
-    c = a + b
-    print((type(c)))
-    assert isinstance(c, np.ndarray)
+def test_property_returns_readonly_array():
+    """Depend: properties return non-writeable arrays"""
+    h = Holder()
+    assert type(h.x) is np.ndarray
+    with pytest.raises(ValueError):
+        h.x[0] = 1.0
+    with pytest.raises(ValueError):
+        h.x += 1.0
 
 
-def test_increment():
-    """Depend: Increment test"""
-    c = np.zeros((2, 2))
-    c += a
-    print((type(c)))
-    assert isinstance(c, np.ndarray)
+def test_handle_is_not_an_array():
+    """Depend: depend objects cannot be used as arrays"""
+    h = Holder()
+    with pytest.raises(TypeError):
+        np.asarray(h.x_)
 
 
-def test_dot():
-    """Depend: Dot test"""
-    c = np.dot(a, b)
-    print((type(c)))
-    assert isinstance(c, np.ndarray)
+def test_writes_taint_dependants():
+    """Depend: writes through the handle, its views and the property taint dependants"""
+    h = Holder()
+    assert np.array_equal(h.y, np.zeros(4))
+    h.x_[1] = 1.0
+    assert h.y_.tainted()
+    assert np.array_equal(h.y, [0.0, 2.0, 0.0, 0.0])
+    h.x_[2:][0] = 3.0
+    assert np.array_equal(h.y, [0.0, 2.0, 6.0, 0.0])
+    h.x = np.ones(4)
+    assert np.array_equal(h.y, 2 * np.ones(4))
 
 
-def test_dotf():
-    """Depend: Dot-f test"""
+def test_inplace_operators():
+    """Depend: in-place operators modify the buffer and taint dependants"""
+    h = Holder()
+    buffer = h.x
+    h.x_ += 1.0
+    h.x_ *= 3.0
+    assert np.array_equal(h.y, 6 * np.ones(4))
+    # the array is updated in place
+    assert np.array_equal(buffer, 3 * np.ones(4))
+    h.x_[0] -= 3.0
+    assert np.array_equal(h.y, [0.0, 6.0, 6.0, 6.0])
 
-    rdot = np.dot
 
-    def fdot(aa, bb):
-        return rdot(aa, bb).view(np.ndarray)
+def test_indexed_inplace_operators():
+    """Depend: `obj.x_[i] op= v` updates the array and taints dependants"""
+    h = Holder()
+    h.x_[1:3] += 2.0
+    assert np.array_equal(h.y, [0.0, 4.0, 4.0, 0.0])
+    a = dp.depend_array(name="a", value=np.zeros((2, 3)))
+    a[1] += 1.0
+    # a view obtained with a different index is copied
+    a[0] = a[1]
+    assert np.array_equal(a.get(), np.ones((2, 3)))
+    with pytest.raises(NameError):
+        h.y_[0:2] += 1.0
 
-    np.dot = fdot
 
-    c = np.dot(a, b)
-    assert isinstance(c, np.ndarray)
-    np.dot = rdot
+@pytest.mark.parametrize("backend", ["numpy", "torch"])
+@pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
+def test_advanced_index_inplace_operators(backend, index):
+    """Depend: `obj.x_[i] op= v` with a mask or an array of indices, which
+    select a copy rather than a view, updates the array and taints dependants,
+    while modifying the copy does not"""
+    if backend == "torch":
+        pytest.importorskip("torch")
+    ab.set_backend(backend)
+    try:
+        index = ab.xp.asarray(index)
+        h = Holder()
+        h.x_[index] += 2.0
+        assert np.array_equal(ab.to_numpy(h.y), [4.0, 0.0, 4.0, 0.0])
+        a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
+        a[:, index] *= 3.0
+        assert np.array_equal(ab.to_numpy(a.get()), [[3.0, 1.0, 3.0, 1.0]] * 2)
+        selection = h.x_[index]
+        selection[0] = 5.0
+        assert not h.y_.tainted()
+        assert np.array_equal(ab.to_numpy(h.x), [2.0, 0.0, 2.0, 0.0])
+    finally:
+        ab.set_backend("numpy")
+
+
+def test_computed_cannot_be_set():
+    """Depend: setting a computed quantity raises"""
+    h = Holder()
+    with pytest.raises(NameError):
+        h.y = np.ones(4)
 
 
 def test_readonly():
-    """Depend: read-only flag"""
+    """Depend: assigning to an Atoms property"""
     atoms = ipi.engine.atoms.Atoms(2)
     atoms.q = np.zeros(2 * 3)
 
@@ -88,71 +144,40 @@ def test_reshape_signatures():
     da = dp.depend_array(name="r", value=np.arange(6.0))
     r1 = da.reshape((2, 3))
     r2 = da.reshape(2, 3)
-    assert isinstance(r1, dp.depend_array) and r1.shape == (2, 3)
-    assert isinstance(r2, dp.depend_array) and r2.shape == (2, 3)
+    assert isinstance(r1, dp.depend_array) and r1.get().shape == (2, 3)
+    assert isinstance(r2, dp.depend_array) and r2.get().shape == (2, 3)
     # Reshaped view shares memory with the parent.
     r1[0, 0] = 99.0
     assert da[0] == 99.0
 
 
 def test_pickle_roundtrip():
-    """Depend: pickle/unpickle preserves values and drops the threadlock cleanly."""
+    """Depend: pickle/unpickle preserves values and recreates the lock."""
     da = dp.depend_array(name="p", value=np.array([1.0, 2.0, 3.0]))
-    blob = pickle.dumps(da)
-    rt = pickle.loads(blob)
+    rt = pickle.loads(pickle.dumps(da))
     assert isinstance(rt, dp.depend_array)
-    assert np.array_equal(np.asarray(rt), np.asarray(da))
-    # Threadlock is recreated on unpickle.
-    with rt._threadlock:
+    assert np.array_equal(rt.get(), da.get())
+    with rt._status.lock:
         pass
+    rt[0] = 5.0
+    assert rt[0] == 5.0
 
 
-def test_asarray_zerocopy():
-    """Depend: np.asarray on a depend_array exposes the underlying buffer."""
-    da = dp.depend_array(name="z", value=np.zeros(4))
-    arr = np.asarray(da)
-    arr[1] = 7.0
-    assert da[1] == 7.0
-
-
-def test_slice_writes_taint_parent_dependant():
-    """Depend: writing through a slice taints downstream consumers of the parent."""
-    parent = dp.depend_array(name="par", value=np.zeros(4))
-    child = dp.depend_array(
-        name="ch", value=np.zeros(4), func=lambda: 2 * np.asarray(parent)
-    )
-    child.add_dependency(parent)
-    # Force a refresh so child becomes untainted.
-    _ = np.asarray(child)
-    assert not child.tainted()
-    # Writing through a slice of the parent must taint the child.
-    parent[1:3] = np.array([5.0, 6.0])
-    assert child.tainted()
-    # And the recompute uses the updated parent values.
-    assert np.array_equal(np.asarray(child), np.array([0.0, 10.0, 12.0, 0.0]))
-
-
-def test_iteration():
-    """Depend: iterating over a 2D depend_array yields the rows."""
-    da = dp.depend_array(name="it", value=np.arange(6.0).reshape(2, 3))
-    rows = list(da)
-    assert len(rows) == 2
-    assert np.array_equal(rows[0], np.array([0.0, 1.0, 2.0]))
-    assert np.array_equal(rows[1], np.array([3.0, 4.0, 5.0]))
+def test_deepcopy():
+    """Depend: deep copies have independent storage and status."""
+    da = dp.depend_array(name="c", value=np.array([1.0, 2.0, 3.0]))
+    cp = deepcopy(da)
+    cp[0] = 5.0
+    assert cp[0] == 5.0
+    assert da[0] == 1.0
+    assert cp._status is not da._status
 
 
 def test_strided_slice_refresh_via_parent():
-    """Depend: a strided 1D slice of an auto-computed array refreshes
-    through its parent (not through its own `_func`), so first-access
-    through the slice does not crash with a shape mismatch.
-
-    This is the pattern that was previously used for ForceBead's per-axis
-    force shortcuts: a parent depend_array with a `_func` returning the
-    full-shape buffer, plus strided 1D slices that share `_tainted` and
-    delegate refresh upward via `_parent`.
-    """
+    """Depend: a strided 1D view of an auto-computed array refreshes
+    through its parent, so first access through the view does not crash
+    with a shape mismatch."""
     natoms = 4
-    fbase = np.zeros(3 * natoms)
     counter = [0]
 
     def get_full():
@@ -161,21 +186,103 @@ def test_strided_slice_refresh_via_parent():
 
     trigger = dp.depend_value(name="trig", value=0)
     full = dp.depend_array(
-        name="full", value=fbase, func=get_full, dependencies=[trigger]
+        name="full", value=np.zeros(3 * natoms), func=get_full, dependencies=[trigger]
     )
-    # Strided 1D view of the parent's buffer, with refresh delegation.
-    sx = dp.depend_array(name="sx", value=fbase[0 : 3 * natoms : 3], parent=full)
-    dp.dcopy(full, sx)
+    sx = full._view(full._value[0::3], full._wvalue[0::3])
 
-    # First-access through the slice (before `full` is touched) delegates
-    # refresh to the parent — no shape mismatch.
-    sx_first = np.asarray(sx).copy()
+    # first access through the view delegates refresh to the parent
+    sx_first = sx.get().copy()
     assert counter[0] == 1
-    assert np.array_equal(sx_first, np.asarray(full)[0::3])
+    assert np.array_equal(sx_first, full.get()[0::3])
 
-    # Tainting `trigger` taints the slice via the shared `_tainted`.
+    # tainting `trigger` taints the view through the shared status
     trigger.taint()
     assert sx.tainted()
-    sx_new = np.asarray(sx).copy()
+    sx_new = sx.get().copy()
     assert counter[0] == 2
-    assert np.array_equal(sx_new, np.asarray(full)[0::3])
+    assert np.array_equal(sx_new, full.get()[0::3])
+
+
+def test_synchronizer():
+    """Depend: writing a synchronized peer makes the other stale"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    b_sum = dp.depend_value(name="bsum", func=lambda: b.get().sum(), dependencies=[b])
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    # `a` holds the current data when the two are linked
+    assert not a.tainted() and b.tainted()
+    assert np.array_equal(b.get(), 2 * np.ones(3))
+    b[:] = 4.0
+    assert a.tainted()
+    assert np.array_equal(a.get(), 2 * np.ones(3))
+    # a view shares the synchronizer of its parent
+    a[1:][0] = 0.0
+    assert b.tainted() and b_sum.tainted()
+    assert np.array_equal(b.get(), [4.0, 0.0, 4.0])
+    assert b_sum.get() == 8.0
+    # in-place updates also propagate
+    b += 1.0
+    assert np.array_equal(a.get(), [2.5, 0.5, 2.5])
+    with pytest.raises(AssertionError):
+        dp.dsynchro(a, dp.depend_array(name="c", value=np.zeros(3)), None, None)
+
+
+def test_dcompute():
+    """Depend: dcompute and dpipe make a primitive object computed"""
+    h = Holder()
+    z = dp.depend_value(name="z", value=5.0)
+    zz = dp.depend_value(name="zz", func=lambda: 2 * z.get(), dependencies=[z])
+    assert zz.get() == 10.0
+    dp.dcompute(z, lambda: h.x.sum(), [h.x_])
+    # the current value is discarded, and the dependants are tainted
+    assert z.tainted() and zz.tainted()
+    assert z.get() == 0.0
+    h.x_[0] = 1.0
+    assert zz.get() == 2.0
+    with pytest.raises(NameError):
+        z.set(3.0)
+    w = dp.depend_value(name="w", value=0.0)
+    dp.dpipe(h.y_, w, item=0)
+    assert w.get() == 2.0
+    # an object that follows another one can be piped again
+    dp.dpipe(zz, w)
+    assert w.get() == 2.0
+    h.x_[0] = 2.0
+    assert w.get() == 4.0
+    # computed objects, views, and synchronized objects cannot be made computed
+    for dep in (z, h.x_[1:]):
+        with pytest.raises(AssertionError):
+            dp.dcompute(dep, lambda: 0.0, [])
+    a = dp.depend_array(name="a", value=np.ones(3))
+    dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
+    with pytest.raises(AssertionError):
+        dp.dpipe(h.x_, a)
+
+
+def test_ddeps():
+    """Depend: ddeps adds dependencies to a computed object"""
+    h = Holder()
+    z = dp.depend_value(name="z", value=1.0)
+    h.y
+    dp.ddeps(h.y_, [z])
+    assert h.y_.tainted()
+    h.y
+    z.set(2.0)
+    assert h.y_.tainted()
+    # primitive objects and views cannot be given dependencies
+    for dep in (h.x_, h.y_[1:]):
+        with pytest.raises(AssertionError):
+            dp.ddeps(dep, [z])
+
+
+def test_load_and_root():
+    """Depend: _load returns the stored value without refreshing it, and
+    _root returns the array that views belong to"""
+    h = Holder()
+    h.y
+    h.x_[0] = 1.0
+    assert h.y_._load()[0] == 0.0 and h.y_.tainted()
+    view = h.x_[1:][1:]
+    assert view._root() is h.x_ and h.x_._root() is h.x_
+    v = dp.depend_value(name="v", value=1.0)
+    assert v._load() == 1.0 and v._root() is v

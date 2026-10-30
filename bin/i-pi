@@ -28,6 +28,7 @@ if not dir_root in sys.path:
     sys.path.insert(0, dir_root)
 
 from ipi.utils.softexit import softexit
+from ipi.utils.array_backend import set_backend
 from ipi.engine.simulation import Simulation
 
 def profile_exit(prefix="profile"):
@@ -56,6 +57,9 @@ def main(fn_input, options):
             softexit.register_function(profile_exit, prefix=options.yappi_prefix)
         except ImportError:
             raise ImportError('Profiling requires the `yappi` package.')            
+
+    # selects the library used to store and process arrays
+    set_backend(options.backend, device=options.device, jit=options.jit)
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
@@ -105,6 +109,16 @@ if __name__ == '__main__':
 
     parser.add_option('-S', '--sockets_prefix', dest='sockets_prefix', default=None,
                       help='Prefix for profiler files.')
+
+    parser.add_option('--backend', dest='backend', default='numpy',
+                      choices=['numpy', 'torch', 'jax'],
+                      help='Library used to store and process arrays.')
+
+    parser.add_option('--device', dest='device', default='cpu',
+                      help='Device on which arrays are allocated (e.g. `cpu` or `cuda`); only `cpu` is supported by the numpy backend.')
+
+    parser.add_option('--jit', dest='jit', action='store_true', default=False,
+                      help='Compiles the MD steps, for the simulations that support it: records them as CUDA graphs and replays them with the torch backend (on a CUDA device only), compiles them with jax.jit with the jax backend.')
 
     options, args = parser.parse_args()
 

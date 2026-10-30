@@ -5,6 +5,11 @@ These are used in initialising the velocities and in stochastic thermostats.
 The state of the random number generator is kept track of, so that the if the
 simulation is restarted from a checkpoint, we will see the same dynamics as if
 it had not been stopped.
+
+Scalars and host-side arrays are drawn with numpy generators. Arrays of
+Gaussian numbers (`gvec`, `gfill`) are drawn with the generator of the array
+backend, i.e. on the device when using torch. With JAX, whose arrays cannot be
+filled in place, only `gvec` is available.
 """
 
 # This file is part of i-PI.
@@ -14,7 +19,11 @@ it had not been stopped.
 
 import numpy as np
 import concurrent.futures
+import functools
 import time
+
+from ipi.utils.array_backend import backend, device
+from ipi.utils.messages import verbosity, warning
 
 __all__ = ["Random"]
 
@@ -62,7 +71,31 @@ class Random(object):
         ]
 
         self.n_threads = n_threads
-        if self.n_threads == 1:
+        self._torch_rng = None
+        self._jax_key = None
+        if backend() == "jax":
+            import jax
+
+            # Gaussian arrays are drawn with a JAX key, split at each draw and
+            # seeded independently of the numpy generators
+            self._jax_key = jax.random.key(
+                int(np.random.SeedSequence(seed).generate_state(1)[0])
+            )
+            self.gvec = self.gvec_jax
+            self.gammavec = self.gammavec_jax
+        elif backend() == "torch":
+            import torch
+
+            # Gaussian arrays are drawn on the device by a torch generator,
+            # seeded independently of the numpy generators
+            self._torch_rng = torch.Generator(device=device())
+            self._torch_rng.manual_seed(
+                int(np.random.SeedSequence(seed).generate_state(1, np.uint64)[0])
+            )
+            self.gvec = self.gvec_torch
+            self.gfill = self.gfill_torch
+            self.gammavec = self.gammavec_torch
+        elif self.n_threads == 1:
             self.gvec = self.gvec_serial
             self.gfill = self.gfill_serial
         else:
@@ -73,20 +106,79 @@ class Random(object):
         if state is not None:
             self.state = state
 
-    def get_state(self):
-        """Interface to the standard get_state() function."""
+    @property
+    def torch_generator(self):
+        """The torch generator that draws the Gaussian arrays on the device, or
+        None if they are drawn with numpy."""
 
-        return [r.bit_generator.state for r in self.rng]
+        return self._torch_rng
+
+    def get_state(self):
+        """Interface to the standard get_state() function.
+
+        Returns the list of the states of the numpy generators, or a dictionary
+        that also contains the state of the torch generator or of the JAX key,
+        if present.
+        """
+
+        states = [r.bit_generator.state for r in self.rng]
+        if self._jax_key is not None:
+            import jax
+
+            return {"numpy": states, "jax": jax.random.key_data(self._jax_key).tolist()}
+        if self._torch_rng is None:
+            return states
+        return {
+            "numpy": states,
+            "torch": {
+                "device": str(self._torch_rng.device),
+                "state": self._torch_rng.get_state().tolist(),
+            },
+        }
 
     def set_state(self, value):
         """Interface to the standard set_state() function.
 
         Should only be used with states generated from another similar random
-        number generator, such as one from a previous run.
+        number generator, such as one from a previous run. If the state of the
+        torch generator is missing, or refers to a different device, the torch
+        generator keeps the state obtained from the seed.
         """
 
+        torch_state = jax_state = None
+        if isinstance(value, dict):
+            torch_state = value.get("torch")
+            jax_state = value.get("jax")
+            value = value["numpy"]
         for r, s in zip(self.rng, value):
             r.bit_generator.state = s
+        if self._jax_key is not None:
+            import jax
+
+            if jax_state is not None:
+                self._jax_key = jax.random.wrap_key_data(
+                    jax.numpy.asarray(jax_state, dtype=jax.numpy.uint32)
+                )
+            else:
+                warning(
+                    "No state for the JAX random key: it is initialized from the seed",
+                    verbosity.low,
+                )
+        if self._torch_rng is not None:
+            if torch_state is not None and torch_state["device"] == str(
+                self._torch_rng.device
+            ):
+                import torch
+
+                self._torch_rng.set_state(
+                    torch.tensor(torch_state["state"], dtype=torch.uint8)
+                )
+            else:
+                warning(
+                    "No state for the torch random number generator on this device: "
+                    "it is initialized from the seed",
+                    verbosity.low,
+                )
 
     state = property(get_state, set_state)
 
@@ -123,6 +215,17 @@ class Random(object):
         """
 
         return self.rng[0].gamma(k, theta, size)
+
+    def gammavec(self, k, shape):
+        """Returns an array of random numbers from a gamma distribution with
+        shape `k` and scale 1, drawn with the generator of the backend.
+
+        Args:
+            k: Shape parameter for the gamma distribution.
+            shape: The shape of the array to be returned.
+        """
+
+        return self.rng[0].gamma(k, 1.0, shape)
 
     def poisson(self, lam=1.0, size=None):
         """Interface to the standard poisson() function.
@@ -237,3 +340,86 @@ class Random(object):
         self.gfill_threaded(rvec)
 
         return rvec
+
+    def gfill_torch(self, out):
+        """Fills a pre-allocated torch array with the torch generator.
+
+        Args:
+            out: The array to be filled.
+        """
+
+        out.normal_(generator=self._torch_rng)
+
+    def gvec_torch(self, shape):
+        """Returns an array of Gaussian random numbers drawn with the torch
+        generator, on its device.
+
+        Args:
+            shape: The shape of the array to be returned.
+        """
+
+        import torch
+
+        return torch.randn(
+            shape,
+            generator=self._torch_rng,
+            dtype=torch.float64,
+            device=self._torch_rng.device,
+        )
+
+    def gvec_jax(self, shape):
+        """Returns an array of Gaussian random numbers drawn with a new key
+        split from the JAX key.
+
+        Args:
+            shape: The shape of the array to be returned.
+        """
+
+        self._jax_key, rvec = _jax_normal()(self._jax_key, shape)
+        return rvec
+
+    def gammavec_torch(self, k, shape):
+        """Returns an array of gamma-distributed random numbers drawn with the
+        torch generator, on its device (see `gammavec`)."""
+
+        import torch
+
+        alpha = torch.empty(shape, dtype=torch.float64, device=self._torch_rng.device)
+        return torch._standard_gamma(alpha.fill_(k), generator=self._torch_rng)
+
+    def gammavec_jax(self, k, shape):
+        """Returns an array of gamma-distributed random numbers drawn with a new
+        key split from the JAX key (see `gammavec`)."""
+
+        self._jax_key, rvec = _jax_gamma()(self._jax_key, k, shape)
+        return rvec
+
+
+@functools.cache
+def _jax_normal():
+    """Returns a jitted function that splits `key` and draws an array of shape
+    `shape` with one of the two keys, returning the other key and the array
+    (a single call, as eager JAX operations are slow)."""
+
+    import jax
+
+    def normal(key, shape):
+        key, subkey = jax.random.split(key)
+        return key, jax.random.normal(subkey, shape, dtype=jax.numpy.float64)
+
+    return jax.jit(normal, static_argnums=1)
+
+
+@functools.cache
+def _jax_gamma():
+    """Returns a jitted function that splits `key` and draws an array of shape
+    `shape` from a gamma distribution with shape `k`, with one of the two keys,
+    returning the other key and the array."""
+
+    import jax
+
+    def gamma(key, k, shape):
+        key, subkey = jax.random.split(key)
+        return key, jax.random.gamma(subkey, k, shape, dtype=jax.numpy.float64)
+
+    return jax.jit(gamma, static_argnums=(1, 2))

@@ -10,7 +10,6 @@ from ipi.utils.io.io_units import auto_units, process_units
 
 from ipi.utils.io import open_backup, iter_file_name_raw, print_file
 
-
 description = """
 Read positions of individual beads from a set of trajectory files and
 a) multiplex them into a single output trajectory

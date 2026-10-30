@@ -90,7 +90,7 @@ def test_ring_polymer_swap_includes_spring_energy(simulation):
         s = sim.syslist[0]
         q = np.zeros((4, 6))
         q[:, 0] = [-10, 10, -10, 10]
-        s.beads.q[:] = q
+        s.beads.q_[:] = q
         delta = (
             0.5
             * (3.0 - 2.0)

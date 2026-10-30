@@ -6,6 +6,7 @@
 
 import numpy as np
 from ipi.utils.messages import verbosity, info
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 import os
 
 
@@ -25,8 +26,7 @@ def get_dynmat(h, m3, nbeads=1):
     ism = m3.reshape((1, -1)) ** (-0.5)
     ismT = m3[0].reshape((-1, 1)) ** (-0.5)
 
-    dynmat = np.zeros(h.shape)
-    dynmat = np.multiply(ismT, np.multiply(h, ism))
+    dynmat = ismT * (h * ism)
     return dynmat
 
 
@@ -49,12 +49,12 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     info(" @clean_hessian: asr = %s " % asr, verbosity.medium)
     # Set some useful things
     ii = natoms * nbeads
-    mm = np.zeros((nbeads, natoms))
+    mm = xp.zeros((nbeads, natoms))
     for i in range(nbeads):
         mm[i] = m
     mm = mm.reshape(ii)
     ism = m3.reshape((ii * 3, 1)) ** (-0.5)
-    dynmat = np.multiply(ism.T, np.multiply(h, ism))
+    dynmat = ism.T * (h * ism)
     # ismm = np.outer(ism, ism)
     # dynmat = np.multiply(h, ismm)
 
@@ -62,68 +62,68 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
         hm = dynmat
     else:
         # Computes the centre of mass.
-        com = np.dot(np.transpose(q.reshape((ii, 3))), mm) / mm.sum()
+        com = (q.reshape((ii, 3)).T @ mm) / mm.sum()
         qminuscom = q.reshape((ii, 3)) - com
-        ism = ism.flatten()
+        ism = ism.reshape(-1)
 
         if asr == "poly":
             # Computes the moment of inertia tensor.
-            moi = np.zeros((3, 3), float)
+            moi = xp.zeros((3, 3))
             for k in range(ii):
                 moi -= (
-                    np.dot(
-                        np.cross(qminuscom[k], np.identity(3)),
-                        np.cross(qminuscom[k], np.identity(3)),
-                    )
+                    xp.linalg.cross(qminuscom[k], xp.eye(3))
+                    @ xp.linalg.cross(qminuscom[k], xp.eye(3))
                     * mm[k]
                 )
 
-            I, U = np.linalg.eig(moi)
-            R = np.dot(qminuscom, U)
-            D = np.zeros((6, 3 * ii), float)
+            # moi is symmetric, so eigenvalues and eigenvectors are real
+            I, U = xp.linalg.eig(moi)
+            I, U = xp.real(I), xp.real(U)
+            R = qminuscom @ U
+            D = xp.zeros((6, 3 * ii))
 
             # Computes the vectors along translations and rotations.
             # Translations
-            D[0] = np.tile([1, 0, 0], ii) / ism
-            D[1] = np.tile([0, 1, 0], ii) / ism
-            D[2] = np.tile([0, 0, 1], ii) / ism
-            # Rotations
-            for i in range(3 * ii):
-                iatom = i // 3
-                idof = np.mod(i, 3)
-                D[3, i] = (R[iatom, 1] * U[idof, 2] - R[iatom, 2] * U[idof, 1]) / ism[i]
-                D[4, i] = (R[iatom, 2] * U[idof, 0] - R[iatom, 0] * U[idof, 2]) / ism[i]
-                D[5, i] = (R[iatom, 0] * U[idof, 1] - R[iatom, 1] * U[idof, 0]) / ism[i]
+            D[0] = xp.asarray(np.tile([1, 0, 0], ii)) / ism
+            D[1] = xp.asarray(np.tile([0, 1, 0], ii)) / ism
+            D[2] = xp.asarray(np.tile([0, 0, 1], ii)) / ism
+            # Rotations, element (iatom, idof) goes to D[:, 3 * iatom + idof]
+            D[3] = (R[:, 1:2] * U[:, 2] - R[:, 2:3] * U[:, 1]).reshape(-1) / ism
+            D[4] = (R[:, 2:3] * U[:, 0] - R[:, 0:1] * U[:, 2]).reshape(-1) / ism
+            D[5] = (R[:, 0:1] * U[:, 1] - R[:, 1:2] * U[:, 0]).reshape(-1) / ism
 
             for k in range(6):
-                D[k] = D[k] / np.linalg.norm(D[k])
+                D[k] = D[k] / xp.linalg.vector_norm(D[k])
             # Computes the transformation matrix.
-            transfmatrix = np.eye(3 * ii) - np.dot(D.T, D)
-            hm = np.dot(transfmatrix.T, np.dot(dynmat, transfmatrix))
+            transfmatrix = xp.eye(3 * ii) - D.T @ D
+            hm = transfmatrix.T @ (dynmat @ transfmatrix)
 
         elif asr == "crystal":
             # Computes the vectors along translations.
             # Translations
-            D = np.zeros((3, 3 * ii), float)
-            D[0] = np.tile([1, 0, 0], ii) / ism
-            D[1] = np.tile([0, 1, 0], ii) / ism
-            D[2] = np.tile([0, 0, 1], ii) / ism
+            D = xp.zeros((3, 3 * ii))
+            D[0] = xp.asarray(np.tile([1, 0, 0], ii)) / ism
+            D[1] = xp.asarray(np.tile([0, 1, 0], ii)) / ism
+            D[2] = xp.asarray(np.tile([0, 0, 1], ii)) / ism
 
             for k in range(3):
-                D[k] = D[k] / np.linalg.norm(D[k])
+                D[k] = D[k] / xp.linalg.vector_norm(D[k])
             # Computes the transformation matrix.
-            transfmatrix = np.eye(3 * ii) - np.dot(D.T, D)
-            hm = np.dot(transfmatrix.T, np.dot(dynmat, transfmatrix))
+            transfmatrix = xp.eye(3 * ii) - D.T @ D
+            hm = transfmatrix.T @ (dynmat @ transfmatrix)
 
     # Symmetrize to use linalg.eigh
     hmT = hm.T
     hm = (hmT + hm) / 2.0
 
-    d, w = np.linalg.eigh(hm)
+    d, w = xp.linalg.eigh(hm)
 
-    # Count
+    # Count, on the host
+    d_host = to_numpy(d)
     dd = (
-        np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)
+        np.sign(d_host)
+        * np.absolute(d_host) ** 0.5
+        / (2 * np.pi * 3e10 * 2.4188843e-17)
     )  # convert to cm^-1
 
     # Zeros
@@ -163,12 +163,13 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
                 verbosity.high,
             )
 
-        d = np.delete(d, list(range(nneg.size, nneg.size + nzero.size)))
-        w = np.delete(w, list(range(nneg.size, nneg.size + nzero.size)), axis=1)
+        # removes the eigenpairs from nneg.size to nneg.size + nzero.size
+        d = xp.concat((d[: nneg.size], d[nneg.size + nzero.size :]))
+        w = xp.concat((w[:, : nneg.size], w[:, nneg.size + nzero.size :]), axis=1)
 
     if mofi:
         if asr == "poly":
-            return d, w, np.prod(I)
+            return d, w, xp.prod(I)
         else:
             return d, w, 1.0
     else:
@@ -195,11 +196,12 @@ def get_hessian(
     ii = natoms * 3
     activedof = np.delete(np.arange(ii), fixatoms_dof)
     ncalc = ii - len(fixatoms_dof)
-    if x0.size != natoms * 3 * nbeads:
+    if xp_size(x0) != natoms * 3 * nbeads:
         raise ValueError(
             "The position vector is not consistent with the number of atoms/beads."
         )
 
+    # the hessian is assembled on the host, as it is saved to file after each row
     h = np.zeros((ii, ii * nbeads), float)
     if friction:
         eta_h = np.zeros((nbeads, ii, ii, ii), float)
@@ -255,7 +257,7 @@ def get_hessian(
                 " @get_hessian: Computing hessian: %d of %d" % (ndone + 1, ncalc),
                 verbosity.low,
             )
-            x = x0.copy()
+            x = xp.asarray(x0, copy=True)
 
             # PLUS
             x[:, j] = x0[:, j] + d
@@ -271,7 +273,7 @@ def get_hessian(
 
             # COMBINE
             g = (f1 - f2) / (2 * d)
-            h[j, :] = g.flatten()
+            h[j, :] = to_numpy(g).reshape(-1)
             f = open("hessian_" + str(j) + ".tmp", "w")
             np.savetxt(f, h)
             f.close()
@@ -295,7 +297,8 @@ def get_hessian(
         except OSError:
             pass
 
+    # the friction tensors (gm.eta) are kept on the host
     if not friction:
-        return h
+        return xp.asarray(h)
     else:
-        return h, eta_h
+        return xp.asarray(h), eta_h

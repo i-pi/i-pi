@@ -16,6 +16,7 @@ from ipi.utils.messages import verbosity, warning
 from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp, to_numpy
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
@@ -281,7 +282,8 @@ class PropertyOutput(BaseOutput):
                     quantity = unit_to_user(dimension, unit, quantity)
             except KeyError:
                 raise KeyError(what + " is not a recognized property")
-            if not hasattr(quantity, "__len__"):
+            quantity = to_numpy(quantity)
+            if quantity.ndim == 0:
                 self.out.write(write_type(float, quantity) + "   ")
             else:
                 for el in quantity:
@@ -625,12 +627,12 @@ class TrajectoryOutput(BaseOutput):
             "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data[b]
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data[b])
         else:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data)
 
         fcell = Cell()
         fcell.h = self.system.cell.h
@@ -687,7 +689,7 @@ class CheckpointOutput:
 
         self.filename = filename
         self.stride = stride
-        self._step = depend_value(name="step", value=step)
+        self.step_ = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._continued = False
 

@@ -5,7 +5,6 @@ Computes the autocorrelation function from i-pi outputs.
 Assumes the input files are in xyz format and atomic units.
 """
 
-
 import argparse
 import numpy as np
 

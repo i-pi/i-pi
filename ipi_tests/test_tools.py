@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import socket
 import signal
+import sys
 import traceback
 import xml.etree.ElementTree as ET
 import tempfile
@@ -14,6 +15,11 @@ import glob
 
 from ipi.scripting import InteractiveSimulation
 from ipi.utils.softexit import softexit
+
+# array backend and device used to run i-PI, set by the --ipi-backend and
+# --ipi-device pytest options (see ipi_tests/conftest.py)
+ipi_backend = "numpy"
+ipi_device = "cpu"
 
 
 def _socket_ready(client):
@@ -30,10 +36,29 @@ def _socket_ready(client):
 
 def _free_port():
     """A TCP port that is currently free, so that tests running in parallel
-    do not share inet sockets."""
-    with socket.socket() as s:
-        s.bind(("localhost", 0))
-        return s.getsockname()[1]
+    do not share inet sockets. On Linux, the port stays reserved until
+    `_release_ports` is called, so it is not given to another test while i-PI
+    starts up: i-PI can still listen on it, as both sockets allow address reuse."""
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("localhost", 0))
+    port = s.getsockname()[1]
+    if sys.platform.startswith("linux"):
+        _reserved_ports[port] = s
+    else:
+        s.close()
+    return port
+
+
+# sockets that hold the ports given by `_free_port` to the running examples
+_reserved_ports = {}
+
+
+def _release_ports(clients):
+    """Frees the inet ports reserved for this run's clients."""
+    for client in clients or []:
+        if client[1] == "inet" and client[3] in _reserved_ports:
+            _reserved_ports.pop(client[3]).close()
 
 
 def _cleanup_unix_sockets(clients):
@@ -177,7 +202,9 @@ class InProcessIPI:
                 self.stderr
             ):
                 with open(self.command.split()[-1]) as input_file:
-                    self.simulation = InteractiveSimulation(input_file)
+                    self.simulation = InteractiveSimulation(
+                        input_file, backend=ipi_backend, device=ipi_device
+                    )
         except BaseException:
             self.returncode = 1
             self.stderr.write(traceback.format_exc())
@@ -506,16 +533,24 @@ class Runner(object):
             if getattr(self, "run_ipi_in_process", False):
                 ipi = InProcessIPI(self.call_ipi, self.tmp_dir)
             else:
+                call_ipi = self.call_ipi.replace(
+                    "i-pi", f"i-pi --backend {ipi_backend} --device {ipi_device}", 1
+                )
                 ipi = sp.Popen(
-                    self.call_ipi,
+                    call_ipi,
                     cwd=(self.tmp_dir),
                     shell=True,
                     stdin=sp.DEVNULL,
                     stdout=sp.PIPE,
                     stderr=sp.PIPE,
                     start_new_session=True,
-                    # so a SIGABRT on timeout makes i-PI dump where it is stuck
-                    env={**os.environ, "PYTHONFAULTHANDLER": "1"},
+                    # so a SIGABRT on timeout makes i-PI dump where it is stuck,
+                    # and its log is not lost in the output buffer
+                    env={
+                        **os.environ,
+                        "PYTHONFAULTHANDLER": "1",
+                        "PYTHONUNBUFFERED": "1",
+                    },
                 )
 
             if len(clients) > 0:
@@ -672,3 +707,4 @@ class Runner(object):
             # always clear this run's own rendezvous sockets, including when the
             # example failed or timed out and i-PI was killed before cleaning up
             _cleanup_unix_sockets(clients)
+            _release_ports(clients)

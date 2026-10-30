@@ -11,6 +11,7 @@ Used for implementing the minimum image convention.
 import numpy as np
 
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 from ipi.utils.mathtools import *
 
 __all__ = ["Cell", "GenericCell"]
@@ -41,17 +42,17 @@ class Cell:
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
-        self._ih = depend_array(
+        self.h_ = depend_array(name="h", value=h)
+        self.ih_ = depend_array(
             name="ih",
             value=np.zeros((3, 3), float),
             func=self.get_ih,
-            dependencies=[self._h],
+            dependencies=[self.h_],
         )
-        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
+        self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
 
     def clone(self):
-        return Cell(dstrip(self.h).copy())
+        return Cell(xp.asarray(self.h, copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
@@ -75,12 +76,10 @@ class Cell:
            system box.
         """
 
-        s = np.dot(self.ih, atom.q)
+        s = self.ih @ atom.q
+        s = s - xp.round(s)
 
-        for i in range(3):
-            s[i] = s[i] - round(s[i])
-
-        return np.dot(self.h, s)
+        return self.h @ s
 
     def array_pbc(self, pos):
         """Uses the minimum image convention to return a list of particles to the
@@ -94,14 +93,10 @@ class Cell:
            system box.
         """
 
-        s = dstrip(pos).copy().reshape(-1, 3)
+        s = self.ih @ pos.reshape(-1, 3).T
+        s = s - xp.round(s)
 
-        s = np.dot(dstrip(self.ih), s.T)
-        s = s - np.round(s)
-
-        s = np.dot(dstrip(self.h), s).T
-
-        pos[:] = s.reshape(-1)
+        return (self.h @ s).T.reshape(pos.shape)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two
@@ -121,10 +116,9 @@ class Cell:
            atom1 and atom2 in the minimum image convention.
         """
 
-        s = np.dot(self.ih, atom1.q - atom2.q)
-        for i in range(3):
-            s[i] -= round(s[i])
-        return np.dot(self.h, s)
+        s = self.ih @ (atom1.q - atom2.q)
+        s = s - xp.round(s)
+        return self.h @ s
 
 
 dproperties(Cell, ["h", "ih", "V"])
@@ -150,27 +144,27 @@ class GenericCell(Cell):
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
-        self._ih = depend_array(
+        self.h_ = depend_array(name="h", value=h)
+        self.ih_ = depend_array(
             name="ih",
             value=np.zeros((3, 3), float),
             func=self.get_ih,
-            dependencies=[self._h],
+            dependencies=[self.h_],
         )
-        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
+        self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
 
     def clone(self):
-        return GenericCell(dstrip(self.h).copy())
+        return GenericCell(xp.asarray(self.h, copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
 
-        return np.linalg.inv(self.h)
+        return xp.linalg.inv(self.h)
 
     def get_volume(self):
         """Calculates the volume of the system box."""
 
-        return np.linalg.det(self.h)
+        return xp.linalg.det(self.h)
 
 
 dproperties(GenericCell, ["h", "ih", "V"])

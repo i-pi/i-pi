@@ -39,7 +39,7 @@ class Motion:
               initial positions.
         """
 
-        self._dt = depend_value(name="dt", value=0.0)
+        self.dt_ = depend_value(name="dt", value=0.0)
         self.fixcom = fixcom
         if fixatoms_dof is None:
             self.fixatoms_dof = np.zeros(0, int)

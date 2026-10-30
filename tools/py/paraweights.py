@@ -28,7 +28,6 @@ Syntax:
    paraweights.py inputfile.xml [prefix] [temperature(K)] [skip]
 """
 
-
 import sys
 import re
 import numpy as np

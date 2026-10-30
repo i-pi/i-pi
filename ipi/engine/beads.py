@@ -14,6 +14,7 @@ centroid coordinate is required.
 import numpy as np
 
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp
 from ipi.engine.atoms import Atoms
 
 __all__ = ["Beads"]
@@ -87,82 +88,82 @@ class Beads:
         self.natoms = natoms
         self.nbeads = nbeads
 
-        self._names = depend_array(
-            name="names", value=np.zeros(natoms, np.dtype("|U6"))
+        self.names_ = depend_array(
+            name="names", value=np.zeros(natoms, np.dtype("|U6")), host=True
         )
 
         # atom masses, and mass-related arrays
-        self._m = depend_array(
+        self.m_ = depend_array(
             name="m", value=np.zeros(natoms, float)
         )  # this is the prototype mass array (just one independent of bead n)
-        self._m3 = depend_array(
+        self.m3_ = depend_array(
             name="m3",
             value=np.zeros(
                 (nbeads, 3 * natoms), float
             ),  # this is m conveniently replicated to be (nb,3*nat)
             func=self.mtom3,
-            dependencies=[self._m],
+            dependencies=[self.m_],
         )
-        self._sm3 = depend_array(
+        self.sm3_ = depend_array(
             name="sm3",
             value=np.zeros(
                 (nbeads, 3 * natoms), float
             ),  # this is just the square root of m3
             func=self.m3tosm3,
-            dependencies=[self._m3],
+            dependencies=[self.m3_],
         )
 
         # positions and momenta. bead representation, base storage used everywhere
-        self._q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
-        self._p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
+        self.q_ = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
+        self.p_ = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
 
         # position and momentum of the centroid
-        self._qc = depend_array(
+        self.qc_ = depend_array(
             name="qc",
             value=np.zeros(3 * natoms, float),
             func=self.get_qc,
-            dependencies=[self._q],
+            dependencies=[self.q_],
         )
-        self._pc = depend_array(
+        self.pc_ = depend_array(
             name="pc",
             value=np.zeros(3 * natoms, float),
             func=self.get_pc,
-            dependencies=[self._p],
+            dependencies=[self.p_],
         )
 
         # path springs potential and force
-        self._vpath = depend_value(
-            name="vpath", func=self.get_vpath, dependencies=[self._q, self._m3]
+        self.vpath_ = depend_value(
+            name="vpath", func=self.get_vpath, dependencies=[self.q_, self.m3_]
         )
-        self._fpath = depend_array(
+        self.fpath_ = depend_array(
             name="fpath",
             value=np.zeros((nbeads, 3 * natoms), float),
             func=self.get_fpath,
-            dependencies=[self._q],
+            dependencies=[self.q_],
         )
 
         # create proxies to access the individual beads as Atoms objects
         # TODO: ACTUALLY THIS IS ONLY USED HERE METHINK, SO PERHAPS WE COULD REMOVE IT TO DECLUTTER THE CODE.
         self._blist = [
-            Atoms(natoms, _prebind=(self.q[i, :], self.p[i, :], self.m, self.names))
+            Atoms(natoms, _prebind=(self.q_[i, :], self.p_[i, :], self.m_, self.names_))
             for i in range(nbeads)
         ]
 
         # kinetic energies of thhe beads, and total (classical) kinetic stress tensor
-        self._kins = depend_array(
+        self.kins_ = depend_array(
             name="kins",
             value=np.zeros(nbeads, float),
             func=self.kin_gather,
-            dependencies=[b._kin for b in self._blist],
+            dependencies=[b.kin_ for b in self._blist],
         )
-        self._kin = depend_value(
-            name="kin", func=self.get_kin, dependencies=[self._kins]
+        self.kin_ = depend_value(
+            name="kin", func=self.get_kin, dependencies=[self.kins_]
         )
-        self._kstress = depend_array(
+        self.kstress_ = depend_array(
             name="kstress",
             value=np.zeros((3, 3), float),
             func=self.get_kstress,
-            dependencies=[b._kstress for b in self._blist],
+            dependencies=[b.kstress_ for b in self._blist],
         )
 
     def clone(self, nbeads=-1):
@@ -178,16 +179,16 @@ class Beads:
             nbeads = self.nbeads
 
         newbd = Beads(self.natoms, nbeads)
-        newbd.q[:] = self.q[:nbeads]
-        newbd.p[:] = self.p[:nbeads]
-        newbd.m[:] = self.m
-        newbd.names[:] = self.names
+        newbd.q_[:] = self.q[:nbeads]
+        newbd.p_[:] = self.p[:nbeads]
+        newbd.m_[:] = self.m
+        newbd.names_[:] = self.names
         return newbd
 
     def m3tosm3(self):
         """Takes the mass array and returns the square rooted mass array."""
 
-        return np.sqrt(dstrip(self.m3))
+        return xp.sqrt(self.m3)
 
     def mtom3(self):
         """Takes the mass array for each bead and returns one with an element
@@ -198,22 +199,18 @@ class Beads:
            to the mass associated with the appropriate degree of freedom in q.
         """
 
-        m3 = np.zeros((self.nbeads, 3 * self.natoms), float)
-        m3[:, 0 : 3 * self.natoms : 3] = self.m
-        m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
-        m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
-        return m3
+        return xp.ones((self.nbeads, 1)) * xp.repeat(self.m, 3)
 
     def get_qc(self):
         """Gets the centroid coordinates."""
 
-        return np.sum(dstrip(self.q), axis=0) / self.nbeads
+        return self.q.sum(axis=0) / self.nbeads
         # return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
-        return np.sum(dstrip(self.p), axis=0) / self.nbeads
+        return self.p.sum(axis=0) / self.nbeads
         # return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
 
     def kin_gather(self):
@@ -223,7 +220,7 @@ class Beads:
            A list of the kinetic energy for each system.
         """
 
-        return np.array([b.kin for b in self._blist])
+        return xp.stack([b.kin for b in self._blist])
 
     def get_kin(self):
         """Gets the total kinetic energy of all the replicas.
@@ -247,7 +244,7 @@ class Beads:
            The sum of the kinetic stress tensor of each replica.
         """
 
-        ks = np.zeros((3, 3), float)
+        ks = xp.zeros((3, 3))
         for b in range(self.nbeads):
             ks += self[b].kstress
         return ks
@@ -261,14 +258,14 @@ class Beads:
         """
 
         epath = 0.0
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q
+        m = self.m3[0]
         for b in range(self.nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
             else:
                 dq = q[b, :] - q[self.nbeads - 1, :]
-            epath += np.dot(dq, m * dq)
+            epath += dq @ (m * dq)
         print(
             "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
         )
@@ -284,10 +281,10 @@ class Beads:
 
         nbeads = self.nbeads
         natoms = self.natoms
-        f = np.zeros((nbeads, 3 * natoms), float)
+        f = xp.zeros((nbeads, 3 * natoms))
 
-        q = dstrip(self.q)
-        m = dstrip(self.m3)[0]
+        q = self.q
+        m = self.m3[0]
         for b in range(nbeads):
             if b > 0:
                 dq = q[b, :] - q[b - 1, :]
@@ -340,10 +337,10 @@ class Beads:
            value: The Atoms object that holds the new values.
         """
 
-        self._blist[index].p[:] = value.p
-        self._blist[index].q[:] = value.q
-        self._blist[index].m[:] = value.m
-        self._blist[index].names[:] = value.names
+        self._blist[index].p_[:] = value.p
+        self._blist[index].q_[:] = value.q
+        self._blist[index].m_[:] = value.m
+        self._blist[index].names_[:] = value.names
 
 
 dproperties(

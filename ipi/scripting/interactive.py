@@ -9,8 +9,7 @@ motion step functions, and inject custom properties.
 from copy import deepcopy
 
 import numpy as np
-
-from ipi.utils.depend import dstrip
+from ipi.utils.array_backend import set_backend, to_numpy, xp
 from ipi.utils.units import unit_to_internal, unit_to_user, Constants
 from ipi.engine.simulation import Simulation
 from ipi.engine.motion import Dynamics
@@ -42,14 +41,32 @@ class InteractiveSimulation(Simulation):
          - 'dimension': Optional(str), the dimension of the property
             (default 'undefined', could be 'length', 'energy', etc.)
          - 'help': Optional(str), a help string describing the property
+    :param backend: Optional(str) The library used to store and process arrays,
+       "numpy", "torch" or "jax". If not given, the one selected with
+       `ipi.utils.array_backend.set_backend` is used (numpy by default).
+    :param device: Optional(str), default "cpu". The device on which arrays are
+       allocated when `backend` is given, e.g. "cuda" for the torch backend.
+    :param jit: Optional(bool), default False. Whether the steps are compiled
+       when `backend` is given: recorded as CUDA graphs and replayed with the
+       torch backend (on a CUDA device only), compiled with jax.jit with the
+       jax backend.
     """
 
-    def __init__(self, xml_input, custom_properties=None):
+    def __init__(
+        self,
+        xml_input,
+        custom_properties=None,
+        backend=None,
+        device="cpu",
+        jit=False,
+    ):
         # not-so-great way to initialize from the class method-generated
         # Simulation object. one should probably reconsider how Simulation
         # is initialized as this hack might lead to issues further down
         # the line, but for the moment all looks good.
 
+        if backend is not None:
+            set_backend(backend, device=device, jit=jit)
         self._custom_properties = custom_properties or {}
         sim = Simulation.load_from_xml(
             xml_input, post_init_hook=self._add_custom_properties
@@ -107,7 +124,7 @@ class InteractiveSimulation(Simulation):
         props = []
         for system in self.syslist:
             value, dimension, unit = system.properties[property]
-            props.append(value * unit_to_user(dimension, "ase", 1.0))
+            props.append(to_numpy(value) * unit_to_user(dimension, "ase", 1.0))
         if len(props) == 1:
             return props[0]
         else:
@@ -122,13 +139,13 @@ class InteractiveSimulation(Simulation):
             structures = []
             for b in range(system.beads.nbeads):
                 struc = ase.Atoms(
-                    positions=dstrip(system.beads.q[b]).reshape(-1, 3)
+                    positions=to_numpy(system.beads.q[b]).reshape(-1, 3)
                     * unit_to_user("length", "ase", 1.0),
-                    symbols=dstrip(system.beads.names),
-                    cell=dstrip(system.cell.h).T * unit_to_user("length", "ase", 1.0),
+                    symbols=system.beads.names,
+                    cell=to_numpy(system.cell.h).T * unit_to_user("length", "ase", 1.0),
                 )
                 struc.set_momenta(
-                    dstrip(system.beads.p[b]).reshape(-1, 3)
+                    to_numpy(system.beads.p[b]).reshape(-1, 3)
                     * unit_to_user("momentum", "ase", 1.0)
                 )
                 # set a dummy ASE calculator to be able to attach forces and
@@ -136,9 +153,9 @@ class InteractiveSimulation(Simulation):
                 # when the user calls `get_structures()`, so they should always
                 # reflect the current state of the simulation.
                 struc.calc = calculators.DummyASECalculator(
-                    energy=dstrip(system.forces.pots[b])
+                    energy=float(system.forces.pots[b])
                     * unit_to_user("energy", "ase", 1.0),
-                    forces=dstrip(system.forces.f[b]).reshape(-1, 3)
+                    forces=to_numpy(system.forces.f[b]).reshape(-1, 3)
                     * unit_to_user("force", "ase", 1.0),
                 )
                 structures.append(struc)
@@ -158,14 +175,17 @@ class InteractiveSimulation(Simulation):
             if system.beads.nbeads == 1:
                 structures = [structures]
             for b, struc in enumerate(structures):
-                system.beads.q[b] = struc.positions.flatten() * unit_to_internal(
-                    "length", "ase", 1.0
+                system.beads.q_[b] = xp.asarray(
+                    struc.positions.flatten() * unit_to_internal("length", "ase", 1.0)
                 )
-                system.cell.h = struc.cell.T * unit_to_internal("length", "ase", 1.0)
+                system.cell.h = xp.asarray(
+                    np.array(struc.cell).T * unit_to_internal("length", "ase", 1.0)
+                )
                 if "momenta" in struc.arrays:
-                    system.beads.p[b] = struc.arrays[
-                        "momenta"
-                    ].flatten() * unit_to_internal("momentum", "ase", 1.0)
+                    system.beads.p_[b] = xp.asarray(
+                        struc.arrays["momenta"].flatten()
+                        * unit_to_internal("momentum", "ase", 1.0)
+                    )
 
     def thermalize_momenta(self, temperature_K=None):
         """Resets system momenta"""
@@ -180,9 +200,9 @@ class InteractiveSimulation(Simulation):
             s.ensemble.eens += s.nm.kin
 
             # initialize in the nm basis to handle PIMD mass scaling
-            s.nm.pnm[:] = (
+            s.nm.pnm_[:] = (
                 self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
-                * np.sqrt(dstrip(s.nm.dynm3))
+                * np.sqrt(s.nm.dynm3)
                 * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
             )
 

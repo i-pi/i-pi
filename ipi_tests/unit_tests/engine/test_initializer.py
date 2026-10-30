@@ -22,6 +22,7 @@ from ipi.engine.cell import Cell
 from ipi.engine.ensembles import Ensemble
 from ipi.engine.normalmodes import NormalModes
 from ipi.utils.prng import Random
+from ipi.utils.depend import depend_array
 from ipi_tests.unit_tests.engine.mathematical_references import (
     fourier_matrix,
     mode_mass_factors,
@@ -195,10 +196,10 @@ def test_init_chk_skips_checkpoint_forcefields(tmp_path):
 def initialized_system():
     """A valid two-atom path; individual tests replace only the requested data."""
     beads = Beads(2, 4)
-    beads.q[:] = np.arange(24).reshape(4, 6) / 10
-    beads.p[:] = np.arange(1, 25).reshape(4, 6) / 10
-    beads.m[:] = [2, 8]
-    beads.names[:] = ["H", "He"]
+    beads.q_[:] = np.arange(24).reshape(4, 6) / 10
+    beads.p_[:] = np.arange(1, 25).reshape(4, 6) / 10
+    beads.m_[:] = [2, 8]
+    beads.names_[:] = ["H", "He"]
     return SimpleNamespace(beads=beads, cell=Cell(np.eye(3) * 5))
 
 
@@ -272,12 +273,12 @@ def test_manual_vector_updates_only_selected_atoms_and_beads(
     ],
 )
 def test_invalid_vector_selection_does_not_modify_state(index, bead, shape, message):
-    target = np.ones((4, 6))
+    target = depend_array(name="q", value=np.ones((4, 6)))
     with pytest.raises(ValueError, match=message):
         initializer.set_vector(
             initializer.InitIndexed(index=index, bead=bead), target, np.zeros(shape)
         )
-    npt.assert_array_equal(target, 1)
+    npt.assert_array_equal(target.get(), 1)
 
 
 @pytest.mark.parametrize("kind", ["masses", "labels", "positions", "momenta"])
@@ -314,11 +315,11 @@ def test_missing_initial_state_is_rejected(initialized_system, missing, message)
     if missing == "positions":
         system.beads = Beads(0, 0)
     elif missing == "cell":
-        system.cell.h[:] = 0
+        system.cell.h_[:] = 0
     elif missing == "masses":
-        system.beads.m[0] = 0
+        system.beads.m_[0] = 0
     else:
-        system.beads.names[0] = ""
+        system.beads.names_[0] = ""
     with pytest.raises(ValueError, match=message):
         initializer.Initializer(4).init_stage1(system)
 
@@ -447,13 +448,13 @@ def test_path_resizing_is_fourier_projection(tmp_path, source, target, kind):
     matrix = projection(source, target)
     expected = matrix @ values
     if kind == "positions":
-        target_q = np.zeros((target, 6))
+        target_q = depend_array(name="q", value=np.zeros((target, 6)))
         initializer.set_vector(initializer.InitIndexed(), target_q, values)
-        np.testing.assert_allclose(target_q, expected, atol=1e-13)
+        np.testing.assert_allclose(target_q.get(), expected, atol=1e-13)
     system = SimpleNamespace(beads=Beads(2, target), cell=Cell(np.eye(3) * 10))
-    system.beads.m[:] = [2, 5]
-    system.beads.names[:] = ["H", "He"]
-    system.beads.q[:] = 1
+    system.beads.m_[:] = [2, 5]
+    system.beads.names_[:] = ["H", "He"]
+    system.beads.q_[:] = 1
     if kind == "velocities":
         expected *= np.repeat([2.0, 5.0], 3)
     if kind != "positions":
@@ -494,10 +495,10 @@ def test_thermal_momenta_with_mode_masses(
     monkeypatch, style, frequencies, index, thermal_temperature
 ):
     beads = Beads(2, 4)
-    beads.m[:] = [2, 5]
-    beads.names[:] = ["H", "He"]
-    beads.q[:] = 0.1
-    beads.p[:] = 7
+    beads.m_[:] = [2, 5]
+    beads.names_[:] = ["H", "He"]
+    beads.q_[:] = 0.1
+    beads.p_[:] = 7
     system = SimpleNamespace(
         beads=beads,
         cell=Cell(np.eye(3) * 10),
@@ -547,9 +548,9 @@ def test_mass_cell_and_velocity_unit_conversion(tmp_path):
         "2\nvelocities{m/s}\nH 100000 -200000 300000\nHe -100000 200000 -300000\n"
     )
     system = SimpleNamespace(beads=Beads(2, 1), cell=Cell())
-    system.beads.m[:] = [1, 1]
-    system.beads.names[:] = ["H", "He"]
-    system.beads.q[:] = 1
+    system.beads.m_[:] = [1, 1]
+    system.beads.names_[:] = ["H", "He"]
+    system.beads.q_[:] = 1
     queue = [
         (
             "masses",

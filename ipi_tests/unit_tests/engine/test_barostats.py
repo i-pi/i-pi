@@ -4,19 +4,31 @@
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+import math
 import xml.etree.ElementTree as ET
-from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from ipi.engine.barostats import BaroSCR
+from ipi.engine.barostats import BaroSCR, cell_propagators
 from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
-from ipi.utils.depend import depend_value
+from ipi.utils.depend import depend_array, depend_value, dproperties
 from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import pressure_input
+
+
+class MockNormalModes:
+    """Normal-mode positions and momenta, with the masses of the modes."""
+
+    def __init__(self, qnm, pnm, dynm3):
+        self.qnm_ = depend_array(name="qnm", value=qnm)
+        self.pnm_ = depend_array(name="pnm", value=pnm)
+        self.dynm3 = dynm3
+
+
+dproperties(MockNormalModes, ["qnm", "pnm"])
 
 
 class FixedGaussian:
@@ -34,11 +46,14 @@ class OrthorhombicCell:
     """Minimal cell object for testing the SCR coordinate map."""
 
     def __init__(self, lengths):
-        self.h = np.diag(np.asarray(lengths, float))
+        self.h_ = depend_array(name="h", value=np.diag(np.asarray(lengths, float)))
 
     @property
     def V(self):
         return np.linalg.det(self.h)
+
+
+dproperties(OrthorhombicCell, ["h"])
 
 
 def scr_simulation_xml():
@@ -316,12 +331,8 @@ def test_scr_trotter_map_and_effective_energy():
     positions = np.asarray([[0.2, -0.3, 0.4, 0.5, -0.1, 0.7]])
     momenta = np.asarray([[0.8, -0.4, 0.2, 0.3, 0.5, -0.6]])
     masses = np.asarray([[1.0, 1.0, 1.0, 2.0, 2.0, 2.0]])
-    barostat.nm = SimpleNamespace(
-        qnm=positions.copy(),
-        pnm=momenta.copy(),
-        dynm3=masses,
-    )
-    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
+    barostat.nm = MockNormalModes(positions.copy(), momenta.copy(), masses)
+    barostat.qdt_ = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     old_volume = barostat.cell.V
     old_lambda = np.sqrt(old_volume)
@@ -411,7 +422,7 @@ def test_scr_rejects_nonpositive_proposed_volume():
     barostat.cell = OrthorhombicCell([1.0, 1.0, 1.0])
     barostat.prng = FixedGaussian(-10.0)
     barostat.get_lambda_force = lambda: 0.0
-    barostat._qdt = depend_value(name="qdt", value=barostat.dt / 2.0)
+    barostat.qdt_ = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     with pytest.raises(ValueError, match="non-positive or non-finite sqrt"):
         barostat.prepare()
@@ -465,3 +476,22 @@ def test_flexible_barostat_volume_constraint(simulation):
         initial = sim.syslist[0].cell.V
         sim.run(steps=8, write_outputs=False)
         assert sim.syslist[0].cell.V == pytest.approx(initial, rel=1e-12)
+
+
+def test_cell_propagators_match_power_series():
+    """exp(+-v dt) and dt sinh(v dt)/(v dt) are correct both for cell velocities
+    with zero diagonal (nilpotent) and with non-zero diagonal"""
+
+    dt = 2.0
+    shear = np.array([[0.0, 0.3, -0.2], [0.0, 0.0, 0.1], [0.0, 0.0, 0.0]])
+    # the scaling and squaring of the matrix exponential loses a few digits
+    tolerance = dict(rtol=1e-12, atol=1e-12)
+    for v in (shear, shear + np.diag([1e-2, -2e-2, 3e-2])):
+        x = v * dt
+        powers = [np.linalg.matrix_power(x, k) / math.factorial(k) for k in range(25)]
+        expq, expp, sinh = cell_propagators(v, dt)
+        assert np.allclose(expq, sum(powers), **tolerance)
+        exp_minus = sum(c * (-1) ** k for k, c in enumerate(powers))
+        assert np.allclose(expp, exp_minus, **tolerance)
+        series = sum(powers[2 * k] / (2 * k + 1) for k in range(12))
+        assert np.allclose(sinh, dt * series, **tolerance)

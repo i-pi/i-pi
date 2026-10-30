@@ -273,12 +273,16 @@ def test_weighted_centroid_force_and_saved_state(simulation, weight):
                     s.forces.virs_component(1, weighted, interpolate),
                     np.zeros((count, 3, 3)),
                 )
-        s.beads.q[:] = q * 2
+        s.beads.q_[:] = q * 2
         np.testing.assert_allclose(s.forces.f, 2 * expected_force)
-        s.beads.q[:] = q
+        s.beads.q_[:] = q
         s.forces.load_state(snapshot)
         np.testing.assert_allclose(s.forces.f, expected_force)
-        s.beads.q[:] = q * 3
+        # with zero weight, the component was not computed when the state was saved
+        np.testing.assert_allclose(
+            s.forces.forces_component(1, False, False), [-0.5 * centroid]
+        )
+        s.beads.q_[:] = q * 3
         np.testing.assert_allclose(s.forces.f, 3 * expected_force)
         np.testing.assert_allclose(s.forces.pots, 9 * expected_pots)
         with pytest.raises(ValueError, match="components"):
@@ -307,9 +311,9 @@ def force_system():
             if len(component.mts_weights) == 0:
                 component.mts_weights = np.array([1.0])
         beads = Beads(1, nbeads)
-        beads.m[:] = 2
-        beads.names[:] = ["H"]
-        beads.q[:] = np.arange(1, 3 * nbeads + 1).reshape(nbeads, 3) / 10
+        beads.m_[:] = 2
+        beads.names_[:] = ["H"]
+        beads.q_[:] = np.arange(1, 3 * nbeads + 1).reshape(nbeads, 3) / 10
         cell = Cell(np.eye(3) * 10)
         providers = {
             component.ffield: Harmonic(
@@ -370,7 +374,7 @@ def test_scaled_component_updates_energy_force_and_virial(force_system, scaling)
     beads, _, forces = force_system([ForceComponent("harmonic")])
     scaled = ScaledForceComponent(forces.mforces[0], scaling=scaling)
     for displacement in [1.0, 2.0]:
-        beads.q[:] *= displacement
+        beads.q_[:] *= displacement
         q = beads.q.copy()
         np.testing.assert_allclose(scaled.f, -scaling * q)
         np.testing.assert_allclose(scaled.pots, scaling * 0.5 * np.sum(q * q, axis=1))
@@ -412,7 +416,7 @@ def test_suzuki_chin_finite_difference_modes(force_system, alpha, epsilon, zero_
     forces.alpha = alpha
     forces.omegan2 = 2.0
     if zero_force:
-        beads.q[:] = 0
+        beads.q_[:] = 0
     q = beads.q.copy()
     expected = -2 * q / beads.m3  # -gradient of |F|^2/m for U=|q|^2/2
     if alpha == 0:
@@ -440,7 +444,7 @@ def test_manual_force_transfer_invalidated_by_move(force_system, extras):
     np.testing.assert_array_equal(forces.vir, 4 * virial)
     if extras:
         assert forces.extras["label"] == ["saved"] * 4
-    beads.q[:] = q * 2
+    beads.q_[:] = q * 2
     np.testing.assert_allclose(forces.f, -2 * q)
     np.testing.assert_allclose(forces.pots, 2 * np.sum(q * q, axis=1))
 
@@ -454,7 +458,7 @@ def test_clone_and_force_transfer_preserve_independent_state(force_system):
     clone = forces.clone(clone_beads, cell.clone())
     clone.transfer_forces(forces)
     np.testing.assert_array_equal(clone.f, expected)
-    clone_beads.q[:] *= 2
+    clone_beads.q_[:] *= 2
     np.testing.assert_allclose(clone.f, 2 * expected)
     np.testing.assert_array_equal(beads.q, q)
     np.testing.assert_array_equal(forces.f, expected)
