@@ -17,8 +17,6 @@ import time
 import threading
 
 import numpy as np
-import json
-
 from multiprocessing import shared_memory
 
 from ipi.utils.messages import verbosity, warning, info
@@ -468,6 +466,57 @@ class Driver(DriverSocket):
         else:
             raise InvalidStatus("Status in sendextra was " + self.status)
 
+    def _recv_forceready(self):
+        """Receives the FORCEREADY header after GETFORCE has been sent.
+
+        Raises:
+           Disconnected: Raised if the driver has disconnected.
+        """
+
+        reply = ""
+        while True:
+            try:
+                reply = self.recv_msg()
+            except socket.timeout:
+                warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
+                continue
+            except:
+                warning(
+                    " @SOCKET:   Error while receiving message: %s" % (reply),
+                    verbosity.low,
+                )
+                raise Disconnected()
+            if reply == MESSAGE["forceready"]:
+                return
+            else:
+                warning(
+                    " @SOCKET:   Unexpected getforce reply: %s" % (reply),
+                    verbosity.low,
+                )
+            if reply == "":
+                raise Disconnected()
+
+    def _recv_force_data(self):
+        """Receives the payload following a FORCEREADY header.
+
+        Subclasses such as :class:`SHMDriver` override this because their
+        numeric payload is stored outside the control socket.
+        """
+
+        mu = self.recvall(np.float64())
+        mlen = self.recvall(np.int32())
+        mf = self.recvall(np.zeros(3 * mlen, np.float64))
+        mvir = self.recvall(np.zeros((3, 3), np.float64))
+
+        extra_len = self.recvall(np.int32())
+        if extra_len > 0:
+            mxtra = bytearray(
+                self.recvall(np.zeros(extra_len, np.dtype("S1")))
+            ).decode("utf-8")
+        else:
+            mxtra = ""
+        return [mu, mf, mvir, parse_extra(mxtra)]
+
     def getforce(self):
         """Gets the potential energy, force and virial from the driver.
 
@@ -481,80 +530,11 @@ class Driver(DriverSocket):
 
         if self.status & Status.HasData:
             self.send_msg("getforce")
-            reply = ""
-            while True:
-                try:
-                    reply = self.recv_msg()
-                except socket.timeout:
-                    warning(
-                        " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
-                    )
-                    continue
-                except:
-                    warning(
-                        " @SOCKET:   Error while receiving message: %s" % (reply),
-                        verbosity.low,
-                    )
-                    raise Disconnected()
-                if reply == MESSAGE["forceready"]:
-                    break
-                else:
-                    warning(
-                        " @SOCKET:   Unexpected getforce reply: %s" % (reply),
-                        verbosity.low,
-                    )
-                if reply == "":
-                    raise Disconnected()
+            self._recv_forceready()
         else:
             raise InvalidStatus("Status in getforce was " + str(self.status))
 
-        mu = np.float64()
-        mu = self.recvall(mu)
-
-        mlen = np.int32()
-        mlen = self.recvall(mlen)
-
-        mf = np.zeros(3 * mlen, np.float64)
-        mf = self.recvall(mf)
-
-        mvir = np.zeros((3, 3), np.float64)
-        mvir = self.recvall(mvir)
-
-        # Machinery to return a string as an "extra" field.
-        # Comment if you are using a ancient patched driver that does not return anything!
-        # Actually, you should really update your driver, you're like a decade behind.
-        mlen = np.int32()
-        mlen = self.recvall(mlen)
-        if mlen > 0:
-            mxtra = np.zeros(mlen, np.dtype("S1"))
-            mxtra = self.recvall(mxtra)
-            mxtra = bytearray(mxtra).decode("utf-8")
-        else:
-            mxtra = ""
-        mxtradict = {}
-        if mxtra:
-            try:
-                mxtradict = json.loads(mxtra)
-                info(
-                    "@driver.getforce: Extra string JSON has been loaded.",
-                    verbosity.debug,
-                )
-            except:
-                # if we can't parse it as a dict, issue a warning and carry on
-                info(
-                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
-                    + mxtra,
-                    verbosity.debug,
-                )
-                mxtradict = {}
-                pass
-            if "raw" in mxtradict:
-                raise ValueError(
-                    "'raw' cannot be used as a field in a JSON-formatted extra string"
-                )
-
-            mxtradict["raw"] = mxtra
-        return [mu, mf, mvir, mxtradict]
+        return self._recv_force_data()
 
     def dispatch(self, r):
         """Dispatches a request r and looks after it setting results
