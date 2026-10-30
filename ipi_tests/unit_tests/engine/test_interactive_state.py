@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import pytest
+import ipi.utils.array_backend as ab
 from ipi.utils.units import unit_to_user
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
@@ -59,6 +60,21 @@ def test_thermalization_updates_energy_accounting(simulation, temperature):
         else:
             assert np.isfinite(system.beads.p).all()
             assert system.nm.kin > 0
+
+
+def test_thermalization_with_torch_arrays(simulation, strict_torch):
+    """Thermalizing works with the arrays of the torch backend, without implicit
+    conversions to numpy (which fail for arrays on a GPU)"""
+    ab.set_backend("torch")
+    try:
+        with simulation(harmonic_input(nbeads=4)) as sim:
+            system = sim.syslist[0]
+            conserved = float(system.ensemble.econs)
+            sim.thermalize_momenta(600)
+            assert float(system.ensemble.econs) == pytest.approx(conserved)
+            assert float(system.nm.kin) > 0
+    finally:
+        ab.set_backend("numpy")
 
 
 def test_custom_motion_replaces_step_and_can_be_restored(simulation):
