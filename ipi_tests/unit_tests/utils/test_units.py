@@ -13,3 +13,12 @@ def test_case_insensitive():
     Angstrom = units.unit_to_internal("length", "Angstrom", 1.0)
     if angstrom != Angstrom:
         raise ValueError("angstrom != Angstrom")
+
+
+def test_inverse_pressure_roundtrip():
+    """Common compressibility units convert to and from atomic units."""
+
+    value = 4.5e-5
+    internal = units.unit_to_internal("inverse-pressure", "bar^-1", value)
+    converted = units.unit_to_user("inverse-pressure", "bar^-1", internal)
+    assert abs(converted - value) < 1e-15
