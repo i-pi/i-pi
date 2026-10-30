@@ -363,6 +363,7 @@ def test_extras_and_virials_follow_component_weights(force_system, contracted, w
     assert forces.extras["raw"] == ["firstsecond" if full_second else "first"] * 4
     assert forces.extras["label"] == ["second" if full_second else "first"] * 4
     assert forces.extras_component(0)["label"] == ["first"] * 4
+    assert forces.extras_component(0)["raw"] == ["first"] * 4
     np.testing.assert_allclose(
         forces.mforces[0].vir, np.sum([-np.triu(np.outer(a, a)) for a in q], axis=0)
     )
