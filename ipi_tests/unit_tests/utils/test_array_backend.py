@@ -188,7 +188,7 @@ def test_jax_views_follow_parent(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * ab.to_numpy(a.get()))
     # a view of one of two synchronized arrays
     c = dp.depend_array(name="c", value=np.zeros((2, 3)))
-    dp.dsynchro(c, a, lambda: 2 * a.get(), lambda: c.get() / 2)
+    dp.dsynchro(a, c, lambda: c.get() / 2, lambda: 2 * a.get())
     row[2] = 4.0
     assert np.array_equal(ab.to_numpy(c.get()[1]), [10.0, 4.0, 8.0])
     c.set(np.zeros((2, 3)))
