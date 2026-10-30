@@ -211,10 +211,11 @@ class Ensemble:
             self.hweights_ = depend_array(
                 name="hweights", value=np.ones(len(self.forces.mforces)), host=True
             )
+        # the bias is non-zero with bias components, or Hamiltonian weights other than 1
         self.has_bias_ = depend_value(
             name="has_bias",
             func=lambda: (
-                len(self.bcomp) > 0 and np.mean((self.hweights - 1) ** 2) < 1e-20
+                len(self.bcomp) > 0 or np.mean((self.hweights - 1) ** 2) > 1e-20
             ),
             dependencies=[self.hweights_],
         )
