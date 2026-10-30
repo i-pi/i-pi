@@ -1,0 +1,23 @@
+<simulation verbosity='high'>
+  <output prefix='results/ffsocket_py_driver'>
+    <properties filename='properties' stride='1'>[step, time{femtosecond}, conserved{electronvolt}, potential{electronvolt}]</properties>
+    <trajectory filename='trajectory' stride='1' format='xyz'>positions{angstrom}</trajectory>
+  </output>
+  <total_steps>10</total_steps>
+  <prng><seed>31415</seed></prng>
+  <ffsocket name='mace_py_driver' mode='unix' pbc='true'>
+    <address>mace-comparison-py-driver</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'>init.xyz</file>
+      <velocities mode='manual' units='atomic_unit'>[0, 0, 0, 0, 0, 0, 0, 0, 0]</velocities>
+    </initialize>
+    <forces><force forcefield='mace_py_driver'/></forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'>0.5</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

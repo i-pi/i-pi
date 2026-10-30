@@ -1,0 +1,6 @@
+RESTART
+__pycache__/
+results/
+results.previous.*/
+error.txt
+*.swp
