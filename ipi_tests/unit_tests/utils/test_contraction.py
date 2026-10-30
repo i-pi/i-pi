@@ -11,69 +11,6 @@ from numpy.testing import assert_almost_equal
 
 from ipi.utils import nmtransform
 
-
-def check_up_and_down_scaling(n, q):
-    """Check if q expanding and then contracting a ring polymer is a no-op.
-
-    Args:
-       n: The number of beads in the scaled ring polymer.
-       q: The original position array.
-    """
-
-    rescale = nmtransform.nm_rescale(q.shape[0], n)
-    print("Initial position of the beads:")
-    print(q, q.shape, (q.shape[0], n))
-
-    # rescale up to the n beads
-    beads_n = rescale.b1tob2(q)
-    print("Upscaled to %d beads:" % n)
-    print(beads_n, beads_n.shape)
-
-    beads_final = rescale.b2tob1(beads_n)
-    print("Final position of the beads:")
-    print(beads_final)
-
-    assert_almost_equal(q, beads_final)
-    return beads_n
-
-
-def check_rpc_consistency(n, q):
-    """Check if q expanding and then contracting a ring polymer is a no-op.
-
-    Args:
-       n: The number of beads in the scaled ring polymer.
-       q: The original position array.
-    """
-
-    rescale1 = nmtransform.nm_rescale(q.shape[0], n)
-    rescale2 = nmtransform.nm_rescale(n, q.shape[0])
-
-    beads_n = rescale1.b1tob2(q)
-    beads_1 = rescale1.b2tob1(beads_n)
-    beads_2 = rescale2.b1tob2(beads_n)
-
-    assert_almost_equal(beads_1, beads_2)
-
-
-def check_centroid_pos(n, q):
-    """Check if expanding and then contracting a ring polymer
-    maintains the centroid.
-
-    Args:
-       n: The number of beads in the scaled ring polymer.
-       q: The original position array.
-    """
-
-    beads_big = check_up_and_down_scaling(n, q)
-    rescale_big = nmtransform.mk_rs_matrix(n, 1)
-    rescale_q = nmtransform.mk_rs_matrix(q.shape[0], 1)
-
-    centroid_big = np.dot(rescale_big, beads_big)
-    centroid_q = np.dot(rescale_q, q)
-
-    assert_almost_equal(centroid_q, centroid_big)
-
-
 numbers_to_check = list(range(10, 56, 9))
 
 
@@ -98,11 +35,48 @@ qs_to_check = [
 ]
 
 
-@pytest.mark.parametrize("n", numbers_to_check)
-@pytest.mark.parametrize("q", qs_to_check)
-def test_contraction(n, q):
-    """Test contraction to `n` replicas with original positions `q`."""
+CASES = (
+    [
+        pytest.param(q, n, None, id=f"original-p{len(q)}-to-{n}")
+        for q in qs_to_check
+        for n in numbers_to_check
+    ]
+    + [
+        pytest.param(
+            np.random.default_rng(17).normal(size=(small, 6)),
+            large,
+            opened,
+            id=f"{label}-p{small}-to-{large}",
+        )
+        for small, large in [(1, 4), (3, 8), (4, 7), (4, 4)]
+        for label, opened in [("closed", []), ("open-both", [0, 1])]
+    ]
+    + [
+        pytest.param(
+            np.random.default_rng(17).normal(size=(3, 6)),
+            8,
+            [atom],
+            id=f"mixed-open{atom}-p3-to-8",
+            marks=pytest.mark.xfail(
+                strict=True,
+                raises=AssertionError,
+                reason="nm_rescale.b2tob1 applies the open-path map to closed-path atoms",
+            ),
+        )
+        for atom in [0, 1]
+    ]
+)
 
-    check_up_and_down_scaling(n, q)
-    check_rpc_consistency(n, q)
-    check_centroid_pos(n, q)
+
+@pytest.mark.parametrize("q,n,open_paths", CASES)
+def test_contraction(q, n, open_paths):
+    """Expansion preserves each path, its centroid, and independent storage."""
+    rescale = nmtransform.nm_rescale(len(q), n, open_paths=open_paths)
+    expanded = rescale.b1tob2(q)
+    restored = rescale.b2tob1(expanded)
+    reverse = nmtransform.nm_rescale(n, len(q), open_paths=open_paths)
+
+    np.testing.assert_allclose(restored, q, atol=2e-14)
+    assert_almost_equal(restored, reverse.b1tob2(expanded))
+    np.testing.assert_allclose(expanded.mean(axis=0), q.mean(axis=0), atol=2e-14)
+    assert not np.shares_memory(q, expanded)

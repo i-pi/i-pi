@@ -1,48 +1,45 @@
-<simulation verbosity="medium">
-<output prefix="lj-nickel">
-    <properties stride="5" filename="out">
-		[step, time{picosecond}, conserved{electronvolt}, temperature{kelvin},
-		kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{bar},
-		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
-    </properties>
-    <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
-    <trajectory filename="forces" stride="5" format="ase"> forces </trajectory>
-    <checkpoint stride="1000"/>
-</output>
-<total_steps> 1000</total_steps>
-<prng><seed>12345</seed></prng>
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'> [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal} ] </properties>
+    <trajectory filename='pos' stride='10' format='ase'> positions </trajectory>
+    <trajectory filename='uq' stride='1' extra_type='energy_uncertainty'> extras </trajectory>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
 
-<ffsocket mode='unix' name='driver' pbc="false">
-    <port>12345</port>
-    <address>metatomic</address>
-</ffsocket>
+  <!--
+      PET-MAD runs in-process through the metatomic driver. The four beads are
+      collected into batches of four, and each batch is split between two
+      model instances running in separate threads (device:cpu;cpu).
+      The per-atom energy uncertainty is returned as an extra, and a warning
+      is printed whenever it exceeds the threshold (in eV/atom).
+  -->
+  <ffdirect name='pet-mad' pbc='false'>
+    <pes> metatomic </pes>
+    <parameters> {template:init.xyz,model:pet-mad-xs-v1.6.0.pt,device:cpu;cpu,uncertainty_threshold:0.1} </parameters>
+    <batch_size> 4 </batch_size>
+  </ffdirect>
 
-<system>
-    <initialize nbeads="1">
-        <file mode="ase" units="angstrom"> nickel.xyz </file>
-        <velocities mode="thermal" units="kelvin"> 250.0 </velocities>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='ase' units='angstrom'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-    	<force forcefield='driver'/>
+      <force forcefield='pet-mad'/>
     </forces>
-
-    <motion mode="dynamics">
-    	<dynamics mode="nvt">
-        	<timestep units="femtosecond"> 2 </timestep>
-            <thermostat mode='gle'>
-            	<A shape='(5,5)'>[
-                	 4.49e-3,   6.59e-6,   2.79e-4,  -8.81e-4,   5.61e-3,
-                    -6.73e-6,   2.08e-9,   1.75e-5,  -4.80e-6,   1.03e-5,
-                    -3.59e-4,  -1.75e-5,   3.29e-5,   1.24e-4,  -2.42e-4,
-                    -2.51e-4,   4.80e-6,  -1.24e-4,   6.45e-4,   2.78e-4,
-                     5.27e-3,  -1.03e-5,   2.42e-4,  -2.78e-4,   7.49e-3
-                ]</A>
-            </thermostat>
-        </dynamics>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='pile_g'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
     </motion>
-
-	<ensemble>
-        <temperature units="kelvin"> 250.0 </temperature>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
     </ensemble>
-</system>
+  </system>
 </simulation>

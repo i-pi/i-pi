@@ -4,3 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 exclude = 'test_properties.py'
+
+[tool.coverage.run]
+# i-pi ends with os._exit(), which would otherwise skip saving the coverage data
+patch = ["_exit"]
