@@ -38,6 +38,10 @@ or because they were approved explicitly:
   depend array that the scaled force components depend on (since 5e863291), so exchanging them did not change
   the bias: the acceptance used the weights before the exchange, and each replica kept its Hamiltonian. They
   are now a depend array, exposed as `hweights`. New unit test.
+  Also, the integrators skipped the bias (`ensemble.has_bias` was false) whenever the Hamiltonian weights
+  differed from 1 (since 5e863291), so the replicas evolved with the unscaled Hamiltonian, and with no explicit
+  bias, while the conserved quantity, the exchange acceptance and the barostat included them. This changes
+  the results of Hamiltonian replica exchange runs. New unit test.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
