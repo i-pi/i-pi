@@ -52,6 +52,12 @@ or because they were approved explicitly:
   Both were strict xfails on main. The initial structure, the physical forces and the positions given to
   `mtd_update` are converted to numpy at this boundary, so PLUMED also works with the torch backend (and
   again with numpy, which failed on the read-only masses of the depend properties).
+- Missing dependencies of the forces: the fourth-order Suzuki-Chin term on alpha, the total SC virial on the
+  per-bead ones (it depended on the SC potential), and the combined extras and the components added to a bias
+  (`add_component`) on the component weights; they gave stale values when these changed (e.g. the extras of a
+  bias whose weights are exchanged by replica exchange). As the finite differences of the fourth-order term
+  displace only the odd beads for alpha = 0, alpha cannot change between zero and non-zero values once the term
+  has been computed (`ValueError`). New unit tests.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
