@@ -324,6 +324,12 @@ def test_missing_initial_state_is_rejected(initialized_system, missing, message)
         initializer.Initializer(4).init_stage1(system)
 
 
+def test_cell_with_zero_volume_is_rejected(initialized_system):
+    zero = initializer.InitIndexed(value=np.zeros(9), mode="manual")
+    with pytest.raises(ValueError, match="zero volume"):
+        initializer.Initializer(4, [("cell", zero)]).init_stage1(initialized_system)
+
+
 def test_manual_initialization_constructs_complete_system():
     system = SimpleNamespace(beads=Beads(0, 0), cell=Cell())
     queue = [
