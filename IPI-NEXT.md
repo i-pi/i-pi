@@ -1,9 +1,10 @@
-# Array backend (numpy / torch): notes
+# i-PI next: development notes
 
-Notes for the array-backend PR: the changes of behaviour it introduces, and the work left for later PRs.
-See also `CONSTRAINTS_REVIEW.md` for constrained dynamics.
+Development notes for `next`, the branch that will become i-PI 4.0: the changes of behaviour relative to `main`
+(i-PI 3.x), the state of the array backends (numpy, torch, JAX) and of the compiled MD steps (`--jit`), and the
+work left. Update them with every change that affects results, performance or the developer API.
 
-## Behaviour changes in this PR (numpy backend)
+## Behaviour changes relative to main (numpy backend)
 
 Bugs found while porting, fixed because they were renames that had not been carried over, obvious typos,
 or because they were approved explicitly:
@@ -15,7 +16,7 @@ or because they were approved explicitly:
   exp(+-v dt) by `barostats.cell_propagators`, from one exponential of 6x6 block matrices (no branch, no
   `eig`), with a unit test.
 - Constrained dynamics could not run from an input file (fixatoms/fixatoms_dof mismatch, removed
-  `Forces.forces_mts`), plus small issues in constrtools; see `CONSTRAINTS_REVIEW.md`. New unit test.
+  `Forces.forces_mts`), plus small issues in constrtools; see [Constrained dynamics](#constrained-dynamics). New unit test.
 - Planetary and Al6xxx KMC could not bind (`Forces.copy` is now `clone`; `Motion.__init__` was not called).
 - L-BFGS (`mintools.L_BFGS`), checked against Nocedal & Wright (Alg. 7.4/7.5) and Numerical Recipes
   (dfpmin/lnsrch): the "moving uphill" reset used +g/|g| (uphill) and did not reach the caller; pairs failing
@@ -99,7 +100,7 @@ or because they were approved explicitly:
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.
 
-## Work after this PR
+## Status and work left
 
 ### Pre-existing bugs found and not fixed (need a decision)
 - `GeopMotion.reset` uses the undefined `self.initial_values`.
@@ -117,7 +118,7 @@ bugs pass, and are no longer marked.
 - Planetary output: `netstring_encoded_savez` writes the bytes of `np.savez` through `io.StringIO` into a
   text-mode file (Python 2 leftover), so saving the frequency matrix fails.
 - `Properties.get_vcom(bead=...)` uses an `Atoms` object as momenta, and the bead index arrives as a string.
-- Constrained dynamics: see `CONSTRAINTS_REVIEW.md` (Eckart index check, angle and linear-group conditioning,
+- Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
 - Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs
   ("release unlocked lock": two signal threads racing in `softexit.cleanup`).
@@ -155,7 +156,7 @@ bugs pass, and are no longer marked.
   model on the GPU, the overhead of 4-bead PIMD grows to 15 ms (1 BLAS thread) - 30 ms (16 threads) at 11000
   atoms, and was several times larger on a node shared with other jobs.
 
-### CUDA graphs (`--jit` with torch on CUDA, branch feats/cuda-graphs)
+### CUDA graphs (`--jit` with torch on CUDA)
 - `ipi/utils/cudagraphs.py` has the generic machinery: `GraphReplay` runs a function eagerly for the first
   calls (two, and at least one in the calling thread, as cuBLAS creates handles per thread), records the next
   one in segments separated by eager functions, and replays them. Code in the recorded function marks the
@@ -249,7 +250,7 @@ bugs pass, and are no longer marked.
 - cupy and jax: `xp` comes from `array_api_compat`, the PRNG has one implementation per backend, and all
   writes to the state go through the depend objects (`set`, `__setitem__`, in-place operators), which is where
   jax would need functional updates.
-- JAX, eager (experiment on `jax-backend`): `set_backend("jax")` enables 64-bit types; depend arrays holding
+- JAX, eager: `set_backend("jax")` enables 64-bit types; depend arrays holding
   JAX arrays become `depend_immutable`, whose writes replace the stored array and whose views (per-bead
   Atoms, thermostat `bind`s, `obj.x_[i] op= v`) read the parent at each access and write through it; masks and
   arrays of indices select copies, as with the other backends.
@@ -268,7 +269,7 @@ bugs pass, and are no longer marked.
   (`zeros_like`), against <1 us with numpy; the depend helpers are <10% of the step. Performance needs
   jit of whole steps, which would need the depend state passed in and out of the traced function (as the
   CUDA-graph replay does).
-- JAX, jit of the MD steps (`--jit` with JAX, branch `feat/jax-jit`, CUDA graphs rebased on `feat/jax-backend`):
+- JAX, jit of the MD steps (`--jit` with JAX):
   `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
   restoration of the taint status, the `split`/`eager` markers, `unsupported` and the warmup steps). The
   second eager step is observed to find the depend objects read before being written; the third is traced
@@ -291,7 +292,6 @@ bugs pass, and are no longer marked.
   JAX 19-27). jit is 13-78x faster than eager JAX; CUDA graphs have the lower fixed cost (classical MD), jit
   scales better with beads and atoms (one XLA program, forces included). Jit PIMD is slower at 3162 atoms than
   at 10000 (not investigated). Jit vs eager JAX on the GPU: 2e-16 to 3e-15 after 10 steps, same keys.
-  Full tables: report.md (untracked, repository root).
   torch.compile and jax.jit do not overlap: with torch the steps are CUDA graphs and only the functions
   marked `@compiled` are compiled (whole-step torch.compile breaks on the depend locks and the lazy forces);
   with JAX the whole step is one XLA program and `@compiled` functions are traced inline.
@@ -309,6 +309,26 @@ bugs pass, and are no longer marked.
   with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX (it was `--cuda-graphs` for
   torch); with numpy, or torch on the CPU, it is an error.
 
+### Multiple systems and replica exchange
+- Systems are stepped in threads by default (`threading='true'`). With in-process forcefields this only adds
+  overhead: classical NVT with the dummy forcefield, 100 atoms, numpy, 4 / 8 / 16 replicas: 0.76 / 1.54 / 3.0
+  ms/step stepping the systems in turn, 4.0 / 8.6 / 17.7 ms/step in threads (workstation with the `powersave`
+  governor; most of the cost is waking threads on other cores, the rest GIL contention). Threads cannot overlap
+  in-process model evaluations either: `FFDirect.poll` evaluates under the forcefield lock (LJ metatomic model,
+  8 replicas: no gain on CPU or CUDA). Batching the replicas (`threaded` `ffdirect` with `batch_size`) is the only
+  in-process use of threads, and gained 0-11% with the LJ model.
+- With socket drivers threads pay off when the driver cost is several ms: LJ model, 128 atoms, 4 / 8 replicas:
+  19 / 39 ms/step in turn, 18 / 27 ms/step in threads; 2048 atoms: 140 / 285 vs 84 / 121 ms/step. With
+  `matching='auto'` each replica keeps its driver, and stepping in turn leaves each driver idle most of the time
+  (48 instead of 19 ms/step at 128 atoms, 4 replicas); `matching='any'` avoids it. The collect loop of the
+  consolidated socket dispatch waits for all the jobs in flight before dispatching new requests.
+- The exchange step tries all the pairs of replicas (with probability 1/stride each), each attempt swapping the
+  ensembles, rescaling the momenta and recomputing `econs`/`lpens` through the depend graph: ~0.1-0.2 ms per pair,
+  +3.4 ms/step for 8 replicas and +12 ms/step for 16 with stride 1.
+- Options: step the systems in turn unless a forcefield runs outside the process or batches across systems;
+  a single-threaded cooperative scheduler (e.g. greenlets) that interleaves the systems at the force evaluations,
+  which would give batching and overlapping socket calls without threads; a cheaper acceptance test.
+
 ### Testing
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
@@ -317,3 +337,63 @@ bugs pass, and are no longer marked.
   (`tox -e torch`, `tox -e torch-examples`).
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
+
+## Constrained dynamics
+
+Scope: `ipi/utils/constrtools.py`, `ipi/engine/motion/constrained_dynamics.py`,
+`ipi/inputs/motion/constrained_dynamics.py`.
+
+### Fixed (no change of method)
+
+- **Constrained dynamics could not run from an input file (also on main).**
+  - `InputMotion` passes `fixatoms_dof=`, but `ConstrainedDynamics.__init__` accepted `fixatoms` and forwarded it
+    to `Motion.__init__`, whose argument is now `fixatoms_dof`. It now takes `fixatoms_dof` (and still refuses
+    fixed atoms).
+  - `NVEConstrainedIntegrator.step_B` called the removed `Forces.forces_mts(level)`; it now uses
+    `forces.mts_forces[level].f`, like the MD integrators.
+  - There was no test: `ipi_tests/unit_tests/engine/test_constrained_dynamics.py` now runs bond, angle and
+    Eckart constraints from XML, checks that the constraints hold, and checks numpy vs torch.
+- **Small errors with obvious intent.**
+  - An invalid ensemble now raises (the `ValueError` was created but not raised).
+  - The "no convergence" warning of `ConstraintSolver.proj_manifold` was never printed
+    (`if i == self.maxit` after `range(self.maxit)`); it now uses a `for ... else`.
+  - `array.shape = ...` on the constructor arguments, which mutated the caller's arrays and is deprecated since
+    numpy 2.5, is replaced by `reshape`.
+  - `constraint_list=[]` (mutable default) is replaced by `None`.
+- **Dead code and docs.** Removed `ConstraintList.get_iai` (it called a method that no constraint defines) and
+  the `dq`/`dqprev` dproperties of `ConstraintList` (no such depend objects). Fixed the docstrings of `Gfunc`
+  and `GCfunc`, and the comment on `_m3`. Also removed a debugging block in `RigidBondConstraint.gfunc` that
+  printed "autsch" and called `exit()` if `q[0]` was infinite.
+- **Array-backend port.** The per-constraint loops of `RigidBondConstraint`/`AngleConstraint` are vectorized
+  (same values); scipy's Cholesky solve is kept for numpy, and torch solves the Gram systems with
+  `xp.linalg.solve`. Trajectories match the pre-port code to ~5e-16 and numpy/torch CPU/torch CUDA to ~1e-15.
+
+### To change (method or behaviour)
+
+1. **Misleading Eckart check.** `EckartConstraint` raises "repeated atom indices" whenever
+   `constrained_indices != np.unique(...)`, i.e. also for unsorted but unique indices. Either sort the indices
+   (keeping the reference coordinates consistent) or test for duplicates only.
+2. **Angle constraints are ill-conditioned near 0 and 180 degrees.** `AngleConstraint` constrains
+   `cos(angle) - cos(target)`, whose gradient vanishes at 0 and 180 degrees: the Gram matrix becomes singular
+   for (nearly) linear angles.
+3. **Eckart constraints assume a non-linear group.** Six constraints are always imposed; for linear groups (or two
+   atoms) the rotational rows of the Jacobian are linearly dependent and the Cholesky factorization fails.
+4. **Inconsistent convergence measure.** `proj_manifold` tests `norm(g)` over a group, where `g` mixes units:
+   squared lengths minus squared targets (bonds), cosine differences (angles), mass-weighted displacements
+   (Eckart). The tolerance means different things for different constraints, and for bonds it scales with the
+   bond length; a per-constraint relative tolerance would be more meaningful.
+5. **Inconsistent defaults.** `ConstrainedDynamics` builds a default `ConstraintSolver(tolerance=1e-4,
+   maxit=10000)`, while `ConstraintSolver` defaults to `1e-3` and `1000`, and the input class has its own
+   defaults.
+6. **Unneeded recomputation.** `ValueConstraintBase.bind` makes `Dg` depend on `constraint_values`, but the
+   Jacobians of bonds and angles do not depend on the target values, so `Dg`, `Gram` and its factorization are
+   recomputed when the values change.
+7. **Performance for many molecules, and on GPU.** The solver loops over constraint groups in Python, with a
+   small dense solve and a host-side convergence check (`float(norm(g))`) per group and iteration. For many
+   small molecules (rigid water: one group per molecule) this is slow with numpy and dominated by kernel
+   launches and device syncs with torch. Groups of the same type and size could be batched
+   (`xp.linalg.solve`/`cholesky` accept stacks of matrices), with one convergence check per iteration. On numpy
+   the scipy `cho_factor` is cached and reused; on torch the Gram system is re-solved every time (a cached
+   `torch.linalg.cholesky` + `torch.cholesky_solve` would match the numpy behaviour).
+8. **Coverage.** The only example (`examples/temp/broken/lammps/h2o-constraints`) is in the "broken" folder,
+   and there is no regression test with reference outputs.
