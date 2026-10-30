@@ -100,6 +100,8 @@ or because they were approved explicitly:
 - Depend objects are stored in attributes with a trailing underscore, `obj.x_` instead of `obj._x`, and
   `dproperties` exposes their value as `obj.x`. Entries of `dproperties` with no depend object behind them
   (they raised a `KeyError` when read) are removed.
+- In-place operators on depend arrays (`obj.x_ += v`) raise a `TypeError` when they cannot update the stored
+  array in place, e.g. a numpy array added to a torch tensor, which left the array unchanged.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

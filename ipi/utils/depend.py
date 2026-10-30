@@ -440,7 +440,13 @@ class depend_array(depend_base):
         self._wvalue[index] = value
 
     def _apply(self, op, other):
-        op(self._wvalue, other)
+        # an in-place operator that falls back to an out-of-place one (e.g. for a
+        # torch tensor and a numpy array) would leave the stored array unchanged
+        if op(self._wvalue, other) is not self._wvalue:
+            raise TypeError(
+                f"Cannot update <{self._name}> in place with a "
+                f"{type(other).__name__}: use an array of the backend"
+            )
 
     def set(self, value, manual=True):
         """Full-array assignment. `manual=False` is used by `update_auto`.

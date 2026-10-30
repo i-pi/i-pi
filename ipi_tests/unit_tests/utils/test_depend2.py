@@ -126,6 +126,23 @@ def test_advanced_index_inplace_operators(backend, index):
         ab.set_backend("numpy")
 
 
+def test_inplace_operators_with_other_arrays_raise():
+    """Depend: an in-place operator that cannot update the stored array in
+    place (a torch tensor and a numpy array) raises, rather than losing the
+    update"""
+    pytest.importorskip("torch")
+    ab.set_backend("torch")
+    try:
+        h = Holder()
+        assert np.array_equal(ab.to_numpy(h.y), np.zeros(4))
+        with pytest.raises(TypeError):
+            h.x_ += np.ones(4)
+        assert not h.y_.tainted()
+        assert np.array_equal(ab.to_numpy(h.x), np.zeros(4))
+    finally:
+        ab.set_backend("numpy")
+
+
 def test_computed_cannot_be_set():
     """Depend: setting a computed quantity raises"""
     h = Holder()
