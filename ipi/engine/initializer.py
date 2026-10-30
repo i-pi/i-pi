@@ -383,7 +383,7 @@ class Initializer:
 
                 simul.cell.h = xp.asarray(rh)
                 if simul.cell.V == 0.0:
-                    ValueError("Cell provided has zero volume")
+                    raise ValueError("Cell provided has zero volume")
 
                 fcell = True
             elif k == "masses":
