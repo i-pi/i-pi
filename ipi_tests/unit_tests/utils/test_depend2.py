@@ -126,6 +126,22 @@ def test_advanced_index_inplace_operators(backend, index):
         ab.set_backend("numpy")
 
 
+def test_depend_objects_are_read_up_to_date():
+    """Depend: a depend object that is assigned or added to an array is
+    recomputed first if it is out of date"""
+    h = Holder()
+    c = dp.depend_array(name="c", value=np.zeros(4))
+    h.x_ += 1.0
+    c.set(h.y_)
+    assert np.array_equal(c.get(), 2 * np.ones(4))
+    h.x_ += 1.0
+    c[:] = h.y_
+    assert np.array_equal(c.get(), 4 * np.ones(4))
+    h.x_ += 1.0
+    c += h.y_
+    assert np.array_equal(c.get(), 10 * np.ones(4))
+
+
 def test_inplace_operators_with_other_arrays_raise():
     """Depend: an in-place operator that cannot update the stored array in
     place (a torch tensor and a numpy array) raises, rather than losing the

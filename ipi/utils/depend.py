@@ -429,7 +429,7 @@ class depend_array(depend_base):
                 if status.synchro is None and self._func is not None:
                     self.update_man()  # raises, as the value is computed
                 return
-            value = value._value
+            value = value.get()
         with status.lock:
             self._assign(index, value)
             if status.synchro is not None or self._func is not None:
@@ -455,7 +455,7 @@ class depend_array(depend_base):
         """
 
         if isinstance(value, depend_base):
-            value = value._value
+            value = value.get()
         status = self._status
         with status.lock:
             self._assign(Ellipsis, value)
@@ -497,7 +497,7 @@ class depend_array(depend_base):
 def _make_inplace(op):
     def method(self, other):
         if isinstance(other, depend_base):
-            other = other._value
+            other = other.get()
         status = self._status
         with status.lock:
             if status.tainted:
