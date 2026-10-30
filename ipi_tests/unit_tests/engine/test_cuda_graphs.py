@@ -137,6 +137,28 @@ def test_replay_matches_eager_steps(
 
 
 @cuda
+def test_momenta_written_between_replays(tmp_path, monkeypatch):
+    """Momenta written through the normal modes between replayed steps (as by
+    InteractiveSimulation.thermalize_momenta) are used by the next replays"""
+
+    monkeypatch.chdir(tmp_path)
+    xml = write_input("nve", HARMONIC)
+    try:
+        eager, graph = simulation(xml, False), simulation(xml, True)
+        for sim in (eager, graph):
+            for step in range(6):
+                sim.run_step(step)
+            sim.syslist[0].nm.pnm_[:] = 0.0
+            for step in range(6, 9):
+                sim.run_step(step)
+        a, b = eager.syslist[0].beads, graph.syslist[0].beads
+        torch.testing.assert_close(b.q, a.q, **TOLERANCE)
+        torch.testing.assert_close(b.p, a.p, **TOLERANCE)
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
 def test_recording_in_a_new_thread(tmp_path, monkeypatch, device_random):
     """A step is recorded in a thread that has run eager steps, as some
     libraries (e.g. cuBLAS) initialize per-thread state that cannot be
@@ -436,6 +458,29 @@ def test_inputs_of_a_segment(fake_cuda):
     for _ in range(3):
         replay()
     assert [dep._name for dep, _, _ in replay.segments[0].inputs] == ["read"]
+
+
+def test_updated_objects_are_inputs_of_a_segment(fake_cuda):
+    """The depend objects that a segment updates in place, or of which it
+    assigns a part, are inputs that are brought up to date before its replays"""
+
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.depend import depend_array
+
+    added = depend_array(name="added", value=torch.zeros(3))
+    assigned = depend_array(name="assigned", value=torch.zeros(3))
+    replaced = depend_array(name="replaced", value=torch.zeros(3))
+
+    def func():
+        added.__iadd__(1.0)
+        assigned[0] = 1.0
+        replaced[...] = 1.0
+
+    replay = GraphReplay(func)
+    for _ in range(3):
+        replay()
+    inputs = sorted(dep._name for dep, _, _ in replay.segments[0].inputs)
+    assert inputs == ["added", "assigned"]
 
 
 @pytest.mark.parametrize("kind", ["array", "value"])
