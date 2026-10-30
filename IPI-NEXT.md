@@ -27,7 +27,8 @@ or because they were approved explicitly:
   string mode renames (`fixatoms_dof`, `fixatoms_mask`) and default `tr_trm` (string mode is still disabled
   at input level).
 - Instanton: `Fix.get_active_array` condition that was always true; `Fix.get_full_vector` t=3 crash
-  (`self.fix.get_mask`); `get_imvector` error message raising TypeError instead of ValueError.
+  (`self.fix.get_mask`), and t=4/5 (friction tensors with fixed atoms) crash, as the indices of the inner loops
+  were not reset; `get_imvector` error message raising TypeError instead of ValueError.
 - Phonons: NMFD/eNMFD refinement was overwritten by the unrefined matrix (water/qtip4pf: NMFD eigenvalues now
   match FD to 5e-7, were 75% off).
 - IMF restart: `v0` was not set and the basis-size schedule differed from a fresh run.
@@ -117,7 +118,7 @@ or because they were approved explicitly:
   segments, so that values written between replayed steps (e.g. by `InteractiveSimulation.thermalize_momenta`,
   through `nm.pnm`) are used (H100: +1-3 us per replayed PIMD step).
 
-The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
+The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
 
 ## Status and work left
