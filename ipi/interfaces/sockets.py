@@ -510,9 +510,9 @@ class Driver(DriverSocket):
 
         extra_len = self.recvall(np.int32())
         if extra_len > 0:
-            mxtra = bytearray(
-                self.recvall(np.zeros(extra_len, np.dtype("S1")))
-            ).decode("utf-8")
+            mxtra = bytearray(self.recvall(np.zeros(extra_len, np.dtype("S1")))).decode(
+                "utf-8"
+            )
         else:
             mxtra = ""
         return [mu, mf, mvir, parse_extra(mxtra)]
