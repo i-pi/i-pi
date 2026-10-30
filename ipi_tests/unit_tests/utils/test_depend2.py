@@ -260,6 +260,18 @@ def test_synchronizer():
         dp.dsynchro(a, dp.depend_array(name="c", value=np.zeros(3)), None, None)
 
 
+def test_partial_assignment_of_an_out_of_date_array():
+    """Depend: assigning part of an out-of-date array keeps the other elements
+    up to date"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    b[:] = 4.0
+    a[0] = 0.0
+    assert np.array_equal(a.get(), [0.0, 2.0, 2.0])
+    assert np.array_equal(b.get(), [0.0, 4.0, 4.0])
+
+
 def test_dcompute():
     """Depend: dcompute and dpipe make a primitive object computed"""
     h = Holder()

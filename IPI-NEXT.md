@@ -102,6 +102,11 @@ or because they were approved explicitly:
   (they raised a `KeyError` when read) are removed.
 - In-place operators on depend arrays (`obj.x_ += v`) raise a `TypeError` when they cannot update the stored
   array in place, e.g. a numpy array added to a torch tensor, which left the array unchanged.
+- Assigning part of a depend array that is out of date (`obj.x_[i] = v`, e.g. `beads.p` after writing
+  `nm.pnm`) merged the new elements into the old values; the array is now brought up to date first. With
+  `--jit`, the objects that a step only updates in place or assigns in part are now inputs of the recorded
+  segments, so that values written between replayed steps (e.g. by `InteractiveSimulation.thermalize_momenta`,
+  through `nm.pnm`) are used (H100: +1-3 us per replayed PIMD step).
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
 bugs pass, and are no longer marked.

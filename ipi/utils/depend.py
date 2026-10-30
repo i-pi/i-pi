@@ -431,6 +431,12 @@ class depend_array(depend_base):
                 return
             value = value.get()
         with status.lock:
+            if index is not Ellipsis:
+                # the elements that are not assigned are kept, so they are read
+                if status.tainted:
+                    self._refresh()
+                if _recorder is not None:
+                    _recorder.read(self)
             self._assign(index, value)
             if status.synchro is not None or self._func is not None:
                 self.update_man()
@@ -502,6 +508,8 @@ def _make_inplace(op):
         with status.lock:
             if status.tainted:
                 self._refresh()
+            if _recorder is not None:
+                _recorder.read(self)
             self._apply(op, other)
             if status.synchro is not None or self._func is not None:
                 self.update_man()
