@@ -1013,8 +1013,9 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = myatoms.q * 0.0
-        self.masses = myatoms.m
+        # PLUMED keeps pointers to these, which must be writable numpy arrays
+        self.charges = np.zeros(self.natoms)
+        self.masses = np.array(to_numpy(myatoms.m))
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -1049,9 +1050,11 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = self.system_force.f.reshape((-1, 3))
-            vir[:] = -self.system_force.vir
-            self.plumed.cmd("setEnergy", self.system_force.pot)
+            system_f = to_numpy(self.system_force.f).reshape((-1, 3))
+            system_vir = to_numpy(self.system_force.vir)
+            f[:] = system_f
+            vir[:] = -system_vir
+            self.plumed.cmd("setEnergy", float(self.system_force.pot))
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
@@ -1075,8 +1078,8 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= self.system_force.f.flatten()
-            vir[:] -= -self.system_force.vir
+            f -= system_f.flatten()
+            vir -= system_vir
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1097,6 +1100,7 @@ class FFPlumed(FFEval):
         # bias force is not "freshly computed"
 
         self.plumed_step += 1
+        pos, cell = to_numpy(pos), to_numpy(cell)
 
         bias_before = np.zeros(1, float)
         bias_after = np.zeros(1, float)
@@ -1112,8 +1116,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": pos, "cell": (cell, None), "result": None}
-            self.evaluate(request)
+            self.evaluate(ForceRequest(pos=pos, cell=(cell, None), result=None))
 
         if self.compute_work:
             self.plumed.cmd("getBias", bias_before)

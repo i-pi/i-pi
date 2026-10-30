@@ -45,6 +45,12 @@ or because they were approved explicitly:
 - Combining the extras of several force components appended the raw strings of the other components to
   those of the first component (since cf4419b5), so `extras_component_raw(0)` printed the strings of all the
   components once the combined extras had been computed. Unit test extended.
+- PLUMED (`ffplumed`): when PLUMED biases the potential energy (metadynamics with `use_energy`), the virial
+  it returned contained the physical virial twice instead of only the bias contribution, and `mtd_update`
+  failed when the positions had moved since the last evaluation (a plain dict instead of a `ForceRequest`).
+  Both were strict xfails on main. The initial structure, the physical forces and the positions given to
+  `mtd_update` are converted to numpy at this boundary, so PLUMED also works with the torch backend (and
+  again with numpy, which failed on the read-only masses of the depend properties).
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
@@ -351,6 +357,10 @@ bugs pass, and are no longer marked.
   (`tox -e torch`, `tox -e torch-examples`).
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
+- PLUMED: the regression tests `PLUMED/METAD` and `PLUMED/BIAS` (they were `.NOAUTO`, with an outdated input
+  tag and references that did not match main) are collected with the others, and skipped when PLUMED cannot be
+  loaded; their references were regenerated (identical outputs on main and next). The `plumed.yml` workflow
+  installs PLUMED from conda-forge and runs them with numpy and torch, together with the PLUMED unit tests.
 
 ## Constrained dynamics
 
