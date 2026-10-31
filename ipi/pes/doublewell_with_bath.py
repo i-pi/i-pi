@@ -94,7 +94,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
             self.bath = Harmonic_Bath_explicit(self.nbath, **self.bath_parameters)
 
         # Harmonic bath
-        pot, fq, fx = self.bath(q, x)
+        pot, fq, fx = self.bath.compute_structure(q, x)
 
         # DW
         pot += self.A * (q - self.delta) ** 2 + self.B * (q**4)

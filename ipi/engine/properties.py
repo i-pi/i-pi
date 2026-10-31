@@ -1171,11 +1171,11 @@ class Properties:
                 dof_ids = np.concatenate(
                     (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
                 )
-                eff_nbeads = (
-                    self.beads.nbeads - 1  # prevent double counting
-                    if self.motion.enstype == "nvt-cc"
-                    else self.beads.nbeads
-                )
+                eff_nbeads = self.beads.nbeads
+                if self.motion.enstype == "nvt-cc" and nm == "":
+                    eff_nbeads -= 1  # the centroid is already counted
+                elif self.motion.enstype == "nvt-cc" and int(nm) == 0:
+                    eff_nbeads = 0
                 eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
             kemd += (
@@ -1779,10 +1779,11 @@ class Properties:
     def get_vcom(self, latom="", bead=-1):
         """Computes the center of mass velocity for the system or for a specified species"""
 
+        bead = int(bead)
         if bead < 0:
             p = self.beads.pc
         else:
-            p = self.beads[bead]
+            p = self.beads.p[bead]
         pcom = xp.zeros(3)
         tm = 0
         for i in range(self.beads.natoms):

@@ -13,7 +13,7 @@ overwrite data given elsewhere.
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.ensembles import Ensemble
@@ -613,22 +613,21 @@ class Initializer:
 
             if k == "gle":
                 # read thermostat parameters from file
-                if not (hasattr(simul.ensemble, "thermostat")):
-                    raise ValueError(
-                        "Ensemble does not have a thermostat to initialize"
-                    )
-                if not (hasattr(simul.ensemble.thermostat, "s")):
+                thermostat = getattr(simul.motion, "thermostat", None)
+                if thermostat is None:
+                    raise ValueError("Motion does not have a thermostat to initialize")
+                if not (hasattr(thermostat, "s")):
                     raise ValueError(
                         "There is nothing to initialize in non-GLE thermostats"
                     )
-                ssimul = simul.ensemble.thermostat.s
+                ssimul = thermostat.s
                 if v.mode == "manual":
                     sinput = v.value.copy()
-                    if sinput.size() != ssimul.size():
+                    if sinput.size != xp_size(ssimul):
                         raise ValueError(
                             "Size mismatch in thermostat initialization data"
                         )
-                    sinput.shape = ssimul.shape
+                    sinput.shape = tuple(ssimul.shape)
                 elif v.mode == "chk":
                     rmotion = init_chk(v.value)[2]
                     if not hasattr(rmotion, "thermostat") or not hasattr(
@@ -637,11 +636,11 @@ class Initializer:
                         raise ValueError(
                             "Checkpoint file does not contain usable thermostat data"
                         )
-                    sinput = rmotion.thermostat.s.copy()
-                    if sinput.shape != ssimul.shape:
+                    sinput = to_numpy(rmotion.thermostat.s).copy()
+                    if sinput.shape != tuple(ssimul.shape):
                         raise ValueError(
                             "Shape mismatch in thermostat initialization data"
                         )
 
                 # if all the preliminary checks are good, we can initialize the s's
-                ssimul[:] = xp.asarray(sinput)
+                thermostat.s = xp.asarray(sinput)

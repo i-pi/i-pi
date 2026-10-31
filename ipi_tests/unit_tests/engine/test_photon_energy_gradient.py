@@ -178,24 +178,17 @@ def test_cavity_rejects_active_atoms_outside_system(active):
     assert not ff.requests
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=KeyError,
-    reason="Cavity dipole validation indexes missing extras before checking their presence",
-)
-def test_cavity_missing_dipole_data_reports_a_validation_error():
+def test_cavity_missing_dipole_data_triggers_soft_exit(monkeypatch):
 
+    exit_state = Softexit()
+    monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
     ff = FFCavPhSocket(interface=ForceField(), threaded=False, dipole_surface=True)
-    with pytest.raises(ValueError, match="[Dd]ipole"):
+    with pytest.raises(SystemExit):
         ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
+    assert exit_state.triggered
 
 
 @pytest.mark.parametrize("where", ["dipole", "queue", "cancelled-request"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="Cavity error handling passes the error message as an invalid soft-exit status",
-)
 def test_cavity_invalid_or_cancelled_request_triggers_soft_exit(where, monkeypatch):
 
     exit_state = Softexit()

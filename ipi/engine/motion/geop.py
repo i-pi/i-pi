@@ -100,7 +100,9 @@ class GeopMotion(Motion):
             self.invhessian = xp.asarray(invhessian_bfgs)
             self.optimizer = BFGSOptimizer()
         elif self.mode == "bfgstrm":
-            self.tr = tr_trm  # trust radius, kept on the host
+            # trust radius, kept on the host, and its initial value for reset
+            self.tr = np.array(tr_trm if tr_trm.size > 0 else [0.4], dtype=float)
+            self.tr_initial = self.tr.copy()
             self.hessian = xp.asarray(hessian_trm)
             self.optimizer = BFGSTRMOptimizer()
         elif self.mode == "lbfgs":
@@ -131,7 +133,7 @@ class GeopMotion(Motion):
         # bfgstrm
         elif self.mode == "bfgstrm":
             self.hessian[:] = xp.eye(len(self.hessian))
-            self.tr = self.initial_values["tr_trm"]
+            self.tr[:] = self.tr_initial  # in place, as the optimizer shares it
         # lbfgs
         elif self.mode == "lbfgs":
             self.corrections *= 0.0
@@ -516,8 +518,6 @@ class BFGSTRMOptimizer(DummyOptimizer):
                 raise ValueError("Hessian size does not match system size")
 
         self.hessian = geop.hessian
-        if geop.tr.size == 0:
-            geop.tr = np.array([0.4])
         self.tr = geop.tr
         self.gm.bind(self)
         self.big_step = geop.big_step

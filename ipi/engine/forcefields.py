@@ -2221,9 +2221,10 @@ class FFCavPhSocket(FFSocket):
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 softexit.trigger(
-                    "The size of charge array = {}  does not match the size of atoms = {} ".format(
+                    status="bad",
+                    message="The size of charge array = {}  does not match the size of atoms = {} ".format(
                         np.size(charge_array_bath), np.size(pos_bath[::3])
-                    )
+                    ),
                 )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
@@ -2394,7 +2395,10 @@ class FFCavPhSocket(FFSocket):
                     # if we return, we may as well output wrong numbers, or mess up things.
                     # so we can only call soft-exit and wait until that is done. then kill the thread
                     # we are in.
-                    softexit.trigger(" @ FORCES : cannot return so will die off here")
+                    softexit.trigger(
+                        status="bad",
+                        message=" @ FORCES : cannot return so will die off here",
+                    )
                     while softexit.exiting:
                         time.sleep(self.latency)
                     sys.exit()
@@ -2444,16 +2448,21 @@ class FFCavPhSocket(FFSocket):
                     has_dipole_der = ("dipole" in extra) and (
                         "dipole_derivative" in extra
                     )
-                    check_dipole_der = (len(extra["dipole"]) == 3) and (
-                        len(extra["dipole_derivative"])
-                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    check_dipole_der = (
+                        has_dipole_der
+                        and (len(extra["dipole"]) == 3)
+                        and (
+                            len(extra["dipole_derivative"])
+                            == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                        )
                     )
                     if not has_dipole_der or not check_dipole_der:
                         softexit.trigger(
-                            "Dipole surface is turned on, but the required dipole information is not provided in extras. \
+                            status="bad",
+                            message="Dipole surface is turned on, but the required dipole information is not provided in extras. \
                             Please check if the driver provides the dipole and its derivative information in extras, \
                             and make sure the size of dipole and dipole derivative information matches the number of atoms. \
-                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`.",
                         )
 
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
@@ -2472,7 +2481,8 @@ class FFCavPhSocket(FFSocket):
                         != int(len(pbcpos) // 3)
                     ):
                         softexit.trigger(
-                            "Total number of photons + molecules does not match total number of particles"
+                            status="bad",
+                            message="Total number of photons + molecules does not match total number of particles",
                         )
                     # 4. calculate total dipole moment array for N baths
                     dx_array, dy_array, _ = self.calc_dipole_xyz_mm(
