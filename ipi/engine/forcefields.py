@@ -1904,7 +1904,8 @@ class FFRotations(ForceField):
         """Polls the forcefield object to check if it has finished."""
 
         with self._threadlock:
-            for r in self.requests:
+            # a copy of the list, as the completed requests are removed from it
+            for r in list(self.requests):
                 if r["status"] == "Running" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
