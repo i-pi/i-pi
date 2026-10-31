@@ -142,6 +142,14 @@ or because they were approved explicitly:
   frequencies in atomic units since d4dd9d70), which changes the results of the runs that set it. Removed
   `DummyOptimizer.opt_coef` and the unreachable full-matrix branch of the Lanczos step; `Mapper` passes
   `new_disc` to `SpringMapper` by keyword (it went into `ret`). New unit tests.
+- Self-consistent phonons: with the default `precheck`, the `sd` displacement mode never moved the mean position
+  nor updated the Hessian (its branch was an `elif` of the check); the reweighting factors of the samples
+  underflowed when the mean position moved far compared to their width (e.g. `ik` with classical statistics),
+  which made the force and the Hessian NaN; they are now computed relative to the largest one, which leaves
+  their ratios, the only thing used, unchanged. The duplicated displacement matrices (`tDm`, `itDm`, `iDm`,
+  `sqtDm`), equal to the others and never used, are removed (the `sqtdm` "typo" had no effect). New tests,
+  including the convergence to the optimal Gaussian of a quartic double well, known in closed form for
+  classical statistics and from a one-dimensional equation for quantum statistics.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -227,9 +235,6 @@ bugs pass, and are no longer marked.
   three-body terms of Kapil et al. are not implemented); the solver uses a fixed basis for the one-mode
   problems (1.8e-4 Ha below the exact IMF free energy at kT ~ hbar w in the test model, which the IMF calculation
   converges), and has no limit on the number of SCF iterations.
-- SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
-  using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
-  Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
 - Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs

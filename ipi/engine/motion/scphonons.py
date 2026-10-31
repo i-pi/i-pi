@@ -494,7 +494,7 @@ class SCPhononator(DummyPhononator):
         # Uses the displacement correction and a used defined scaling
         # factor to move in the direction of the force.
 
-        elif self.dm.displace_mode == "sd":
+        if self.dm.displace_mode == "sd":
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -808,16 +808,13 @@ class SCPhononator(DummyPhononator):
         q0 = self.q[i]
         iD0 = self.iD[i]
 
-        # Estimates the weights as the ratio of density matrix for (qp, iDp) to the density matrix for (self.q, self.iD)
-        rw = xp.exp(
-            -(0.50 * (iDp @ (qp - x).T).T * (qp - x)).sum(axis=1)
-            + (0.50 * (iD0 @ (x - q0).T).T * (x - q0)).sum(axis=1)
-        )
-
-        if rw.sum() < 1e-24:
-            w = rw * 0.0
-        else:
-            w = rw / rw.sum()
+        # Estimates the weights as the ratio of density matrix for (qp, iDp) to the density matrix for (self.q, self.iD),
+        # relative to the largest one, as only their ratios are used
+        log_rw = -(0.50 * (iDp @ (qp - x).T).T * (qp - x)).sum(axis=1) + (
+            0.50 * (iD0 @ (x - q0).T).T * (x - q0)
+        ).sum(axis=1)
+        rw = xp.exp(log_rw - xp.max(log_rw))
+        w = rw / rw.sum()
 
         w = w.reshape((self.dm.max_steps, 1))
         rw = rw.reshape((self.dm.max_steps, 1))
@@ -833,10 +830,7 @@ class SCPhononator(DummyPhononator):
         """
 
         td = xp.zeros(self.dm.dof)
-        tdm = xp.zeros(self.dm.dof)
         itd = xp.zeros(self.dm.dof)
-        itdm = xp.zeros(self.dm.dof)
-        sqtdm = xp.zeros(self.dm.dof)
         sqtd = xp.zeros(self.dm.dof)
 
         if self.dm.mode == "qn":
@@ -847,35 +841,20 @@ class SCPhononator(DummyPhononator):
                 / xp.tanh(0.50 * self.dm.w[self.nz] / self.dm.temp)
             )
             td[self.z] = 0.0
-            tdm[self.nz] = xp.nan_to_num(
-                0.50
-                * self.dm.iw[self.nz]
-                / xp.tanh(0.50 * self.dm.w[self.nz] / self.dm.temp)
-            )
-            tdm[self.z] = 0.0
         elif self.dm.mode == "cl":
             td[self.nz] = (self.dm.iw[self.nz]) ** 2 * self.dm.temp
             td[self.z] = 0.0
-            tdm[self.nz] = (self.dm.iw[self.nz]) ** 2 * self.dm.temp
-            tdm[self.z] = 0.0
 
         # Calculates the inverse and the square of the mass scaled displacements.
         itd[self.nz] = 1.0 / td[self.nz]
         itd[self.z] = 0.0
-        itdm[self.nz] = 1.0 / tdm[self.nz]
-        itdm[self.z] = 0.0
         sqtd[self.nz] = xp.sqrt(td[self.nz])
         sqtd[self.z] = 0.0
-        sqtdm[self.nz] = xp.sqrt(tdm[self.nz])
-        sqtdm[self.z] = 0.0
 
         self.dm.itK = xp.eye(self.dm.dof) * 0.0
         self.dm.tD = xp.eye(self.dm.dof) * 0.0
-        self.dm.tDm = xp.eye(self.dm.dof) * 0.0
         self.dm.itD = xp.eye(self.dm.dof) * 0.0
-        self.dm.itDm = xp.eye(self.dm.dof) * 0.0
         self.dm.sqtD = xp.eye(self.dm.dof) * 0.0
-        self.dm.sqtDm = xp.eye(self.dm.dof) * 0.0
 
         for i in range(self.dm.dof):
             if self.z[i]:
@@ -884,15 +863,11 @@ class SCPhononator(DummyPhononator):
             m = U.T @ U
             self.dm.itK += self.dm.iw2[i] * m
             self.dm.tD += td[i] * m
-            self.dm.tDm += tdm[i] * m
             self.dm.itD += itd[i] * m
-            self.dm.itDm += itdm[i] * m
             self.dm.sqtD += sqtd[i] * m
-            self.dm.sqtDm += sqtd[i] * m
 
         self.dm.K = self.dm.sqM @ (self.dm.dynmatrix @ self.dm.sqM)
         self.dm.iD = self.dm.sqM @ (self.dm.itD @ self.dm.sqM)
-        self.dm.iDm = self.dm.sqM @ (self.dm.itDm @ self.dm.sqM)
         self.dm.D = self.dm.isqM @ (self.dm.tD @ self.dm.isqM)
         self.dm.sqD = self.dm.isqM @ (self.dm.sqtD @ self.dm.isqM)
         self.dm.iK = self.dm.isqM @ (self.dm.itK @ self.dm.isqM)
