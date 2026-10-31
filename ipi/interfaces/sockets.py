@@ -386,7 +386,7 @@ class Driver(DriverSocket):
                 self.get_status()
                 return
         else:
-            raise InvalidStatus("Status in init was " + self.status)
+            raise InvalidStatus("Status in init was " + str(self.status))
 
     def sendpos(self, pos, h_ih):
         """Sends the position and cell data to the driver.
@@ -425,7 +425,7 @@ class Driver(DriverSocket):
                 )
                 raise exc
         else:
-            raise InvalidStatus("Status in sendpos was " + self.status)
+            raise InvalidStatus("Status in sendpos was " + str(self.status))
 
     def _recv_forceready(self):
         """Receives the FORCEREADY header after GETFORCE has been sent.
@@ -453,7 +453,7 @@ class Driver(DriverSocket):
                     " @SOCKET:   Unexpected getforce reply: %s" % (reply),
                     verbosity.low,
                 )
-            if reply == "":
+            if reply == b"":
                 raise Disconnected()
 
     def _recv_force_data(self):
@@ -1021,7 +1021,7 @@ class SHMDriver(Driver):
     def sendpos(self, pos, h_ih):
         global TIMEOUT
         if not (self.status & Status.Ready):
-            raise InvalidStatus("Status in sendpos was " + self.status)
+            raise InvalidStatus("Status in sendpos was " + str(self.status))
         try:
             self.sendall(self._fill_shm([(pos, h_ih)]))
             self.status = Status.Up | Status.Busy
@@ -1328,9 +1328,9 @@ class InterfaceSocket(object):
         for c in self.clients:
             try:
                 c.shutdown(socket.SHUT_RDWR)
-                c.close()
             except:
                 pass
+            c.close()
 
         # flush it all down the drain
         self.clients = []
@@ -1338,12 +1338,12 @@ class InterfaceSocket(object):
 
         try:
             self.server.shutdown(socket.SHUT_RDWR)
-            self.server.close()
         except:
             info(
                 " @interfacesocket.close: Problem shutting down the server socket. Will just continue and hope for the best.",
                 verbosity.low,
             )
+        self.server.close()
         if self.mode in ("unix", "shm"):
             # both modes bind a unix-domain socket file that must be removed
             try:
@@ -1429,7 +1429,7 @@ class InterfaceSocket(object):
                     verbosity.low,
                 )
                 driver.get_status()
-                if driver.status | Status.Up:
+                if driver.status & Status.Up:
                     driver.exit_on_disconnect = self.exit_on_disconnect
                     self.clients.append(driver)
                     info(
@@ -1443,7 +1443,10 @@ class InterfaceSocket(object):
                         " @SOCKET:   Handshaking failed. Dropping connection.",
                         verbosity.low,
                     )
-                    client.shutdown(socket.SHUT_RDWR)
+                    try:
+                        client.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass  # the client is already disconnected
                     client.close()
             else:
                 keepsearch = False
@@ -1530,6 +1533,8 @@ class InterfaceSocket(object):
                 finished_ids.append(ijob)
             elif chk == 0:
                 self.poll_iter = UPDATEFREQ  # client disconnected. force a pool_update
+                # the job is dropped here, so pool_update cannot requeue its request
+                r["status"], r["start"] = "Queued", -1
                 finished_ids.append(ijob)
             nchecked += 1
         # batch removal of finished/disconnected jobs (reverse order to preserve indices)
@@ -1699,7 +1704,7 @@ class InterfaceSocket(object):
             return self._dispatch_free_client_batch(fc)
 
         for r in self.prlist[:]:
-            if match_ids == "match" and fc.lastreq is not r["id"]:
+            if match_ids == "match" and fc.lastreq != r["id"]:
                 continue
             elif match_ids == "none" and fc.lastreq is not None:
                 continue
@@ -1716,7 +1721,7 @@ class InterfaceSocket(object):
                 continue
 
             # makes sure the request is marked as running and the client included in the jobs list
-            fc.locked = fc.lastreq is r["id"]
+            fc.locked = fc.lastreq == r["id"]
 
             r["offset"] = (
                 self.offset
