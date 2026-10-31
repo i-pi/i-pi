@@ -1034,7 +1034,8 @@ class StringMover(Motion):
         # so that recalculation won't be triggered after the step.
         tmp_f = xp.asarray(self.full_f, copy=True)
         tmp_v = xp.asarray(self.full_v, copy=True)
-        tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.stringgrad
+        # the physical forces of the climbing bead, not the climbing ones
+        tmp_f[self.cl_indx] = self.climbgm.rforces.f[0]
         tmp_v[self.cl_indx] = self.stringpot
         # Forcefield results are stored as numpy arrays
         self.forces.transfer_forces_manual(

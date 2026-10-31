@@ -150,6 +150,10 @@ or because they were approved explicitly:
   `sqtDm`), equal to the others and never used, are removed (the `sqtdm` "typo" had no effect). New tests,
   including the convergence to the optimal Gaussian of a quartic double well, known in closed form for
   classical statistics and from a one-dimensional equation for quantum statistics.
+- Climbing-image NEB (and the string method): after each climbing step, the forces of the beads are stored so
+  that they are not recomputed; for the climbing bead this stored the gradient of the climbing force (opposite
+  sign, and inverted component along the path) instead of its physical force, which reached the force outputs,
+  everything reading the forces afterwards, and the forces saved in restarts. New unit test.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -226,7 +230,6 @@ bugs pass, and are no longer marked.
 ## Status and work left
 
 ### Pre-existing bugs found and not fixed (need a decision)
-- NEB/string climb writes the gradient (minus the climbing force) into the force output; maybe intended.
 - Instanton: the spring term for non-uniform discretizations (`SpringMapper`, under `if False:`) is disabled,
   while the physical potential is weighted by the discretization coefficients.
 - VSCF, not checked or changed: with `nprim > 1` the one-mode and the pair terms are scaled differently (the
