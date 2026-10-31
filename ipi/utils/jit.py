@@ -91,10 +91,24 @@ def _compiled(func):
         )
         return func
     try:
-        return torch.compile(func, fullgraph=True, dynamic=False)
+        compiled = torch.compile(func, fullgraph=True, dynamic=False)
     except RuntimeError as err:
         warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
         return func
+
+    @functools.wraps(func)
+    def call(*args):
+        nonlocal compiled
+        if compiled is not func:
+            # the function is compiled at the first call with new arguments
+            try:
+                return compiled(*args)
+            except Exception as err:
+                warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
+                compiled = func
+        return func(*args)
+
+    return call
 
 
 class _Recorder:
