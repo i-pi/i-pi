@@ -119,10 +119,13 @@ class depend_status(object):
         self.lock = threading.RLock()
 
     def __getstate__(self):
-        return (self.tainted, self.dependants, self.synchro)
+        # copies (deep copies and pickles) have no dependants and no synchronization
+        return self.tainted
 
     def __setstate__(self, state):
-        self.tainted, self.dependants, self.synchro = state
+        self.tainted = state
+        self.dependants = []
+        self.synchro = None
         self.lock = threading.RLock()
 
 
@@ -135,6 +138,10 @@ class depend_base(object):
             synchronized objects, it computes the value from the peer.
         _name: Human-readable name, used in error messages.
         _value: The stored value.
+
+    Deep copies and pickles of a depend object hold a copy of its value, and
+    are isolated: they have no dependants and are not synchronized. Views
+    cannot be copied.
     """
 
     __slots__ = ("_status", "_func", "_name", "_value", "__weakref__")
@@ -149,6 +156,7 @@ class depend_base(object):
         self._status.tainted = func is not None
 
     def __deepcopy__(self, memo):
+        _check_not_view(self)
         # `_func` is shared rather than copied: it is often a bound method
         # whose `__self__` may hold non-copyable state such as a lock.
         cls = type(self)
@@ -163,6 +171,7 @@ class depend_base(object):
         return newone
 
     def __getstate__(self):
+        _check_not_view(self)
         return {
             m: getattr(self, m) for m in _slot_names(type(self)) if hasattr(self, m)
         }
@@ -259,6 +268,13 @@ class depend_base(object):
         self._value = value
 
 
+def _check_not_view(dep):
+    if getattr(dep, "_parent", None) is not None:
+        raise TypeError(
+            f"<{dep._name}> is a view, which cannot be copied: copy its parent"
+        )
+
+
 def _slot_names(cls):
     """Names of all the slots defined by `cls` and its bases, except `__weakref__`
     and those replaced by a property (the value of `depend_immutable`)."""
@@ -307,8 +323,9 @@ def _is_scalar_index(index, ndim):
         return False
     if hasattr(index, "__len__"):
         if len(index) == ndim and isinstance(index, tuple):
+            # only integers select a single element
             for i in index:
-                if isinstance(i, slice):
+                if not (type(i) is int or isinstance(i, np.integer)):
                     return False
             return True
         return False
@@ -470,14 +487,16 @@ class depend_array(depend_base):
             self.taint(taintme=False)
 
     def reshape(self, *shape):
-        """Returns a reshaped view. Accepts `reshape((2, 3))` and `reshape(2, 3)`."""
+        """Returns a reshaped view. Accepts `reshape((2, 3))` and `reshape(2, 3)`.
+        Only contiguous views can be reshaped, as reshaping a non-contiguous
+        one would give a copy."""
 
         if len(shape) == 1:
             shape = shape[0]
         return self._view(self._value.reshape(shape), self._wvalue.reshape(shape))
 
     def flatten(self):
-        """Returns a 1D view."""
+        """Returns a 1D view (of a contiguous array, see `reshape`)."""
 
         return self.reshape(-1)
 
@@ -687,7 +706,7 @@ class depend_immutable(depend_array):
 
 
 def dpipe(dfrom, dto, item=-1):
-    """Synchonizes two depend objects.
+    """Makes a depend object follow the value of another.
 
     Takes two depend objects, and makes one of them depend on the other in such
     a way that both keep the same value. Used for attributes such as
@@ -703,6 +722,9 @@ def dpipe(dfrom, dto, item=-1):
         item: If non-negative, `dto` takes the value of `dfrom[item]`.
     """
 
+    assert (
+        dto._status.synchro is None and dto._root() is dto
+    ), f"<{dto._name}> is synchronized, or a view"
     dto._func = None
     if item < 0:
         dcompute(dto, dfrom.get, [dfrom])
