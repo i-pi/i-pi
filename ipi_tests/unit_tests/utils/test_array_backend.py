@@ -143,6 +143,19 @@ def jax_backend():
     ab.set_backend("numpy")
 
 
+def test_synchronize_waits_for_the_selected_device(monkeypatch):
+    """synchronize waits for the operations on the device of the arrays (e.g.
+    the second GPU), rather than on the current one"""
+
+    torch = pytest.importorskip("torch")
+    devices = []
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda d=None: devices.append(d))
+    monkeypatch.setitem(ab._current, "backend", "torch")
+    monkeypatch.setitem(ab._current, "device", "cuda:1")
+    ab.synchronize()
+    assert devices == ["cuda:1"]
+
+
 def test_jax_types_like_numpy(jax_backend):
     """With JAX, arrays are created with the types numpy would give"""
 
