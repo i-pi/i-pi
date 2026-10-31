@@ -873,7 +873,18 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
 
 # Damped BFGS to use in NEB. Has no line search and no TRM.
-def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
+def _max_atomic_displacement(dx, shape, mask):
+    """Largest displacement of an atom, given the displacements of the
+    coordinates, or of the free coordinates of each bead (`mask`)."""
+
+    if mask is not None:
+        full = xp.zeros((shape[0], len(mask)), dtype=dx.dtype)
+        full[:, xp.asarray(mask)] = dx.reshape(shape)
+        dx = full
+    return xp.max(xp.linalg.vector_norm(dx.reshape(-1, 3), axis=1))
+
+
+def Damped_BFGS(x0, fdf, fdf0, hessian, big_step, mask=None):
     """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
     The purpose is mostly using it for NEB optimization, but it is capable of
     plain geometry optimization also.
@@ -897,6 +908,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
       hessian: approximate Hessian for the BFGS algorithm
       big_step: limit on step length. It is defined differently
                   compared to other optimization algorithms, take care.
+      mask: the free coordinates of each bead, when x0 holds only those
 
     Returns:
       quality: minus cosine of the (gradient, dx) angle.
@@ -930,7 +942,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
 
     # I use maximal cartesian atomic displacement as a measure of step length
-    maxdispl = xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))
+    maxdispl = _max_atomic_displacement(sk, x0.shape, mask)
     info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
     if maxdispl > big_step:
         info(
@@ -941,7 +953,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     info(
         " @DampedBFGS: maxdispl:                %.6f bohr"
-        % (xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))),
+        % _max_atomic_displacement(sk, x0.shape, mask),
         verbosity.debug,
     )
 

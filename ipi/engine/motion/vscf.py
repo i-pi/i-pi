@@ -39,11 +39,26 @@ try:
     from scipy.special import hermite
     from scipy.special import logsumexp
     from scipy.interpolate import interp1d
-    from scipy.interpolate import interp2d
+    from scipy.interpolate import RectBivariateSpline
 except Exception as e:
     scipy = None
     scipy_exception = e
 from itertools import combinations
+
+
+def _coupling_on_grid(qi, qj, v, igrid, jgrid):
+    """Returns the pair coupling V(qi, qj) - V(qi, 0) - V(0, qj) + V(0, 0) on
+    igrid x jgrid, indexed as [j, i], interpolating with bicubic splines the
+    potential v sampled on qi x qj (flattened, with qi as the outer index)."""
+
+    spline = RectBivariateSpline(qi, qj, np.reshape(v, (len(qi), len(qj))))
+    vij = (
+        spline(igrid, jgrid)
+        - spline(igrid, [0.0])
+        - spline([0.0], jgrid)
+        + spline([0.0], [0.0])
+    )
+    return vij.T
 
 
 class NormalModeMover(Motion):
@@ -329,9 +344,8 @@ class IMF(DummyCalculator):
 
         # Calculates the free and internal energy
         A = -logsumexp(-1.0 * evals / self.imm.temp) * self.imm.temp
-        E = np.sum(evals * np.exp(-1.0 * evals / self.imm.temp)) / np.sum(
-            np.exp(-1.0 * evals / self.imm.temp)
-        )
+        weights = np.exp(-(evals - evals[0]) / self.imm.temp)
+        E = np.sum(evals * weights) / np.sum(weights)
 
         if return_eigsys:
             return A, E, evals, evecs.T
@@ -409,7 +423,7 @@ class IMF(DummyCalculator):
                 bs_Aanh.append(bs_AEanh[0])
                 bs_Eanh.append(bs_AEanh[1])
 
-                dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
+                dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2])
                 info(
                     " @NM: CONVERGENCE : nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
                     % (nnbasis, bs_Aanh[-1].item(), dA.item(), self.athresh),
@@ -582,7 +596,7 @@ class IMF(DummyCalculator):
                     bs_Aanh.append(bs_AEanh[0])
                     bs_Eanh.append(bs_AEanh[1])
 
-                    dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
+                    dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2])
                     info(
                         " @NM: CONVERGENCE : fnmrms = %10.8e   nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
                         % (
@@ -605,7 +619,7 @@ class IMF(DummyCalculator):
                 Eanh.append(bs_Eanh[-1])
 
                 # Check whether anharmonic frequency is converged
-                dA = np.abs(Aanh[-1] - Aanh[-2]) / (self.dof - self.imm.nz)
+                dA = np.abs(Aanh[-1] - Aanh[-2])
                 if dA < self.athresh:
                     break
 
@@ -649,25 +663,9 @@ class IMF(DummyCalculator):
             )
             * self.imm.temp
         )
-        Zhar = np.sum(
-            [
-                np.exp(-1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp)
-                for i in range(nnbasis)
-            ]
-        )
-        Ehar = (
-            np.sum(
-                [
-                    np.sqrt(self.imm.w2[step])
-                    * (0.5 + i)
-                    * np.exp(
-                        -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
-                    )
-                    for i in range(nnbasis)
-                ]
-            )
-            / Zhar
-        )
+        levels = np.sqrt(self.imm.w2[step]) * (0.5 + np.arange(nnbasis))
+        weights = np.exp(-(levels - levels[0]) / self.imm.temp)
+        Ehar = np.sum(levels * weights) / np.sum(weights)
 
         info(
             " @NM: HAR frequency     =  %10.8e" % (self.imm.w[step],), verbosity.medium
@@ -837,12 +835,8 @@ class VSCF(IMF):
         self.npts = np.zeros(self.dof, dtype=int)
         self.npts_neg = np.zeros(self.dof, dtype=int)
         self.npts_pos = np.zeros(self.dof, dtype=int)
-        self.v_indep_list = []
-        self.displacements_nm = []
-        self.displacements_nm = []
-
-        for x in range(self.dof - dof):
-            self.displacements_nm.append([0])
+        self.v_indep_list = {}
+        self.displacements_nm = {}
 
         if self.solve or self.grid:
             self.q_grids = np.zeros((self.dof, self.nint))
@@ -912,19 +906,15 @@ class VSCF(IMF):
                     self.npts[self.inms] = (
                         self.npts_neg[self.inms] + self.npts_pos[self.inms] + 1
                     )
-                self.v_indep_list.append(
-                    np.loadtxt(
-                        self.imm.output_maker.prefix + "." + self.v_indep_filename
-                    ).T
-                )
-                self.displacements_nm.append(
-                    [
-                        self.fnmrms
-                        * self.nmrms[self.inm]
-                        * (-self.npts_neg[self.inm] + i - 2.0)
-                        for i in range(self.npts[self.inm] + 4)
-                    ]
-                )
+                self.v_indep_list[self.inm] = np.loadtxt(
+                    self.imm.output_maker.prefix + "." + self.v_indep_filename
+                ).T
+                self.displacements_nm[self.inm] = [
+                    self.fnmrms
+                    * self.nmrms[self.inm]
+                    * (-self.npts_neg[self.inm] + i - 2.0)
+                    for i in range(self.npts[self.inm] + 4)
+                ]
                 info(
                     " @NM: Loading the sampled potential energy for mode  %8d"
                     % (self.inm,),
@@ -951,15 +941,13 @@ class VSCF(IMF):
                 self.npts[self.inm] = (
                     self.npts_neg[self.inm] + self.npts_pos[self.inm] + 1
                 )
-                self.v_indep_list.append(v_indeps)
-                self.displacements_nm.append(
-                    [
-                        self.fnmrms
-                        * self.nmrms[self.inm]
-                        * (-self.npts_neg[self.inm] + i - 2.0)
-                        for i in range(self.npts[self.inm] + 4)
-                    ]
-                )
+                self.v_indep_list[self.inm] = v_indeps
+                self.displacements_nm[self.inm] = [
+                    self.fnmrms
+                    * self.nmrms[self.inm]
+                    * (-self.npts_neg[self.inm] + i - 2.0)
+                    for i in range(self.npts[self.inm] + 4)
+                ]
 
                 info(
                     " @NM: Using %8d configurations along the +ve direction."
@@ -1001,8 +989,8 @@ class VSCF(IMF):
                         verbosity.medium,
                     )
                     vspline = interp1d(
-                        self.displacements_nm[-1],
-                        self.v_indep_list[-1],
+                        self.displacements_nm[self.inm],
+                        self.v_indep_list[self.inm],
                         kind="cubic",
                         bounds_error=False,
                     )
@@ -1047,7 +1035,6 @@ class VSCF(IMF):
             # Selects the normal mode pair to map out.
             vijgrid = None
             self.inm, self.jnm = self.pair_combinations[step - len(self.inms) - 1]
-            self.inm_index, self.jnm_index = self.inm - self.nz, self.jnm - self.nz
 
             # Defines the names of the files that store the sampled
             # and the interpolated potential energy.
@@ -1120,9 +1107,9 @@ class VSCF(IMF):
                     for j in range(self.npts[self.jnm] + 4):
                         # Uses on-axis potentials are available from 1D maps.
                         if (-self.npts_neg[self.inm] + i - 2) == 0:
-                            self.v_coupled[k] = self.v_indep_list[self.jnm_index][j]
+                            self.v_coupled[k] = self.v_indep_list[self.jnm][j]
                         elif (-self.npts_neg[self.jnm] + j - 2) == 0:
-                            self.v_coupled[k] = self.v_indep_list[self.inm_index][i]
+                            self.v_coupled[k] = self.v_indep_list[self.inm][i]
                         else:
                             self.imm.dbeads.q = (
                                 self.imm.beads.q
@@ -1184,13 +1171,6 @@ class VSCF(IMF):
                         % (self.nint, self.nint),
                         verbosity.medium,
                     )
-                    vtspl = interp2d(
-                        displacements_nmi,
-                        displacements_nmj,
-                        self.v_coupled,
-                        kind="cubic",
-                        bounds_error=False,
-                    )
                     igrid = np.linspace(
                         -self.npts_neg[self.inm] * self.fnmrms * self.nmrms[self.inm],
                         self.npts_pos[self.inm] * self.fnmrms * self.nmrms[self.inm],
@@ -1201,11 +1181,12 @@ class VSCF(IMF):
                         self.npts_pos[self.jnm] * self.fnmrms * self.nmrms[self.jnm],
                         self.nint,
                     )
-                    vijgrid = (
-                        vtspl(igrid, jgrid)
-                        - vtspl(igrid, jgrid * 0.0)
-                        - vtspl(igrid * 0.0, jgrid)
-                        + vtspl(igrid * 0.0, jgrid * 0.0)
+                    vijgrid = _coupling_on_grid(
+                        displacements_nmi,
+                        displacements_nmj,
+                        self.v_coupled,
+                        igrid,
+                        jgrid,
                     )
 
                     # Save coupling correction to file for vistualisation.
@@ -1228,9 +1209,6 @@ class VSCF(IMF):
                         + str(self.inm)
                         + ".dat"
                     )
-                    # vtspl = interp2d(displacements_nmj, displacements_nmi, self.v_coupled, kind='cubic', bounds_error=False)
-                    # vijgrid = vtspl(jgrid, igrid) - vtspl(jgrid, igrid * 0.0) - vtspl(jgrid * 0.0, igrid) + vtspl(jgrid * 0.0, igrid * 0.0)
-
                     # Save coupling correction to file for vistualisation.
                     info(
                         " @NM: Saving the interpolated potential energy to %s"
@@ -1316,29 +1294,16 @@ class VSCF(IMF):
 
         vscf_iter = 0
         a_imf = self.v0 + ai.sum()
-        a_imf = ai.sum()
         a_vscf = a_imf
+        mean_field = np.zeros_like(self.v_mft_grids)
         self.evals_vscf, self.evecs_vscf = self.evals_imf.copy(), self.evecs_imf.copy()
         info(" @NM: The total IMF free energy is %10.8e" % (a_imf), verbosity.medium)
         info("\n @NM: The SCF begins.", verbosity.medium)
 
         while True:
-            # Calculates the VSCF free energy.
-            a_vscf_old = a_vscf
-            a_vscf = self.v0 + ai.sum()
-            a_vscf = ai.sum()
-            vscf_iter += 1
-            da = np.absolute(a_vscf - a_vscf_old) / len(self.inms)
-            info(
-                " @NM: CONVERGENCE : iteration = %8d   A =  %10.8e    D(A) = %10.8e / %10.8e"
-                % (vscf_iter, a_vscf.item(), da.item(), self.athresh),
-                verbosity.medium,
-            )
-
-            # Calculates the thermal density for each normal mode.
-            # This is essentially the square of the wave function
+            # Calculates the thermal density for each normal mode (Kapil et al.,
+            # JCTC 15, 5845 (2019), Eq. 18), i.e. the square of the wave function
             # times the Boltzmann density of each state.
-            # info(' @NM: Calculating the thermal density.', verbosity.medium)
             self.rho_grids *= 0.0
             for inm in self.inms:
                 for ibasis in range(self.nbasis):
@@ -1351,41 +1316,52 @@ class VSCF(IMF):
                         * np.dot(self.psi_i_grids[inm].T, self.evecs_vscf[inm, ibasis])
                         ** 2
                     )
-                    self.rho_grids[inm] /= self.rho_grids[inm].sum()
+                self.rho_grids[inm] /= self.rho_grids[inm].sum()
 
-            # Calculates the mean field potential for each normal
-            # mode and solves the Schroedinger's equation.
+            # Calculates the mean field of the pair couplings for each normal mode (Eq. 17).
             for inm in self.inms:
-                self.v_mft_grids[inm] = (
-                    self.v_indep_grids[inm] + (1 - self.alpha) * self.v_mft_grids[inm]
-                )
                 fn = self.v_coupled_grids_file_prefix + "." + str(inm) + ".dat"
                 vcg = np.load(self.imm.output_maker.prefix + "." + fn)
+                mean_field[inm] = 0.0
                 for jnm in self.inms:
-                    self.v_mft_grids[inm] += (
-                        self.alpha * np.dot(vcg[jnm], self.rho_grids[jnm]) / self.nprim
+                    mean_field[inm] += (
+                        np.dot(vcg[jnm], self.rho_grids[jnm]) / self.nprim
                     )
 
-                (
-                    ai[inm],
-                    ei[inm],
-                    self.evals_vscf[inm],
-                    self.evecs_vscf[inm],
-                ) = self.solve_schroedingers_equation(
-                    self.imm.w[inm], self.psi_i_grids[inm], self.v_mft_grids[inm], True
+            # Calculates the VSCF free energy, the variational (Gibbs-Bogoliubov)
+            # free energy of the product of the thermal densities: the free energies
+            # of the modes in their mean-field potentials count each pair coupling
+            # twice, unlike Eq. 19
+            a_vscf_old = a_vscf
+            a_vscf = self.v0
+            for inm in self.inms:
+                rho = self.rho_grids[inm]
+                a_vscf += ai[inm] - rho @ (
+                    self.v_mft_grids[inm] - self.v_indep_grids[inm]
                 )
+                a_vscf += 0.5 * rho @ mean_field[inm]
+            vscf_iter += 1
+            da = np.absolute(a_vscf - a_vscf_old) / len(self.inms)
+            info(
+                " @NM: CONVERGENCE : iteration = %8d   A =  %10.8e    D(A) = %10.8e / %10.8e"
+                % (vscf_iter, a_vscf.item(), da.item(), self.athresh),
+                verbosity.medium,
+            )
 
             # Checks the convergence of the SCF procedure.
-            da = np.absolute(a_vscf - a_vscf_old) / len(self.inms)
             if da < self.athresh and vscf_iter > 4:
+                # free energies per primitive cell
+                self.total_imf_free_energy = a_imf / self.nprim
+                self.total_vscf_free_energy = a_vscf / self.nprim
                 info("\n @NM: Convergence reached.", verbosity.medium)
                 info(
-                    " @NM: IMF free energy             = %10.8e" % (a_imf / self.nprim),
+                    " @NM: IMF free energy             = %10.8e"
+                    % self.total_imf_free_energy,
                     verbosity.low,
                 )
                 info(
                     " @NM: VSCF free energy correction = %10.8e"
-                    % ((a_vscf - a_imf) / self.nprim),
+                    % (self.total_vscf_free_energy - self.total_imf_free_energy),
                     verbosity.low,
                 )
                 info(
@@ -1412,6 +1388,21 @@ class VSCF(IMF):
                 outfile.close_stream()
                 self.terminate()
                 return
+
+            # Mixes the mean-field potentials, as mixing the densities, and solves
+            # the Schroedinger's equation of each mode.
+            for inm in self.inms:
+                self.v_mft_grids[inm] = (1 - self.alpha) * self.v_mft_grids[
+                    inm
+                ] + self.alpha * (self.v_indep_grids[inm] + mean_field[inm])
+                (
+                    ai[inm],
+                    ei[inm],
+                    self.evals_vscf[inm],
+                    self.evecs_vscf[inm],
+                ) = self.solve_schroedingers_equation(
+                    self.imm.w[inm], self.psi_i_grids[inm], self.v_mft_grids[inm], True
+                )
 
     def one_dimensional_mapper(self, step):
         """

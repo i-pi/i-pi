@@ -111,6 +111,29 @@ or because they were approved explicitly:
   change out (since the motion was written), so path-integral simulations did not sample the right
   distribution. It is computed from the normal modes, as in the alchemical exchange. Results of PIMD with
   atom swaps change; classical ones do not. Strict xfail of the unit tests, extended to an accepted swap.
+- Geometry optimization with `damped_bfgs` and fixed coordinates (`fixatoms_dof`): the step was limited by the
+  displacements of triplets of free coordinates, which failed when their number is not a multiple of 3, and
+  mixed the coordinates of different atoms otherwise. The displacements of the atoms are now computed from
+  the free coordinates. Strict xfail of the unit tests, plus a test of the step measure.
+- IMF and VSCF (`normalmodes`), checked against Kapil, Engel, Rossi, Ceriotti, JCTC 15, 5845 (2019), which
+  describes this implementation:
+  - VSCF with `grid=True` failed with scipy >= 1.14 (`interp2d` was removed); the pair couplings are
+    interpolated with `RectBivariateSpline`, the same bicubic interpolation.
+  - In the SCF, the thermal density of each mode was normalised after adding each state instead of once,
+    which weights the excited states wrongly (it matters for modes with hbar w below ~2 kT); mixing the mean
+    field (`alpha` < 1) converged to v_indep/alpha + mean field; the one-mode potentials used in the pair maps
+    were taken by the index of the mode minus the number of zero modes, wrong when a list of modes is given
+    (`modes.dat`) or when low-frequency modes are left out.
+  - The VSCF free energy is the variational (Gibbs-Bogoliubov) free energy of the product of the thermal
+    densities, sum_i A_i - sum_{i<j} <<V2_ij>>. The sum of the free energies of the modes in their mean
+    fields (Eq. 19 of the paper, used so far) counts each pair coupling twice: for weak couplings the VSCF
+    correction to the IMF free energy is about half of what it was. VSCF results change.
+  - The free energy of each mode is converged to `athresh`, as documented (the change was divided by the
+    number of modes), and the internal energies use Boltzmann weights relative to the ground state (they were
+    NaN below a few K). The IMF free energy printed by VSCF includes the potential offset, as in IMF.
+  - The IMF and VSCF free energies are stored as `total_imf_free_energy` and `total_vscf_free_energy`.
+  New tests on separable and coupled Morse potentials against exact references, and of the pair coupling of
+  a polynomial.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -192,8 +215,12 @@ bugs pass, and are no longer marked.
   (`np.arange(omegak.shape)`); `FrictionMapper.evaluate` adds the total friction energy to every bead (counted
   nbeads times in line-search energies). Dead code: `DummyOptimizer.opt_coef`, the `banded = False` branch of
   `LanczosOptimizer`; `Mapper.__call__` passes `new_disc` positionally into `SpringMapper`'s `ret`.
-- VSCF with `grid=True` crashes: `scipy.interpolate.interp2d` was removed in scipy 1.14 (the examples run only
-  one step).
+- VSCF, not checked or changed: with `nprim > 1` the one-mode and the pair terms are scaled differently (the
+  pair mean field is divided by `nprim` once more); `mptwo`, `threebody`, `print_mftpot`, `print_2b_map`,
+  `print_vib_density`, `nkbt`, `nexc` and `ethresh` are accepted but not used (the MP2 correction and the
+  three-body terms of Kapil et al. are not implemented); the solver uses a fixed basis for the one-mode
+  problems (1.8e-4 Ha below the exact IMF free energy at kT ~ hbar w in the test model, which the IMF calculation
+  converges), and has no limit on the number of SCF iterations.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
   using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
   Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
