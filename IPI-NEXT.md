@@ -134,6 +134,14 @@ or because they were approved explicitly:
   - The IMF and VSCF free energies are stored as `total_imf_free_energy` and `total_vscf_free_energy`.
   New tests on separable and coupled Morse potentials against exact references, and of the pair coupling of
   a polynomial.
+- Instanton rates with friction, checked against Litman et al., JCP 156, 194106 (2022): without a tabulated
+  Laplace transform of the friction kernel (`fric_spec_dens`), i.e. with frequency-independent friction, the
+  setup failed; the friction energy of the ring polymer (Eq. 20) was added to the energy of every bead, so the
+  energies summed by the optimizers counted it nbeads times while the gradient counted it once; the Laplace
+  transform was not divided by its value at `fric_spec_dens_ener` (compared and evaluated in cm^-1 against
+  frequencies in atomic units since d4dd9d70), which changes the results of the runs that set it. Removed
+  `DummyOptimizer.opt_coef` and the unreachable full-matrix branch of the Lanczos step; `Mapper` passes
+  `new_disc` to `SpringMapper` by keyword (it went into `ret`). New unit tests.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -211,10 +219,8 @@ bugs pass, and are no longer marked.
 
 ### Pre-existing bugs found and not fixed (need a decision)
 - NEB/string climb writes the gradient (minus the climbing force) into the force output; maybe intended.
-- Instanton friction: without a spectral density, `FrictionMapper.set_fric_spec_dens` crashes
-  (`np.arange(omegak.shape)`); `FrictionMapper.evaluate` adds the total friction energy to every bead (counted
-  nbeads times in line-search energies). Dead code: `DummyOptimizer.opt_coef`, the `banded = False` branch of
-  `LanczosOptimizer`; `Mapper.__call__` passes `new_disc` positionally into `SpringMapper`'s `ret`.
+- Instanton: the spring term for non-uniform discretizations (`SpringMapper`, under `if False:`) is disabled,
+  while the physical potential is weighted by the discretization coefficients.
 - VSCF, not checked or changed: with `nprim > 1` the one-mode and the pair terms are scaled differently (the
   pair mean field is divided by `nprim` once more); `mptwo`, `threebody`, `print_mftpot`, `print_2b_map`,
   `print_vib_density`, `nkbt`, `nexc` and `ethresh` are accepted but not used (the MP2 correction and the

@@ -13,24 +13,30 @@ from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
+def friction_mapper(s, eta):
+    """A FrictionMapper with a constant friction tensor, bound to system s."""
+    mapper = FrictionMapper(False, eta)
+    mapper.bind(
+        SimpleNamespace(
+            beads=s.beads,
+            cell=s.cell,
+            forces=s.forces,
+            nm=s.nm,
+            rp_factor=1.0,
+            fix=SimpleNamespace(nactive=2),
+            coef=np.ones((s.beads.nbeads + 1, 1)),
+            options={"max_ms": 0, "max_e": 0},
+        )
+    )
+    return mapper
+
+
 @pytest.mark.parametrize("count", [4, 7])
 def test_constant_friction_action_gradient_and_hessian(simulation, count):
     with simulation(harmonic_input(nbeads=count)) as sim:
         s = sim.syslist[0]
         eta = np.diag(np.arange(1.0, 7.0))
-        mapper = FrictionMapper(False, eta)
-        mapper.bind(
-            SimpleNamespace(
-                beads=s.beads,
-                cell=s.cell,
-                forces=s.forces,
-                nm=s.nm,
-                rp_factor=1.0,
-                fix=SimpleNamespace(nactive=2),
-                coef=np.ones((count + 1, 1)),
-                options={"max_ms": 0, "max_e": 0},
-            )
-        )
+        mapper = friction_mapper(s, eta)
         # Constant spectral density over every normal-mode frequency.
         conversion = unit_to_internal("frequency", "inversecm", 1.0)
         data = np.column_stack(
@@ -63,6 +69,48 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
         shifted_energy, shifted_gradient = mapper.compute_friction_terms()
         assert shifted_energy == pytest.approx(energy, abs=1e-12)
         np.testing.assert_allclose(shifted_gradient, gradient, atol=1e-12)
+
+
+def test_friction_without_laplace_transform_is_frequency_independent(simulation):
+    """Without a tabulated Laplace transform of the friction kernel, the friction
+    is frequency independent (Litman et al., JCP 156, 194106 (2022), Eq. 20)"""
+    with simulation(harmonic_input(nbeads=4)) as sim:
+        mapper = friction_mapper(sim.syslist[0], np.eye(6))
+        mapper.set_fric_spec_dens(np.ones(0), 0.0)
+        np.testing.assert_allclose(mapper.fric_LTwk[:, 0], mapper.omegak)
+
+
+def test_laplace_transform_is_normalised_at_the_reference_energy(simulation):
+    """The tabulated Laplace transform of the friction kernel (frequencies in
+    cm^-1) is divided by its value at the energy at which the friction tensor
+    was computed (in atomic units)"""
+    with simulation(harmonic_input(nbeads=4)) as sim:
+        mapper = friction_mapper(sim.syslist[0], np.eye(6))
+        conversion = unit_to_internal("frequency", "inversecm", 1.0)
+        top = 2 * max(mapper.omegak)
+        freq = np.linspace(0, top, 9)
+        data = np.column_stack([freq / conversion, 1 + freq / top])
+        energy = 0.3 * top
+        mapper.set_fric_spec_dens(data, energy)
+        expected = mapper.omegak * (1 + mapper.omegak / top) / (1 + energy / top)
+        np.testing.assert_allclose(mapper.fric_LTwk[:, 0], expected, rtol=1e-10)
+
+
+def test_friction_energy_is_a_term_of_the_ring_polymer(simulation):
+    """The energies of the beads, which the optimizers sum, include the friction
+    energy of the ring polymer once"""
+    with simulation(harmonic_input(nbeads=4)) as sim:
+        mapper = friction_mapper(sim.syslist[0], np.diag(np.arange(1.0, 7.0)))
+        mapper.set_fric_spec_dens(np.ones(0), 0.0)
+        q = np.linspace(-0.2, 0.4, 4)[:, None] * np.arange(1.0, 7.0)[None, :]
+        mapper.dbeads.q_[:] = q
+        mapper.initialize(q, mapper.dforces)
+        friction, _ = mapper.compute_friction_terms()
+        energy, _ = mapper.evaluate()
+        assert friction > 0
+        assert np.sum(energy) == pytest.approx(
+            np.sum(mapper.dforces.pots) + friction, rel=1e-12
+        )
 
 
 @pytest.mark.parametrize("case", ["TS", "splitting", "rate"])
