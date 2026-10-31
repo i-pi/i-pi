@@ -32,18 +32,8 @@ def test_geop_reset_restores_the_trust_radius(trust_radius):
     "method", ["sd", "cg", "bfgs", "bfgstrm", "lbfgs", "damped_bfgs"]
 )
 @pytest.mark.parametrize("selection", [None, "fixatoms", "fixatoms_dof"])
-def test_geometry_optimization_finds_harmonic_minimum(
-    simulation, method, selection, request
-):
+def test_geometry_optimization_finds_harmonic_minimum(simulation, method, selection):
     """Minimize free coordinates while preserving any fixed atoms or coordinates."""
-    if method == "damped_bfgs" and selection == "fixatoms_dof":
-        request.node.add_marker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=ValueError,
-                reason="Damped_BFGS reshapes five free coordinates into triples",
-            )
-        )
     root = ET.fromstring(harmonic_input())
     motion = root.find("system/motion")
     motion.clear()

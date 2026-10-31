@@ -775,6 +775,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
                 fdf0,
                 masked_invhessian,
                 self.big_step,
+                mask=self.gm.fixatoms_mask,
             )
 
             # Restore dimensionality of the invhessian

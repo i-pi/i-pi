@@ -3,7 +3,14 @@
 import numpy as np
 import pytest
 
-from ipi.utils.mintools import L_BFGS_nls, min_brent_neb, min_trm, nichols, Powell
+from ipi.utils.mintools import (
+    L_BFGS_nls,
+    _max_atomic_displacement,
+    min_brent_neb,
+    min_trm,
+    nichols,
+    Powell,
+)
 
 
 @pytest.mark.parametrize("radius", [0.1, 10.0])
@@ -86,3 +93,14 @@ def test_lbfgs_without_line_search_on_quadratic():
         )
         assert value == pytest.approx(objective(x)[0])
     np.testing.assert_allclose(x, 0, atol=1e-6)
+
+
+def test_damped_bfgs_step_is_measured_on_atoms():
+    """With fixed coordinates, the step of Damped_BFGS is limited by the
+    displacements of the atoms, not of triplets of free coordinates"""
+
+    # z of the first atom, x and y of the second
+    mask = np.array([False, False, True, True, True, False])
+    dx = np.array([[3.0, 4.0, 0.0]])
+    assert _max_atomic_displacement(dx.reshape(-1), dx.shape, mask) == 4.0
+    assert _max_atomic_displacement(dx.reshape(-1), dx.shape, None) == 5.0
