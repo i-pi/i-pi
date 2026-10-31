@@ -218,8 +218,8 @@ class DynMatrixMover(Motion):
                     * self.m[k]
                 )
 
-            # moi is symmetric, so its eigenvectors are real
-            U = xp.real(xp.linalg.eig(moi)[1])
+            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+            U = xp.linalg.eigh(moi)[1]
             R = qminuscom @ U
             D = xp.zeros((3, 3 * self.beads.natoms))
 
@@ -252,8 +252,8 @@ class DynMatrixMover(Motion):
                     * self.m[k]
                 )
 
-            # moi is symmetric, so its eigenvectors are real
-            U = xp.real(xp.linalg.eig(moi)[1])
+            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+            U = xp.linalg.eigh(moi)[1]
             R = qminuscom @ U
             D = xp.zeros((6, 3 * self.beads.natoms))
 

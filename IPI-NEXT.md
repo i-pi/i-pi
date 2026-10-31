@@ -75,6 +75,15 @@ or because they were approved explicitly:
   forever; `InvalidStatus` raised a `TypeError` instead; `close` did not close the sockets whose `shutdown`
   failed. The batched `gas` and `harmonic` drivers of `FFDirect` evaluate structures with different numbers
   of atoms one at a time (they assumed equal sizes). All were strict xfails of the unit tests.
+- `logsumlog` (sums of signed numbers stored as logarithms) gave the wrong result when the larger term was
+  negative (-3 + 2 gave -5), which affected the isotope fractionation estimators (`isotope_scfep`,
+  `isotope_tdfep`) when the centroid-virial kinetic term is negative for some configurations. `apply_asr`
+  (phonons, SCP, `hesstools`) diagonalized the inertia tensor with `eig`, which gives non-orthogonal
+  eigenvectors when two moments of inertia are equal (symmetric and spherical tops), so the removal of the
+  rotations (`asr="poly"`) was not a projection; it uses `eigh`. `Cqp` (GLE tools) rescaled the drift matrix
+  the wrong way, giving wrong <q^2> and <qs> for frequencies other than 1 (`gle_frequency_kernel` only uses the
+  momentum column, which was right). The unused, and incorrect, `exp_ut3x3` and `eigensystem_ut3x3` are
+  removed. Strict xfails of the unit tests, plus a new test for the symmetric top.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -162,7 +171,6 @@ bugs pass, and are no longer marked.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
   using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
   Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
-- `apply_asr` (phonontools, hesstools) uses `eig` on the symmetric inertia tensor; `eigh` would be cleaner.
 - Planetary output: `netstring_encoded_savez` writes the bytes of `np.savez` through `io.StringIO` into a
   text-mode file (Python 2 leftover), so saving the frequency matrix fails.
 - `Properties.get_vcom(bead=...)` uses an `Atoms` object as momenta, and the bead index arrives as a string.

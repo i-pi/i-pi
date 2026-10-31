@@ -26,8 +26,8 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
             * m[k]
         )
 
-    # moi is symmetric, so its eigenvectors are real
-    U = xp.real(xp.linalg.eig(moi)[1])
+    # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+    U = xp.linalg.eigh(moi)[1]
     R = qminuscom @ U
 
     if asr == "crystal":

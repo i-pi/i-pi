@@ -76,9 +76,8 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
                     * mm[k]
                 )
 
-            # moi is symmetric, so eigenvalues and eigenvectors are real
-            I, U = xp.linalg.eig(moi)
-            I, U = xp.real(I), xp.real(U)
+            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+            I, U = xp.linalg.eigh(moi)
             R = qminuscom @ U
             D = xp.zeros((6, 3 * ii))
 
