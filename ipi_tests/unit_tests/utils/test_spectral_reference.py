@@ -6,23 +6,7 @@ from ipi.utils.tools.gle import Aqp, Dqp, Cqp, gle_frequency_kernel, isra_deconv
 from ipi.utils.tools.acf_xyz import compute_acf_xyz
 
 
-@pytest.mark.parametrize(
-    "frequency",
-    [
-        1.0,
-        *[
-            pytest.param(
-                w,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="Cqp frequency rescaling violates the covariance equation",
-                ),
-            )
-            for w in [0.2, 3.0]
-        ],
-    ],
-)
+@pytest.mark.parametrize("frequency", [1.0, 0.2, 3.0])
 @pytest.mark.parametrize("auxiliary", [False, True])
 def test_gle_covariance_solves_lyapunov_equation(frequency, auxiliary):
     ap = np.array([[1.0, 0.3], [-0.3, 2.0]]) if auxiliary else np.array([[0.7]])

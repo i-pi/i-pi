@@ -126,11 +126,59 @@ def test_advanced_index_inplace_operators(backend, index):
         ab.set_backend("numpy")
 
 
+def test_depend_objects_are_read_up_to_date():
+    """Depend: a depend object that is assigned or added to an array is
+    recomputed first if it is out of date"""
+    h = Holder()
+    c = dp.depend_array(name="c", value=np.zeros(4))
+    h.x_ += 1.0
+    c.set(h.y_)
+    assert np.array_equal(c.get(), 2 * np.ones(4))
+    h.x_ += 1.0
+    c[:] = h.y_
+    assert np.array_equal(c.get(), 4 * np.ones(4))
+    h.x_ += 1.0
+    c += h.y_
+    assert np.array_equal(c.get(), 10 * np.ones(4))
+
+
+def test_inplace_operators_with_other_arrays_raise():
+    """Depend: an in-place operator that cannot update the stored array in
+    place (a torch tensor and a numpy array) raises, rather than losing the
+    update"""
+    pytest.importorskip("torch")
+    ab.set_backend("torch")
+    try:
+        h = Holder()
+        assert np.array_equal(ab.to_numpy(h.y), np.zeros(4))
+        with pytest.raises(TypeError):
+            h.x_ += np.ones(4)
+        assert not h.y_.tainted()
+        assert np.array_equal(ab.to_numpy(h.x), np.zeros(4))
+    finally:
+        ab.set_backend("numpy")
+
+
 def test_computed_cannot_be_set():
     """Depend: setting a computed quantity raises"""
     h = Holder()
     with pytest.raises(NameError):
         h.y = np.ones(4)
+
+
+def test_views_of_computed_arrays_cannot_be_written():
+    """Depend: writing a view of a computed quantity raises, as writing the
+    quantity itself does, instead of being lost at the next recompute"""
+    h = Holder()
+    view = h.y_[1:3]
+    with pytest.raises(NameError):
+        view[:] = 1.0
+    with pytest.raises(NameError):
+        view.set(ab.xp.ones(2))
+    with pytest.raises(NameError):
+        view += 1.0
+    with pytest.raises(NameError):
+        h.y_.flatten()[0] = 1.0
 
 
 def test_readonly():
@@ -171,6 +219,37 @@ def test_deepcopy():
     assert cp[0] == 5.0
     assert da[0] == 1.0
     assert cp._status is not da._status
+
+
+def test_copies_are_isolated():
+    """Depend: deep copies and pickles of a depend object hold a copy of its
+    value, without its dependants, and views cannot be copied"""
+    h = Holder()
+    h.y
+    for copy in (deepcopy(h.x_), pickle.loads(pickle.dumps(h.x_))):
+        assert copy._status.dependants == []
+        copy[0] = 1.0
+        assert not h.y_.tainted()
+        assert np.array_equal(h.x, np.zeros(4))
+    with pytest.raises(TypeError, match="view"):
+        deepcopy(h.x_[1:3])
+    with pytest.raises(TypeError, match="view"):
+        pickle.dumps(h.x_[1:3])
+
+
+def test_ellipsis_and_new_axes_select_views():
+    """Depend: indices with Ellipsis or None select views connected to the
+    array, as those with slices do"""
+    a = dp.depend_array(name="a", value=np.zeros((2, 3)))
+    b = dp.depend_array(
+        name="b", value=np.zeros((2, 3)), func=lambda: 2 * a.get(), dependencies=[a]
+    )
+    column = a[..., 1]
+    assert isinstance(column, dp.depend_array)
+    assert isinstance(a[0, None], dp.depend_array)
+    column[0] = 1.0
+    a[1, ...] += 2.0
+    assert np.array_equal(b.get(), [[0.0, 2.0, 0.0], [4.0, 4.0, 4.0]])
 
 
 def test_strided_slice_refresh_via_parent():
@@ -227,6 +306,18 @@ def test_synchronizer():
         dp.dsynchro(a, dp.depend_array(name="c", value=np.zeros(3)), None, None)
 
 
+def test_partial_assignment_of_an_out_of_date_array():
+    """Depend: assigning part of an out-of-date array keeps the other elements
+    up to date"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    b[:] = 4.0
+    a[0] = 0.0
+    assert np.array_equal(a.get(), [0.0, 2.0, 2.0])
+    assert np.array_equal(b.get(), [0.0, 4.0, 4.0])
+
+
 def test_dcompute():
     """Depend: dcompute and dpipe make a primitive object computed"""
     h = Holder()
@@ -257,6 +348,17 @@ def test_dcompute():
     dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
     with pytest.raises(AssertionError):
         dp.dpipe(h.x_, a)
+
+
+def test_dpipe_refuses_synchronized_objects():
+    """Depend: piping into a synchronized object raises, and leaves it synchronized"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    with pytest.raises(AssertionError):
+        dp.dpipe(dp.depend_array(name="c", value=np.zeros(3)), b)
+    a[:] = 3.0
+    assert np.array_equal(b.get(), 6 * np.ones(3))
 
 
 def test_ddeps():

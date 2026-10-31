@@ -21,8 +21,6 @@ __all__ = [
     "abc2h",
     "invert_ut3x3",
     "det_ut3x3",
-    "eigensystem_ut3x3",
-    "exp_ut3x3",
     "root_herm",
     "logsumlog",
     "sinch",
@@ -49,10 +47,10 @@ def logsumlog(lasa, lbsb):
 
     if la > lb:
         sr = sa
-        lr = la + np.log(1.0 + sb * np.exp(lb - la))
+        lr = la + np.log(1.0 + sa * sb * np.exp(lb - la))
     else:
         sr = sb
-        lr = lb + np.log(1.0 + sa * np.exp(la - lb))
+        lr = lb + np.log(1.0 + sa * sb * np.exp(la - lb))
 
     return (lr, sr)
 
@@ -263,35 +261,6 @@ def invert_ut3x3(h):
     return (eye - m + m @ m) / d
 
 
-def eigensystem_ut3x3(p):
-    """Finds the eigenvector matrix of a 3*3 upper-triangular matrix.
-
-    Args:
-       p: An upper triangular 3*3 matrix.
-
-    Returns:
-       An array giving the 3 eigenvalues of p, and the eigenvector matrix of p.
-    """
-
-    eigp = np.zeros((3, 3), float)
-    eigvals = np.zeros(3, float)
-
-    for i in range(3):
-        eigp[i, i] = 1
-    eigp[0, 1] = -p[0, 1]
-    if eigp[0, 1] != 0.0:
-        eigp[0, 1] /= p[0, 0] - p[1, 1]
-    eigp[1, 2] = -p[1, 2]
-    if eigp[1, 2] != 0.0:
-        eigp[1, 2] /= p[1, 1] - p[2, 2]
-    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
-    if eigp[1, 2] != 0.0:
-        eigp[1, 2] /= (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
-    for i in range(3):
-        eigvals[i] = p[i, i]
-    return eigvals, eigp
-
-
 def det_ut3x3(h):
     """Calculates the determinant of a 3*3 upper triangular matrix.
 
@@ -307,69 +276,6 @@ def det_ut3x3(h):
     """
 
     return h[0, 0] * h[1, 1] * h[2, 2]
-
-
-MINSERIES = 1e-8
-
-
-def exp_ut3x3(h):
-    """Computes the matrix exponential for a 3x3 upper-triangular matrix.
-
-    Note that for 3*3 upper triangular matrices this is the best method, as
-    it is stable. This is terms which become unstable as the
-    denominator tends to zero are calculated via a Taylor series in this limit.
-
-    Args:
-       h: An upper triangular 3*3 matrix.
-
-    Returns:
-       The matrix exponential of h.
-    """
-    eh = np.zeros((3, 3), float)
-    e00 = math.exp(h[0, 0])
-    e11 = math.exp(h[1, 1])
-    e22 = math.exp(h[2, 2])
-    eh[0, 0] = e00
-    eh[1, 1] = e11
-    eh[2, 2] = e22
-
-    if abs((h[0, 0] - h[1, 1]) / h[0, 0]) > MINSERIES:
-        r01 = (e00 - e11) / (h[0, 0] - h[1, 1])
-    else:
-        r01 = e00 * (1 + (h[0, 0] - h[1, 1]) * (0.5 + (h[0, 0] - h[1, 1]) / 6.0))
-    if abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
-        r12 = (e11 - e22) / (h[1, 1] - h[2, 2])
-    else:
-        r12 = e11 * (1 + (h[1, 1] - h[2, 2]) * (0.5 + (h[1, 1] - h[2, 2]) / 6.0))
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
-        r02 = (e22 - e00) / (h[2, 2] - h[0, 0])
-    else:
-        r02 = e22 * (1 + (h[2, 2] - h[0, 0]) * (0.5 + (h[2, 2] - h[0, 0]) / 6.0))
-
-    eh[0, 1] = h[0, 1] * r01
-    eh[1, 2] = h[1, 2] * r12
-
-    eh[0, 2] = h[0, 2] * r02
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r01 - r12) / (h[0, 0] - h[2, 2])
-    elif abs((h[1, 1] - h[0, 0]) / h[1, 1]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r12 - r02) / (h[1, 1] - h[0, 0])
-    elif abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r02 - r01) / (h[2, 2] - h[1, 1])
-    else:
-        eh[0, 2] += (
-            h[0, 1]
-            * h[0, 2]
-            * e00
-            / 24.0
-            * (
-                12.0
-                + 4 * (h[1, 1] + h[2, 2] - 2 * h[0, 0])
-                + (h[1, 1] - h[0, 0]) * (h[2, 2] - h[0, 0])
-            )
-        )
-
-    return eh
 
 
 def root_herm(A):

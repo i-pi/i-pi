@@ -203,6 +203,27 @@ def test_sc_coefficients_and_corrections(reference_system, alpha):
         )
 
 
+@pytest.mark.parametrize("before,after", [(0.0, 0.3), (0.3, 0.0), (0.3, 0.5)])
+def test_sc_alpha_cannot_switch_between_zero_and_nonzero(
+    reference_system, before, after
+):
+    """The finite differences of the fourth-order correction displace only the
+    odd beads for alpha = 0, and all of them otherwise: once it is computed,
+    alpha can change only between non-zero values"""
+    s, r = reference_system(alpha=before)
+    s.forces.mforces[0].epsilon = -1e-5
+    s.forces.f_4th_order
+    s.forces.alpha = after
+    if (before == 0) != (after == 0):
+        with pytest.raises(ValueError, match="alpha"):
+            s.forces.f_4th_order
+    else:
+        derivative = sc_reference(r.q, r.masses, r.a, r.b, after, 0.4)["derivative"]
+        np.testing.assert_allclose(
+            s.forces.f_4th_order, derivative, rtol=1e-7, atol=2e-8
+        )
+
+
 @pytest.mark.parametrize("contracted", [False, True])
 @pytest.mark.parametrize("alpha", [0.0, 0.3])
 def test_multicomponent_sc_force_derivatives_obey_chain_rule(
@@ -306,10 +327,6 @@ def force_system():
             request._event_done.set()
 
     def create(components, nbeads=4, extra_values=None):
-        # Match the input schema's default: one outer MTS level with unit weight.
-        for component in components:
-            if len(component.mts_weights) == 0:
-                component.mts_weights = np.array([1.0])
         beads = Beads(1, nbeads)
         beads.m_[:] = 2
         beads.names_[:] = ["H"]
@@ -363,9 +380,38 @@ def test_extras_and_virials_follow_component_weights(force_system, contracted, w
     assert forces.extras["raw"] == ["firstsecond" if full_second else "first"] * 4
     assert forces.extras["label"] == ["second" if full_second else "first"] * 4
     assert forces.extras_component(0)["label"] == ["first"] * 4
+    assert forces.extras_component(0)["raw"] == ["first"] * 4
     np.testing.assert_allclose(
         forces.mforces[0].vir, np.sum([-np.triu(np.outer(a, a)) for a in q], axis=0)
     )
+
+
+def test_component_defaults_to_one_outer_mts_level(force_system):
+    """A force component created without MTS weights contributes with unit
+    weight to the total force and to the outer (only) MTS level, as with the
+    default of the input"""
+    beads, _, forces = force_system([ForceComponent("first")])
+    assert forces.nmtslevels == 1
+    np.testing.assert_allclose(forces.f, -beads.q)
+    np.testing.assert_allclose(forces.mts_forces[0].f, -beads.q)
+    assert forces.pot == pytest.approx(0.5 * np.sum(beads.q**2))
+
+
+def test_extras_follow_weight_changes(force_system):
+    """The combined extras are recomputed when the weight of a component changes"""
+    beads, _, forces = force_system(
+        [
+            ForceComponent("first", interpolate_extras=["energy"]),
+            ForceComponent("second", interpolate_extras=["energy"]),
+        ]
+    )
+    energy = 0.5 * np.sum(beads.q**2, axis=1)
+    np.testing.assert_allclose(forces.extras["energy"], 2 * energy)
+    forces.mforces[1].weight = 0.5
+    np.testing.assert_allclose(forces.extras["energy"], 1.5 * energy)
+    forces.mforces[1].weight = 0.0
+    np.testing.assert_allclose(forces.extras["energy"], energy)
+    assert forces.extras["label"] == ["first"] * 4
 
 
 @pytest.mark.parametrize("scaling", [0.0, -0.5, 2.0])

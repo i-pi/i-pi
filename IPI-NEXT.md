@@ -27,7 +27,8 @@ or because they were approved explicitly:
   string mode renames (`fixatoms_dof`, `fixatoms_mask`) and default `tr_trm` (string mode is still disabled
   at input level).
 - Instanton: `Fix.get_active_array` condition that was always true; `Fix.get_full_vector` t=3 crash
-  (`self.fix.get_mask`); `get_imvector` error message raising TypeError instead of ValueError.
+  (`self.fix.get_mask`), and t=4/5 (friction tensors with fixed atoms) crash, as the indices of the inner loops
+  were not reset; `get_imvector` error message raising TypeError instead of ValueError.
 - Phonons: NMFD/eNMFD refinement was overwritten by the unrefined matrix (water/qtip4pf: NMFD eigenvalues now
   match FD to 5e-7, were 75% off).
 - IMF restart: `v0` was not set and the basis-size schedule differed from a fresh run.
@@ -38,10 +39,59 @@ or because they were approved explicitly:
   depend array that the scaled force components depend on (since 5e863291), so exchanging them did not change
   the bias: the acceptance used the weights before the exchange, and each replica kept its Hamiltonian. They
   are now a depend array, exposed as `hweights`. New unit test.
+  Also, the integrators skipped the bias (`ensemble.has_bias` was false) whenever the Hamiltonian weights
+  differed from 1 (since 5e863291), so the replicas evolved with the unscaled Hamiltonian, and with no explicit
+  bias, while the conserved quantity, the exchange acceptance and the barostat included them. This changes
+  the results of Hamiltonian replica exchange runs. New unit test.
+- Combining the extras of several force components appended the raw strings of the other components to
+  those of the first component (since cf4419b5), so `extras_component_raw(0)` printed the strings of all the
+  components once the combined extras had been computed. Unit test extended.
+- PLUMED (`ffplumed`): when PLUMED biases the potential energy (metadynamics with `use_energy`), the virial
+  it returned contained the physical virial twice instead of only the bias contribution, and `mtd_update`
+  failed when the positions had moved since the last evaluation (a plain dict instead of a `ForceRequest`).
+  Both were strict xfails on main. The initial structure, the physical forces and the positions given to
+  `mtd_update` are converted to numpy at this boundary, so PLUMED also works with the torch backend (and
+  again with numpy, which failed on the read-only masses of the depend properties).
+- Missing dependencies of the forces: the fourth-order Suzuki-Chin term on alpha, the total SC virial on the
+  per-bead ones (it depended on the SC potential), and the combined extras and the components added to a bias
+  (`add_component`) on the component weights; they gave stale values when these changed (e.g. the extras of a
+  bias whose weights are exchanged by replica exchange). As the finite differences of the fourth-order term
+  displace only the odd beads for alpha = 0, alpha cannot change between zero and non-zero values once the term
+  has been computed (`ValueError`). New unit tests.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
   the forces of other positions. They are now recomputed when read. Unit test extended.
+- SVR thermostat (also the centroid of PILE_G): the sign of the rescaling factor used twice the kinetic energy
+  relative to the construction of Bussi, Donadio and Parrinello (JCP 126, 014101, App. A), from which its
+  square is computed (since 2.0), so some of the momentum reversals were missed. The sampled distribution was
+  correct; the dynamics change only with few degrees of freedom and tau not much larger than the time step
+  (with 30 degrees of freedom and dt = tau, 1e-4 of the steps reverse the momenta). With one degree of
+  freedom, the step is now the Langevin propagator. New unit test.
+- Socket interface: a client that disconnected during the handshake was added to the pool (`status | Up`);
+  request ids were compared by identity, so in `lock` mode a client could not get its replica back when the id
+  was a large or recreated integer; with `consolidate_messages=False`, the request of a client that timed out
+  was never queued again; a driver closing the connection before the force header made `getforce` loop
+  forever; `InvalidStatus` raised a `TypeError` instead; `close` did not close the sockets whose `shutdown`
+  failed. The batched `gas` and `harmonic` drivers of `FFDirect` evaluate structures with different numbers
+  of atoms one at a time (they assumed equal sizes). All were strict xfails of the unit tests.
+- `logsumlog` (sums of signed numbers stored as logarithms) gave the wrong result when the larger term was
+  negative (-3 + 2 gave -5), which affected the isotope fractionation estimators (`isotope_scfep`,
+  `isotope_tdfep`) when the centroid-virial kinetic term is negative for some configurations. `apply_asr`
+  (phonons, SCP, `hesstools`) diagonalized the inertia tensor with `eig`, which gives non-orthogonal
+  eigenvectors when two moments of inertia are equal (symmetric and spherical tops), so the removal of the
+  rotations (`asr="poly"`) was not a projection; it uses `eigh`. `Cqp` (GLE tools) rescaled the drift matrix
+  the wrong way, giving wrong <q^2> and <qs> for frequencies other than 1 (`gle_frequency_kernel` only uses the
+  momentum column, which was right). The unused, and incorrect, `exp_ut3x3` and `eigensystem_ut3x3` are
+  removed. Strict xfails of the unit tests, plus a new test for the symmetric top.
+- Input and output: the planetary model could not save its frequency matrix (`netstring_encoded_savez` wrote
+  the bytes of `np.savez` through a `StringIO`); the NPZ data is now stored as base64, which is safe in the
+  text file. Property strings with an unmatched unit brace (`potential{electronvolt`, `potential}`) raise a
+  `ValueError` instead of giving a wrong name or unit; an empty initialization file raises a `ValueError`
+  (it was an `UnboundLocalError`). The dipoles of driven dynamics read from the legacy "Total dipole moment"
+  strings were NaN (strings multiplied by a float), and only the first bead was read. The interpolation of
+  instantons left `new_hessian.dat` open, so it could be incomplete when the function returned. Strict xfails
+  of the unit tests.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -96,8 +146,23 @@ or because they were approved explicitly:
 - Depend objects are stored in attributes with a trailing underscore, `obj.x_` instead of `obj._x`, and
   `dproperties` exposes their value as `obj.x`. Entries of `dproperties` with no depend object behind them
   (they raised a `KeyError` when read) are removed.
+- In-place operators on depend arrays (`obj.x_ += v`) raise a `TypeError` when they cannot update the stored
+  array in place, e.g. a numpy array added to a torch tensor, which left the array unchanged.
+- Indices of depend arrays with Ellipsis or None (`obj.x_[..., i]`) select views connected to the array, as
+  slices do (they were taken for scalar indices, and gave read-only copies). Deep copies and pickles of depend
+  objects are isolated (no dependants, no synchronization: a deep copy shared the dependants of the original,
+  and an object with dependants could not be pickled), and views cannot be copied. `dpipe` checks that its
+  target is not synchronized or a view before discarding its function.
+- Writing a view of a computed depend array (`v = obj.f_[1:]; v[:] = 0`) raises a `NameError`, as writing the
+  array itself does; it was accepted, and lost at the next recompute (`obj.f_[1:] += v` already raised). Views
+  inherit the function of their parent when they are created.
+- Assigning part of a depend array that is out of date (`obj.x_[i] = v`, e.g. `beads.p` after writing
+  `nm.pnm`) merged the new elements into the old values; the array is now brought up to date first. With
+  `--jit`, the objects that a step only updates in place or assigns in part are now inputs of the recorded
+  segments, so that values written between replayed steps (e.g. by `InteractiveSimulation.thermalize_momenta`,
+  through `nm.pnm`) are used (H100: +1-3 us per replayed PIMD step).
 
-The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3)
+The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
 
 ## Status and work left
@@ -114,9 +179,6 @@ bugs pass, and are no longer marked.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
   using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
   Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
-- `apply_asr` (phonontools, hesstools) uses `eig` on the symmetric inertia tensor; `eigh` would be cleaner.
-- Planetary output: `netstring_encoded_savez` writes the bytes of `np.savez` through `io.StringIO` into a
-  text-mode file (Python 2 leftover), so saving the frequency matrix fails.
 - `Properties.get_vcom(bead=...)` uses an `Atoms` object as momenta, and the bead index arrives as a string.
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
@@ -337,6 +399,10 @@ bugs pass, and are no longer marked.
   (`tox -e torch`, `tox -e torch-examples`).
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
+- PLUMED: the regression tests `PLUMED/METAD` and `PLUMED/BIAS` (they were `.NOAUTO`, with an outdated input
+  tag and references that did not match main) are collected with the others, and skipped when PLUMED cannot be
+  loaded; their references were regenerated (identical outputs on main and next). The `plumed.yml` workflow
+  installs PLUMED from conda-forge and runs them with numpy and torch, together with the PLUMED unit tests.
 
 ## Constrained dynamics
 

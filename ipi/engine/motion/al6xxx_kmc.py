@@ -321,13 +321,14 @@ class AlKMC(Motion):
     # threaded geometry optimization
     def geop_thread(self, ieval, nstr, nevent, ostr=None):
         self.optimizer[ieval].reset()
-        ipot = self.dforces[ieval].pot
+        ipot = float(self.dforces[ieval].pot)
 
         for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.optimizer[ieval].step(i)
-        newq = xp.asarray(self.dbeads[ieval].q[0], copy=True)
-        newpot = self.dforces[ieval].pot
+        # the caches are saved with pickle, so they hold numpy arrays and floats
+        newq = np.array(to_numpy(self.dbeads[ieval].q[0]))
+        newpot = float(self.dforces[ieval].pot)
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
         with self._threadlock:
@@ -665,7 +666,7 @@ class AlKMC(Motion):
         self.sites[self.unique_idx(self.state)]
         oldq = xp.asarray(self.beads.q[0], copy=True)
 
-        newq = xp.zeros(self.nsites * 3)
+        newq = np.zeros(self.nsites * 3)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
@@ -674,6 +675,6 @@ class AlKMC(Motion):
             # which atom sits in this site in the unique-mapped structure?
             iuid = ruidx[self.idx[i]]
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]
-        newq -= oldq
+        newq = xp.asarray(newq) - oldq
         newq = self.cell.array_pbc(newq)
         self.beads.q_[0] += newq

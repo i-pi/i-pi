@@ -58,7 +58,8 @@ class GraphReplay:
     Attributes:
         func: The function.
         generator: The torch generator used by the function, if any.
-        segments: The recorded segments, or None before the recording.
+        segments: The recorded segments, or None until the whole function
+            has been recorded.
     """
 
     def __init__(self, func, generator=None):
@@ -71,14 +72,14 @@ class GraphReplay:
         self.pool = torch.cuda.graph_pool_handle()
         self.segments = None
         self.ncalls = 0
-        # the threads that have run eager calls
-        self.threads = set()
+        # whether the current thread has run eager calls
+        self.warm = threading.local()
 
     def __call__(self, *args):
         if self.segments is not None:
             for segment in self.segments:
                 segment.replay()
-        elif self.ncalls < WARMUP_CALLS or threading.get_ident() not in self.threads:
+        elif self.ncalls < WARMUP_CALLS or not getattr(self.warm, "done", False):
             # also initializes the libraries on the stream used by the recording,
             # and in this thread (e.g. cuBLAS handles are created per thread)
             default = self.torch.cuda.current_stream()
@@ -87,7 +88,7 @@ class GraphReplay:
                 self.func(*args)
             default.wait_stream(self.stream)
             self.ncalls += 1
-            self.threads.add(threading.get_ident())
+            self.warm.done = True
         else:
             self.record(*args)
 
@@ -95,7 +96,8 @@ class GraphReplay:
         """Calls the function, recording its kernels as CUDA graphs."""
 
         self.default = self.torch.cuda.current_stream()
-        self.segments = []
+        self.recorded = []
+        self.capturing = False
         self.recorder = _GraphRecorder(self)
         depend.set_recorder(self.recorder)
         try:
@@ -103,16 +105,23 @@ class GraphReplay:
             self.func(*args)
             self.end(None)
         except Exception as err:
+            if not self.capturing:
+                # raised by an eager call between two segments
+                raise
             try:
                 self.graph.capture_end()
             except Exception:
                 pass
+            if isinstance(err, JitError):
+                raise
             raise JitError(
                 "The step cannot be replayed as CUDA graphs: run i-PI without --jit"
             ) from err
         finally:
             depend.set_recorder(None)
             self.torch.cuda.set_stream(self.default)
+        # the segments are replayed only once the whole step has been recorded
+        self.segments = self.recorded
         info(
             f" @cudagraphs: step recorded in {len(self.segments)} CUDA graphs",
             verbosity.low,
@@ -127,6 +136,7 @@ class GraphReplay:
         self.stream.wait_stream(self.default)
         self.torch.cuda.set_stream(self.stream)
         self.graph.capture_begin(pool=self.pool, capture_error_mode="thread_local")
+        self.capturing = True
         self.recorder.reset()
 
     def end(self, after):
@@ -137,8 +147,9 @@ class GraphReplay:
             # segments between two interruptions may be empty
             warnings.filterwarnings("ignore", message=".*CUDA Graph is empty.*")
             self.graph.capture_end()
+        self.capturing = False
         self.torch.cuda.set_stream(self.default)
-        self.segments.append(self.recorder.segment(self.graph, after))
+        self.recorded.append(self.recorder.segment(self.graph, after))
         self.graph.replay()
 
     def interrupt(self, after):
@@ -274,7 +285,7 @@ def _is_cuda_tensor(value):
 
 def _equal(a, b):
     try:
-        return bool(np.all(np.asarray(a) == np.asarray(b)))
+        return bool(np.array_equal(a, b))
     except Exception:
         return False
 

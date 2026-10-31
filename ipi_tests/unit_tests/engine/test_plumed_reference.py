@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+import ipi.utils.array_backend as ab
 from ipi.engine.forcefields import FFPlumed, ForceRequest
 from ipi.utils.softexit import Softexit
 
@@ -85,8 +86,12 @@ def bias_with_physical_forces(ff):
     cell = np.eye(3) * 20
     first = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
     ff.evaluate(first)
+    # the physical forces are arrays of the backend
+    system = ab.xp.asarray(q)
     ff.system_force = SimpleNamespace(
-        pot=3.0, f=np.concatenate([q[3:], -q[3:]]), vir=-np.outer(q[3:], q[3:])
+        pot=ab.xp.asarray(3.0),
+        f=ab.xp.concat([system[3:], -system[3:]]),
+        vir=-ab.xp.linalg.outer(system[3:], system[3:]),
     )
     second = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
     ff.evaluate(second)
@@ -99,21 +104,11 @@ def test_plumed_returns_only_bias_energy_and_forces(plumed_field):
         np.testing.assert_allclose(combined[component], alone[component], atol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FFPlumed adds rather than removes the physical virial after changing its sign",
-)
 def test_plumed_returns_only_bias_virial(plumed_field):
     alone, combined = bias_with_physical_forces(plumed_field())
     np.testing.assert_allclose(combined[2], alone[2], atol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="FFPlumed.mtd_update creates a plain dict without the ForceRequest completion event",
-)
 def test_plumed_update_recomputes_bias_after_positions_change(plumed_field):
     ff = plumed_field()
     q = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
@@ -122,6 +117,23 @@ def test_plumed_update_recomputes_bias_after_positions_change(plumed_field):
     # A static restraint does no update work, even if positions have moved.
     assert ff.mtd_update(2 * q, cell) == pytest.approx(0, abs=1e-12)
     np.testing.assert_array_equal(ff.lastq, 2 * q)
+
+
+def test_plumed_with_torch_arrays(plumed_field, strict_torch):
+    """The initial structure, the physical forces and the positions passed to
+    mtd_update can be arrays of the torch backend"""
+    expected = bias_with_physical_forces(plumed_field())
+    ab.set_backend("torch")
+    try:
+        ff = plumed_field()
+        for results, reference in zip(bias_with_physical_forces(ff), expected):
+            for value, ref in zip(results[:3], reference[:3]):
+                np.testing.assert_allclose(value, ref, atol=1e-10)
+        q = ab.xp.asarray([0.0, 0.0, 0.0, 2.0, 0.0, 0.0])
+        assert ff.mtd_update(q, 20 * ab.xp.eye(3)) == pytest.approx(0, abs=1e-12)
+        np.testing.assert_array_equal(ff.lastq, ab.to_numpy(q))
+    finally:
+        ab.set_backend("numpy")
 
 
 def test_plumed_rejects_unsupported_initial_structure_format(plumed_field):

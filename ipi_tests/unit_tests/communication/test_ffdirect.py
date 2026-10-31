@@ -68,11 +68,6 @@ def test_ffdirect_harmonic_batched_requests():
         _assert_harmonic_result(req, q)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="BUG: gas FFDirect batches use the first structure's atom count for every force array",
-)
 def test_ffdirect_gas_batch_preserves_different_atom_counts():
     """A shared gas provider must return one force vector per input coordinate."""
     positions = [
@@ -97,11 +92,6 @@ def test_ffdirect_gas_batch_preserves_different_atom_counts():
         ff.release(request)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="BUG: harmonic FFDirect batches call np.stack on structures with different atom counts",
-)
 def test_ffdirect_harmonic_batch_preserves_different_atom_counts():
     """A shared harmonic provider must preserve each structure's size and results."""
     positions = [

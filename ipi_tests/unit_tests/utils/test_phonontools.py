@@ -28,3 +28,22 @@ def test_crystal_asr_projector_removes_translations():
     assert np.allclose(projector @ projector, projector)
     assert np.allclose(projector @ translations.T, 0.0, atol=1.0e-12)
     assert np.allclose(apply_asr("crystal", identity, beads), projector)
+
+
+def test_poly_asr_projector_for_a_symmetric_top():
+    """Checks removal of the translations and rotations when two moments of
+    inertia are equal (a square of equal masses, in a generic orientation)."""
+
+    a, b = 0.7, 1.1
+    rx = np.array([[1, 0, 0], [0, np.cos(a), -np.sin(a)], [0, np.sin(a), np.cos(a)]])
+    rz = np.array([[np.cos(b), -np.sin(b), 0], [np.sin(b), np.cos(b), 0], [0, 0, 1]])
+    square = np.array([[1.0, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0]]) @ (rz @ rx).T
+    beads = Beads(4, 1)
+    beads.m_[:] = np.ones(4)
+    beads.q_[:] = square.reshape(1, -1)
+    projector = apply_asr("poly", np.eye(12), beads, return_trans_matrix=True)
+    rotations = np.cross(np.eye(3)[:, None, :], square[None, :, :]).reshape(3, 12)
+
+    assert np.allclose(projector @ projector, projector)
+    assert np.allclose(projector @ rotations.T, 0.0, atol=1.0e-12)
+    assert np.isclose(np.trace(projector), 12 - 6)

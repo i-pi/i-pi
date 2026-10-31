@@ -22,6 +22,12 @@ PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
 TOLERANCE = dict(rtol=1e-12, atol=1e-14)
 
 
+@pytest.fixture(autouse=True)
+def jax_random(device_random):
+    """Draws the random numbers with JAX also with --ipi-backend jax, as the
+    numpy draws used then would be fixed in the compiled steps."""
+
+
 @pytest.fixture
 def numpy_afterwards():
     """Restores the numpy backend after the test."""
@@ -135,3 +141,24 @@ def test_changed_parameters_stop_the_compiled_steps(
     setattr(obj, name, getattr(obj, name) * 1.1)
     with pytest.raises(JitError, match="cannot change"):
         sim.run_step(4)
+
+
+def test_changed_input_types_stop_the_compiled_step(numpy_afterwards):
+    """An input of the compiled step that changes shape or type stops it"""
+
+    import jax.numpy as jnp
+
+    from ipi.utils.depend import depend_array, depend_value
+    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jit import JitError
+
+    ab.set_backend("jax")
+    scale = depend_value(name="scale", value=jnp.asarray(2.0))
+    y = depend_array(name="y", value=jnp.zeros(3))
+    replay = JitReplay(lambda: y.set(y.get() + scale.get()))
+    for _ in range(4):
+        replay()
+    assert replay.compiled is not None
+    scale.set(jnp.asarray(2, dtype=jnp.int32))
+    with pytest.raises(JitError, match="shape or type"):
+        replay()

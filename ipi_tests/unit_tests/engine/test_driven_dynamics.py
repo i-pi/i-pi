@@ -114,11 +114,6 @@ def test_missing_or_malformed_dipoles_cannot_look_like_zero(extras):
     assert np.isnan(dipole.dipole).all()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Legacy dipole parser multiplies a string array by a float and returns NaN",
-)
 def test_legacy_dipole_text_converts_angstrom_to_atomic_units():
     _, dipole = response_objects(
         {"raw": ["Total dipole moment [eAng]: 1.0 -2.0 3.0"] * 2}

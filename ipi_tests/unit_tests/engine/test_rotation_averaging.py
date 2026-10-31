@@ -39,6 +39,26 @@ def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
     assert not ff.requests
 
 
+def test_rotation_average_completes_all_ready_requests_in_one_poll():
+    """A single poll completes all the requests whose member results are ready"""
+    member = FFDebye(name="debye", H=np.eye(3), xref=np.zeros(3), threaded=True)
+    ff = FFRotations(
+        ffdirect=member,
+        grid_mode="lebedev",
+        grid_order=3,
+        prng=Random(seed=17),
+        dopbc=False,
+    )
+    requests = []
+    for i in range(4):
+        atoms = Atoms(1)
+        atoms.q_[:] = [0.1 * (i + 1), 0.0, 0.0]
+        requests.append(ff.queue(atoms, Cell(np.eye(3) * 10)))
+    ff.poll()
+    assert [r["status"] for r in requests] == ["Done"] * 4
+    assert not ff.requests
+
+
 @pytest.mark.parametrize(
     "options,message",
     [

@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from ipi.engine.ensembles import ensemble_swap
 from ipi.engine.smotion.remd import ReplicaExchange, motion_scale
+from ipi.utils.array_backend import to_numpy
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
@@ -97,6 +98,26 @@ def test_hamiltonian_weights_are_exchanged(simulation):
         for s, weight in zip(systems, weights[::-1]):
             assert s.ensemble.hweights[0] == weight
             assert s.ensemble.bias.pot == pytest.approx((weight - 1) * s.forces.pot)
+
+
+def test_hamiltonian_weights_scale_the_dynamics(simulation):
+    """A Hamiltonian weight acts on the dynamics as the same weight of the force."""
+
+    def trajectory(root):
+        with simulation(ET.tostring(root, encoding="unicode")) as sim:
+            s = sim.syslist[0]
+            econs = s.ensemble.econs
+            sim.run(steps=10, write_outputs=False)
+            assert s.ensemble.econs == pytest.approx(econs, abs=1e-6)
+            return to_numpy(s.beads.q), to_numpy(s.beads.p)
+
+    hamiltonian = ET.fromstring(harmonic_input())
+    ensemble = hamiltonian.find("system/ensemble")
+    ET.SubElement(ensemble, "hamiltonian_weights", shape="(1)").text = "[0.5]"
+    force = ET.fromstring(harmonic_input())
+    force.find("system/forces/force").set("weight", "0.5")
+    for weighted, scaled in zip(trajectory(hamiltonian), trajectory(force)):
+        np.testing.assert_allclose(weighted, scaled, rtol=1e-12, atol=1e-14)
 
 
 def test_nested_thermostat_scaling_reaches_all_auxiliary_momenta():

@@ -143,6 +143,19 @@ def jax_backend():
     ab.set_backend("numpy")
 
 
+def test_synchronize_waits_for_the_selected_device(monkeypatch):
+    """synchronize waits for the operations on the device of the arrays (e.g.
+    the second GPU), rather than on the current one"""
+
+    torch = pytest.importorskip("torch")
+    devices = []
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda d=None: devices.append(d))
+    monkeypatch.setitem(ab._current, "backend", "torch")
+    monkeypatch.setitem(ab._current, "device", "cuda:1")
+    ab.synchronize()
+    assert devices == ["cuda:1"]
+
+
 def test_jax_types_like_numpy(jax_backend):
     """With JAX, arrays are created with the types numpy would give"""
 
@@ -169,6 +182,9 @@ def test_jax_depend_writes(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * np.ones(4))
     with pytest.raises(TypeError):
         a.get()[0] = 0.0
+    # views of a computed array cannot be written, as the array itself
+    with pytest.raises(NameError):
+        b[1:3][:] = 0.0
 
 
 def test_jax_views_follow_parent(jax_backend):
@@ -188,7 +204,7 @@ def test_jax_views_follow_parent(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * ab.to_numpy(a.get()))
     # a view of one of two synchronized arrays
     c = dp.depend_array(name="c", value=np.zeros((2, 3)))
-    dp.dsynchro(c, a, lambda: 2 * a.get(), lambda: c.get() / 2)
+    dp.dsynchro(a, c, lambda: c.get() / 2, lambda: 2 * a.get())
     row[2] = 4.0
     assert np.array_equal(ab.to_numpy(c.get()[1]), [10.0, 4.0, 8.0])
     c.set(np.zeros((2, 3)))
@@ -209,7 +225,7 @@ def test_jax_depend_copies(jax_backend):
         a._value = xp.zeros(3)
 
 
-def test_jax_random_state(jax_backend):
+def test_jax_random_state(jax_backend, device_random):
     """With JAX, Gaussian arrays are drawn with a JAX key, which is restored with
     the state of the generator"""
 

@@ -119,20 +119,7 @@ def test_driven_field_envelope_and_forces(reference_system, time):
     np.testing.assert_allclose(s.trajs["Eforces"][0], charge @ field, atol=1e-13)
 
 
-@pytest.mark.parametrize(
-    "encoding",
-    [
-        "json",
-        pytest.param(
-            "legacy",
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="Legacy dipole parsing returns after the first bead, leaving later beads as NaN",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("encoding", ["json", "legacy"])
 @pytest.mark.parametrize("bead", ["", "2"])
 def test_driven_field_dipole_and_born_charges(harmonic_system, bead, encoding):
     s = harmonic_system
@@ -201,11 +188,6 @@ def test_output_units_and_arguments(harmonic_system):
 
 
 @pytest.mark.parametrize("text", ["potential{electronvolt", "potential}"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=pytest.fail.Exception,
-    reason="Property parser accepts unmatched unit braces",
-)
 def test_parser_rejects_unmatched_unit_braces(text):
     with pytest.raises(ValueError):
         getall(text)

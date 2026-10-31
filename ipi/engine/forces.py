@@ -43,6 +43,12 @@ def _stack(arrays):
     return arrays[0][None] if len(arrays) == 1 else xp.stack(arrays)
 
 
+def _in_mts_level(ff, level):
+    """Whether the force component `ff` contributes to the MTS level `level`."""
+
+    return len(ff.mts_weights) > level and ff.mts_weights[level] != 0
+
+
 def _check_virial_symmetry(vir, ffname):
     """Warns if a forcefield returns a full virial that is not symmetric,
     as only its upper triangular part is used."""
@@ -341,7 +347,8 @@ class ForceComponent:
               combined to give a total force, the contribution of this forcefield
               will be weighted by this factor. The combination is a weighted sum.
            name: The name of the forcefield.
-           mts_weights: Weight of forcefield at each mts level.
+           mts_weights: Weight of forcefield at each mts level. Defaults to [1],
+              i.e. a single (outer) level with unit weight, as in the input.
            interpolate_extras: A list of properties that should be treated as physical quantities,
               converted to numpy arrays and treated with ring polymer contraction. If
               different force components have this field, they will also be summed with
@@ -353,7 +360,7 @@ class ForceComponent:
         self.nbeads = nbeads
         self.weight_ = depend_value(name="weight", value=weight)
         if mts_weights is None:
-            self.mts_weights = np.asarray([])
+            self.mts_weights = np.ones(1)
         else:
             self.mts_weights = np.asarray(mts_weights)
         if interpolate_extras is None:
@@ -665,10 +672,7 @@ class MTSForces:
 
         for ff in self.mforces:
             # add dependencies from the forces that actually depend on this
-            mts_weights = ff.mts_weights
-            if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level and mts_weights[level] != 0
-            ):
+            if _in_mts_level(ff, level):
                 ddeps(self.f_, [ff.f_, ff.weight_])
                 ddeps(self.virs_, [ff.virs_, ff.weight_])
 
@@ -677,12 +681,8 @@ class MTSForces:
 
         level = self.level
         for ff in self.mforces:
-            mts_weights = ff.mts_weights
-            # forces with no MTS specification are applied at the outer level
-            if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level and mts_weights[level] != 0 and ff.weight != 0
-            ):
-                # do not queue forces which have zero weight
+            # do not queue forces which have zero weight
+            if _in_mts_level(ff, level) and ff.weight != 0:
                 ff.queue()
 
     def get_forces_mts(self):
@@ -695,12 +695,9 @@ class MTSForces:
         mforces = self.mforces
         mrpc = self.mrpc
         for index in range(len(mforces)):
-            # forces with no MTS specification are applied at the outer level
             weight = mforces[index].weight
             mts_weights = mforces[index].mts_weights
-            if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
-            ):
+            if _in_mts_level(mforces[index], level) and weight != 0:
                 f = mforces[index].f
                 # expands the forces of a contracted ring polymer
                 if not mrpc[index].noop:
@@ -725,11 +722,7 @@ class MTSForces:
         mrpc = self.mrpc
         rp = xp.zeros((self.nbeads, 3, 3))
         for index in range(len(mforces)):
-            if (
-                len(mforces[index].mts_weights) > level
-                and mforces[index].mts_weights[level] != 0
-                and mforces[index].weight != 0
-            ):
+            if _in_mts_level(mforces[index], level) and mforces[index].weight != 0:
                 dmvirs = mforces[index].virs
                 dv = mrpc[index].b2tob1(dmvirs)
                 rp += mforces[index].weight * mforces[index].mts_weights[level] * dv
@@ -771,6 +764,8 @@ class Forces:
         self.dforces = None
         self.dbeads = None
         self.dcell = None
+        # whether alpha was zero at the first evaluation of the fourth-order term
+        self.alpha_zero = None
 
     def add_component(self, nbeads, nrpc, nforces):
         self.mrpc.append(nrpc)
@@ -781,6 +776,8 @@ class Forces:
         ddeps(self.pots_, [nforces.pots_])
         ddeps(self.virs_, [nforces.virs_])
         ddeps(self.extras_, [nforces.extras_])
+        for dep in (self.f_, self.pots_, self.virs_, self.extras_):
+            ddeps(dep, [nforces.weight_])
 
     def bind(self, beads, cell, fcomponents, fflist, open_paths, output_maker):
         """Binds beads, cell and forces to the forcefield.
@@ -955,7 +952,7 @@ class Forces:
         self.fvir_4th_order_ = depend_value(
             name="fvir_4th_order",
             value=[None, None],
-            dependencies=[self.beads.m_, self.f_, self.pots_],
+            dependencies=[self.beads.m_, self.f_, self.pots_, self.alpha_],
             func=self.fvir_4th_order_combine,
         )
 
@@ -1019,7 +1016,7 @@ class Forces:
 
         self.virsc_ = depend_value(
             name="virsc",
-            dependencies=[self.potssc_],
+            dependencies=[self.virssc_],
             func=(lambda: self.virssc.sum(axis=0)),
         )
 
@@ -1030,6 +1027,7 @@ class Forces:
         ddeps(self.f_, weights)
         ddeps(self.pots_, weights)
         ddeps(self.virs_, weights)
+        ddeps(self.extras_, weights)
 
     def clone(self, beads, cell):
         """Duplicates the force object, so that it can be used to compute forces
@@ -1501,6 +1499,15 @@ class Forces:
     def fvir_4th_order_combine(self):
         """Obtains the total fourth order |f^2| correction to the force vector and the virial."""
 
+        # the finite differences displace only the odd beads for alpha = 0, and all
+        # of them otherwise: the scheme is fixed by the first evaluation
+        if self.alpha_zero is None:
+            self.alpha_zero = self.alpha == 0
+        elif self.alpha_zero != (self.alpha == 0):
+            raise ValueError(
+                "The Suzuki-Chin alpha cannot change between zero and non-zero values"
+            )
+
         rf = xp.zeros((self.nbeads, 3 * self.natoms))
         rv = xp.zeros((self.nbeads, 3, 3))
 
@@ -1569,7 +1576,8 @@ class Forces:
                                 for ib in range(self.nbeads):
                                     re["raw"][ib] += v[ib]
                             else:
-                                re["raw"] = v
+                                # a copy, as the strings of the other components are appended
+                                re["raw"] = list(v)
                         else:
                             if e in re:
                                 warning(

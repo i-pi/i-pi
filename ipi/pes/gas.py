@@ -34,6 +34,9 @@ class Gas_driver(Dummy_driver):
                 "Both position and cell should be given as lists to run in batched mode"
             )
 
+        if len({np.shape(p) for p in pos}) > 1:
+            # structures with different numbers of atoms, one at a time
+            return super().compute(cell, pos)
         # nothing to compute: hand back zero-valued views of one allocation
         nbatch = len(pos)
         forces = np.zeros((nbatch,) + np.asarray(pos[0]).shape)
