@@ -1,0 +1,285 @@
+<simulation verbosity='quiet'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'> [ step, time{femtosecond}, conserved, potential, kinetic_md, temperature{kelvin} ] </properties>
+    <trajectory filename='pos' stride='5'> positions </trajectory>
+  </output>
+  <total_steps> 20 </total_steps>
+  <prng><seed> 12345 </seed></prng>
+  <ffsocket name='qtip4pf' mode='unix'>
+    <address> localhost </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='manual' units='angstrom'> [ 12.4173, 0.0, 0.0, 0.0, 12.4173, 0.0, 0.0, 0.0, 12.4173 ] </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces><force forcefield='qtip4pf'></force></forces>
+    <ensemble><temperature units='kelvin'> 300 </temperature></ensemble>
+    <motion mode='constrained_dynamics'>
+      <fixcom> false </fixcom>
+      <constrained_dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <nsteps_geo> 2 </nsteps_geo>
+        <csolver><tolerance> 1e-8 </tolerance><maxit> 1000 </maxit></csolver>
+        <!-- rigid water: the two O-H bonds and the HOH angle of each molecule -->
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[0,1,2]</atoms></constraint>
+          <constraint mode='distance'><atoms>[0,1,0,2]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[3,4,5]</atoms></constraint>
+          <constraint mode='distance'><atoms>[3,4,3,5]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[6,7,8]</atoms></constraint>
+          <constraint mode='distance'><atoms>[6,7,6,8]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[9,10,11]</atoms></constraint>
+          <constraint mode='distance'><atoms>[9,10,9,11]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[12,13,14]</atoms></constraint>
+          <constraint mode='distance'><atoms>[12,13,12,14]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[15,16,17]</atoms></constraint>
+          <constraint mode='distance'><atoms>[15,16,15,17]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[18,19,20]</atoms></constraint>
+          <constraint mode='distance'><atoms>[18,19,18,20]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[21,22,23]</atoms></constraint>
+          <constraint mode='distance'><atoms>[21,22,21,23]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[24,25,26]</atoms></constraint>
+          <constraint mode='distance'><atoms>[24,25,24,26]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[27,28,29]</atoms></constraint>
+          <constraint mode='distance'><atoms>[27,28,27,29]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[30,31,32]</atoms></constraint>
+          <constraint mode='distance'><atoms>[30,31,30,32]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[33,34,35]</atoms></constraint>
+          <constraint mode='distance'><atoms>[33,34,33,35]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[36,37,38]</atoms></constraint>
+          <constraint mode='distance'><atoms>[36,37,36,38]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[39,40,41]</atoms></constraint>
+          <constraint mode='distance'><atoms>[39,40,39,41]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[42,43,44]</atoms></constraint>
+          <constraint mode='distance'><atoms>[42,43,42,44]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[45,46,47]</atoms></constraint>
+          <constraint mode='distance'><atoms>[45,46,45,47]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[48,49,50]</atoms></constraint>
+          <constraint mode='distance'><atoms>[48,49,48,50]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[51,52,53]</atoms></constraint>
+          <constraint mode='distance'><atoms>[51,52,51,53]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[54,55,56]</atoms></constraint>
+          <constraint mode='distance'><atoms>[54,55,54,56]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[57,58,59]</atoms></constraint>
+          <constraint mode='distance'><atoms>[57,58,57,59]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[60,61,62]</atoms></constraint>
+          <constraint mode='distance'><atoms>[60,61,60,62]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[63,64,65]</atoms></constraint>
+          <constraint mode='distance'><atoms>[63,64,63,65]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[66,67,68]</atoms></constraint>
+          <constraint mode='distance'><atoms>[66,67,66,68]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[69,70,71]</atoms></constraint>
+          <constraint mode='distance'><atoms>[69,70,69,71]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[72,73,74]</atoms></constraint>
+          <constraint mode='distance'><atoms>[72,73,72,74]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[75,76,77]</atoms></constraint>
+          <constraint mode='distance'><atoms>[75,76,75,77]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[78,79,80]</atoms></constraint>
+          <constraint mode='distance'><atoms>[78,79,78,80]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[81,82,83]</atoms></constraint>
+          <constraint mode='distance'><atoms>[81,82,81,83]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[84,85,86]</atoms></constraint>
+          <constraint mode='distance'><atoms>[84,85,84,86]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[87,88,89]</atoms></constraint>
+          <constraint mode='distance'><atoms>[87,88,87,89]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[90,91,92]</atoms></constraint>
+          <constraint mode='distance'><atoms>[90,91,90,92]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[93,94,95]</atoms></constraint>
+          <constraint mode='distance'><atoms>[93,94,93,95]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[96,97,98]</atoms></constraint>
+          <constraint mode='distance'><atoms>[96,97,96,98]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[99,100,101]</atoms></constraint>
+          <constraint mode='distance'><atoms>[99,100,99,101]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[102,103,104]</atoms></constraint>
+          <constraint mode='distance'><atoms>[102,103,102,104]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[105,106,107]</atoms></constraint>
+          <constraint mode='distance'><atoms>[105,106,105,107]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[108,109,110]</atoms></constraint>
+          <constraint mode='distance'><atoms>[108,109,108,110]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[111,112,113]</atoms></constraint>
+          <constraint mode='distance'><atoms>[111,112,111,113]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[114,115,116]</atoms></constraint>
+          <constraint mode='distance'><atoms>[114,115,114,116]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[117,118,119]</atoms></constraint>
+          <constraint mode='distance'><atoms>[117,118,117,119]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[120,121,122]</atoms></constraint>
+          <constraint mode='distance'><atoms>[120,121,120,122]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[123,124,125]</atoms></constraint>
+          <constraint mode='distance'><atoms>[123,124,123,125]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[126,127,128]</atoms></constraint>
+          <constraint mode='distance'><atoms>[126,127,126,128]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[129,130,131]</atoms></constraint>
+          <constraint mode='distance'><atoms>[129,130,129,131]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[132,133,134]</atoms></constraint>
+          <constraint mode='distance'><atoms>[132,133,132,134]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[135,136,137]</atoms></constraint>
+          <constraint mode='distance'><atoms>[135,136,135,137]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[138,139,140]</atoms></constraint>
+          <constraint mode='distance'><atoms>[138,139,138,140]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[141,142,143]</atoms></constraint>
+          <constraint mode='distance'><atoms>[141,142,141,143]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[144,145,146]</atoms></constraint>
+          <constraint mode='distance'><atoms>[144,145,144,146]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[147,148,149]</atoms></constraint>
+          <constraint mode='distance'><atoms>[147,148,147,149]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[150,151,152]</atoms></constraint>
+          <constraint mode='distance'><atoms>[150,151,150,152]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[153,154,155]</atoms></constraint>
+          <constraint mode='distance'><atoms>[153,154,153,155]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[156,157,158]</atoms></constraint>
+          <constraint mode='distance'><atoms>[156,157,156,158]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[159,160,161]</atoms></constraint>
+          <constraint mode='distance'><atoms>[159,160,159,161]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[162,163,164]</atoms></constraint>
+          <constraint mode='distance'><atoms>[162,163,162,164]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[165,166,167]</atoms></constraint>
+          <constraint mode='distance'><atoms>[165,166,165,167]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[168,169,170]</atoms></constraint>
+          <constraint mode='distance'><atoms>[168,169,168,170]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[171,172,173]</atoms></constraint>
+          <constraint mode='distance'><atoms>[171,172,171,173]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[174,175,176]</atoms></constraint>
+          <constraint mode='distance'><atoms>[174,175,174,176]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[177,178,179]</atoms></constraint>
+          <constraint mode='distance'><atoms>[177,178,177,179]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[180,181,182]</atoms></constraint>
+          <constraint mode='distance'><atoms>[180,181,180,182]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[183,184,185]</atoms></constraint>
+          <constraint mode='distance'><atoms>[183,184,183,185]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[186,187,188]</atoms></constraint>
+          <constraint mode='distance'><atoms>[186,187,186,188]</atoms></constraint>
+        </constraint>
+        <constraint mode='multi'>
+          <constraint mode='angle'><atoms>[189,190,191]</atoms></constraint>
+          <constraint mode='distance'><atoms>[189,190,189,191]</atoms></constraint>
+        </constraint>
+      </constrained_dynamics>
+    </motion>
+  </system>
+</simulation>

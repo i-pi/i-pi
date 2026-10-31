@@ -258,8 +258,8 @@ bugs pass, and are no longer marked.
   three-body terms of Kapil et al. are not implemented); the solver uses a fixed basis for the one-mode
   problems (1.8e-4 Ha below the exact IMF free energy at kT ~ hbar w in the test model, which the IMF calculation
   converges), and has no limit on the number of SCF iterations.
-- Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
-  tolerance units, solver defaults, batching), and add a regression test with reference outputs.
+- Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (angle and linear-group conditioning,
+  tolerance units, batching).
 - Upstream, also on main: `test_metatomic.py` and `test_metatomic_reference.py` error at setup with Python 3.14,
   as TorchScript cannot compile metatomic's `AtomisticModel` with the deferred annotations of Python 3.14 (CI
   runs Python 3.10 and 3.13; the tests skip without metatomic).
@@ -510,36 +510,35 @@ Scope: `ipi/utils/constrtools.py`, `ipi/engine/motion/constrained_dynamics.py`,
   the `dq`/`dqprev` dproperties of `ConstraintList` (no such depend objects). Fixed the docstrings of `Gfunc`
   and `GCfunc`, and the comment on `_m3`. Also removed a debugging block in `RigidBondConstraint.gfunc` that
   printed "autsch" and called `exit()` if `q[0]` was infinite.
+- **Index check, defaults, dependencies, coverage.**
+  - `EckartConstraint` rejected any atom indices that were not sorted, as "repeated atom indices" (the reference
+    positions are matched to the sorted atoms): the atoms are sorted, with their reference positions, and only
+    repeated ones are rejected.
+  - The solver defaults are those of the input (tolerance 1e-4, 1000 iterations) also in `ConstraintSolver` and
+    in the fallback of `ConstrainedDynamics` (they were 1e-3/1000 and 1e-4/10000).
+  - The Jacobians of bonds and angles no longer depend on the target values, so changing a target does not
+    recompute them, the Gram matrix and its factorization.
+  - Regression test with reference outputs: `CONSTRAINTS/rigid_water`, 64 rigid q-TIP4P/F molecules (two bonds
+    and an angle each) in NVE. New unit tests for the Eckart indices and the bond Jacobian.
 - **Array-backend port.** The per-constraint loops of `RigidBondConstraint`/`AngleConstraint` are vectorized
   (same values); scipy's Cholesky solve is kept for numpy, and torch solves the Gram systems with
   `xp.linalg.solve`. Trajectories match the pre-port code to ~5e-16 and numpy/torch CPU/torch CUDA to ~1e-15.
 
 ### To change (method or behaviour)
 
-1. **Misleading Eckart check.** `EckartConstraint` raises "repeated atom indices" whenever
-   `constrained_indices != np.unique(...)`, i.e. also for unsorted but unique indices. Either sort the indices
-   (keeping the reference coordinates consistent) or test for duplicates only.
-2. **Angle constraints are ill-conditioned near 0 and 180 degrees.** `AngleConstraint` constrains
+1. **Angle constraints are ill-conditioned near 0 and 180 degrees.** `AngleConstraint` constrains
    `cos(angle) - cos(target)`, whose gradient vanishes at 0 and 180 degrees: the Gram matrix becomes singular
    for (nearly) linear angles.
-3. **Eckart constraints assume a non-linear group.** Six constraints are always imposed; for linear groups (or two
+2. **Eckart constraints assume a non-linear group.** Six constraints are always imposed; for linear groups (or two
    atoms) the rotational rows of the Jacobian are linearly dependent and the Cholesky factorization fails.
-4. **Inconsistent convergence measure.** `proj_manifold` tests `norm(g)` over a group, where `g` mixes units:
+3. **Inconsistent convergence measure.** `proj_manifold` tests `norm(g)` over a group, where `g` mixes units:
    squared lengths minus squared targets (bonds), cosine differences (angles), mass-weighted displacements
    (Eckart). The tolerance means different things for different constraints, and for bonds it scales with the
    bond length; a per-constraint relative tolerance would be more meaningful.
-5. **Inconsistent defaults.** `ConstrainedDynamics` builds a default `ConstraintSolver(tolerance=1e-4,
-   maxit=10000)`, while `ConstraintSolver` defaults to `1e-3` and `1000`, and the input class has its own
-   defaults.
-6. **Unneeded recomputation.** `ValueConstraintBase.bind` makes `Dg` depend on `constraint_values`, but the
-   Jacobians of bonds and angles do not depend on the target values, so `Dg`, `Gram` and its factorization are
-   recomputed when the values change.
-7. **Performance for many molecules, and on GPU.** The solver loops over constraint groups in Python, with a
+4. **Performance for many molecules, and on GPU.** The solver loops over constraint groups in Python, with a
    small dense solve and a host-side convergence check (`float(norm(g))`) per group and iteration. For many
    small molecules (rigid water: one group per molecule) this is slow with numpy and dominated by kernel
    launches and device syncs with torch. Groups of the same type and size could be batched
    (`xp.linalg.solve`/`cholesky` accept stacks of matrices), with one convergence check per iteration. On numpy
    the scipy `cho_factor` is cached and reused; on torch the Gram system is re-solved every time (a cached
    `torch.linalg.cholesky` + `torch.cholesky_solve` would match the numpy behaviour).
-8. **Coverage.** The only example (`examples/temp/broken/lammps/h2o-constraints`) is in the "broken" folder,
-   and there is no regression test with reference outputs.

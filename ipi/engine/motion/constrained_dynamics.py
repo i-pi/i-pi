@@ -150,7 +150,7 @@ class ConstrainedDynamics(Dynamics):
 
         if csolver is None:
             self.csolver = ConstraintSolver(
-                self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2
+                self.constraint_list, tolerance=0.0001, maxit=1000, norm_order=2
             )
         else:
             if csolver["norm_order"] == -1:
@@ -254,7 +254,7 @@ class ConstraintSolver(ConstraintSolverBase):
     """
 
     def __init__(
-        self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
+        self, constraint_list, dt=1.0, tolerance=0.0001, maxit=1000, norm_order=2
     ):
         """Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and

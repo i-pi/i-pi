@@ -196,8 +196,8 @@ class ValueConstraintBase(ConstraintBase):
     def bind(self, beads):
         super(ValueConstraintBase, self).bind(beads)
 
+        # the Jacobians of bonds and angles do not depend on the targets
         ddeps(self.g_, [self.constraint_values_])
-        ddeps(self.Dg_, [self.constraint_values_])
 
 
 dproperties(ValueConstraintBase, ["constraint_values"])
@@ -325,15 +325,18 @@ class EckartConstraint(ConstraintBase):
     """
 
     def __init__(self, constrained_indices, constraint_values):
-        super(EckartConstraint, self).__init__(constrained_indices, 6)
-        self.constrained_indices = self.constrained_indices.reshape(-1)
+        # the atoms are kept in increasing order, as the unique atoms of the
+        # base class, together with their reference positions
+        indices = np.asarray(constrained_indices).reshape(-1)
+        if len(np.unique(indices)) != len(indices):
+            raise ValueError("repeated atom indices in EckartConstraint")
+        order = np.argsort(indices)
+        if len(constraint_values) != 0:
+            constraint_values = np.reshape(constraint_values, (-1, 3))[order]
+        super(EckartConstraint, self).__init__(indices[order], 6)
         self.constraint_values_ = depend_array(
             name="constraint_values", value=np.zeros(self.ncons)
         )
-
-        # Check that there are no repeats
-        if np.any(self.constrained_indices != self.i_unique):
-            raise ValueError("repeated atom indices in EckartConstraint")
         self.i3_indirect = self.i3_indirect.reshape((-1, 3))
         if len(constraint_values) == 0:
             self._calc_cons = True

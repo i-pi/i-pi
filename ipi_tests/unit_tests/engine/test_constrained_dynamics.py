@@ -139,3 +139,46 @@ def test_constrained_backend_equivalence(
     for (qr, cr), (q, c) in zip(reference, run("torch", device)):
         assert np.allclose(q, qr, rtol=1e-10, atol=1e-12)
         assert np.isclose(c, cr, rtol=1e-10)
+
+
+def bound_beads():
+    """Beads of four atoms, in a fixed random configuration."""
+
+    from ipi.engine.beads import Beads
+
+    beads = Beads(4, 1)
+    beads.m_[:] = np.array([16.0, 1.0, 1.0, 12.0])
+    beads.q_[:] = np.random.default_rng(3).normal(size=(1, 12))
+    return beads
+
+
+def test_eckart_atoms_in_any_order(numpy_backend):
+    """The atoms of an Eckart constraint can be given in any order, with their
+    reference positions in the same order; repeated atoms are rejected"""
+
+    from ipi.utils.constrtools import EckartConstraint
+
+    beads = bound_beads()
+    reference = np.random.default_rng(5).normal(size=(4, 3))
+    ordered = EckartConstraint(np.array([0, 1, 3]), reference[[0, 1, 3]].ravel())
+    shuffled = EckartConstraint(np.array([3, 0, 1]), reference[[3, 0, 1]].ravel())
+    for constraint in (ordered, shuffled):
+        constraint.bind(beads)
+    np.testing.assert_allclose(shuffled.g, ordered.g, atol=1e-14)
+    np.testing.assert_allclose(shuffled.Dg, ordered.Dg, atol=1e-14)
+    with pytest.raises(ValueError, match="repeated"):
+        EckartConstraint(np.array([0, 1, 1]), [])
+
+
+def test_bond_jacobian_does_not_depend_on_the_targets(numpy_backend):
+    """Changing the target of a bond leaves its Jacobian, and the factorization
+    of the Gram matrix, up to date"""
+
+    from ipi.utils.constrtools import RigidBondConstraint
+
+    constraint = RigidBondConstraint(np.array([[0, 1], [0, 2]]), [1.0, 1.2])
+    constraint.bind(bound_beads())
+    constraint.Dg
+    constraint.constraint_values = np.array([1.5, 1.1])
+    assert not constraint.Dg_.tainted()
+    assert constraint.g_.tainted()
