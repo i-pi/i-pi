@@ -183,7 +183,7 @@ def synchronize():
     if _current["backend"] == "torch" and _current["device"] != "cpu":
         import torch
 
-        torch.cuda.synchronize()
+        torch.cuda.synchronize(_current["device"])
     elif _current["backend"] == "jax":
         # the operations of a device run in order, so waiting for a new one
         # waits for all
