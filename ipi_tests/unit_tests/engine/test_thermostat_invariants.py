@@ -11,6 +11,7 @@ from ipi.engine.thermostats import (
     ThermoGLE,
     ThermoLangevin,
     ThermoSVR,
+    _svr_step,
 )
 from ipi.utils.prng import Random
 
@@ -136,6 +137,21 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
     np.testing.assert_allclose(
         atoms.p, expected_scale * initial, rtol=1e-12, atol=1e-14
     )
+
+
+@pytest.mark.parametrize("r1", [-1.5, -1.0, -0.5, 0.0, 0.5])
+def test_svr_with_one_degree_of_freedom_is_langevin(r1):
+    """With one degree of freedom, the SVR step is the Langevin propagator,
+    including the sign of the new momentum."""
+    # Bussi, Donadio and Parrinello, JCP 126, 014101 (2007), Eq. (A2), with
+    # x = p / sqrt(m kT): p' = sqrt(et) p + sqrt((1 - et) m kT) r1.
+    # With dt = tau, the momentum is reversed for r1 < -0.76.
+    p, m, temperature, et = 1.0, 2.0, 0.5, np.exp(-1.0)
+    alpha, _ = _svr_step(
+        np.array([p]), np.array([m]), 0.5 * temperature, et, np.array([r1]), np.zeros(1)
+    )
+    expected = np.sqrt(et) * p + np.sqrt((1 - et) * m * temperature) * r1
+    assert alpha * p == pytest.approx(expected, rel=1e-12)
 
 
 @pytest.mark.parametrize("intau,idtau", [(0.0, 0.0), (0.7, 0.0), (0.0, 0.7)])
