@@ -153,7 +153,15 @@ class JitReplay:
 
         import jax
 
-        key, results = self.compiled(key, arrays)
+        try:
+            key, results = self.compiled(key, arrays)
+        except TypeError as err:
+            # the compiled function checks the shapes and types of its inputs
+            raise JitError(
+                "The shape or type of an input of the compiled step has changed: "
+                "the parameters of the simulation that are fixed in the compiled "
+                "step cannot change when running with --jit"
+            ) from err
         if key is not None:
             self.prng._jax_key = key
         results = iter(results)
