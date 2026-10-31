@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from ipi.engine.motion.geop import GeopMotion
 from ipi.engine.motion.stringmep import (
     GradientMapper,
     StringGradientMapper,
@@ -13,6 +14,18 @@ from ipi.engine.motion.stringmep import (
     spline_resample,
 )
 from ipi_tests.unit_tests.engine.inputs import harmonic_input, motion_input
+
+
+@pytest.mark.parametrize("trust_radius", [[], [0.2]])
+def test_geop_reset_restores_the_trust_radius(trust_radius):
+    """Resetting a BFGSTRM optimization (as the Al6xxx KMC does at each step)
+    restores the initial trust radius, in the array shared with the optimizer"""
+
+    geop = GeopMotion(mode="bfgstrm", tr_trm=np.array(trust_radius))
+    tr = geop.tr
+    tr[0] = 1.5
+    geop.reset()
+    assert geop.tr is tr and tr[0] == (trust_radius or [0.4])[0]
 
 
 @pytest.mark.parametrize(

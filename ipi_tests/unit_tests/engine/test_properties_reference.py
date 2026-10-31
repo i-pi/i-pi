@@ -134,16 +134,8 @@ def test_kinetic_estimators_select_atoms(nbeads, selection, indices):
 @pytest.mark.parametrize("atom", ["", "0", "1"])
 @pytest.mark.parametrize("mode", ["", "0", "1"])
 def test_temperature_counts_constrained_degrees_of_freedom(
-    reference_system, constraint, atom, mode, request
+    reference_system, constraint, atom, mode
 ):
-    if constraint == "centroid-and-coordinate" and mode != "":
-        request.node.add_marker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="BUG: mode-selected temperature miscounts fixed coordinates when the centroid is fixed",
-            )
-        )
     s, r = reference_system(4)
     mode_p = fourier_matrix(4) @ r.p
     selected_atoms = [0, 1] if atom == "" else [int(atom)]

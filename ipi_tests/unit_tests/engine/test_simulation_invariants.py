@@ -127,11 +127,6 @@ def test_output_stride_matches_completed_steps(simulation, threading):
     np.testing.assert_allclose(rows[:, 1:], expected_energies, rtol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="BUG: GLE state initialization uses ensemble.thermostat instead of motion.thermostat",
-)
 def test_gle_auxiliary_momenta_initialized_from_input(simulation):
     xml = harmonic_input(thermostat="gle").replace(
         "<tau>0.5</tau>", "<A shape='(2,2)'>[1,0,0,1]</A>"

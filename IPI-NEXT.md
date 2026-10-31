@@ -92,6 +92,20 @@ or because they were approved explicitly:
   strings were NaN (strings multiplied by a float), and only the first bead was read. The interpolation of
   instantons left `new_hessian.dat` open, so it could be incomplete when the function returned. Strict xfails
   of the unit tests.
+- Engine and drivers: `GeopMotion.reset` with `bfgstrm` failed (it read the undefined `initial_values`), which
+  stopped the Al6xxx KMC with that optimizer; it restores the initial trust radius, whose default (0.4) is set
+  in `GeopMotion`. The spring forces of the beads (`fpath`) did not depend on the masses, so they were stale
+  after the masses changed; `beads.kin` failed (`kins` was not a property); `vcom(bead=...)` failed. The GLE
+  state given in `<initialize><gle>` was looked for in the ensemble instead of the motion, so it could never
+  be read. The temperature of a single normal mode (`temperature(nm=...)`) with a fixed centroid counted the
+  fixed coordinates as nbeads-1 degrees of freedom in every mode. The cavity forcefield (`FFCavPhSocket`)
+  passed its error messages as the soft-exit status, so it raised a `ValueError` instead of stopping, and
+  read the dipole data before checking it was there. The ASE driver without stress rejected its own zero
+  stress. The double-well drivers with an explicit bath (`DW_bath`, `DDW_with_explicit_bath`) could not run
+  since the bath was converted to `compute_structure`. The force of the spline driver (`pes/spline.py`) was
+  the derivative of the tabulated energy with respect to the scaled coordinate, missing the scaling factor
+  (`factor_coord = 5`), so it was 5 times smaller than the derivative of the energy it reports: results with
+  that driver change. Strict xfails of the unit tests, plus a test of `reset` and of the DDW driver.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -168,7 +182,6 @@ bugs pass, and are no longer marked.
 ## Status and work left
 
 ### Pre-existing bugs found and not fixed (need a decision)
-- `GeopMotion.reset` uses the undefined `self.initial_values`.
 - NEB/string climb writes the gradient (minus the climbing force) into the force output; maybe intended.
 - Instanton friction: without a spectral density, `FrictionMapper.set_fric_spec_dens` crashes
   (`np.arange(omegak.shape)`); `FrictionMapper.evaluate` adds the total friction energy to every bead (counted
@@ -179,7 +192,6 @@ bugs pass, and are no longer marked.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
   using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
   Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
-- `Properties.get_vcom(bead=...)` uses an `Atoms` object as momenta, and the bead index arrives as a string.
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
 - Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs

@@ -85,11 +85,6 @@ def test_centroid_center_of_mass_velocity(harmonic_system, species, indices):
     np.testing.assert_allclose(s.properties.get_vcom(species), expected)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="Bead-specific vcom indexes the Atoms object instead of its momenta",
-)
 def test_single_bead_center_of_mass_velocity(harmonic_system):
     s = harmonic_system
     expected = s.beads.p[2].reshape(2, 3).sum(axis=0) / 5

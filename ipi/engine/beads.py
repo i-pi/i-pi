@@ -139,7 +139,7 @@ class Beads:
             name="fpath",
             value=np.zeros((nbeads, 3 * natoms), float),
             func=self.get_fpath,
-            dependencies=[self.q_],
+            dependencies=[self.q_, self.m3_],
         )
 
         # create proxies to access the individual beads as Atoms objects
@@ -354,6 +354,7 @@ dproperties(
         "m3",
         "names",
         "sm3",
+        "kins",
         "kin",
         "kstress",
         "vpath",

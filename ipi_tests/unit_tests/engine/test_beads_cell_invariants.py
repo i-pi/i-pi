@@ -36,11 +36,6 @@ def test_spring_force_is_negative_energy_gradient(beads):
     np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Beads.fpath is not invalidated when masses change",
-)
 def test_spring_force_updates_after_mass_change(beads):
     """Changing isotope masses must invalidate already evaluated spring forces."""
     original_force = beads.fpath.copy()
@@ -91,11 +86,6 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     np.testing.assert_allclose(clone.h, h, atol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="Beads total kinetic energy refers to missing kins attribute",
-)
 def test_total_bead_kinetic_energy_sums_independent_replicas():
     beads = Beads(2, 4)
     beads.m_[:] = [2.0, 3.0]
