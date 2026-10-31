@@ -398,7 +398,8 @@ class depend_array(depend_base):
 
         view = depend_array.__new__(depend_array)
         view._status = self._status
-        view._func = None
+        # a view of a computed array is computed too, so writing it raises
+        view._func = self._func
         view._name = self._name
         view._value = value
         view._wvalue = wvalue
@@ -443,8 +444,6 @@ class depend_array(depend_base):
             if getattr(value, "_parent", None) is self and value._index is index:
                 # `obj.x_[i] op= v` stores back the view obtained from
                 # `obj.x_[i]`, which has already been updated in place
-                if status.synchro is None and self._func is not None:
-                    self.update_man()  # raises, as the value is computed
                 return
             value = value.get()
         with status.lock:
@@ -680,7 +679,7 @@ class depend_immutable(depend_array):
     def _view(self, index):
         view = depend_immutable.__new__(depend_immutable)
         view._status = self._status
-        view._func = None
+        view._func = self._func
         view._name = self._name
         view._parent = self
         view._index = index
@@ -761,7 +760,9 @@ def ddeps(dep, dependencies):
         dependencies: The depend objects to add to its dependencies.
     """
 
-    assert dep._func is not None, f"<{dep._name}> is not computed"
+    assert (
+        dep._func is not None and dep._root() is dep
+    ), f"<{dep._name}> is not computed, or is a view"
     _add_dependencies(dep, dependencies)
     dep.taint(taintme=True)
 
