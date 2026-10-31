@@ -791,7 +791,9 @@ class Properties:
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
                        for total energy and heat capacity for a Suzuki-Chin high-order factorization, as described in 
                        Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249 (2019). Returns eps_v and eps_v', 
-                       as defined in that paper.
+                       as defined in that paper: the energy is <eps_v>, and the heat capacity
+                       beta**2*kboltzmann*(Cov(eps_v, eps_v^TD) + <eps_v'>), with eps_v^TD the thermodynamic
+                       estimator returned by sc_scaledcoords.
                        As the two estimators have a different dimensions, this can only be output in atomic units.
                        Takes one argument, 'fd_delta', which gives the value of the finite difference parameter used -
                        which defaults to """
@@ -2149,7 +2151,6 @@ class Properties:
 
         dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
-        self.dforces.omegan2 = self.forces.omegan2
         self.dforces.alpha = self.forces.alpha
         self.dcell.h = self.cell.h
 
@@ -2162,10 +2163,14 @@ class Properties:
             splus = np.sqrt(1.0 + dbeta)
             sminus = np.sqrt(1.0 - dbeta)
 
+            # the coefficient of |f|^2 in the Suzuki-Chin potential, proportional to
+            # 1 / omegan2, also scales with beta (Yamamoto, Eqs. 33-34)
+            self.dforces.omegan2 = self.forces.omegan2 / (1.0 + dbeta) ** 2
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
             vplus = (self.dforces.pot + self.dforces.potsc) / self.beads.nbeads
 
+            self.dforces.omegan2 = self.forces.omegan2 / (1.0 - dbeta) ** 2
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - sminus) + sminus * q[b, :]
             vminus = (self.dforces.pot + self.dforces.potsc) / self.beads.nbeads

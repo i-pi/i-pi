@@ -154,6 +154,26 @@ or because they were approved explicitly:
   that they are not recomputed; for the climbing bead this stored the gradient of the climbing force (opposite
   sign, and inverted component along the path) instead of its physical force, which reached the force outputs,
   everything reading the forces afterwards, and the forces saved in restarts. New unit test.
+- Fourth-order Suzuki-Chin path integrals (production runs always have alpha = 0, which is not an input):
+  - The SC virial missed the force-product term of the strain derivative of |f|^2 / m, 2 (f/m) x f (Kapil et
+    al., JCTC 15, 3237 (2019), Eq. 9; checked by strain finite differences): SC NPT and the `pressure_tdsc` and
+    `vir_tdsc` outputs change (the missing term is O(1/P^2), so the pressure converged only at second order).
+    SC NVT trajectories are unchanged.
+  - With contracted components (RPC) and centered differences, the + and - displaced odd beads were put on
+    one auxiliary ring, which the contraction mixed: the fourth-order term of contracted components was wrong.
+    They displace the whole ring, as for alpha != 0 (whose limit alpha -> 0 this matches).
+  - The scaled-coordinate estimators (`sc_scaledcoords`) kept the coefficient of |f|^2, proportional to beta^2,
+    fixed when scaling beta (Yamamoto, JCP 123, 104101 (2005), Eqs. 33-34): on a harmonic oscillator they gave
+    1.421 instead of 1.500 for the energy, and a heat capacity 3.6 times too large.
+  - With alpha = 0, mixing components with forward and centered differences failed, as they shared one
+    auxiliary system: there is one per number of beads.
+  - The help of `sc_op_scaledcoords` gives the operator heat capacity, beta^2 kB (Cov(eps_v, eps_v^TD) +
+    <eps_v'>) (Kapil et al., Eq. 13): note the covariance with the thermodynamic estimator, and the sign of
+    eps_v', opposite to `sc_scaledcoords`.
+  Strict xfails of the unit tests (the forward-difference virial cases use a smaller displacement), a test of
+  mixed differences, and an exact test of all the SC energy estimators and heat capacities on a harmonic
+  oscillator (Gaussian ring polymer: the thermodynamic ones reproduce the derivatives of ln Z_SC, the operator
+  ones the quantum result to fourth order). No regression test uses Suzuki-Chin.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512

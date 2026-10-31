@@ -12,7 +12,7 @@ import pytest
 
 from ipi.engine.simulation import Simulation
 from ipi.utils.units import Constants, unit_to_internal
-from ipi_tests.unit_tests.engine.inputs import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
 from ipi_tests.unit_tests.engine.mathematical_references import (
     fourier_matrix,
     mode_mass_factors,
@@ -380,11 +380,103 @@ def test_operator_scaled_coordinates_double_virial(reference_system, displacemen
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="BUG: SC scaled-coordinate derivatives omit the explicit beta dependence of the force-squared coefficient (Yamamoto Eqs.33-34)",
-)
+def sc_harmonic_precision(beta, count, alpha, a, m, scale=1.0):
+    """Precision matrix of one coordinate of the Suzuki-Chin ring polymer for
+    U = scale a x^2 (hbar = kB = 1): springs, and (1 + c1) U + c2 |f|^2 / m on
+    each bead, as in Forces.potssc."""
+    laplacian = 2 * np.eye(count) - np.roll(np.eye(count), 1, 0)
+    laplacian -= np.roll(np.eye(count), -1, 0)
+    c1 = np.tile([-1 / 3, 1 / 3], count // 2)
+    c2 = np.tile([alpha, 1 - alpha], count // 2) / (9 * (count / beta) ** 2)
+    u = (1 + c1) * a * scale + c2 * 4 * (a * scale) ** 2 / m
+    return (m * count / beta) * laplacian + (2 * beta / count) * np.diag(u)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 0.3])
+def test_suzuki_chin_estimators_of_a_harmonic_oscillator(reference_system, alpha):
+    """For a harmonic potential the Suzuki-Chin ring polymer is Gaussian, every
+    estimator is a quadratic form of the bead positions, and its average and
+    fluctuations are known exactly. The thermodynamic estimators reproduce the
+    derivatives of ln Z_SC, the operator ones the quantum harmonic oscillator up
+    to the fourth-order error of the factorization. The heat capacities are
+    Var(eps) - <eps'> for the scaled coordinates (Yamamoto, JCP 123, 104101
+    (2005)) and Cov(eps_op, eps) + <eps_op'> for the operator estimator (Kapil
+    et al., JCTC 15, 3237 (2019), Eq. 13)"""
+
+    count = 8
+    s, r = reference_system(count=count, alpha=alpha)
+    s.forces.ff["harmonic"].driver = PrescribedPolynomial(r.a, np.zeros(6))
+    masses, beta = np.repeat(r.masses, 3), 1 / r.temperature
+    keys = ["potential_tdsc", "kinetic_tdsc", "kinetic_prsc"]
+    keys += ["potential_opsc", "kinetic_opsc", "eps", "eps'", "eps_op", "eps_op'"]
+
+    def estimators(q):
+        s.beads.q_[:] = q
+        values = [s.properties[key][0] for key in keys[:5]]
+        values += list(s.properties.get_scyama_estimators(0.0003))
+        values += list(s.properties.get_scop_estimators(0.0003))
+        return np.array(values, dtype=float)
+
+    # the coordinates are independent, and the estimators even functions of each
+    zero = estimators(np.zeros((count, 6)))
+    mean, covariance = zero.copy(), np.zeros((len(keys), len(keys)))
+    for k in range(6):
+        sigma = np.linalg.inv(
+            sc_harmonic_precision(beta, count, alpha, r.a[k], masses[k])
+        )
+        unit = [np.outer(np.eye(count)[i], np.eye(6)[k]) for i in range(count)]
+        single = [estimators(x) for x in unit]
+        quadratic = np.zeros((len(keys), count, count))
+        for i in range(count):
+            quadratic[:, i, i] = single[i] - zero
+            for j in range(i + 1, count):
+                pair = estimators(unit[i] + unit[j])
+                quadratic[:, i, j] = (pair - single[i] - single[j] + zero) / 2
+                quadratic[:, j, i] = quadratic[:, i, j]
+        mean += np.einsum("kij,ji->k", quadratic, sigma)
+        product = np.einsum("kij,jl->kil", quadratic, sigma)
+        covariance += 2 * np.einsum("kij,lji->kl", product, product)
+    mean, index = dict(zip(keys, mean)), {key: i for i, key in enumerate(keys)}
+
+    def lnz(beta, scale=1.0):
+        return sum(
+            0.5 * count * np.log(m * count / beta)
+            - 0.5
+            * np.linalg.slogdet(sc_harmonic_precision(beta, count, alpha, a, m, scale))[
+                1
+            ]
+            for a, m in zip(r.a, masses)
+        )
+
+    h = 1e-4
+    energy = -(lnz(beta + h) - lnz(beta - h)) / (2 * h)
+    potential = -(lnz(beta, 1 + h) - lnz(beta, 1 - h)) / (2 * h * beta)
+    heat = (lnz(beta + h) - 2 * lnz(beta) + lnz(beta - h)) / h**2
+    for key, value in [
+        ("potential_tdsc", potential),
+        ("kinetic_tdsc", energy - potential),
+        ("kinetic_prsc", energy - potential),
+        ("eps", energy),
+    ]:
+        assert mean[key] == pytest.approx(value, rel=1e-7)
+    eps, eps_op = index["eps"], index["eps_op"]
+    assert covariance[eps, eps] - mean["eps'"] == pytest.approx(heat, rel=1e-5)
+
+    # the quantum harmonic oscillator, with U = m w^2 x^2 / 2 and <U> = <K>
+    w = np.sqrt(2 * r.a / masses)
+    exact = np.sum(w / 2 / np.tanh(beta * w / 2))
+    exact_heat = np.sum((w / 2 / np.sinh(beta * w / 2)) ** 2)
+    for key, value in [
+        ("potential_opsc", exact / 2),
+        ("kinetic_opsc", exact / 2),
+        ("eps_op", exact),
+    ]:
+        assert mean[key] == pytest.approx(value, rel=3e-4)
+    assert covariance[eps_op, eps] + mean["eps_op'"] == pytest.approx(
+        exact_heat, rel=2e-3
+    )
+
+
 @pytest.mark.parametrize("alpha", [0.0, 0.3])
 def test_suzuki_chin_scaled_coordinates(reference_system, alpha):
     s, r = reference_system(alpha=alpha)

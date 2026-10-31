@@ -227,16 +227,8 @@ def test_sc_alpha_cannot_switch_between_zero_and_nonzero(
 @pytest.mark.parametrize("contracted", [False, True])
 @pytest.mark.parametrize("alpha", [0.0, 0.3])
 def test_multicomponent_sc_force_derivatives_obey_chain_rule(
-    reference_system, contracted, alpha, request
+    reference_system, contracted, alpha
 ):
-    if contracted and alpha == 0:
-        request.node.add_marker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="BUG: alpha=0 SC contraction mixes positive and negative displacements before evaluating the contracted force",
-            )
-        )
     s, r = reference_system(alpha=alpha)
     forces, refs = combined_case(s, r, contracted)
     total_force = sum(
@@ -260,6 +252,17 @@ def test_multicomponent_sc_force_derivatives_obey_chain_rule(
     np.testing.assert_allclose(
         forces.f_4th_order, sum(derivatives), rtol=1e-7, atol=2e-8
     )
+
+
+def test_forward_and_centered_sc_differences_can_be_mixed(reference_system):
+    """With alpha = 0, the forward and centered differences of different
+    components use auxiliary systems of different sizes"""
+    s, r = reference_system(alpha=0.0)
+    forces, refs = combined_case(s, r, contracted=False)
+    centered = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
+    forces.mforces[0].epsilon = 1e-8
+    mixed = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
+    np.testing.assert_allclose(mixed, centered, rtol=1e-6, atol=1e-8)
 
 
 @pytest.mark.parametrize("weight", [0.0, 0.3, -0.2])

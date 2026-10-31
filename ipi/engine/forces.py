@@ -761,9 +761,8 @@ class Forces:
 
     def __init__(self):
         self.bound = False
-        self.dforces = None
-        self.dbeads = None
-        self.dcell = None
+        # auxiliary systems for the finite differences of the fourth-order term
+        self.aux = {}
         # whether alpha was zero at the first evaluation of the fourth-order term
         self.alpha_zero = None
 
@@ -1341,25 +1340,20 @@ class Forces:
             # for the case of alpha = 0, only odd beads are displaced.
             if self.alpha == 0:
                 # we use an aux force evaluator with half the number of beads.
-                if self.dforces is None:
-                    self.dbeads = self.beads.clone(self.nbeads // 2)
-                    self.dcell = self.cell.clone()
-                    self.dforces = self.clone(self.dbeads, self.dcell)
-
-                self.dcell.h = self.cell.h
+                dbeads, dforces = self.aux_system(self.nbeads // 2)
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
 
                 # displaces odd beads only.
-                self.dbeads.q = self.beads.q[1::2] - dq[1::2]
+                dbeads.q = self.beads.q[1::2] - dq[1::2]
 
                 # calculates the force.
-                fminus = self.dforces.mrpc[index].b2tob1(self.dforces.mforces[index].f)
+                fminus = dforces.mrpc[index].b2tob1(dforces.mforces[index].f)
 
                 # calculates the virial.
-                dmvirs = self.dforces.mforces[index].virs
-                vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
+                dmvirs = dforces.mforces[index].virs
+                vminus = dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order[1::2] = 2.0 * (fminus - fbase[1::2]) / delta
@@ -1368,25 +1362,20 @@ class Forces:
             # For the case of alpha != 0, all the beads are displaced.
             else:
                 # we use an aux force evaluator with the same number of beads.
-                if self.dforces is None:
-                    self.dbeads = self.beads.clone()
-                    self.dcell = self.cell.clone()
-                    self.dforces = self.clone(self.dbeads, self.dcell)
-
-                self.dcell.h = self.cell.h
+                dbeads, dforces = self.aux_system(self.nbeads)
 
                 f_4th_order = fbase * 0.0
                 v_4th_order = vbase * 0.0
 
                 # displaces the beads.
-                self.dbeads.q = self.beads.q + dq
+                dbeads.q = self.beads.q + dq
 
                 # calculates the force.
-                fplus = self.dforces.mrpc[index].b2tob1((self.dforces.mforces[index].f))
+                fplus = dforces.mrpc[index].b2tob1((dforces.mforces[index].f))
 
                 # calculates the virial.
-                dmvirs = self.dforces.mforces[index].virs
-                vplus = self.dforces.mrpc[index].b2tob1(dmvirs)
+                dmvirs = dforces.mforces[index].virs
+                vplus = dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order = 2.0 * (fbase - fplus) / delta
@@ -1395,30 +1384,26 @@ class Forces:
         # uses a centered difference for epsilon  < 0.
         if self.mforces[index].epsilon < 0.0:
             # we use an aux force evaluator with the same number of beads.
-            if self.dforces is None:
-                self.dbeads = self.beads.clone()
-                self.dcell = self.cell.clone()
-                self.dforces = self.clone(self.dbeads, self.dcell)
-
-            self.dcell.h = self.cell.h
+            dbeads, dforces = self.aux_system(self.nbeads)
 
             f_4th_order = fbase * 0.0
             v_4th_order = vbase * 0.0
 
-            # for the case of alpha = 0, only odd beads are displaced.
-            if self.alpha == 0:
+            # for the case of alpha = 0, only odd beads are displaced, on a ring whose
+            # first and second halves hold the + and - displacements; contracted
+            # components would mix them, and displace the full ring instead (its
+            # even beads, not displaced, have zero coefficients)
+            if self.alpha == 0 and self.mrpc[index].noop:
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
-                self.dbeads.q_[: self.nbeads // 2] = self.beads.q[1::2] + dq[1::2]
-                self.dbeads.q_[-self.nbeads // 2 :] = self.beads.q[1::2] - dq[1::2]
+                dbeads.q_[: self.nbeads // 2] = self.beads.q[1::2] + dq[1::2]
+                dbeads.q_[-self.nbeads // 2 :] = self.beads.q[1::2] - dq[1::2]
 
                 # calculates the forces.
-                fplusminus = self.dforces.mrpc[index].b2tob1(
-                    self.dforces.mforces[index].f
-                )
+                fplusminus = dforces.mrpc[index].b2tob1(dforces.mforces[index].f)
 
                 # calculates the virial.
-                dmvirs = self.dforces.mforces[index].virs
-                vplusminus = self.dforces.mrpc[index].b2tob1(dmvirs)
+                dmvirs = dforces.mforces[index].virs
+                vplusminus = dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 for k in range(self.nbeads // 2):
@@ -1439,32 +1424,55 @@ class Forces:
             # For the case of alpha != 0, all the beads are displaced.
             else:
                 # displaces the beads.
-                self.dbeads.q = self.beads.q + dq
+                dbeads.q = self.beads.q + dq
 
                 # calculates the forces.
-                fplus = self.dforces.mrpc[index].b2tob1(self.dforces.mforces[index].f)
+                fplus = dforces.mrpc[index].b2tob1(dforces.mforces[index].f)
 
                 # calculates the virial.
                 vplus = xp.zeros((self.nbeads, 3, 3))
-                dmvirs = self.dforces.mforces[index].virs
-                vplus += self.dforces.mrpc[index].b2tob1(dmvirs)
+                dmvirs = dforces.mforces[index].virs
+                vplus += dforces.mrpc[index].b2tob1(dmvirs)
 
                 # displaces the beads.
-                self.dbeads.q = self.beads.q - dq
+                dbeads.q = self.beads.q - dq
 
                 # calculates the forces.
-                fminus = self.dforces.mrpc[index].b2tob1(self.dforces.mforces[index].f)
+                fminus = dforces.mrpc[index].b2tob1(dforces.mforces[index].f)
 
                 # calculates the virial.
-                dmvirs = self.dforces.mforces[index].virs
-                vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
+                dmvirs = dforces.mforces[index].virs
+                vminus = dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order = 2.0 * (fminus - fplus) / 2.0 / delta
                 v_4th_order = 2.0 * (vminus - vplus) / 2.0 / delta
 
+        # the strain derivative of |f|^2 / m also contains 2 (f / m) x f, summed over
+        # the components (Kapil et al., JCTC 15, 3237 (2019), Eq. 9), in the upper
+        # triangle like the virials
+        u = (dq / delta).reshape((self.nbeads, -1, 3))
+        fk = fbase.reshape((self.nbeads, -1, 3))
+        v_4th_order = v_4th_order + 2.0 * xp.triu(xp.swapaxes(u, 1, 2) @ fk)
+        if self.alpha == 0:
+            # only the odd beads have non-zero coefficients
+            odd = xp.asarray(np.arange(self.nbeads) % 2.0)[:, None]
+            f_4th_order = f_4th_order * odd
+            v_4th_order = v_4th_order * odd[:, :, None]
+
         # returns the 4th order |f^2| correction.
         return [f_4th_order, v_4th_order]
+
+    def aux_system(self, nbeads):
+        """Returns the beads and the forces of an auxiliary system with nbeads
+        beads, on the current cell, for the fourth-order finite differences."""
+
+        if nbeads not in self.aux:
+            beads, cell = self.beads.clone(nbeads), self.cell.clone()
+            self.aux[nbeads] = (beads, cell, self.clone(beads, cell))
+        beads, cell, forces = self.aux[nbeads]
+        cell.h = self.cell.h
+        return beads, forces
 
     def get_nmtslevels(self):
         """Returns the total number of mts levels."""
