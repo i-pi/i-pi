@@ -84,32 +84,40 @@ def test_neb_relaxes_transverse_displacement(simulation, optimizer, tangent):
         assert np.isfinite(s.beads.q).all()
 
 
-@pytest.mark.parametrize("optimizer", ["fire", "damped_bfgs"])
-def test_climbing_image_finds_quadratic_saddle(simulation, optimizer):
+SADDLE = np.diag([-1.0, 0.5, 0.5])
+
+
+def saddle_input(optimizer, q):
+    """Climbing-image NEB of one atom on the quadratic saddle SADDLE, from the
+    path q."""
     options = ET.Element("neb_optimizer", mode=optimizer)
     ET.SubElement(options, "tangent").text = "improved"
     ET.SubElement(options, "use_climb").text = "True"
-    root = motion_input("neb", options, nbeads=5)
+    nbeads = len(q)
+    root = motion_input("neb", options, nbeads=nbeads)
     root.remove(root.find("ffdirect"))
     ff = ET.SubElement(root, "ffdebye", name="harmonic", pbc="False")
-    ET.SubElement(ff, "hessian", shape="(3,3)").text = str(
-        np.diag([-1.0, 0.5, 0.5]).ravel().tolist()
-    )
+    ET.SubElement(ff, "hessian", shape="(3,3)").text = str(SADDLE.ravel().tolist())
     ET.SubElement(ff, "x_reference", shape="(3)").text = "[0,0,0]"
     beads = root.find("system/beads")
     beads.set("natoms", "1")
-    q = np.zeros((5, 3))
-    q[:, 0] = [-1, -0.5, 0.05, 0.5, 1]
-    q[1:-1, 1] = 0.05
     for tag, shape, value in [
-        ("q", "(5,3)", q.ravel().tolist()),
-        ("p", "(5,3)", [0.0] * 15),
+        ("q", f"({nbeads},3)", q.ravel().tolist()),
+        ("p", f"({nbeads},3)", [0.0] * 3 * nbeads),
         ("m", "(1)", [1.0]),
         ("names", "(1)", ["H"]),
     ]:
         beads.find(tag).set("shape", shape)
         beads.find(tag).text = str(value)
-    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+    return ET.tostring(root, encoding="unicode")
+
+
+@pytest.mark.parametrize("optimizer", ["fire", "damped_bfgs"])
+def test_climbing_image_finds_quadratic_saddle(simulation, optimizer):
+    q = np.zeros((5, 3))
+    q[:, 0] = [-1, -0.5, 0.05, 0.5, 1]
+    q[1:-1, 1] = 0.05
+    with simulation(saddle_input(optimizer, q)) as sim:
         s = sim.syslist[0]
         s.motion.exit_on_convergence = False
         for step in range(350):
@@ -120,6 +128,33 @@ def test_climbing_image_finds_quadratic_saddle(simulation, optimizer):
         np.testing.assert_allclose(s.beads.q[2], 0, atol=2e-4)
         np.testing.assert_array_equal(s.beads.q[[0, -1]], q[[0, -1]])
         assert s.forces.pots[2] == pytest.approx(0, abs=1e-7)
+
+
+def test_climbing_image_stores_its_physical_force(simulation):
+    """After each climbing step, the stored force of the climbing bead is the
+    physical one, not the climbing force (they differ away from the saddle)"""
+    # two movable beads, so that the climbing one starts away from the saddle,
+    # and FIRE, which climbs in several steps (damped BFGS lands on it at once)
+    q = np.zeros((4, 3))
+    q[:, 0] = [-1, -0.4, 0.3, 1]
+    q[1:-1, 1] = 0.05
+    with simulation(saddle_input("fire", q)) as sim:
+        s = sim.syslist[0]
+        s.motion.exit_on_convergence = False
+        climbing, stage = 0, None
+        for step in range(350):
+            s.motion.step(step)
+            if stage == s.motion.stage == "climb":
+                i = s.motion.cl_indx
+                force = np.asarray(s.forces.f[i])
+                np.testing.assert_allclose(
+                    force, -SADDLE @ np.asarray(s.beads.q[i]), atol=1e-12
+                )
+                climbing += np.linalg.norm(force) > 1e-3
+            stage = s.motion.stage
+            if s.motion.finished:
+                break
+        assert climbing > 1
 
 
 @pytest.mark.parametrize("optimizer", ["nichols", "NR", "lanczos", "lbfgs"])
