@@ -512,20 +512,7 @@ def test_fourth_order_isotope_weights(reference_system, mass_ratio, atom):
 
 
 @pytest.mark.parametrize("estimator", ["get_isotope_yama", "get_isotope_thermo"])
-@pytest.mark.parametrize(
-    "spring",
-    [
-        0.5,
-        pytest.param(
-            -0.5,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="Signed log accumulation gives an incorrect negative isotope kinetic estimator",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("spring", [0.5, -0.5])
 def test_unit_mass_ratio_recovers_mean_kinetic_estimator(estimator, spring):
     s = harmonic_system(spring=spring)
     s.beads.q_[:, 0] = [-2, -1, 1, 2]
