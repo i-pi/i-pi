@@ -383,8 +383,8 @@ class ElectricDipole:
                             "wrong number of extracted values from the extra string: they should be 3."
                         )
                     else:
-                        dipole[n] = float(factor) * np.asarray(matches)
-                    return dipole
+                        dipole[n] = float(factor) * np.asarray(matches, dtype=float)
+                return dipole
             else:
                 raise ValueError(
                     "Error in '_get_dipole': can not extract dipole from the extra string."

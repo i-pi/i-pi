@@ -119,7 +119,6 @@ def init_file(
        a Cell object as read from the final pdb frame.
     """
 
-    rfile = open(filename, "r")
     ratoms = []
 
     info(
@@ -127,16 +126,19 @@ def init_file(
         % (filename, dimension, units, cell_units),
         verbosity.low,
     )
-    while True:
-        # while loop, so that more than one configuration can be given
-        # so multiple beads can be initialized at once.
-        try:
-            ret = read_file(
-                mode, rfile, dimension=dimension, units=units, cell_units=cell_units
-            )
-        except EOFError:
-            break
-        ratoms.append(ret["atoms"])
+    with open(filename, "r") as rfile:
+        while True:
+            # while loop, so that more than one configuration can be given
+            # so multiple beads can be initialized at once.
+            try:
+                ret = read_file(
+                    mode, rfile, dimension=dimension, units=units, cell_units=cell_units
+                )
+            except EOFError:
+                break
+            ratoms.append(ret["atoms"])
+    if not ratoms:
+        raise ValueError(f"Empty initialization file {filename}")
     return ratoms, ret["cell"]  # if multiple frames, the last cell is returned
 
 

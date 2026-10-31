@@ -99,11 +99,6 @@ def test_unstable_direction_and_invalid_stable_hessian():
         get_imvector(np.eye(6), np.ones(3))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Interpolated Hessian output remains buffered after the function returns",
-)
 @pytest.mark.parametrize("new_count", [2, 4, 8])
 def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     monkeypatch.chdir(tmp_path)
