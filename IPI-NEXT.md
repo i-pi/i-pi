@@ -68,6 +68,13 @@ or because they were approved explicitly:
   correct; the dynamics change only with few degrees of freedom and tau not much larger than the time step
   (with 30 degrees of freedom and dt = tau, 1e-4 of the steps reverse the momenta). With one degree of
   freedom, the step is now the Langevin propagator. New unit test.
+- Socket interface: a client that disconnected during the handshake was added to the pool (`status | Up`);
+  request ids were compared by identity, so in `lock` mode a client could not get its replica back when the id
+  was a large or recreated integer; with `consolidate_messages=False`, the request of a client that timed out
+  was never queued again; a driver closing the connection before the force header made `getforce` loop
+  forever; `InvalidStatus` raised a `TypeError` instead; `close` did not close the sockets whose `shutdown`
+  failed. The batched `gas` and `harmonic` drivers of `FFDirect` evaluate structures with different numbers
+  of atoms one at a time (they assumed equal sizes). All were strict xfails of the unit tests.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512

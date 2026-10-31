@@ -236,11 +236,6 @@ def test_getforce_requires_data(connection):
 
 @DRIVERS
 @pytest.mark.parametrize("method", ["initialize", "sendpos"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="InvalidStatus message concatenates an integer status with a string",
-)
 def test_invalid_status_reports_protocol_error(connection, method):
     driver, peer = connection
     peer.sendall(HAVEDATA)
@@ -492,15 +487,15 @@ def test_handshake_and_exit_on_close(server, reply):
     assert interface.clients == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Handshake uses bitwise OR with Up, accepting a disconnected client",
-)
-def test_disconnected_handshake_is_not_accepted(server):
+@pytest.mark.parametrize("closed", [False, True], ids=["half-closed", "closed"])
+def test_disconnected_handshake_is_not_accepted(server, closed):
     interface, _ = server
     with socket.create_connection(interface.server.getsockname(), timeout=1) as peer:
-        peer.shutdown(socket.SHUT_WR)
+        if closed:
+            # e.g. a check that the server is listening
+            peer.close()
+        else:
+            peer.shutdown(socket.SHUT_WR)
         interface.pool_update()
         assert not interface.clients
 
@@ -551,11 +546,6 @@ def test_client_with_pending_data_gets_no_work(server):
     assert pending(peer) == b""
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Request matching compares integer identity instead of value",
-)
 def test_locked_client_keeps_replica_with_large_id(server):
     interface, connect = server
     interface.match_mode = "lock"
@@ -569,11 +559,6 @@ def test_locked_client_keeps_replica_with_large_id(server):
         assert_completed(r)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Worker-mode timeout removes the job before pool_update can requeue its request",
-)
 def test_worker_timeout_does_not_lose_request(server, connection, monkeypatch):
 
     interface, _ = server
@@ -594,11 +579,6 @@ def test_worker_timeout_does_not_lose_request(server, connection, monkeypatch):
     assert_pending(r)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Force-header receive loops on EOF because bytes are compared to an empty string",
-)
 def test_force_header_eof_is_disconnected(connection, monkeypatch):
     driver, peer = connection
     peer.sendall(HAVEDATA)
@@ -620,11 +600,6 @@ def test_force_header_eof_is_disconnected(connection, monkeypatch):
     assert len(calls) == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Interface close skips closing the server descriptor when shutdown raises",
-)
 def test_server_descriptor_closes_even_if_shutdown_fails(server, monkeypatch):
     interface, _ = server
 

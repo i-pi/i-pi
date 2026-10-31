@@ -66,7 +66,9 @@ class Harmonic_driver(Dummy_driver):
                 "Both position and cell should be given as lists to run in batched mode"
             )
 
-        # all structures in a batch share the atom count, so we can stack them
+        if len({np.shape(p) for p in pos}) > 1:
+            # structures with different numbers of atoms, one at a time
+            return super().compute(cell, pos)
         pos_arr = np.stack([np.asarray(p) for p in pos])  # (nbatch, nat, 3)
         forces = -self.k * pos_arr  # k is a scalar or broadcasts over xyz
         if self.type == "isotropic":
