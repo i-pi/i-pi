@@ -166,6 +166,21 @@ def test_computed_cannot_be_set():
         h.y = np.ones(4)
 
 
+def test_views_of_computed_arrays_cannot_be_written():
+    """Depend: writing a view of a computed quantity raises, as writing the
+    quantity itself does, instead of being lost at the next recompute"""
+    h = Holder()
+    view = h.y_[1:3]
+    with pytest.raises(NameError):
+        view[:] = 1.0
+    with pytest.raises(NameError):
+        view.set(ab.xp.ones(2))
+    with pytest.raises(NameError):
+        view += 1.0
+    with pytest.raises(NameError):
+        h.y_.flatten()[0] = 1.0
+
+
 def test_readonly():
     """Depend: assigning to an Atoms property"""
     atoms = ipi.engine.atoms.Atoms(2)

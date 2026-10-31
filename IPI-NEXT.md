@@ -129,6 +129,9 @@ or because they were approved explicitly:
   objects are isolated (no dependants, no synchronization: a deep copy shared the dependants of the original,
   and an object with dependants could not be pickled), and views cannot be copied. `dpipe` checks that its
   target is not synchronized or a view before discarding its function.
+- Writing a view of a computed depend array (`v = obj.f_[1:]; v[:] = 0`) raises a `NameError`, as writing the
+  array itself does; it was accepted, and lost at the next recompute (`obj.f_[1:] += v` already raised). Views
+  inherit the function of their parent when they are created.
 - Assigning part of a depend array that is out of date (`obj.x_[i] = v`, e.g. `beads.p` after writing
   `nm.pnm`) merged the new elements into the old values; the array is now brought up to date first. With
   `--jit`, the objects that a step only updates in place or assigns in part are now inputs of the recorded

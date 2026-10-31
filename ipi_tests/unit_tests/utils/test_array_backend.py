@@ -182,6 +182,9 @@ def test_jax_depend_writes(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * np.ones(4))
     with pytest.raises(TypeError):
         a.get()[0] = 0.0
+    # views of a computed array cannot be written, as the array itself
+    with pytest.raises(NameError):
+        b[1:3][:] = 0.0
 
 
 def test_jax_views_follow_parent(jax_backend):
