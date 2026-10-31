@@ -488,12 +488,12 @@ class FrictionMapper(PesMapper):
         # from scipy.interpolate import interp1d
         omegak = to_numpy(self.omegak)
         if len(fric_spec_dens_data) == 0:
-            LT_fric_spec_dens = np.ones((1000, 2))
-            LT_fric_spec_dens[:, 0] = np.arange(omegak.shape)
+            # frequency-independent friction
+            LT_fric_spec_dens = np.ones(omegak.shape)
         else:
             invcm2au = units.unit_to_internal("frequency", "inversecm", 1)
 
-            # We perform the spline in inversecm for numerical reasons
+            # frequencies in atomic units, as the energy below (hbar = 1)
             freq = fric_spec_dens_data[:, 0] * invcm2au
             spline = self.interp1d(
                 freq,
@@ -503,13 +503,12 @@ class FrictionMapper(PesMapper):
                 bounds_error=False,
             )
 
-            if fric_spec_dens_ener == 0 or fric_spec_dens_ener / invcm2au < freq[0]:
-                norm = 1.0  # spline(freq[0])*freq[0]*invcm2au
-            elif fric_spec_dens_ener / invcm2au > freq[-1]:
-                norm = 1.0  # spline(freq[-1])*freq[-10]*invcm2au
+            if fric_spec_dens_ener == 0 or fric_spec_dens_ener < freq[0]:
+                norm = 1.0
+            elif fric_spec_dens_ener > freq[-1]:
+                norm = 1.0
             else:
-                # norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
-                norm = spline(fric_spec_dens_ener / invcm2au)
+                norm = spline(fric_spec_dens_ener)
 
             fric_spec_dens = spline(omegak)
             LT_fric_spec_dens = fric_spec_dens / norm
@@ -690,7 +689,9 @@ class FrictionMapper(PesMapper):
         g = -self.f
 
         e_friction, g_friction = self.compute_friction_terms()
-        e += e_friction
+        # the friction energy is a term of the whole ring polymer (the weights
+        # of the beads below sum to nbeads)
+        e += e_friction / self.dbeads.nbeads
         g += xp.asarray(g_friction)
 
         e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
@@ -940,7 +941,7 @@ class Mapper(object):
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
         if mode == "all":
-            e1, g1 = self.sm(x, new_disc)
+            e1, g1 = self.sm(x, new_disc=new_disc)
             e2, g2 = self.gm(x, new_disc)
             e = e1 + e2.sum()
             g = g1 + g2
@@ -948,7 +949,7 @@ class Mapper(object):
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
         elif mode == "springs":
-            e, g = self.sm(x, new_disc)
+            e, g = self.sm(x, new_disc=new_disc)
         else:
             raise ValueError("Mode not recognized when calling FullMapper")
 
@@ -1252,23 +1253,6 @@ class DummyOptimizer:
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
         pass
-
-    def opt_coef(self, coef):
-        # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
-        def func(x):
-            return 2 * np.sum(x) - x[0] - x[-1]
-
-        coef = np.absolute(coef)
-        s = func(coef)
-        coef *= 2 * self.sm.dbeads.nbeads / s
-        # c0   = 2*self.sm.dbeads.nbeads - 2*np.sum(coef)
-        # coef = np.insert(coef,0,c0)
-
-        # self.im.set_coef(coef)
-
-        fphys = self.gm.dforces.f * ((coef[1:] + coef[:-1]) / 2).reshape(-1, 1)
-        e, gspring = self.sm(self.sm.dbeads.q)
-        return np.amax(np.absolute(-gspring + fphys))
 
 
 class HessianOptimizer(DummyOptimizer):
@@ -1684,43 +1668,16 @@ class LanczosOptimizer(HessianOptimizer):
             self.fix.fixbeads.natoms * 3 * self.fix.fixbeads.nbeads, 1
         )
 
-        banded = False
-        banded = True
-        if banded:
-            # BANDED Version
-            # MASS-scaled
-            dyn_mat = get_dynmat(
-                activearrays["hessian"], self.fix.fixbeads.m3, self.fix.fixbeads.nbeads
-            )
+        # MASS-scaled banded Hessian
+        dyn_mat = get_dynmat(
+            activearrays["hessian"], self.fix.fixbeads.m3, self.fix.fixbeads.nbeads
+        )
+        h_up_band = banded_hessian(
+            dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
+        )  # create upper band matrix
+        f = f * self.fix.fixbeads.m3.reshape(f.shape) ** -0.5
+        d = diag_banded(h_up_band)
 
-            h_up_band = banded_hessian(
-                dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
-            )  # create upper band matrix
-            f = f * self.fix.fixbeads.m3.reshape(f.shape) ** -0.5
-            # CARTESIAN
-            # h_up_band = banded_hessian(activearrays["hessian"], self.sm.masses=True)  # create upper band matrix
-
-            d = diag_banded(h_up_band)
-        else:
-            # FULL dimensions version
-            h_0 = red2comp(
-                activearrays["hessian"],
-                self.sm.dbeads.nbeads,
-                self.sm.dbeads.natoms,
-                self.mapper.coef,
-            )
-            h_test = np.add(self.sm.h, h_0)  # add spring terms to the physical hessian
-            d, w = clean_hessian(
-                h_test,
-                self.sm.dbeads.q,
-                self.sm.dbeads.natoms,
-                self.sm.dbeads.nbeads,
-                self.sm.dbeads.m,
-                self.sm.dbeads.m3,
-                None,
-            )
-            # CARTESIAN
-            # d,w =np.linalg.eigh(h_test) #Cartesian
         info(
             "\n@Lanczos: 1st freq {} cm^-1".format(
                 units.unit_to_user(
@@ -1772,12 +1729,8 @@ class LanczosOptimizer(HessianOptimizer):
             alpha = 1
             lamb = (d[0] + d[1]) / 4
 
-        if banded:
-            h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
-            d_x = alpha * invmul_banded(h_up_band, f)
-        else:
-            h_test = h_test - np.eye(h_test.shape[0]) * lamb
-            d_x = alpha * np.linalg.solve(h_test, f)
+        h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
+        d_x = alpha * invmul_banded(h_up_band, f)
 
         d_x = d_x.reshape(self.fix.fixbeads.q.shape)
 
