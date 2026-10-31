@@ -260,11 +260,10 @@ bugs pass, and are no longer marked.
   converges), and has no limit on the number of SCF iterations.
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
-- Flaky test: `test_softexit.py::test_signal_during_outputs_completes_the_step` failed once in six full runs
-  ("release unlocked lock": two signal threads racing in `softexit.cleanup`).
-- Failing also on main: `test_metatomic.py` and `test_metatomic_reference.py` error at setup with Python 3.14
-  (`AtomisticModel.__annotations__`, TorchScript).
-- The other known bugs marked as strict xfail in the unit tests fail in the same way as on main.
+- Upstream, also on main: `test_metatomic.py` and `test_metatomic_reference.py` error at setup with Python 3.14,
+  as TorchScript cannot compile metatomic's `AtomisticModel` with the deferred annotations of Python 3.14 (CI
+  runs Python 3.10 and 3.13; the tests skip without metatomic).
+- The metatomic LLPR test is a strict xfail for an upstream bug (metatrain).
 
 ### GPU performance and `torch.compile`
 - The cell and barostat state stay on the device, so that whole steps can be compiled. The remaining host
@@ -481,6 +480,9 @@ bugs pass, and are no longer marked.
   tag and references that did not match main) are collected with the others, and skipped when PLUMED cannot be
   loaded; their references were regenerated (identical outputs on main and next). The `plumed.yml` workflow
   installs PLUMED from conda-forge and runs them with numpy and torch, together with the PLUMED unit tests.
+- `test_softexit.py::test_signal_during_outputs_completes_the_step` failed now and then with "release unlocked
+  lock": the test reset the soft exit while the monitoring thread was running its cleanup, and the reset
+  replaced the lock it held. `softexit.reset` waits for a cleanup in progress. New unit test.
 
 ## Constrained dynamics
 

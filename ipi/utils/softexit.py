@@ -173,8 +173,12 @@ class Softexit(object):
         sys.exit()
 
     def reset(self):
-        """Resets the soft-exit state and restores intercepted signals."""
+        """Resets the soft-exit state and restores intercepted signals, after the
+        cleanup in progress in another thread, if any (it releases the lock that
+        the reset replaces)."""
 
+        with self.lock:
+            pass
         for signum, handler in self._kill.items():
             signal.signal(signum, handler)
         self.__init__()

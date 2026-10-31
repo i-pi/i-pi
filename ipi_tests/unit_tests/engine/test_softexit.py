@@ -282,6 +282,33 @@ def test_pending_exit_runs_callbacks_once(workdir):
     assert calls == [True]
 
 
+def test_reset_waits_for_a_cleanup_in_progress(workdir):
+    """A reset during a cleanup in another thread (e.g. the monitoring thread,
+    after a signal) waits for it, instead of replacing the lock it holds."""
+
+    running, release, errors = threading.Event(), threading.Event(), []
+    softexit.register_function(lambda: (running.set(), release.wait(10)))
+
+    def cleanup():
+        try:
+            softexit.cleanup()
+        except RuntimeError as err:
+            errors.append(err)
+
+    cleaner = threading.Thread(target=cleanup)
+    cleaner.start()
+    assert running.wait(10)
+    resetter = threading.Thread(target=softexit.reset)
+    resetter.start()
+    resetter.join(timeout=0.1)
+    assert resetter.is_alive()
+    release.set()
+    for thread in (cleaner, resetter):
+        thread.join(timeout=10)
+        assert not thread.is_alive()
+    assert errors == []
+
+
 def test_second_signal_forces_the_exit(workdir):
     """The first Ctrl-C asks for a soft exit, the second one interrupts."""
 
