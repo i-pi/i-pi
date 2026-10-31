@@ -106,6 +106,11 @@ or because they were approved explicitly:
   the derivative of the tabulated energy with respect to the scaled coordinate, missing the scaling factor
   (`factor_coord = 5`), so it was 5 times smaller than the derivative of the energy it reports: results with
   that driver change. Strict xfails of the unit tests, plus a test of `reset` and of the DDW driver.
+- Atom swaps (`atomswap`) with more than one bead: the swapped atoms keep their masses, so the spring energy
+  of the ring polymers changes when their masses differ; the acceptance and the conserved quantity left this
+  change out (since the motion was written), so path-integral simulations did not sample the right
+  distribution. It is computed from the normal modes, as in the alchemical exchange. Results of PIMD with
+  atom swaps change; classical ones do not. Strict xfail of the unit tests, extended to an accepted swap.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512

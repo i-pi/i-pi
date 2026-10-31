@@ -74,12 +74,10 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
         np.testing.assert_array_equal(restored.names, ["H", "O"])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="AtomSwap acceptance omits the ring-polymer spring-energy change for unequal masses",
-)
-def test_ring_polymer_swap_includes_spring_energy(simulation):
+@pytest.mark.parametrize("accepted", [False, True])
+def test_ring_polymer_swap_includes_spring_energy(simulation, accepted):
+    """Swapping atoms with different masses changes the spring energy, which
+    enters the acceptance and the conserved quantity"""
     root = ET.fromstring(harmonic_input(nbeads=4))
     motion = root.find("system/motion")
     motion.clear()
@@ -98,6 +96,13 @@ def test_ring_polymer_swap_includes_spring_energy(simulation):
             * np.sum((q[:, 0] - np.roll(q[:, 0], 1)) ** 2)
         )
         assert np.exp(-delta / (4 * s.ensemble.temp)) < 0.999
-        s.motion.prng = Proposal(0.999)
+        s.motion.prng = Proposal(0.0 if accepted else 0.999)
         s.motion.step(0)
-        np.testing.assert_array_equal(s.beads.q, q)
+        if accepted:
+            # the harmonic potential of the two atoms is the same
+            swapped = q.reshape(4, 2, 3)[:, ::-1].reshape(4, 6)
+            np.testing.assert_array_equal(s.beads.q, swapped)
+            assert s.motion.ealc == pytest.approx(-delta)
+        else:
+            np.testing.assert_array_equal(s.beads.q, q)
+            assert s.motion.ealc == 0
