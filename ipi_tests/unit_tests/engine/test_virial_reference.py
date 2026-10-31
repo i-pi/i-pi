@@ -20,12 +20,6 @@ from ipi_tests.unit_tests.engine.mathematical_references import (
     volume_polynomial,
 )
 
-SC_VIRIAL_BUG = pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="BUG: SC virial omits the force-product term required by the complete energy's cell-strain derivative (JCTC 2019, SI S1.31)",
-)
-
 
 class VolumePolynomial:
     """Driver differentiates U directly; references use polynomial calculus."""
@@ -214,10 +208,9 @@ def test_published_sc_virial_formula(virial_case, coupling):
     close(published, expected)
 
 
-@SC_VIRIAL_BUG
 @pytest.mark.parametrize("alpha", [0.0, 0.3, 1.0])
 @pytest.mark.parametrize("coupling", [0.0, 0.6])
-@pytest.mark.parametrize("epsilon", [-1e-5, 1e-6], ids=["centered", "forward"])
+@pytest.mark.parametrize("epsilon", [-1e-5, 1e-8], ids=["centered", "forward"])
 @pytest.mark.parametrize(
     "virial_case,component_index",
     [((4, False), 0), ((6, True), 0), ((6, True), 1)],
@@ -241,7 +234,6 @@ def test_sc_component_virial_differentiates_force_square(
     close(s.forces.forcesvirs_4th_order(component_index)[1], expected)
 
 
-@SC_VIRIAL_BUG
 @pytest.mark.parametrize("virial_case", [(6, True)], indirect=True)
 @pytest.mark.parametrize("quantity", ["combine", "cached"])
 def test_sc_combined_raw_virial_differentiates_force_square(virial_case, quantity):
@@ -264,7 +256,6 @@ def test_sc_linear_virial_differentiates_linear_energy(virial_case):
     close(s.forces.get_virssc_part_1(), expected)
 
 
-@SC_VIRIAL_BUG
 @pytest.mark.parametrize("virial_case", [(6, True)], indirect=True)
 @pytest.mark.parametrize("part", ["virssc_part_2", "virssc"])
 def test_sc_corrected_virial_differentiates_complete_energy(virial_case, part):
@@ -318,7 +309,6 @@ def test_pressure_outputs_include_explicit_cell_derivatives(virial_case, key):
         close(s.properties[key][0], expected[key])
 
 
-@SC_VIRIAL_BUG
 @pytest.mark.parametrize("virial_case", [(6, True)], indirect=True)
 @pytest.mark.parametrize("key", ["pressure_tdsc", "vir_tdsc"])
 def test_sc_pressure_outputs_use_complete_energy_strain(virial_case, key):
@@ -407,7 +397,6 @@ def test_sc_barostat_kinetic_correction(virial_case):
     close(barostat.get_kstress_sc(), kinetic(r, force2, centroid=False))
 
 
-@SC_VIRIAL_BUG
 @pytest.mark.parametrize("virial_case", [(6, True)], indirect=True)
 @pytest.mark.parametrize("quantity", ["stress", "piston_momentum"])
 def test_sc_barostat_high_order_stress_and_momentum(virial_case, quantity):
