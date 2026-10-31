@@ -62,6 +62,12 @@ or because they were approved explicitly:
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
   the forces of other positions. They are now recomputed when read. Unit test extended.
+- SVR thermostat (also the centroid of PILE_G): the sign of the rescaling factor used twice the kinetic energy
+  relative to the construction of Bussi, Donadio and Parrinello (JCP 126, 014101, App. A), from which its
+  square is computed (since 2.0), so some of the momentum reversals were missed. The sampled distribution was
+  correct; the dynamics change only with few degrees of freedom and tau not much larger than the time step
+  (with 30 degrees of freedom and dt = tau, 1e-4 of the steps reverse the momenta). With one degree of
+  freedom, the step is now the Langevin propagator. New unit test.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512

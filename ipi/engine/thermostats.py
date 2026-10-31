@@ -472,8 +472,9 @@ dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])
 @compiled
 def _svr_step(p, m, K_target, et, r1, rg):
     """Returns the scaling of the momenta in a stochastic velocity rescaling
-    step, and the energy given to the thermostat, given the random numbers r1
-    (normal) and rg (chi-squared with one degree of freedom fewer than p)."""
+    step, and the energy given to the thermostat, given the target kinetic
+    energy per degree of freedom K_target and the random numbers r1 (normal)
+    and rg (chi-squared with one degree of freedom fewer than p)."""
 
     K = (p @ (p / m)) * 0.5
     # with zero kinetic energy (p = 0) any finite scaling leaves p unchanged
@@ -482,7 +483,7 @@ def _svr_step(p, m, K_target, et, r1, rg):
     alpha2 = (
         et + ratio * (1 - et) * (r1**2 + rg) + 2.0 * r1 * (ratio * et * (1 - et)) ** 0.5
     )
-    flip = r1 + (2 * K / K_target * et / (1 - et)) ** 0.5 < 0
+    flip = r1 + (K / K_target * et / (1 - et)) ** 0.5 < 0
     return alpha2**0.5 * (1 - 2 * flip), K * (1 - alpha2)
 
 
