@@ -56,10 +56,19 @@ jobs:
         run: python -c "import plumed; plumed.Plumed().finalize()"
 
       - name: Run PLUMED unit tests
-        run: python -m pytest -v -ra ipi_tests/unit_tests/engine/test_plumed_reference.py
+        run: python -m pytest -v -ra --cov=ipi --cov-append ipi_tests/unit_tests/engine/test_plumed_reference.py
 
       - name: Run PLUMED regression tests (numpy)
-        run: python -m pytest -v -ra ipi_tests/regression_tests/test_run.py -k PLUMED
+        run: python -m pytest -v -ra --cov=ipi --cov-append ipi_tests/regression_tests/test_run.py -k PLUMED
 
       - name: Run PLUMED regression tests (torch)
-        run: python -m pytest -v -ra ipi_tests/regression_tests/test_run.py -k PLUMED --ipi-backend torch
+        run: |
+          python -m pytest -v -ra --cov=ipi --cov-append --cov-report=xml:coverage-plumed.xml \
+            ipi_tests/regression_tests/test_run.py -k PLUMED --ipi-backend torch
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-plumed.xml
+          fail_ci_if_error: true
