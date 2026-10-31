@@ -206,6 +206,37 @@ def test_deepcopy():
     assert cp._status is not da._status
 
 
+def test_copies_are_isolated():
+    """Depend: deep copies and pickles of a depend object hold a copy of its
+    value, without its dependants, and views cannot be copied"""
+    h = Holder()
+    h.y
+    for copy in (deepcopy(h.x_), pickle.loads(pickle.dumps(h.x_))):
+        assert copy._status.dependants == []
+        copy[0] = 1.0
+        assert not h.y_.tainted()
+        assert np.array_equal(h.x, np.zeros(4))
+    with pytest.raises(TypeError, match="view"):
+        deepcopy(h.x_[1:3])
+    with pytest.raises(TypeError, match="view"):
+        pickle.dumps(h.x_[1:3])
+
+
+def test_ellipsis_and_new_axes_select_views():
+    """Depend: indices with Ellipsis or None select views connected to the
+    array, as those with slices do"""
+    a = dp.depend_array(name="a", value=np.zeros((2, 3)))
+    b = dp.depend_array(
+        name="b", value=np.zeros((2, 3)), func=lambda: 2 * a.get(), dependencies=[a]
+    )
+    column = a[..., 1]
+    assert isinstance(column, dp.depend_array)
+    assert isinstance(a[0, None], dp.depend_array)
+    column[0] = 1.0
+    a[1, ...] += 2.0
+    assert np.array_equal(b.get(), [[0.0, 2.0, 0.0], [4.0, 4.0, 4.0]])
+
+
 def test_strided_slice_refresh_via_parent():
     """Depend: a strided 1D view of an auto-computed array refreshes
     through its parent, so first access through the view does not crash
@@ -302,6 +333,17 @@ def test_dcompute():
     dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
     with pytest.raises(AssertionError):
         dp.dpipe(h.x_, a)
+
+
+def test_dpipe_refuses_synchronized_objects():
+    """Depend: piping into a synchronized object raises, and leaves it synchronized"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    with pytest.raises(AssertionError):
+        dp.dpipe(dp.depend_array(name="c", value=np.zeros(3)), b)
+    a[:] = 3.0
+    assert np.array_equal(b.get(), 6 * np.ones(3))
 
 
 def test_ddeps():

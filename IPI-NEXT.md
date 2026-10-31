@@ -118,6 +118,11 @@ or because they were approved explicitly:
   (they raised a `KeyError` when read) are removed.
 - In-place operators on depend arrays (`obj.x_ += v`) raise a `TypeError` when they cannot update the stored
   array in place, e.g. a numpy array added to a torch tensor, which left the array unchanged.
+- Indices of depend arrays with Ellipsis or None (`obj.x_[..., i]`) select views connected to the array, as
+  slices do (they were taken for scalar indices, and gave read-only copies). Deep copies and pickles of depend
+  objects are isolated (no dependants, no synchronization: a deep copy shared the dependants of the original,
+  and an object with dependants could not be pickled), and views cannot be copied. `dpipe` checks that its
+  target is not synchronized or a view before discarding its function.
 - Assigning part of a depend array that is out of date (`obj.x_[i] = v`, e.g. `beads.p` after writing
   `nm.pnm`) merged the new elements into the old values; the array is now brought up to date first. With
   `--jit`, the objects that a step only updates in place or assigns in part are now inputs of the recorded
