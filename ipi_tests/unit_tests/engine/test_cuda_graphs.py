@@ -526,6 +526,37 @@ def test_failed_recording_is_recorded_again(fake_cuda):
     assert len(replay.segments) == 1
 
 
+@pytest.mark.parametrize("end_fails", [False, True])
+@pytest.mark.parametrize("kind", ["other", "jit"])
+def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
+    """An error raised while a segment is captured ends the capture, also when
+    ending it fails, and is raised as a JitError; JitErrors are raised as they
+    are"""
+
+    from ipi.utils import depend
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.jit import JitError
+
+    def failing_end(graph):
+        raise RuntimeError("the capture cannot be ended")
+
+    if end_fails:
+        monkeypatch.setattr(FakeGraph, "capture_end", failing_end)
+    error = JitError("raised in the step") if kind == "jit" else ValueError()
+
+    def func():
+        if depend._recorder is not None:
+            raise error
+
+    replay = GraphReplay(func)
+    replay()
+    replay()
+    message = "raised in the step" if kind == "jit" else "cannot be replayed"
+    with pytest.raises(JitError, match=message):
+        replay()
+    assert replay.segments is None
+
+
 def test_errors_of_eager_calls_are_raised_as_they_are(fake_cuda):
     """An error raised by a function called eagerly between two recorded
     segments (e.g. by the driver of a forcefield) is raised as it is"""
@@ -608,9 +639,11 @@ def test_functions_are_compiled_on_recent_gpus(capability, is_compiled, monkeypa
     assert (_compiled(func)(1) == "compiled") == is_compiled
 
 
-def test_functions_that_fail_to_compile_are_called_as_they_are(monkeypatch):
-    """Compilation errors, raised by torch.compile at the first call of the
-    compiled function, make the function run as it is from then on"""
+@pytest.mark.parametrize("stage", ["wrapping", "first call"])
+def test_functions_that_fail_to_compile_are_called_as_they_are(stage, monkeypatch):
+    """Compilation errors, raised by torch.compile when it wraps the function
+    or at the first call of the compiled function, make the function run as it
+    is from then on"""
 
     from ipi.utils.jit import _compiled
 
@@ -620,8 +653,13 @@ def test_functions_that_fail_to_compile_are_called_as_they_are(monkeypatch):
         attempts.append(None)
         raise RuntimeError("compilation failed")
 
+    def compile(func, **kwargs):
+        if stage == "wrapping":
+            failing()
+        return failing
+
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: (9, 0))
-    monkeypatch.setattr(torch, "compile", lambda func, **kwargs: failing)
+    monkeypatch.setattr(torch, "compile", compile)
 
     def func(x):
         return 2 * x
@@ -635,6 +673,25 @@ def test_only_cuda_tensors_are_device_values():
     from ipi.utils.cudagraphs import _is_cuda_tensor
 
     assert not _is_cuda_tensor(torch.zeros(1)) and not _is_cuda_tensor(1.0)
+
+
+def test_values_that_cannot_be_compared_are_different():
+    """Values that cannot be converted to arrays, or whose comparison raises,
+    count as changed"""
+
+    from ipi.utils.cudagraphs import _equal
+
+    class Unconvertible:
+        def __array__(self, dtype=None, copy=None):
+            raise TypeError("cannot be converted")
+
+    class Incomparable:
+        def __eq__(self, other):
+            raise TypeError("cannot be compared")
+
+    assert _equal([1.0, 2.0], [1.0, 2.0]) and not _equal([1.0], [1.0, 1.0])
+    assert not _equal(Unconvertible(), 1.0)
+    assert not _equal(Incomparable(), Incomparable())
 
 
 def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):

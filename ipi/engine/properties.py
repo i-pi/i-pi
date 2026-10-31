@@ -57,11 +57,11 @@ def getall(pstring):
     unstart = len(pstring)
     argstart = unstart
 
-    if "}" in pstring:
+    if "{" in pstring or "}" in pstring:
         # the property has a user-defined unit
         unstart = pstring.find("{")
         unstop = pstring.find("}", unstart)
-        if unstop == -1:
+        if unstart == -1 or unstop == -1:
             raise ValueError("Incorrect format in units specification " + pstring)
         unit = pstring[unstart + 1 : unstop]
     if "(" in pstring:

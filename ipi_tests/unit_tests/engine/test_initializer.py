@@ -374,11 +374,6 @@ def test_xyz_initializes_system_and_optional_cell(
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=UnboundLocalError,
-    reason="Empty initialization file accesses undefined last-frame data",
-)
 def test_empty_initialization_file_has_clear_error(tmp_path):
     path = tmp_path / "empty.xyz"
     path.write_text("")

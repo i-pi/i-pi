@@ -84,6 +84,14 @@ or because they were approved explicitly:
   the wrong way, giving wrong <q^2> and <qs> for frequencies other than 1 (`gle_frequency_kernel` only uses the
   momentum column, which was right). The unused, and incorrect, `exp_ut3x3` and `eigensystem_ut3x3` are
   removed. Strict xfails of the unit tests, plus a new test for the symmetric top.
+- Input and output: the planetary model could not save its frequency matrix (`netstring_encoded_savez` wrote
+  the bytes of `np.savez` through a `StringIO`); the NPZ data is now stored as base64, which is safe in the
+  text file. Property strings with an unmatched unit brace (`potential{electronvolt`, `potential}`) raise a
+  `ValueError` instead of giving a wrong name or unit; an empty initialization file raises a `ValueError`
+  (it was an `UnboundLocalError`). The dipoles of driven dynamics read from the legacy "Total dipole moment"
+  strings were NaN (strings multiplied by a float), and only the first bead was read. The interpolation of
+  instantons left `new_hessian.dat` open, so it could be incomplete when the function returned. Strict xfails
+  of the unit tests.
 - The normal-mode transformation is done by default with a matrix product (`transform="matrix"`) instead of
   an FFT: it is faster up to ~128 beads on CPUs (numpy with or without PyFFTW, torch, jax; 1 or 12 threads), and
   on GPUs with fast double precision (H100: 3-6x up to 256 beads x 10000 atoms); the FFT wins from 256-512
@@ -171,8 +179,6 @@ bugs pass, and are no longer marked.
 - SCP: `sd` displacement mode unreachable while `precheck` is on; `get_KnD` accumulates `sqtdm` into `sqtDm`
   using `sqtd` (looks like a typo; fixing it changes results). `ik` with classical statistics gives a NaN
   Hessian when the first displacement is large compared to the sampled width (all reweighting factors vanish).
-- Planetary output: `netstring_encoded_savez` writes the bytes of `np.savez` through `io.StringIO` into a
-  text-mode file (Python 2 leftover), so saving the frequency matrix fails.
 - `Properties.get_vcom(bead=...)` uses an `Atoms` object as momenta, and the bead index arrives as a string.
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (Eckart index check, angle and linear-group conditioning,
   tolerance units, solver defaults, batching), and add a regression test with reference outputs.
