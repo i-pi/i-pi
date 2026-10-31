@@ -22,6 +22,12 @@ PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
 TOLERANCE = dict(rtol=1e-12, atol=1e-14)
 
 
+@pytest.fixture(autouse=True)
+def jax_random(device_random):
+    """Draws the random numbers with JAX also with --ipi-backend jax, as the
+    numpy draws used then would be fixed in the compiled steps."""
+
+
 @pytest.fixture
 def numpy_afterwards():
     """Restores the numpy backend after the test."""

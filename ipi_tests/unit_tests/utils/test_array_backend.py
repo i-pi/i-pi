@@ -209,7 +209,7 @@ def test_jax_depend_copies(jax_backend):
         a._value = xp.zeros(3)
 
 
-def test_jax_random_state(jax_backend):
+def test_jax_random_state(jax_backend, device_random):
     """With JAX, Gaussian arrays are drawn with a JAX key, which is restored with
     the state of the generator"""
 
