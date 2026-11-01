@@ -663,6 +663,7 @@ class NEBMover(Motion):
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=self.nebgm.fixatoms_mask,
                 )
                 info(" @NEB: after Damped_BFGS() call", verbosity.debug)
 
@@ -868,6 +869,7 @@ class NEBMover(Motion):
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=self.climbgm.fixatoms_mask,
                 )
                 info(" @NEB_CLIMB: after Damped_BFGS() call", verbosity.debug)
 

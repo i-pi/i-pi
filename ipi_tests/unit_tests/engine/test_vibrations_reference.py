@@ -106,6 +106,8 @@ def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(
 
 
 def test_vscf_solver_with_exact_uncoupled_maps(simulation):
+    """The free energies per primitive cell include the energy of the minimum
+    per primitive cell once"""
     options = ET.Element("normalmodes", mode="vscf")
     for key, value in {
         "nint": 101,
@@ -113,6 +115,7 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
         "nevib": 20,
         "grid": "True",
         "solve": "True",
+        "nprim": 2,
     }.items():
         ET.SubElement(options, key).text = str(value)
     masses = np.repeat([2.0, 3.0], 3)
@@ -121,6 +124,8 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
     )
     root = motion_input("normalmodes", options)
     root.find("system/beads/q").text = str([0.0] * 6)
+    # the energy of the minimum is 0.7
+    ET.SubElement(root.find("ffdirect"), "offset").text = "-0.7"
     temp = root.find("system/ensemble/temperature")
     temp.attrib.clear()
     temp.text = ".2"
@@ -139,6 +144,10 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
         np.testing.assert_allclose(calc.evals_vscf, expected, atol=1e-11)
         np.testing.assert_allclose(calc.rho_grids.sum(axis=1), 1, atol=1e-12)
         assert sim.syslist[0].motion.finished
+        omega = np.sqrt(0.5 / masses)
+        free = np.sum(omega / 2 + 0.2 * np.log1p(-np.exp(-omega / 0.2)))
+        assert calc.total_imf_free_energy == pytest.approx((0.7 + free) / 2, abs=1e-8)
+        assert calc.total_vscf_free_energy == pytest.approx((0.7 + free) / 2, abs=1e-8)
 
 
 def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):

@@ -25,6 +25,7 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.utils.messages import verbosity, info
 from ipi.utils.array_backend import xp, xp_size, to_numpy
+from ipi.utils.phonontools import apply_asr
 
 
 class DynMatrixMover(Motion):
@@ -67,7 +68,6 @@ class DynMatrixMover(Motion):
         self.deltae = energy_shift
         self.dynmatrix = dynmat
         self.refdynmatrix = refdynmat
-        self.frefine = False
         self.U = None
         self.V = None
         self.prefix = prefix
@@ -93,7 +93,6 @@ class DynMatrixMover(Motion):
             )
 
         self.ism = 1 / xp.sqrt(self.beads.m3[-1])
-        self.m = self.beads.m
         self.phcalc.bind(self)
 
         self.dbeads = self.beads.clone()
@@ -106,11 +105,9 @@ class DynMatrixMover(Motion):
             self.phcalc.step(step)
         else:
             self.phcalc.transform()
-            self.refdynmatrix = self.apply_asr(xp.asarray(self.refdynmatrix, copy=True))
+            self.refdynmatrix = apply_asr(self.asr, self.refdynmatrix, self.beads)
             self.printall(
-                self.prefix,
-                xp.asarray(self.refdynmatrix, copy=True),
-                fixatoms_dof=self.fixatoms_dof,
+                self.prefix, self.refdynmatrix, fixatoms_dof=self.fixatoms_dof
             )
             self.finish(
                 status="success",
@@ -135,8 +132,8 @@ class DynMatrixMover(Motion):
         else:
             active_atoms_mask = np.arange(3 * self.beads.natoms)
 
-        dmatx_full = xp.asarray(dmatx, copy=True)
-        ism_full = xp.asarray(self.ism, copy=True)
+        dmatx_full = dmatx
+        ism_full = self.ism
         dmatx = dmatx[active_atoms_mask][:, active_atoms_mask]
         ism = self.ism[active_atoms_mask]
 
@@ -195,85 +192,6 @@ class DynMatrixMover(Motion):
         for i in range(activedof):
             outfile.write(" ".join(map(str, to_numpy(eigmode[i]))) + "\n")
         outfile.close_stream()
-
-    def apply_asr(self, dm):
-        """
-        Removes the translations and/or rotations depending on the asr mode.
-        """
-        if self.asr == "none":
-            return dm
-
-        if self.asr == "crystal":
-            # Computes the centre of mass.
-            com = (
-                self.beads.q.reshape((self.beads.natoms, 3)).T @ self.m
-            ) / self.m.sum()
-            qminuscom = self.beads.q.reshape((self.beads.natoms, 3)) - com
-            # Computes the moment of inertia tensor.
-            moi = xp.zeros((3, 3))
-            for k in range(self.beads.natoms):
-                moi -= (
-                    xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    @ xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    * self.m[k]
-                )
-
-            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
-            U = xp.linalg.eigh(moi)[1]
-            R = qminuscom @ U
-            D = xp.zeros((3, 3 * self.beads.natoms))
-
-            # Computes the vectors along rotations.
-            D[0] = xp.asarray(np.tile([1, 0, 0], self.beads.natoms)) / self.ism
-            D[1] = xp.asarray(np.tile([0, 1, 0], self.beads.natoms)) / self.ism
-            D[2] = xp.asarray(np.tile([0, 0, 1], self.beads.natoms)) / self.ism
-
-            # Computes unit vecs.
-            for k in range(3):
-                D[k] = D[k] / xp.linalg.vector_norm(D[k])
-
-            # Computes the transformation matrix.
-            transfmatrix = xp.eye(3 * self.beads.natoms) - D.T @ D
-            r = transfmatrix.T @ (dm @ transfmatrix)
-            return r
-
-        elif self.asr == "poly":
-            # Computes the centre of mass.
-            com = (
-                self.beads.q.reshape((self.beads.natoms, 3)).T @ self.m
-            ) / self.m.sum()
-            qminuscom = self.beads.q.reshape((self.beads.natoms, 3)) - com
-            # Computes the moment of inertia tensor.
-            moi = xp.zeros((3, 3))
-            for k in range(self.beads.natoms):
-                moi -= (
-                    xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    @ xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    * self.m[k]
-                )
-
-            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
-            U = xp.linalg.eigh(moi)[1]
-            R = qminuscom @ U
-            D = xp.zeros((6, 3 * self.beads.natoms))
-
-            # Computes the vectors along translations and rotations.
-            D[0] = xp.asarray(np.tile([1, 0, 0], self.beads.natoms)) / self.ism
-            D[1] = xp.asarray(np.tile([0, 1, 0], self.beads.natoms)) / self.ism
-            D[2] = xp.asarray(np.tile([0, 0, 1], self.beads.natoms)) / self.ism
-            # element (iatom, idof) goes to D[:, 3 * iatom + idof]
-            D[3] = (R[:, 1:2] * U[:, 2] - R[:, 2:3] * U[:, 1]).reshape(-1) / self.ism
-            D[4] = (R[:, 2:3] * U[:, 0] - R[:, 0:1] * U[:, 2]).reshape(-1) / self.ism
-            D[5] = (R[:, 0:1] * U[:, 1] - R[:, 1:2] * U[:, 0]).reshape(-1) / self.ism
-
-            # Computes unit vecs.
-            for k in range(6):
-                D[k] = D[k] / xp.linalg.vector_norm(D[k])
-
-            # Computes the transformation matrix.
-            transfmatrix = xp.eye(3 * self.beads.natoms) - D.T @ D
-            r = transfmatrix.T @ (dm @ transfmatrix)
-            return r
 
 
 class DummyPhononCalculator:

@@ -5,6 +5,7 @@ dynamical matrix is a fixed point and the minimum is found in one iteration."""
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+import json
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -23,8 +24,9 @@ NPARALLEL = 2
 STEPS_PER_ITERATION = 1 + MAX_STEPS // NPARALLEL + 1
 
 
-def scp_input(displace_mode, mode):
-    """Harmonic input with SCP starting from the exact dynamical matrix."""
+def scp_input(displace_mode, mode, scale=1.0):
+    """Harmonic input with SCP starting from the exact dynamical matrix, with the
+    initial positions of the harmonic input multiplied by scale."""
 
     options = ET.Element("scp", mode=mode)
     for key, value in {
@@ -39,19 +41,24 @@ def scp_input(displace_mode, mode):
     ET.SubElement(options, "dynmat", shape="(6,6)").text = str(
         np.diag(0.5 / MASSES).ravel().tolist()
     )
-    return ET.tostring(motion_input("scp", options), encoding="unicode")
+    root = motion_input("scp", options)
+    q = root.find("system/beads/q")
+    q.text = str((scale * np.array(json.loads(q.text))).tolist())
+    return ET.tostring(root, encoding="unicode")
 
 
-# "ik" estimates the Hessian after moving the mean position, by reweighting the
-# samples, which with classical statistics are too narrow to have any weight there
+@pytest.mark.parametrize("scale", [1.0, 1.3, 2.0])
 @pytest.mark.parametrize(
     "displace_mode,mode", [("ik", "qn"), ("ik", "cl"), ("nmik", "qn"), ("nmik", "cl")]
 )
-def test_harmonic_dynamical_matrix_is_a_fixed_point(simulation, displace_mode, mode):
+def test_harmonic_dynamical_matrix_is_a_fixed_point(
+    simulation, displace_mode, mode, scale
+):
     """The mean position moves to the minimum after the first iteration, and
-    the frequencies remain the harmonic ones"""
+    the frequencies remain the harmonic ones, also when the samples of the
+    first iteration have a negligible weight at the minimum"""
 
-    with simulation(scp_input(displace_mode, mode)) as sim:
+    with simulation(scp_input(displace_mode, mode, scale)) as sim:
         scp = sim.syslist[0].motion
         assert np.abs(to_numpy(scp.beads.q)).max() > 0.1
         for iteration in [1, 2]:
@@ -61,6 +68,9 @@ def test_harmonic_dynamical_matrix_is_a_fixed_point(simulation, displace_mode, m
             np.testing.assert_allclose(
                 np.sort(to_numpy(scp.w)), np.sort(FREQUENCIES), rtol=1e-10
             )
+        # the error of the force from the samples drawn at the minimum
+        _, f_err, _ = scp.phononator.weighted_force()
+        assert np.isfinite(to_numpy(f_err)).all()
 
 
 def test_steepest_descent_moves_the_mean_position(simulation):

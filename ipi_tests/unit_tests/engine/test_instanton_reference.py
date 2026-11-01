@@ -10,7 +10,7 @@ import pytest
 from ipi.engine.motion.instanton import FrictionMapper
 from ipi.utils.tools.instanton_postproc import instanton_compute
 from ipi.utils.units import unit_to_internal
-from ipi_tests.unit_tests.engine.inputs import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import harmonic_input, motion_input
 
 
 def friction_mapper(s, eta):
@@ -111,6 +111,100 @@ def test_friction_energy_is_a_term_of_the_ring_polymer(simulation):
         assert np.sum(energy) == pytest.approx(
             np.sum(mapper.dforces.pots) + friction, rel=1e-12
         )
+
+
+FRICTION_WELL = """
+__DRIVER_NAME__ = "friction_well"
+__DRIVER_CLASS__ = "FrictionWell"
+
+import json
+import numpy as np
+from ipi.pes.dummy import Dummy_driver
+
+
+class FrictionWell(Dummy_driver):
+    # double well along x of the first atom, harmonic elsewhere, with a
+    # position-dependent friction along x of the first atom only
+
+    def compute_structure(self, cell, pos):
+        x = np.asarray(pos, dtype=float).reshape(-1)
+        pot = -0.5 * x[0] ** 2 + x[0] ** 4 / 16 + 0.5 * np.sum(x[1:] ** 2)
+        g = x.copy()
+        g[0] = -x[0] + x[0] ** 3 / 4
+        eta = np.zeros((len(x), len(x)))
+        eta[0, 0] = 0.3 * (1 + 0.5 * x[0] ** 2)
+        extras = json.dumps({"friction": eta.tolist()})
+        return pot, -g.reshape(np.shape(pos)), np.zeros((3, 3)), extras
+"""
+
+
+def friction_instanton_input(natoms, sd, update, driver):
+    """Rate instanton with friction (position dependent if sd) in the
+    FRICTION_WELL potential, with all atoms but the first one fixed."""
+    count = 4
+    options = ET.Element("instanton", mode="rate")
+    ET.SubElement(options, "opt").text = "nichols"
+    ET.SubElement(options, "hessian_asr").text = "none"
+    ET.SubElement(options, "energy_shift").text = "0"
+    ET.SubElement(options, "hessian_init").text = "True"
+    ET.SubElement(options, "hessian_update").text = update
+    ET.SubElement(options, "hessian_final").text = "True"
+    ET.SubElement(options, "friction").text = "True"
+    ET.SubElement(options, "frictionSD").text = str(sd)
+    eta = np.zeros((3 * natoms, 3 * natoms))
+    eta[0, 0] = 0.3
+    ET.SubElement(options, "eta", shape=f"{eta.shape}").text = str(eta.ravel().tolist())
+    h = np.eye(3 * natoms)
+    h[0, 0] = -1.0
+    ET.SubElement(options, "hessian", shape=f"{h.shape}").text = str(h.ravel().tolist())
+    ET.SubElement(options, "delta").text = "0.3"
+    tolerances = ET.SubElement(options, "tolerances")
+    for name in ["energy", "force", "position"]:
+        ET.SubElement(tolerances, name).text = "1e-7"
+    root = motion_input("instanton", options, nbeads=count)
+    if natoms > 1:
+        ET.SubElement(root.find("system/motion"), "fixatoms").text = str(
+            list(range(1, natoms))
+        )
+    temperature = root.find("system/ensemble/temperature")
+    temperature.attrib.clear()
+    temperature.text = "0.1"
+    root.remove(root.find("ffdirect"))
+    ff = ET.SubElement(root, "ffdirect", name="harmonic")
+    ET.SubElement(ff, "pes").text = "custom"
+    ET.SubElement(ff, "pes_path").text = str(driver)
+    beads = root.find("system/beads")
+    beads.set("natoms", str(natoms))
+    for tag, shape, value in [
+        ("q", f"({count},{3*natoms})", [0.0] * (3 * natoms * count)),
+        ("p", f"({count},{3*natoms})", [0.0] * (3 * natoms * count)),
+        ("m", f"({natoms})", [1.0] * natoms),
+        ("names", f"({natoms})", ["H"] * natoms),
+    ]:
+        beads.find(tag).set("shape", shape)
+        beads.find(tag).text = str(value)
+    return ET.tostring(root, encoding="unicode")
+
+
+@pytest.mark.parametrize("sd,update", [(False, "powell"), (True, "powell")])
+def test_friction_instanton_with_a_fixed_atom(simulation, tmp_path, sd, update):
+    """A fixed atom without friction leaves the friction instanton of the other
+    atom unchanged"""
+    driver = tmp_path / "friction_well.py"
+    driver.write_text(FRICTION_WELL)
+    paths = []
+    for natoms in [1, 2]:
+        with simulation(friction_instanton_input(natoms, sd, update, driver)) as sim:
+            s = sim.syslist[0]
+            s.motion.exit_on_convergence = False
+            for step in range(50):
+                s.motion.step(step)
+                if s.motion.finished:
+                    break
+            assert s.motion.finished
+            paths.append(np.asarray(s.beads.q)[:, :3])
+    assert np.ptp(paths[0][:, 0]) > 0.5
+    np.testing.assert_allclose(paths[1], paths[0], atol=1e-7)
 
 
 @pytest.mark.parametrize("case", ["TS", "splitting", "rate"])
