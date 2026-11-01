@@ -322,6 +322,15 @@ or because they were approved explicitly:
   of the array or its type beyond a `same_kind` cast (it replaced the array).
 - New tool `i-pi-depend-graph` (`ipi.utils.tools.DependGraph`): writes the graph of the depend objects of a
   simulation in the dot format of Graphviz, optionally only around some objects (`--around`, `--depth`).
+- Dead code removed: `Atoms.kin`/`kstress` (each replica of the beads had them as dependants of the momenta;
+  `Beads.kins`, `kin` and `kstress` are computed from the momenta of all the beads), `Random.gfill`,
+  `mintools.bracket_neb`/`min_brent_neb`/`L_BFGS_nls` (only used by their tests), the `k` argument of
+  `L_BFGS`, `mathtools.sinch`/`mat_taylor`, `Forces.run`/`stop`, the `GradientMapper` and the unimplemented
+  single-force-call step of the string method, and commented-out code. The SC stresses of the barostats
+  (`kstress_sc`, `stress_sc`) are members of `BaroSCBZP` only. NEB and the string method printed the
+  distances between the beads at every evaluation, and debugging information at each step: these are now
+  messages at debug verbosity. The NEB, string and instanton modules no longer change the global print
+  options of numpy when they are imported.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
@@ -329,8 +338,9 @@ bugs pass, and are no longer marked.
 ## Status and work left
 
 ### Pre-existing bugs found and not fixed (need a decision)
-- Instanton: the spring term for non-uniform discretizations (`SpringMapper`, under `if False:`) is disabled,
-  while the physical potential is weighted by the discretization coefficients.
+- Instanton: the spring term for non-uniform discretizations is not implemented (`SpringMapper` ignores the
+  discretization; a disabled draft of it was removed), while the physical potential is weighted by the
+  discretization coefficients.
 - VSCF, not checked or changed: with `nprim > 1` the one-mode and the pair terms are scaled differently (the
   pair mean field is divided by `nprim` once more); `mptwo`, `threebody`, `print_mftpot`, `print_2b_map`,
   `print_vib_density`, `nkbt`, `nexc` and `ethresh` are accepted but not used (the MP2 correction and the

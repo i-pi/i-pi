@@ -24,24 +24,14 @@ def random_factory():
 
 
 @pytest.mark.parametrize(
-    "n_threads,shape,contiguous",
-    [
-        (1, (3,), True),
-        (1, (67, 3), True),
-        (2, (33, 3), True),
-        (4, (33, 3), True),
-        (2, (67, 3), True),
-        (4, (401, 3), True),
-        (4, (401, 3), False),
-    ],
+    "n_threads,shape",
+    [(1, (3,)), (1, (67, 3)), (2, (33, 3)), (4, (33, 3)), (2, (67, 3)), (4, (401, 3))],
 )
-def test_gaussian_fill_updates_the_supplied_array(
-    random_factory, n_threads, shape, contiguous
-):
-    """Both serial and parallel fills must overwrite every output element."""
+def test_gaussian_arrays_fill_every_element(random_factory, n_threads, shape):
+    """Both serial and parallel draws must fill every element of the array."""
     generator = random_factory(seed=109, n_threads=n_threads)
-    output = np.full(shape, np.nan) if contiguous else np.full(shape[::-1], np.nan).T
-    generator.gfill(output)
+    output = generator.gvec(shape)
+    assert output.shape == shape
     assert np.isfinite(output).all()
     assert np.any(output != output.flat[0])
 

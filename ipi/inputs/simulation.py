@@ -6,7 +6,6 @@
 
 
 from ipi import ipi_global_settings
-from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 from ipi.utils.prng import *

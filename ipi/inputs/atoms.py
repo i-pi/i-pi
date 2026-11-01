@@ -14,7 +14,6 @@ import numpy as np
 from ipi.engine.atoms import *
 from ipi.utils.inputvalue import *
 from ipi.utils.array_backend import xp
-from ipi.utils.depend import *
 
 __all__ = ["InputAtoms"]
 

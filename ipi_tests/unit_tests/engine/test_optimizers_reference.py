@@ -9,7 +9,6 @@ import pytest
 
 from ipi.engine.motion.geop import GeopMotion
 from ipi.engine.motion.stringmep import (
-    GradientMapper,
     StringGradientMapper,
     spline_derv,
     spline_resample,
@@ -405,8 +404,9 @@ def test_string_resampling_of_straight_line(count):
     )
 
 
-@pytest.mark.parametrize("projected", [False, True])
-def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projected):
+def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation):
+    """The string mapper returns the energy of the inner beads, and the part of
+    the gradient perpendicular to the path (here along x)"""
 
     with simulation(harmonic_input(nbeads=7)) as sim:
         system = sim.syslist[0]
@@ -414,7 +414,7 @@ def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projec
         q[:, 0] = np.linspace(-1, 1, 7)
         q[:, 1] = 0.2
         system.beads.q_[:] = xp.asarray(q)
-        mapper = (StringGradientMapper if projected else GradientMapper)()
+        mapper = StringGradientMapper()
         mapper.bind(
             SimpleNamespace(
                 beads=system.beads,
@@ -426,6 +426,5 @@ def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projec
         energy, gradient = mapper(xp.asarray(q[1:-1]))
         assert float(energy) == pytest.approx(0.25 * np.sum(q[1:-1] ** 2))
         expected = 0.5 * q[1:-1].copy()
-        if projected:
-            expected[:, 0] = 0
+        expected[:, 0] = 0
         np.testing.assert_allclose(to_numpy(gradient), expected, atol=1e-12)

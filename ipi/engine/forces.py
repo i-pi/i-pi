@@ -887,7 +887,7 @@ class Forces:
 
         self.extras_ = depend_value(
             name="extras",
-            value=np.zeros(self.nbeads, float),
+            value={},
             func=self.extra_combine,
             dependencies=[ff.extras_ for ff in self.mforces],
         )
@@ -1196,28 +1196,6 @@ class Forces:
                     mx[key] = mextra[key][b]
                 ufvx = [mv[b], mf[b], vir, mx]
                 mself._forces[b].ufvx_.set(ufvx, manual=False)
-
-    def run(self):
-        """Makes the socket start looking for driver codes.
-
-        Tells the interface code to start the thread that looks for
-        connection from the driver codes in a loop. Until this point no
-        jobs can be queued.
-        """
-
-        for ff in self.mforces:
-            ff.run()
-
-    def stop(self):
-        """Makes the socket stop looking for driver codes.
-
-        Tells the interface code to stop the thread that looks for
-        connection from the driver codes in a loop. After this point no
-        jobs can be queued.
-        """
-
-        for ff in self.mforces:
-            ff.stop()
 
     def queue(self):
         """Submits all the required force calculations to the forcefields."""

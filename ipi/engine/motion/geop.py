@@ -604,7 +604,6 @@ class LBFGSOptimizer(DummyOptimizer):
             self.ls_options["iter"],
             self.corrections,
             self.scale,
-            step,
         )
         self.d[:, mask] = d
         self.qlist[:, self.flat_mask] = qlist
