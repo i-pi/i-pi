@@ -48,6 +48,8 @@ class GeopMotion(Motion):
         glist_lbfgs: list of previous gradients (g_n+1 - g_n) for L-BFGS. Number of entries = corrections_lbfgs
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

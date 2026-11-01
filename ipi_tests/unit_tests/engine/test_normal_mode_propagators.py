@@ -106,6 +106,34 @@ def test_centroid_positions_and_momenta_follow_free_motion(
         )
 
 
+@pytest.mark.parametrize("paths", ["closed", "open_paths", "bosons"])
+def test_spring_force_is_negative_energy_gradient(simulation, paths):
+    """The spring force is minus the gradient of the spring energy for every
+    bead, and follows changes of the masses"""
+    root = ET.fromstring(harmonic_input(nbeads=4))
+    if paths != "closed":
+        normal = ET.SubElement(root.find("system"), "normal_modes")
+        ET.SubElement(normal, paths).text = "[0]"
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        beads, nm = sim.syslist[0].beads, sim.syslist[0].nm
+        original = np.random.default_rng(82).normal(size=(4, 6))
+        beads.q_[:] = original
+        force = np.array(nm.fspring)
+        numerical = np.zeros_like(original)
+        step = 1e-5
+        for index in np.ndindex(original.shape):
+            beads.q_[index] = original[index] + step
+            forward = float(nm.vspring)
+            beads.q_[index] = original[index] - step
+            backward = float(nm.vspring)
+            beads.q_[index] = original[index]
+            numerical[index] = -(forward - backward) / (2 * step)
+        np.testing.assert_allclose(force, numerical, rtol=1e-7, atol=1e-13)
+        np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-15)
+        beads.m_[:] *= 2
+        np.testing.assert_allclose(nm.fspring, 2 * force, rtol=1e-12)
+
+
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)
 def test_open_and_closed_mode_propagators_match_harmonic_matrix(
     simulation, style, freqs, propagator

@@ -43,6 +43,8 @@ class AlKMC(Motion):
             effective classical temperature.
     """
 
+    jax_support = False
+
     def __init__(
         self,
         mode,

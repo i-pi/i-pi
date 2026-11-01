@@ -64,6 +64,8 @@ def _coupling_on_grid(qi, qj, v, igrid, jgrid):
 class NormalModeMover(Motion):
     """Normal Mode analysis."""
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

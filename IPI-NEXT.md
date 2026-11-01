@@ -55,9 +55,7 @@ or because they were approved explicitly:
 - Missing dependencies of the forces: the fourth-order Suzuki-Chin term on alpha, the total SC virial on the
   per-bead ones (it depended on the SC potential), and the combined extras and the components added to a bias
   (`add_component`) on the component weights; they gave stale values when these changed (e.g. the extras of a
-  bias whose weights are exchanged by replica exchange). As the finite differences of the fourth-order term
-  displace only the odd beads for alpha = 0, alpha cannot change between zero and non-zero values once the term
-  has been computed (`ValueError`). New unit tests.
+  bias whose weights are exchanged by replica exchange). New unit tests.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
@@ -97,11 +95,12 @@ or because they were approved explicitly:
   in `GeopMotion`. `reset` also left a converged optimizer converged, so that the KMC skipped every relaxation
   after the first converged one (also on main); it now clears the convergence, resets the Hessian of
   `damped_bfgs` and the adaptive step of the line search of `sd` and `cg`, and no longer zeroes the
-  `corrections` and `scale` settings of L-BFGS (which then went to the restart). The spring forces of the
-  beads (`fpath`) did not depend on the masses, so they were stale after the masses changed; `beads.kin`
-  failed (`kins` was not a property); `vcom(bead=...)` failed. The GLE
-  state given in `<initialize><gle>` was looked for in the ensemble instead of the motion, so it could never
-  be read. The temperature of a single normal mode (`temperature(nm=...)`) with a fixed centroid counted the
+  `corrections` and `scale` settings of L-BFGS (which then went to the restart). The spring energy and forces
+  of the beads (`vpath`, `fpath`), which were only used in tests, are removed (`nm.vspring` and `nm.fspring`
+  hold those of the path integral): they were wrong for open paths and bosons, and `fpath` did not depend on
+  the masses. `beads.kin` failed (`kins` was not a property); `vcom(bead=...)` failed. The GLE state given
+  in `<initialize><gle>` was looked for in the ensemble instead of the motion, so it could never be read. The
+  temperature of a single normal mode (`temperature(nm=...)`) with a fixed centroid counted the
   fixed coordinates as nbeads-1 degrees of freedom in every mode. The cavity forcefield (`FFCavPhSocket`)
   passed its error messages as the soft-exit status, so it raised a `ValueError` instead of stopping, and
   read the dipole data before checking it was there. The ASE driver without stress rejected its own zero
@@ -265,8 +264,12 @@ or because they were approved explicitly:
   work with arrays that cannot be modified (JAX): `mtom3`, `f_gather`, `invert_ut3x3`, `get_prop_pq_ms`,
   `kstress_mts`/`stress_mts`, the 3x3 <-> 6 conversions of the flexible barostats (a product with a constant
   selection matrix, which also avoids copying index arrays to the device at each call), the centroid-virial
-  kinetic stress estimators. Results change at the level of rounding errors. `Cell.array_pbc` returns the
-  wrapped positions instead of modifying its argument.
+  kinetic stress estimators, the fourth-order Suzuki-Chin finite differences and SC kinetic stress, the
+  centroid-virial estimators `kinetic_cv(atom)`, `kinetic_ij`, `kinetic_tens` and the `kinetic_cv`,
+  `kinetic_od` and `r_gyration` trajectories. Results change at the level of rounding errors (the SC
+  trajectories and these outputs are unchanged). `Cell.array_pbc` returns the wrapped positions instead of
+  modifying its argument. The unused `stress` and `kstress` of the barostats (`stress` added the virials of
+  each bead rather than their sum) and `coeffsc` of the integrators are removed.
 - Depend objects that become computed after they are created (thermostats of the normal modes, constraints,
   contracted beads, bias scaling) are wired with `dsetfunc` or `dpipe` instead of setting `_func` by hand.
   `dsetfunc` raises an `AssertionError` if the object is already computed, synchronized, or a view. `dpipe`
@@ -466,10 +469,17 @@ bugs pass, and are no longer marked.
   static argument (9-15 us), as eager JAX indexing costs 60-400 us. The PRNG splits a stored key per draw,
   in a single jitted call with the draw (40 us instead of 150 us). Only these array operations are jitted,
   not the algorithms. The MD path builds no arrays in place (see the behaviour changes above).
-  Equivalence with numpy (same Gaussian draws, 1e-10): NVE, NVT Langevin/SVR, NPT isotropic/flexible, PIMD
-  NVT/NPT; GLE xfails (`stab_cholesky` and the auxiliary momenta `s` are modified in place). Regression tests
-  with `--ipi-backend jax`: 47/69 pass (all MD), and the MD restart tests; the others stop at plain-array writes in geometry
-  optimizers, NEB, phonons, instantons, exchange, open paths and `stab_cholesky`.
+  Equivalence with numpy (same Gaussian draws, 1e-10): NVE, NVT Langevin/SVR/FFL/CL/multi, MTS with a bias,
+  NPT isotropic/flexible (also with SVR on the barostat), NST, PIMD NVT/NPT with PILE_L/PILE_G, NVT-CC, fixed
+  atoms, contracted components, Suzuki-Chin NVT/NPT (centred and forward differences), and the
+  centroid-virial and gyration estimators; GLE xfails, also on the barostat (`stab_cholesky` and the
+  auxiliary momenta `s` are modified in place). Motions that write into plain arrays (geometry optimization,
+  NEB, string, phonons, IMF/VSCF, SCP, instantons, planetary, Al6xxx KMC, constrained dynamics) set
+  `jax_support = False`, and `System.bind` stops with a `ValueError` (also within `multi`); dynamics,
+  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 46 of 72 pass, with
+  the MD restart tests (PLUMED is skipped); 21 stop at bind (geometry optimizers, NEB, phonons, instantons,
+  constrained dynamics, and their restart tests), and the others at plain-array writes (bosonic exchange,
+  open paths, `stab_cholesky` of the GLE thermostats).
   Eager JAX is slow: ms/step without forces, CPU, numpy / torch / jax, 100 atoms: NVE 0.049 / 0.12 / 0.78,
   NVT 0.11 / 0.29 / 1.8, PIMD-4 0.56 / 1.4 / 11.8, NPT 0.29 / 0.98 / 6.3, NPT flexible 0.93 / 2.6 / 13.4; at
   10000 atoms PIMD-4 28.9 / 26.5 / 34.8. Each eager JAX operation costs 11-16 us (arithmetic), 26 us (reshape), 40-85 us (indexing), 70 us

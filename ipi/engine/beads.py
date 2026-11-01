@@ -46,10 +46,6 @@ class Beads:
        p: An array giving all the bead momenta.
        qc: An array giving the centroid positions. Depends on qnm.
        pc: An array giving the centroid momenta. Depends on pnm.
-       vpath: The spring potential between the beads, divided by omegan**2.
-          Depends on q.
-       fpath: The spring force between the beads, divided by omegan**2.
-          Depends on q.
        kins: A list of the kinetic energy of each replica.
        kin: The total kinetic energy of the system. Note that this is not the
           same as the estimate of the kinetic energy of the system, which is
@@ -129,17 +125,6 @@ class Beads:
             value=np.zeros(3 * natoms, float),
             func=self.get_pc,
             dependencies=[self.p_],
-        )
-
-        # path springs potential and force
-        self.vpath_ = depend_value(
-            name="vpath", func=self.get_vpath, dependencies=[self.q_, self.m3_]
-        )
-        self.fpath_ = depend_array(
-            name="fpath",
-            value=np.zeros((nbeads, 3 * natoms), float),
-            func=self.get_fpath,
-            dependencies=[self.q_, self.m3_],
         )
 
         # create proxies to access the individual beads as Atoms objects
@@ -249,55 +234,6 @@ class Beads:
             ks += self[b].kstress
         return ks
 
-    def get_vpath(self):
-        """Calculates the spring potential between the replicas.
-
-        Note that this is actually the harmonic potential without being
-        multiplied by the factor omegan**2, which is only available in the
-        ensemble as the temperature is required to calculate it.
-        """
-
-        epath = 0.0
-        q = self.q
-        m = self.m3[0]
-        for b in range(self.nbeads):
-            if b > 0:
-                dq = q[b, :] - q[b - 1, :]
-            else:
-                dq = q[b, :] - q[self.nbeads - 1, :]
-            epath += dq @ (m * dq)
-        print(
-            "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
-        )
-        return epath * 0.5
-
-    def get_fpath(self):
-        """Calculates the spring force between the replicas.
-
-        Note that this is actually the harmonic force without being
-        multiplied by the factor omegan**2, which is only available in the
-        ensemble as the temperature is required to calculate it.
-        """
-
-        nbeads = self.nbeads
-        natoms = self.natoms
-        f = xp.zeros((nbeads, 3 * natoms))
-
-        q = self.q
-        m = self.m3[0]
-        for b in range(nbeads):
-            if b > 0:
-                dq = q[b, :] - q[b - 1, :]
-            else:
-                dq = q[b, :] - q[self.nbeads - 1, :]
-            dq *= m
-            f[b] -= dq
-            if b > 0:
-                f[b - 1] += dq
-            else:
-                f[nbeads - 1] += dq
-        return f
-
     # A set of functions to access individual beads as Atoms objects
     def __len__(self):
         """Length function.
@@ -357,7 +293,5 @@ dproperties(
         "kins",
         "kin",
         "kstress",
-        "vpath",
-        "fpath",
     ],
 )

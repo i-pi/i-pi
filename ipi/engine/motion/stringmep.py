@@ -265,6 +265,8 @@ class StringMover(Motion):
         stage: flag denoting current stage: "endpoints", "string" or "climb", or "converged"
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

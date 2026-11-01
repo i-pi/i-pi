@@ -459,7 +459,9 @@ must not be created at import time (module constants, default arguments).
   views such as ``obj.x_[i]``) replace the stored array. Other arrays must not
   be written in place: build them with whole-array operations (``xp.stack``,
   ``xp.concat``, ``xp.where``, ``@`` with a constant matrix) rather than by
-  filling an array created with ``xp.zeros``.
+  filling an array created with ``xp.zeros``. Motions that do not work with
+  JAX set the class attribute ``jax_support = False``, so that i-PI stops
+  with an error when they are used with JAX.
 
 The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
 check that the torch and JAX backends reproduce the numpy trajectories and

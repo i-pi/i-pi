@@ -312,8 +312,11 @@ if they do.
 
 ``--backend jax`` (experimental) stores the arrays as
 `JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
-runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
-instantons, bosonic exchange, open paths or the GLE thermostats, and it is
+runs molecular dynamics, replays, ramps and Monte Carlo exchanges of atoms,
+but not yet constrained dynamics, geometry optimization, NEB, string methods,
+phonons, vibrational and SCP analyses, instantons, planetary models, kinetic
+Monte Carlo, bosonic exchange, open paths or the GLE thermostats (i-PI stops
+with an error at the start for the motions it cannot run), and it is
 much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
