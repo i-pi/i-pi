@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from ipi.inputs.motion.motion import InputMotion
+from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
@@ -38,35 +39,36 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         system = sim.syslist[0]
         beads = system.beads
-        q, p, m = beads.q.copy(), beads.p.copy(), beads.m.copy()
+        q, p, m = [to_numpy(x).copy() for x in (beads.q, beads.p, beads.m)]
         kinetic = np.sum(p**2 / np.repeat(m, 3)) / 2
-        spring = system.nm.vspring
-        potential = system.forces.pot
+        spring = float(system.nm.vspring)
+        potential = float(system.forces.pot)
         system.motion.prng = Proposal(0.0, attempts)
         system.motion.step(0)
-        assert np.sum(beads.p**2 / np.repeat(beads.m, 3)) / 2 == pytest.approx(kinetic)
-        assert system.forces.pot == pytest.approx(potential)
-        assert system.nm.vspring + system.motion.ealc == pytest.approx(spring)
+        q1, p1, m1 = [to_numpy(x) for x in (beads.q, beads.p, beads.m)]
+        assert np.sum(p1**2 / np.repeat(m1, 3)) / 2 == pytest.approx(kinetic)
+        assert float(system.forces.pot) == pytest.approx(potential)
+        assert float(system.nm.vspring + system.motion.ealc) == pytest.approx(spring)
         if attempts and mode == "alchemy":
             np.testing.assert_array_equal(beads.names, ["O", "H"])
-            np.testing.assert_array_equal(beads.m, m[::-1])
-            np.testing.assert_allclose(beads.p, p * np.repeat(np.sqrt(m[::-1] / m), 3))
-            np.testing.assert_array_equal(beads.q, q)
+            np.testing.assert_array_equal(m1, m[::-1])
+            np.testing.assert_allclose(p1, p * np.repeat(np.sqrt(m[::-1] / m), 3))
+            np.testing.assert_array_equal(q1, q)
         elif attempts:
             np.testing.assert_array_equal(
-                beads.q, q.reshape(nbeads, 2, 3)[:, ::-1].reshape(nbeads, 6)
+                q1, q.reshape(nbeads, 2, 3)[:, ::-1].reshape(nbeads, 6)
             )
-            np.testing.assert_array_equal(beads.p, p)
+            np.testing.assert_array_equal(p1, p)
         else:
-            np.testing.assert_array_equal(beads.q, q)
-            np.testing.assert_array_equal(beads.p, p)
-            np.testing.assert_array_equal(beads.m, m)
+            np.testing.assert_array_equal(q1, q)
+            np.testing.assert_array_equal(p1, p)
+            np.testing.assert_array_equal(m1, m)
         # The changed species/masses and accumulated exchange energy belong in restart.
 
         stored = InputMotion()
         stored.store(system.motion)
         restored = stored.fetch()
-        assert restored.ealc == pytest.approx(system.motion.ealc)
+        assert float(restored.ealc) == pytest.approx(float(system.motion.ealc))
         np.testing.assert_array_equal(restored.names, ["H", "O"])
 
 
@@ -101,24 +103,24 @@ def test_ring_polymer_swap_includes_spring_energy(simulation, accepted):
         s = sim.syslist[0]
         q = np.zeros((4, 6))
         q[:, 0] = [-10, 10, -10, 10]
-        s.beads.q_[:] = q
+        s.beads.q_[:] = xp.asarray(q)
         delta = (
             0.5
             * (3.0 - 2.0)
-            * s.nm.omegan2
+            * float(s.nm.omegan2)
             * np.sum((q[:, 0] - np.roll(q[:, 0], 1)) ** 2)
         )
-        assert np.exp(-delta / (4 * s.ensemble.temp)) < 0.999
+        assert np.exp(-delta / (4 * float(s.ensemble.temp))) < 0.999
         s.motion.prng = Proposal(0.0 if accepted else 0.999)
         s.motion.step(0)
         if accepted:
             # the harmonic potential of the two atoms is the same
             swapped = q.reshape(4, 2, 3)[:, ::-1].reshape(4, 6)
-            np.testing.assert_array_equal(s.beads.q, swapped)
-            assert s.motion.ealc == pytest.approx(-delta)
+            np.testing.assert_array_equal(to_numpy(s.beads.q), swapped)
+            assert float(s.motion.ealc) == pytest.approx(-delta)
         else:
-            np.testing.assert_array_equal(s.beads.q, q)
-            assert s.motion.ealc == 0
+            np.testing.assert_array_equal(to_numpy(s.beads.q), q)
+            assert float(s.motion.ealc) == 0
 
 
 @pytest.mark.parametrize("nbeads", [1, 4])
@@ -140,7 +142,7 @@ def test_dynamics_after_alchemical_exchange_uses_new_masses(simulation, nbeads):
             # exchanges the two atoms in the first step only
             s.motion.mlist[1].prng = Proposal(0.0, int(step == 0))
             sim.run_step(step)
-            econs.append(s.ensemble.econs)
+            econs.append(float(s.ensemble.econs))
         np.testing.assert_array_equal(s.beads.names, ["O", "H"])
         # the drift is 5e-3 if the positions are propagated with the old masses
         assert np.ptp(econs) < 1e-5 * abs(econs[0])

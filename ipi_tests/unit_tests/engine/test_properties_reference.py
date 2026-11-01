@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from ipi.engine.simulation import Simulation
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.units import Constants, unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
 from ipi_tests.unit_tests.engine.mathematical_references import (
@@ -54,14 +55,14 @@ def test_spring_primitive_and_conserved_energies(reference_system, count):
         * np.repeat(r.masses, 3)
         * (2 * r.q - np.roll(r.q, 1, axis=0) - np.roll(r.q, -1, axis=0))
     )
-    assert s.properties["spring"][0] == pytest.approx(action / count)
-    assert s.properties["kinetic_td"][0] == pytest.approx(
+    assert to_numpy(s.properties["spring"][0]) == pytest.approx(action / count)
+    assert to_numpy(s.properties["kinetic_td"][0]) == pytest.approx(
         3 * count * r.temperature - action / count
     )
-    np.testing.assert_allclose(s.trajs["forces_spring"][0], force, atol=1e-13)
+    np.testing.assert_allclose(to_numpy(s.trajs["forces_spring"][0]), force, atol=1e-13)
     energy = polynomial(r.q, r.a, r.b)[0].sum()
     kinetic = np.sum(r.p**2 / (2 * np.repeat(r.masses, 3)))
-    assert s.properties["conserved"][0] == pytest.approx(
+    assert to_numpy(s.properties["conserved"][0]) == pytest.approx(
         (action + energy + kinetic) / count
     )
 
@@ -85,9 +86,9 @@ def test_kinetic_md_uses_mode_masses(reference_system, style, frequencies, atom)
         np.arange(6) if atom == "" else np.arange(3 * int(atom), 3 * int(atom) + 3)
     )
     expected = np.sum(modes[:, selected] ** 2 / (2 * mass[:, selected])) / 4
-    assert s.properties.get_kinmd(atom) == pytest.approx(expected)
+    assert to_numpy(s.properties.get_kinmd(atom)) == pytest.approx(expected)
     for mode in range(4):
-        assert s.properties.get_kinmd(atom, nm=str(mode)) == pytest.approx(
+        assert to_numpy(s.properties.get_kinmd(atom, nm=str(mode))) == pytest.approx(
             np.sum(modes[mode, selected] ** 2 / (2 * mass[mode, selected]))
         )
     stress = np.zeros((3, 3))
@@ -95,7 +96,9 @@ def test_kinetic_md_uses_mode_masses(reference_system, style, frequencies, atom)
         vectors = modes[mode].reshape(2, 3)
         for i, m in enumerate(r.masses):
             stress += np.outer(vectors[i], vectors[i]) / (m * factors[mode])
-    np.testing.assert_allclose(s.properties.get_kstress_md(), stress, atol=1e-13)
+    np.testing.assert_allclose(
+        to_numpy(s.properties.get_kstress_md()), stress, atol=1e-13
+    )
     if style != "rpmd":
         with pytest.raises(ValueError, match="mass matrix"):
             s.properties.get_kinmd(bead="0")
@@ -159,7 +162,7 @@ def test_temperature_counts_constrained_degrees_of_freedom(
     if "coordinate" in constraint:
         mode_p[:, [1, 4]] = 0
         removed[:, [1, 4]] = 4
-    s.beads.p_[:] = fourier_matrix(4).T @ mode_p
+    s.beads.p_[:] = xp.asarray(fourier_matrix(4).T @ mode_p)
     modes = range(4) if mode == "" else [int(mode)]
     energy = sum(
         np.sum(mode_p[k, selected] ** 2 / (2 * np.repeat(r.masses, 3)[selected]))
@@ -170,7 +173,7 @@ def test_temperature_counts_constrained_degrees_of_freedom(
     expected = (2 * energy / divisor + r.temperature * missing / divisor) / (
         3 * len(selected_atoms) * 4
     )
-    assert s.properties.get_temp(atom, nm=mode) == pytest.approx(
+    assert to_numpy(s.properties.get_temp(atom, nm=mode)) == pytest.approx(
         expected, rel=1e-12, abs=1e-12
     )
 
@@ -203,11 +206,11 @@ def test_kinetic_stress_estimators(reference_system, alpha, key):
         kstress_tdsc=np.trace(sc) / (360 * r.count),
     )
     np.testing.assert_allclose(
-        s.properties[key][0], expected[key], rtol=1e-8, atol=1e-10
+        to_numpy(s.properties[key][0]), expected[key], rtol=1e-8, atol=1e-10
     )
     if key == "kstress_tdsc":
         np.testing.assert_allclose(
-            s.properties.kstress_sctd(), sc, rtol=1e-8, atol=1e-10
+            to_numpy(s.properties.kstress_sctd()), sc, rtol=1e-8, atol=1e-10
         )
 
 
@@ -223,7 +226,9 @@ def test_cross_atom_kinetic_tensor(reference_system, first, second):
     if first == second:
         tensor += np.eye(3) * r.temperature / 2
     np.testing.assert_allclose(
-        s.properties.get_kij(str(first), str(second)), vector(tensor), atol=1e-13
+        to_numpy(s.properties.get_kij(str(first), str(second))),
+        vector(tensor),
+        atol=1e-13,
     )
 
 
@@ -263,26 +268,28 @@ def test_suzuki_chin_estimators(reference_system, alpha):
         - np.sum(delta * ref["force"] * np.tile([1, 0], r.count // 2)[:, None])
         / r.count
     )
-    assert s.properties["potential_opsc"][0] == pytest.approx(ref["energy"][::2].mean())
-    assert s.properties["potential_tdsc"][0] == pytest.approx(
+    assert to_numpy(s.properties["potential_opsc"][0]) == pytest.approx(
+        ref["energy"][::2].mean()
+    )
+    assert to_numpy(s.properties["potential_tdsc"][0]) == pytest.approx(
         np.mean(w * ref["energy"] + 2 * c * ref["square"])
     )
-    assert s.properties["kinetic_prsc"][0] == pytest.approx(
+    assert to_numpy(s.properties["kinetic_prsc"][0]) == pytest.approx(
         3 * r.count * r.temperature
         - spring_action(r.q, r.masses, r.temperature) / r.count
         + np.mean(c * ref["square"])
     )
-    assert s.properties["kinetic_opsc"][0] == pytest.approx(cv)
+    assert to_numpy(s.properties["kinetic_opsc"][0]) == pytest.approx(cv)
     expected_td = (
         3 * r.temperature
         - np.sum(delta * (ref["force"] + correction_force)) / (2 * r.count)
         + np.mean(c * ref["square"])
     )
-    assert s.properties["kinetic_tdsc"][0] == pytest.approx(
+    assert to_numpy(s.properties["kinetic_tdsc"][0]) == pytest.approx(
         expected_td, rel=1e-8, abs=1e-10
     )
     np.testing.assert_allclose(
-        s.trajs["forces_sc"][0],
+        to_numpy(s.trajs["forces_sc"][0]),
         ref["force"] + correction_force,
         rtol=1e-8,
         atol=1e-10,
@@ -320,11 +327,11 @@ def test_displaced_path_estimator(reference_system, atom):
         - change / (r.count * r.temperature)
     )
     np.testing.assert_allclose(
-        [s.properties.opening(i) for i in range(r.count)], opening
+        [to_numpy(s.properties.opening(i)) for i in range(r.count)], opening
     )
-    assert s.properties[f"displacedpath(.17;-.23;.11;{atom})"][0] == pytest.approx(
-        expected
-    )
+    assert to_numpy(
+        s.properties[f"displacedpath(.17;-.23;.11;{atom})"][0]
+    ) == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("atom,mass", [("H", 2), ("O", 3)])
@@ -354,7 +361,10 @@ def test_yamamoto_energy_and_beta_derivative(reference_system, displacement):
     s, r = reference_system()
     expected = scaled_derivatives(r.q, r.a, r.b, r.temperature)
     np.testing.assert_allclose(
-        s.properties.get_yama_estimators(displacement), expected, rtol=2e-6, atol=2e-7
+        to_numpy(s.properties.get_yama_estimators(displacement)),
+        expected,
+        rtol=2e-6,
+        atol=2e-7,
     )
 
 
@@ -373,7 +383,7 @@ def test_operator_scaled_coordinates_double_virial(reference_system, displacemen
         delta[::2] * double_virial_force[::2]
     )
     np.testing.assert_allclose(
-        s.properties.get_scop_estimators(displacement),
+        to_numpy(s.properties.get_scop_estimators(displacement)),
         [eop, derivative],
         rtol=2e-6,
         atol=2e-8,
@@ -411,10 +421,10 @@ def test_suzuki_chin_estimators_of_a_harmonic_oscillator(reference_system, alpha
     keys += ["potential_opsc", "kinetic_opsc", "eps", "eps'", "eps_op", "eps_op'"]
 
     def estimators(q):
-        s.beads.q_[:] = q
-        values = [s.properties[key][0] for key in keys[:5]]
-        values += list(s.properties.get_scyama_estimators(0.0003))
-        values += list(s.properties.get_scop_estimators(0.0003))
+        s.beads.q_[:] = xp.asarray(q)
+        values = [float(s.properties[key][0]) for key in keys[:5]]
+        values += list(to_numpy(s.properties.get_scyama_estimators(0.0003)))
+        values += list(to_numpy(s.properties.get_scop_estimators(0.0003)))
         return np.array(values, dtype=float)
 
     # the coordinates are independent, and the estimators even functions of each
@@ -482,7 +492,10 @@ def test_suzuki_chin_scaled_coordinates(reference_system, alpha):
     s, r = reference_system(alpha=alpha)
     expected = sc_scaled_derivatives(r.q, r.masses, r.a, r.b, alpha, r.temperature)
     np.testing.assert_allclose(
-        s.properties.get_scyama_estimators(0.0003), expected, rtol=3e-6, atol=2e-7
+        to_numpy(s.properties.get_scyama_estimators(0.0003)),
+        expected,
+        rtol=3e-6,
+        atol=2e-7,
     )
 
 
@@ -554,7 +567,8 @@ def test_fourth_order_isotope_weights(reference_system, mass_ratio, atom):
     ti0, chin0 = actions(r.q, r.masses)
     exponent = -chin0 / (r.count * r.temperature)
     np.testing.assert_allclose(
-        s.properties.get_chin_correction(), [exponent, exponent**2, np.exp(exponent)]
+        to_numpy(s.properties.get_chin_correction()),
+        [exponent, exponent**2, np.exp(exponent)],
     )
     masses = r.masses.copy()
     masses[atom] *= mass_ratio
@@ -571,7 +585,7 @@ def test_fourth_order_isotope_weights(reference_system, mass_ratio, atom):
         prefactor * np.exp(-(action + chin1 - chin0) / (r.count * r.temperature)),
     ]
     np.testing.assert_allclose(
-        s.properties.get_isotope_zetatd_4th(str(mass_ratio), str(atom)),
+        to_numpy(s.properties.get_isotope_zetatd_4th(str(mass_ratio), str(atom))),
         expected_td,
         rtol=1e-11,
     )
@@ -589,7 +603,7 @@ def test_fourth_order_isotope_weights(reference_system, mass_ratio, atom):
         np.exp(-(action + chin2 - chin0) / (r.count * r.temperature)),
     ]
     np.testing.assert_allclose(
-        s.properties.get_isotope_zetasc_4th(str(mass_ratio), str(atom)),
+        to_numpy(s.properties.get_isotope_zetasc_4th(str(mass_ratio), str(atom))),
         expected_sc,
         rtol=1e-11,
     )

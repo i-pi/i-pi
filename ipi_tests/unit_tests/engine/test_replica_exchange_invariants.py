@@ -53,7 +53,7 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
     root.append(second)
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         systems = sim.syslist
-        energies = [s.ensemble.econs for s in systems]
+        energies = [float(s.ensemble.econs) for s in systems]
         # First draw selects the exchange attempt; second tests its probability.
         attempts = iter([0.0, acceptance_draw])
 
@@ -68,17 +68,17 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
         if accept:
             np.testing.assert_array_equal(remd.repindex, [1, 0])
             for i, s in enumerate(systems):
-                assert s.ensemble.temp == temperatures[1 - i]
+                assert float(s.ensemble.temp) == temperatures[1 - i]
                 factor = (
                     np.sqrt(temperatures[1 - i] / temperatures[i]) if rescale else 1.0
                 )
-                np.testing.assert_allclose(s.beads.p, momenta[i] * factor)
-                assert s.ensemble.econs == pytest.approx(energies[i])
+                np.testing.assert_allclose(to_numpy(s.beads.p), momenta[i] * factor)
+                assert float(s.ensemble.econs) == pytest.approx(energies[i])
         else:
             np.testing.assert_array_equal(remd.repindex, [0, 1])
             for i, s in enumerate(systems):
-                assert s.ensemble.temp == temperatures[i]
-                np.testing.assert_allclose(s.beads.p, momenta[i])
+                assert float(s.ensemble.temp) == temperatures[i]
+                np.testing.assert_allclose(to_numpy(s.beads.p), momenta[i])
 
 
 def test_hamiltonian_weights_are_exchanged(simulation):
@@ -93,11 +93,15 @@ def test_hamiltonian_weights_are_exchanged(simulation):
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         systems = sim.syslist
         for s, weight in zip(systems, weights):
-            assert s.ensemble.bias.pot == pytest.approx((weight - 1) * s.forces.pot)
+            assert float(s.ensemble.bias.pot) == pytest.approx(
+                (weight - 1) * float(s.forces.pot)
+            )
         ensemble_swap(systems[0].ensemble, systems[1].ensemble)
         for s, weight in zip(systems, weights[::-1]):
             assert s.ensemble.hweights[0] == weight
-            assert s.ensemble.bias.pot == pytest.approx((weight - 1) * s.forces.pot)
+            assert float(s.ensemble.bias.pot) == pytest.approx(
+                (weight - 1) * float(s.forces.pot)
+            )
 
 
 def test_hamiltonian_weights_scale_the_dynamics(simulation):
@@ -106,9 +110,9 @@ def test_hamiltonian_weights_scale_the_dynamics(simulation):
     def trajectory(root):
         with simulation(ET.tostring(root, encoding="unicode")) as sim:
             s = sim.syslist[0]
-            econs = s.ensemble.econs
+            econs = float(s.ensemble.econs)
             sim.run(steps=10, write_outputs=False)
-            assert s.ensemble.econs == pytest.approx(econs, abs=1e-6)
+            assert float(s.ensemble.econs) == pytest.approx(econs, abs=1e-6)
             return to_numpy(s.beads.q), to_numpy(s.beads.p)
 
     hamiltonian = ET.fromstring(harmonic_input())

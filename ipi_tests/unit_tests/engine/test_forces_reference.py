@@ -18,6 +18,7 @@ from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFDirect, FFEval
 from ipi.engine.forces import Forces, ForceComponent, ScaledForceComponent
+from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
 from ipi_tests.unit_tests.engine.mathematical_references import (
     polynomial,
@@ -86,10 +87,10 @@ def test_contracted_components_and_mts_levels(reference_system, contracted):
     s, r = reference_system()
     forces, refs = combined_case(s, r, contracted)
     for actual, ref in zip(forces.mforces, refs):
-        np.testing.assert_allclose(actual.beads.q, ref["q"], atol=1e-13)
-        assert actual.pot == pytest.approx(ref["energy"].sum())
+        np.testing.assert_allclose(to_numpy(actual.beads.q), ref["q"], atol=1e-13)
+        assert to_numpy(actual.pot) == pytest.approx(ref["energy"].sum())
         scaled = ScaledForceComponent(actual, scaling=-0.4)
-        assert scaled.pot == pytest.approx(-0.4 * ref["energy"].sum())
+        assert to_numpy(scaled.pot) == pytest.approx(-0.4 * ref["energy"].sum())
     totals = {}
     for quantity in ["force", "energy", "virial"]:
         totals[quantity] = sum(
@@ -98,10 +99,12 @@ def test_contracted_components_and_mts_levels(reference_system, contracted):
             * expand(x["expand"], x[quantity])
             for x in refs
         )
-    np.testing.assert_allclose(forces.f, totals["force"], atol=1e-12)
-    np.testing.assert_allclose(forces.pots, totals["energy"], atol=1e-12)
-    np.testing.assert_allclose(forces.virs, totals["virial"], atol=1e-12)
-    np.testing.assert_allclose(forces.extras["energy"], totals["energy"], atol=1e-12)
+    np.testing.assert_allclose(to_numpy(forces.f), totals["force"], atol=1e-12)
+    np.testing.assert_allclose(to_numpy(forces.pots), totals["energy"], atol=1e-12)
+    np.testing.assert_allclose(to_numpy(forces.virs), totals["virial"], atol=1e-12)
+    np.testing.assert_allclose(
+        to_numpy(forces.extras["energy"]), totals["energy"], atol=1e-12
+    )
     for level in range(2):
         expected_force = sum(
             x["component"].weight
@@ -116,13 +119,15 @@ def test_contracted_components_and_mts_levels(reference_system, contracted):
             for x in refs
         )
         np.testing.assert_allclose(
-            forces.mts_forces[level].f, expected_force, atol=1e-12
+            to_numpy(forces.mts_forces[level].f), expected_force, atol=1e-12
         )
         np.testing.assert_allclose(
-            forces.mts_forces[level].virs, expected_virial, atol=1e-12
+            to_numpy(forces.mts_forces[level].virs), expected_virial, atol=1e-12
         )
         np.testing.assert_allclose(
-            forces.mts_forces[level].vir, expected_virial.sum(axis=0), atol=1e-12
+            to_numpy(forces.mts_forces[level].vir),
+            expected_virial.sum(axis=0),
+            atol=1e-12,
         )
     for index, ref in enumerate(refs):
         for weighted in [False, True]:
@@ -133,7 +138,7 @@ def test_contracted_components_and_mts_levels(reference_system, contracted):
                 if interpolate:
                     expected = expand(ref["expand"], expected)
                 np.testing.assert_allclose(
-                    forces.virs_component(index, weighted, interpolate),
+                    to_numpy(forces.virs_component(index, weighted, interpolate)),
                     expected,
                     atol=1e-12,
                 )
@@ -173,7 +178,9 @@ def test_component_outputs_raw_and_weighted(reference_system, key, bead):
     if quantity == "virial":
         expected = expected[[0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]] / 120
     np.testing.assert_allclose(
-        (s.trajs if quantity == "force" else s.properties)[f"{key}(1;{bead})"][0],
+        to_numpy(
+            (s.trajs if quantity == "force" else s.properties)[f"{key}(1;{bead})"][0]
+        ),
         expected,
         atol=1e-12,
     )
@@ -199,7 +206,11 @@ def test_sc_coefficients_and_corrections(reference_system, alpha):
     )
     for name, expected in checks.items():
         np.testing.assert_allclose(
-            getattr(force, name), expected, rtol=1e-7, atol=2e-8, err_msg=name
+            to_numpy(getattr(force, name)),
+            expected,
+            rtol=1e-7,
+            atol=2e-8,
+            err_msg=name,
         )
 
 
@@ -218,7 +229,7 @@ def test_sc_alpha_switch_recomputes_fourth_order_terms(
         for alpha in alphas:
             s.forces.alpha = alpha
             terms = [s.forces.f_4th_order, s.forces.vir_4th_order]
-        results.append([np.asarray(t, dtype=float) for t in terms])
+        results.append([to_numpy(t).copy() for t in terms])
     for switched, fresh in zip(*results):
         np.testing.assert_allclose(switched, fresh, rtol=1e-12, atol=1e-14)
 
@@ -245,11 +256,11 @@ def test_multicomponent_sc_force_derivatives_obey_chain_rule(
         if alpha == 0:
             df[::2] = 0
         actual_f, _ = forces.forcesvirs_4th_order(index)
-        np.testing.assert_allclose(actual_f, df, rtol=1e-7, atol=2e-8)
+        np.testing.assert_allclose(to_numpy(actual_f), df, rtol=1e-7, atol=2e-8)
         weight = ref["component"].weight * sum(ref["component"].mts_weights)
         derivatives.append(weight * df)
     np.testing.assert_allclose(
-        forces.f_4th_order, sum(derivatives), rtol=1e-7, atol=2e-8
+        to_numpy(forces.f_4th_order), sum(derivatives), rtol=1e-7, atol=2e-8
     )
 
 
@@ -258,9 +269,9 @@ def test_forward_and_centered_sc_differences_can_be_mixed(reference_system):
     components use auxiliary systems of different sizes"""
     s, r = reference_system(alpha=0.0)
     forces, _ = combined_case(s, r, contracted=False)
-    centered = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
+    centered = [to_numpy(forces.forcesvirs_4th_order(k)[0]).copy() for k in range(2)]
     forces.mforces[0].epsilon = 1e-8
-    mixed = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
+    mixed = [to_numpy(forces.forcesvirs_4th_order(k)[0]) for k in range(2)]
     np.testing.assert_allclose(mixed, centered, rtol=1e-6, atol=1e-8)
 
 
@@ -273,41 +284,41 @@ def test_weighted_centroid_force_and_saved_state(simulation, weight):
     )
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         s = sim.syslist[0]
-        q = s.beads.q.copy()
+        q = to_numpy(s.beads.q).copy()
         centroid = q.mean(axis=0)
         expected_force = -0.5 * (q + weight * centroid)
         expected_pots = 0.25 * (np.sum(q * q, axis=1) + weight * np.sum(centroid**2))
-        np.testing.assert_allclose(s.forces.f, expected_force)
-        np.testing.assert_allclose(s.forces.pots, expected_pots)
+        np.testing.assert_allclose(to_numpy(s.forces.f), expected_force)
+        np.testing.assert_allclose(to_numpy(s.forces.pots), expected_pots)
         snapshot = s.forces.dump_state()
         for interpolate in [False, True]:
             count = 4 if interpolate else 1
             for weighted in [False, True]:
                 w = weight if weighted else 1.0
                 np.testing.assert_allclose(
-                    s.forces.forces_component(1, weighted, interpolate),
+                    to_numpy(s.forces.forces_component(1, weighted, interpolate)),
                     np.tile(-0.5 * w * centroid, (count, 1)),
                 )
                 np.testing.assert_allclose(
-                    s.forces.pots_component(1, weighted, interpolate),
+                    to_numpy(s.forces.pots_component(1, weighted, interpolate)),
                     np.full(count, 0.25 * w * np.sum(centroid**2)),
                 )
                 np.testing.assert_array_equal(
-                    s.forces.virs_component(1, weighted, interpolate),
+                    to_numpy(s.forces.virs_component(1, weighted, interpolate)),
                     np.zeros((count, 3, 3)),
                 )
-        s.beads.q_[:] = q * 2
-        np.testing.assert_allclose(s.forces.f, 2 * expected_force)
-        s.beads.q_[:] = q
+        s.beads.q_[:] = xp.asarray(q * 2)
+        np.testing.assert_allclose(to_numpy(s.forces.f), 2 * expected_force)
+        s.beads.q_[:] = xp.asarray(q)
         s.forces.load_state(snapshot)
-        np.testing.assert_allclose(s.forces.f, expected_force)
+        np.testing.assert_allclose(to_numpy(s.forces.f), expected_force)
         # with zero weight, the component was not computed when the state was saved
         np.testing.assert_allclose(
-            s.forces.forces_component(1, False, False), [-0.5 * centroid]
+            to_numpy(s.forces.forces_component(1, False, False)), [-0.5 * centroid]
         )
-        s.beads.q_[:] = q * 3
-        np.testing.assert_allclose(s.forces.f, 3 * expected_force)
-        np.testing.assert_allclose(s.forces.pots, 9 * expected_pots)
+        s.beads.q_[:] = xp.asarray(q * 3)
+        np.testing.assert_allclose(to_numpy(s.forces.f), 3 * expected_force)
+        np.testing.assert_allclose(to_numpy(s.forces.pots), 9 * expected_pots)
         with pytest.raises(ValueError, match="components"):
             s.forces.load_state(snapshot[:1])
 

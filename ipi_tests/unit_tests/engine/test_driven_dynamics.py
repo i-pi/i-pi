@@ -8,6 +8,7 @@ import pytest
 
 from ipi.engine.beads import Beads
 from ipi.engine.motion.driven_dynamics import BEC, ElectricDipole, ElectricField
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import depend_value
 from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
@@ -48,19 +49,24 @@ def test_charges_in_constant_field_accelerate_uniformly(simulation):
     )
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         s = sim.syslist[0]
-        q0 = s.beads.q.copy()
-        p0 = s.beads.p.copy()
-        m = s.beads.m3.copy()
+        q0 = to_numpy(s.beads.q).copy()
+        p0 = to_numpy(s.beads.p).copy()
+        m = to_numpy(s.beads.m3).copy()
         force = np.array([[0.2, -0.1, 0.3, -0.2, 0.1, -0.3]])
         sim.run(steps=10, write_outputs=False)
-        np.testing.assert_allclose(s.beads.p, p0 + 0.1 * force, atol=1e-12)
+        p = to_numpy(s.beads.p)
+        np.testing.assert_allclose(p, p0 + 0.1 * force, atol=1e-12)
         np.testing.assert_allclose(
-            s.beads.q, q0 + 0.1 * p0 / m + 0.5 * 0.1**2 * force / m, atol=1e-12
+            to_numpy(s.beads.q),
+            q0 + 0.1 * p0 / m + 0.5 * 0.1**2 * force / m,
+            atol=1e-12,
         )
-        expected = s.beads.p[0, :3] / 2 - s.beads.p[0, 3:] / 3
-        np.testing.assert_allclose(s.motion.integrator.dipole_dtime(0), expected)
+        expected = p[0, :3] / 2 - p[0, 3:] / 3
         np.testing.assert_allclose(
-            s.motion.integrator.dipole_dtime(), expected[None, :]
+            to_numpy(s.motion.integrator.dipole_dtime(0)), expected
+        )
+        np.testing.assert_allclose(
+            to_numpy(s.motion.integrator.dipole_dtime()), expected[None, :]
         )
         with pytest.raises(ValueError, match="outermost"):
             s.motion.integrator.td_pstep(0, 1)

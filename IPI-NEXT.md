@@ -550,8 +550,9 @@ bugs pass, and are no longer marked.
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
-- The torch CI jobs run the unit tests, and the regression tests and examples with the torch backend
-  (`tox -e torch`, `tox -e torch-examples`).
+- The torch CI jobs run the unit tests, the regression tests and the examples with the torch backend
+  (`tox -e torch`, `tox -e torch-examples`); the unit tests use it for the simulations of the engine fixtures
+  (`simulation`, `reference_system`), the other tests select their backend.
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
 - PLUMED: the regression tests `PLUMED/METAD` and `PLUMED/BIAS` (they were `.NOAUTO`, with an outdated input

@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 from scipy.linalg import expm
+from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 MODE_SETTINGS = [
@@ -45,12 +46,14 @@ def test_frequencies_and_mass_factors(simulation, style, freqs, propagator):
     open_spring = 0.8 * np.sqrt([0.0, 2 - np.sqrt(2), 2.0, 2 + np.sqrt(2)])
     with simulation(normal_mode_input(style, freqs, propagator)) as sim:
         nm = sim.syslist[0].nm
-        assert nm.omegan == pytest.approx(0.8, rel=1e-12)
+        assert float(nm.omegan) == pytest.approx(0.8, rel=1e-12)
         for spring, factors, expected_spring in [
             (nm.omegak, nm.nm_factor, closed_spring),
             (nm.o_omegak, nm.o_nm_factor, open_spring),
         ]:
-            np.testing.assert_allclose(spring, expected_spring, rtol=1e-12, atol=1e-14)
+            np.testing.assert_allclose(
+                to_numpy(spring), expected_spring, rtol=1e-12, atol=1e-14
+            )
             expected_factors = np.ones(4)
             if style == "manual":
                 expected_factors[1:] = (expected_spring[1:] / freqs) ** 2
@@ -69,7 +72,7 @@ def test_frequencies_and_mass_factors(simulation, style, freqs, propagator):
                     expected_spring[1:] ** 2 + wmax**2
                 ) / common_frequency**2
             np.testing.assert_allclose(
-                factors, expected_factors, rtol=1e-12, atol=1e-14
+                to_numpy(factors), expected_factors, rtol=1e-12, atol=1e-14
             )
 
 
@@ -87,22 +90,28 @@ def test_centroid_positions_and_momenta_follow_free_motion(
     masses = np.repeat([2.0, 3.0], 3)
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         system = sim.syslist[0]
-        initial_position = system.beads.q.mean(axis=0)
-        initial_momentum = system.beads.p.mean(axis=0)
+        initial_position = to_numpy(system.beads.q).mean(axis=0)
+        initial_momentum = to_numpy(system.beads.p).mean(axis=0)
         # The input timestep is 0.1; four-bead mode zero is twice the bead mean.
         expected_position = initial_position + 0.1 * initial_momentum / masses
         sim.run(steps=1, write_outputs=False)
         np.testing.assert_allclose(
-            system.beads.q.mean(axis=0), expected_position, rtol=1e-12, atol=1e-14
+            to_numpy(system.beads.q).mean(axis=0),
+            expected_position,
+            rtol=1e-12,
+            atol=1e-14,
         )
         np.testing.assert_allclose(
-            system.beads.p.mean(axis=0), initial_momentum, rtol=1e-12, atol=1e-14
+            to_numpy(system.beads.p).mean(axis=0),
+            initial_momentum,
+            rtol=1e-12,
+            atol=1e-14,
         )
         np.testing.assert_allclose(
-            system.nm.qnm[0], 2 * expected_position, rtol=1e-12, atol=1e-14
+            to_numpy(system.nm.qnm[0]), 2 * expected_position, rtol=1e-12, atol=1e-14
         )
         np.testing.assert_allclose(
-            system.nm.pnm[0], 2 * initial_momentum, rtol=1e-12, atol=1e-14
+            to_numpy(system.nm.pnm[0]), 2 * initial_momentum, rtol=1e-12, atol=1e-14
         )
 
 
@@ -117,21 +126,21 @@ def test_spring_force_is_negative_energy_gradient(simulation, paths):
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         beads, nm = sim.syslist[0].beads, sim.syslist[0].nm
         original = np.random.default_rng(82).normal(size=(4, 6))
-        beads.q_[:] = original
-        force = np.array(nm.fspring)
+        beads.q_[:] = xp.asarray(original)
+        force = to_numpy(nm.fspring).copy()
         numerical = np.zeros_like(original)
         step = 1e-5
         for index in np.ndindex(original.shape):
-            beads.q_[index] = original[index] + step
+            beads.q_[index] = float(original[index] + step)
             forward = float(nm.vspring)
-            beads.q_[index] = original[index] - step
+            beads.q_[index] = float(original[index] - step)
             backward = float(nm.vspring)
-            beads.q_[index] = original[index]
+            beads.q_[index] = float(original[index])
             numerical[index] = -(forward - backward) / (2 * step)
         np.testing.assert_allclose(force, numerical, rtol=1e-7, atol=1e-13)
         np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-15)
         beads.m_[:] *= 2
-        np.testing.assert_allclose(nm.fspring, 2 * force, rtol=1e-12)
+        np.testing.assert_allclose(to_numpy(nm.fspring), 2 * force, rtol=1e-12)
 
 
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)
@@ -140,16 +149,18 @@ def test_open_and_closed_mode_propagators_match_harmonic_matrix(
 ):
     with simulation(normal_mode_input(style, freqs, propagator)) as sim:
         nm = sim.syslist[0].nm
-        for omega, factors, prop in [
+        dt = float(nm.dt)
+        for arrays in [
             (nm.omegak, nm.nm_factor, nm.prop_pq),
             (nm.o_omegak, nm.o_nm_factor, nm.o_prop_pq),
         ]:
+            omega, factors, prop = map(to_numpy, arrays)
             for k in range(1, 4):
                 generator = np.array([[0.0, -omega[k] ** 2], [1 / factors[k], 0.0]])
                 if propagator == "exact":
-                    expected = expm(nm.dt * generator)
+                    expected = expm(dt * generator)
                 else:
-                    half = nm.dt * generator / 2
+                    half = dt * generator / 2
                     expected = np.linalg.solve(np.eye(2) - half, np.eye(2) + half)
                 np.testing.assert_allclose(prop[k], expected, atol=1e-12)
                 assert np.linalg.det(prop[k]) == pytest.approx(1.0)
