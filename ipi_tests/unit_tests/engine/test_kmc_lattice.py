@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 
-import ipi.utils.array_backend as ab
 from ipi.engine.motion.al6xxx_kmc import AlKMC
 
 # a 4x4x4 FCC lattice (a0 = 7.6 bohr) with one vacancy, and zero forces
@@ -67,7 +66,7 @@ def test_fcc_neighbors_and_vacancy_exchange_preserve_species():
 
 
 @pytest.mark.parametrize("backend", ["numpy", "torch"])
-def test_kmc_step_caches_host_values(simulation, backend, request):
+def test_kmc_step_caches_host_values(simulation, select_backend, backend, request):
     """A KMC step runs with the arrays of either backend, and the cached energies
     and structures, which are saved with pickle, are floats and numpy arrays"""
     if backend == "torch":
@@ -78,13 +77,10 @@ def test_kmc_step_caches_host_values(simulation, backend, request):
         f.write("64\n# CELL(abcABC): 30.4 30.4 30.4 90 90 90 ")
         f.write("cell{atomic_unit} positions{atomic_unit}\n")
         f.writelines(f"{name} 0 0 0\n" for name in names)
-    ab.set_backend(backend)
-    try:
-        with simulation(KMC_INPUT) as sim:
-            kmc = sim.syslist[0].motion
-            sim.run(steps=1, write_outputs=False)
-            assert len(kmc.ecache) > 1
-            assert all(isinstance(e, float) for e in kmc.ecache.values())
-            assert all(type(q) is np.ndarray for q in kmc.qcache.values())
-    finally:
-        ab.set_backend("numpy")
+    select_backend(backend)
+    with simulation(KMC_INPUT) as sim:
+        kmc = sim.syslist[0].motion
+        sim.run(steps=1, write_outputs=False)
+        assert len(kmc.ecache) > 1
+        assert all(isinstance(e, float) for e in kmc.ecache.values())
+        assert all(type(q) is np.ndarray for q in kmc.qcache.values())

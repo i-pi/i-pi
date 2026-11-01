@@ -13,6 +13,7 @@ import pytest
 from ipi.engine.barostats import BaroBZP, BaroSCBZP, BaroMTK, BaroRGB, BaroSCR
 from ipi.engine.forcefields import FFDirect
 from ipi.engine.forces import ForceComponent, Forces, ScaledForceComponent
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.prng import Random
 from ipi_tests.unit_tests.engine.mathematical_references import (
     cell_strain_virial,
@@ -104,7 +105,7 @@ def virial_case(reference_system, request):
 def close(actual, expected):
     # Five-point strain differences have ~1e-11 absolute numerical error here;
     # i-PI's internal centered force displacement adds O(epsilon^2) error.
-    np.testing.assert_allclose(actual, expected, rtol=2e-7, atol=2e-9)
+    np.testing.assert_allclose(to_numpy(actual), expected, rtol=2e-7, atol=2e-9)
 
 
 def vector(tensor):
@@ -146,8 +147,8 @@ def test_ordinary_virials_are_complete_cell_derivatives(virial_case, coupling):
     ]:
         q = (r.q.reshape(-1, 3) @ transform).reshape(r.q.shape)
         h = transform.T @ r.h
-        s.beads.q_[:] = q
-        s.cell.h_[:] = h
+        s.beads.q_[:] = xp.asarray(q)
+        s.cell.h_[:] = xp.asarray(h)
         total = cell_strain_virial(lambda x, cell: r.energies(x, cell)[:, 0], q, h)
         close(s.forces.virs, total)
         close(s.forces.vir_combine(), total)
@@ -181,8 +182,8 @@ def test_sc_complete_energy(virial_case):
     s, r = virial_case()
     for scale in [0.93, 1.0, 1.07]:
         q, h = scale * r.q, scale * r.h
-        s.beads.q_[:] = q
-        s.cell.h_[:] = h
+        s.beads.q_[:] = xp.asarray(q)
+        s.cell.h_[:] = xp.asarray(h)
         close(s.forces.pots + s.forces.potssc, r.energies(q, h)[:, 4])
 
 
@@ -194,10 +195,10 @@ def test_published_sc_virial_formula(virial_case, coupling):
     step = 1e-3
     values = []
     for displacement in [-2 * step, -step, step, 2 * step]:
-        s.beads.q_[:] = r.q + displacement * direction
+        s.beads.q_[:] = xp.asarray(r.q + displacement * direction)
         # Later force evaluations update the dependency array in place.
-        values.append(np.asarray(s.forces.virs).copy())
-    s.beads.q_[:] = r.q
+        values.append(to_numpy(s.forces.virs).copy())
+    s.beads.q_[:] = xp.asarray(r.q)
     derivative = (values[0] - 8 * values[1] + 8 * values[2] - values[3]) / (12 * step)
     product = np.array(
         [np.triu(f.reshape(2, 3).T @ (f / r.mass).reshape(2, 3)) for f in force]
@@ -442,11 +443,11 @@ def test_barostat_momentum_receives_complete_virial_contribution(virial_case, ki
             barostat = BaroRGB(
                 **kwargs,
                 h0=s.cell.clone(),
-                stressext=0.001 * np.eye(3),
-                p=0.17 * np.eye(3),
+                stressext=0.001 * xp.eye(3),
+                p=0.17 * xp.eye(3),
             )
         elif kind == "MTK":
-            barostat = BaroMTK(**kwargs, pext=0.001, p=0.17 * np.eye(3))
+            barostat = BaroMTK(**kwargs, pext=0.001, p=0.17 * xp.eye(3))
         else:
             barostat = (BaroBZP if kind == "BZP" else BaroSCBZP)(
                 **kwargs, pext=0.001, p=0.17
@@ -473,7 +474,7 @@ def test_barostat_momentum_receives_complete_virial_contribution(virial_case, ki
                 * (np.trace(virial) if kind in ["BZP", "SCBZP"] else virial)
             )
             barostat.pstep(level)
-            steps.append(np.asarray(barostat.p).copy())
+            steps.append(to_numpy(barostat.p).copy())
             expected_steps.append(cumulative.copy())
         momenta.append(np.asarray(steps))
         derivatives.append(np.asarray(expected_steps))

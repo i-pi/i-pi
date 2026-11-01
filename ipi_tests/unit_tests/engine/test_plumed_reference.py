@@ -119,21 +119,18 @@ def test_plumed_update_recomputes_bias_after_positions_change(plumed_field):
     np.testing.assert_array_equal(ff.lastq, 2 * q)
 
 
-def test_plumed_with_torch_arrays(plumed_field, strict_torch):
+def test_plumed_with_torch_arrays(plumed_field, select_backend, strict_torch):
     """The initial structure, the physical forces and the positions passed to
     mtd_update can be arrays of the torch backend"""
     expected = bias_with_physical_forces(plumed_field())
-    ab.set_backend("torch")
-    try:
-        ff = plumed_field()
-        for results, reference in zip(bias_with_physical_forces(ff), expected):
-            for value, ref in zip(results[:3], reference[:3]):
-                np.testing.assert_allclose(value, ref, atol=1e-10)
-        q = ab.xp.asarray([0.0, 0.0, 0.0, 2.0, 0.0, 0.0])
-        assert ff.mtd_update(q, 20 * ab.xp.eye(3)) == pytest.approx(0, abs=1e-12)
-        np.testing.assert_array_equal(ff.lastq, ab.to_numpy(q))
-    finally:
-        ab.set_backend("numpy")
+    select_backend("torch")
+    ff = plumed_field()
+    for results, reference in zip(bias_with_physical_forces(ff), expected):
+        for value, ref in zip(results[:3], reference[:3]):
+            np.testing.assert_allclose(value, ref, atol=1e-10)
+    q = ab.xp.asarray([0.0, 0.0, 0.0, 2.0, 0.0, 0.0])
+    assert ff.mtd_update(q, 20 * ab.xp.eye(3)) == pytest.approx(0, abs=1e-12)
+    np.testing.assert_array_equal(ff.lastq, ab.to_numpy(q))
 
 
 def test_plumed_rejects_unsupported_initial_structure_format(plumed_field):

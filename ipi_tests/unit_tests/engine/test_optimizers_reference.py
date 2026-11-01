@@ -14,6 +14,7 @@ from ipi.engine.motion.stringmep import (
     spline_derv,
     spline_resample,
 )
+from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import harmonic_input, motion_input
 
 
@@ -62,14 +63,14 @@ def test_geop_reset_restarts_a_converged_optimization(simulation, method):
         system.beads.q_[:] = system.beads.q + 0.3
         geop.reset()
         if method == "bfgs":
-            np.testing.assert_array_equal(geop.invhessian, np.eye(6))
+            np.testing.assert_array_equal(to_numpy(geop.invhessian), np.eye(6))
         if method in ["bfgstrm", "damped_bfgs"]:
-            np.testing.assert_array_equal(geop.hessian, np.eye(6))
+            np.testing.assert_array_equal(to_numpy(geop.hessian), np.eye(6))
         if method == "lbfgs":
             assert (geop.corrections, geop.scale) == settings
         for step in range(100):
             geop.step(step)
-        np.testing.assert_allclose(system.beads.q, 0, atol=1e-4)
+        np.testing.assert_allclose(to_numpy(system.beads.q), 0, atol=1e-4)
 
 
 @pytest.mark.parametrize("method", ["bfgs", "bfgstrm", "damped_bfgs"])
@@ -79,7 +80,7 @@ def test_geop_hessian_survives_a_restart(simulation, method):
 
     def hessian(sim):
         geop = sim.syslist[0].motion
-        return np.array(geop.invhessian if method == "bfgs" else geop.hessian)
+        return to_numpy(geop.invhessian if method == "bfgs" else geop.hessian)
 
     with simulation(geop_input(method)) as sim:
         sim.run(steps=3, write_outputs=False)
@@ -103,14 +104,13 @@ def test_geometry_optimization_finds_harmonic_minimum(
     free = sorted(set(range(6)) - set(fixed))
     with simulation(geop_input(method, selection, nbeads)) as sim:
         system = sim.syslist[0]
-        initial = system.beads.q.copy()
+        initial = to_numpy(system.beads.q).copy()
         sim.run(steps=150 if selection else 20, write_outputs=False)
-        np.testing.assert_array_equal(system.beads.q[:, fixed], initial[:, fixed])
-        np.testing.assert_allclose(
-            system.beads.q[:, free], 0, atol=2e-4 if selection else 1e-5
-        )
+        q = to_numpy(system.beads.q)
+        np.testing.assert_array_equal(q[:, fixed], initial[:, fixed])
+        np.testing.assert_allclose(q[:, free], 0, atol=2e-4 if selection else 1e-5)
         if selection:
-            assert system.forces.pot == pytest.approx(
+            assert float(system.forces.pot) == pytest.approx(
                 0.25 * np.sum(initial[:, fixed] ** 2), abs=1e-7
             )
         else:
@@ -140,7 +140,7 @@ def test_conjugate_gradient_with_a_fixed_atom(simulation):
         s = sim.syslist[0]
         for step in range(10):
             s.motion.step(step)
-        np.testing.assert_allclose(s.beads.q[0, 3:], 0, atol=1e-5)
+        np.testing.assert_allclose(to_numpy(s.beads.q)[0, 3:], 0, atol=1e-5)
 
 
 @pytest.mark.parametrize("optimizer", ["fire", "damped_bfgs"])
@@ -160,10 +160,11 @@ def test_neb_relaxes_transverse_displacement(simulation, optimizer, tangent):
             s.motion.step(step)
             if s.motion.finished:
                 break
-        np.testing.assert_array_equal(s.beads.q[[0, -1]], q[[0, -1]])
-        assert np.max(np.abs(s.beads.q[1:-1, 1:])) < 1e-4
-        np.testing.assert_allclose(s.forces.f, -0.5 * s.beads.q, atol=1e-12)
-        assert np.isfinite(s.beads.q).all()
+        final = to_numpy(s.beads.q)
+        np.testing.assert_array_equal(final[[0, -1]], q[[0, -1]])
+        assert np.max(np.abs(final[1:-1, 1:])) < 1e-4
+        np.testing.assert_allclose(to_numpy(s.forces.f), -0.5 * final, atol=1e-12)
+        assert np.isfinite(final).all()
 
 
 SADDLE = np.diag([-1.0, 0.5, 0.5])
@@ -207,9 +208,10 @@ def test_climbing_image_finds_quadratic_saddle(simulation, optimizer):
             if s.motion.finished:
                 break
         assert s.motion.cl_indx == 2
-        np.testing.assert_allclose(s.beads.q[2], 0, atol=2e-4)
-        np.testing.assert_array_equal(s.beads.q[[0, -1]], q[[0, -1]])
-        assert s.forces.pots[2] == pytest.approx(0, abs=1e-7)
+        final = to_numpy(s.beads.q)
+        np.testing.assert_allclose(final[2], 0, atol=2e-4)
+        np.testing.assert_array_equal(final[[0, -1]], q[[0, -1]])
+        assert float(s.forces.pots[2]) == pytest.approx(0, abs=1e-7)
 
 
 def test_climbing_image_stores_its_physical_force(simulation):
@@ -231,9 +233,9 @@ def test_climbing_image_stores_its_physical_force(simulation):
             if s.motion.stage != "climb":
                 break
             i = s.motion.cl_indx
-            force = np.asarray(s.forces.f[i])
+            force = to_numpy(s.forces.f[i])
             np.testing.assert_allclose(
-                force, -SADDLE @ np.asarray(s.beads.q[i]), atol=1e-12
+                force, -SADDLE @ to_numpy(s.beads.q[i]), atol=1e-12
             )
             transverse += abs(force[1]) > 1e-3
         assert transverse > 1
@@ -257,10 +259,11 @@ def test_damped_bfgs_neb_with_a_fixed_coordinate(simulation, climb):
             s.motion.step(step)
             if s.motion.finished:
                 break
-        np.testing.assert_array_equal(s.beads.q[:, 2], q[:, 2])
-        assert np.max(np.abs(s.beads.q[1:-1, 1])) < 1e-4
+        final = to_numpy(s.beads.q)
+        np.testing.assert_array_equal(final[:, 2], q[:, 2])
+        assert np.max(np.abs(final[1:-1, 1])) < 1e-4
         if climb:
-            assert abs(s.beads.q[s.motion.cl_indx, 0]) < 1e-4
+            assert abs(final[s.motion.cl_indx, 0]) < 1e-4
 
 
 def instanton_input(optimizer, h, q, update="powell", fixatoms=None):
@@ -313,8 +316,9 @@ def test_instanton_optimizer_reaches_quadratic_stationary_point(simulation, opti
             s.motion.step(step)
             if s.motion.finished:
                 break
-        np.testing.assert_allclose(s.beads.q, 0, atol=3e-4)
-        np.testing.assert_allclose(s.forces.f, -s.beads.q @ h, atol=1e-12)
+        final = to_numpy(s.beads.q)
+        np.testing.assert_allclose(final, 0, atol=3e-4)
+        np.testing.assert_allclose(to_numpy(s.forces.f), -final @ h, atol=1e-12)
         assert s.motion.finished
 
 
@@ -345,11 +349,10 @@ def test_instanton_optimizer_with_a_fixed_atom(simulation, optimizer, update):
             s.motion.step(step)
             if s.motion.finished:
                 break
-        np.testing.assert_array_equal(s.beads.q[:, 3:], q[:, 3:])
+        final = to_numpy(s.beads.q)
+        np.testing.assert_array_equal(final[:, 3:], q[:, 3:])
         free = [0, -h[1, 4] * q[0, 4] / h[1, 1], 0]
-        np.testing.assert_allclose(
-            s.beads.q[:, :3], np.tile(free, (count, 1)), atol=3e-4
-        )
+        np.testing.assert_allclose(final[:, :3], np.tile(free, (count, 1)), atol=3e-4)
         assert s.motion.finished
 
 
@@ -388,7 +391,7 @@ def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projec
         q = np.zeros((7, 6))
         q[:, 0] = np.linspace(-1, 1, 7)
         q[:, 1] = 0.2
-        system.beads.q_[:] = q
+        system.beads.q_[:] = xp.asarray(q)
         mapper = (StringGradientMapper if projected else GradientMapper)()
         mapper.bind(
             SimpleNamespace(
@@ -398,9 +401,9 @@ def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projec
                 fixatoms_dof=np.array([], dtype=int),
             )
         )
-        energy, gradient = mapper(q[1:-1])
-        assert energy == pytest.approx(0.25 * np.sum(q[1:-1] ** 2))
+        energy, gradient = mapper(xp.asarray(q[1:-1]))
+        assert float(energy) == pytest.approx(0.25 * np.sum(q[1:-1] ** 2))
         expected = 0.5 * q[1:-1].copy()
         if projected:
             expected[:, 0] = 0
-        np.testing.assert_allclose(gradient, expected, atol=1e-12)
+        np.testing.assert_allclose(to_numpy(gradient), expected, atol=1e-12)

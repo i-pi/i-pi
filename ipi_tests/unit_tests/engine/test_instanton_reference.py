@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from ipi.engine.motion.instanton import FrictionMapper
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.tools.instanton_postproc import instanton_compute
 from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import harmonic_input, motion_input
@@ -24,7 +25,7 @@ def friction_mapper(s, eta):
             nm=s.nm,
             rp_factor=1.0,
             fix=SimpleNamespace(nactive=2),
-            coef=np.ones((s.beads.nbeads + 1, 1)),
+            coef=xp.ones((s.beads.nbeads + 1, 1)),
             options={"max_ms": 0, "max_e": 0},
         )
     )
@@ -39,12 +40,13 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
         mapper = friction_mapper(s, eta)
         # Constant spectral density over every normal-mode frequency.
         conversion = unit_to_internal("frequency", "inversecm", 1.0)
+        omegak = to_numpy(mapper.omegak)
         data = np.column_stack(
-            [np.linspace(0, 2 * max(mapper.omegak) / conversion, 8), np.ones(8)]
+            [np.linspace(0, 2 * max(omegak) / conversion, 8), np.ones(8)]
         )
         mapper.set_fric_spec_dens(data, 0)
         q = np.linspace(-0.2, 0.4, count)[:, None] * np.arange(1.0, 7.0)[None, :]
-        mapper.dbeads.q_[:] = q
+        mapper.dbeads.q_[:] = xp.asarray(q)
         mapper.initialize(q, mapper.dforces)
         energy, gradient = mapper.compute_friction_terms()
         n = np.arange(count)
@@ -52,11 +54,15 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
             np.pi * n[:, None] * (n[None, :] + 0.5) / count
         )
         transform[0] /= np.sqrt(2)
-        omega = 2 * s.nm.omegan * np.sin(np.pi * n / (2 * count))
+        omega = 2 * float(s.nm.omegan) * np.sin(np.pi * n / (2 * count))
         bead_matrix = transform.T @ np.diag(omega) @ transform
         expected_gradient = bead_matrix @ q @ eta
-        assert energy == pytest.approx(np.sum(q * expected_gradient) / 2, rel=1e-7)
-        np.testing.assert_allclose(gradient, expected_gradient, rtol=1e-7, atol=1e-12)
+        assert to_numpy(energy) == pytest.approx(
+            np.sum(q * expected_gradient) / 2, rel=1e-7
+        )
+        np.testing.assert_allclose(
+            to_numpy(gradient), expected_gradient, rtol=1e-7, atol=1e-12
+        )
         hessian = mapper.get_fric_rp_hessian(
             np.zeros((count, 6, 6, 6)), mapper.eta, False
         )
@@ -65,10 +71,12 @@ def test_constant_friction_action_gradient_and_hessian(simulation, count):
         )
         assert np.linalg.eigvalsh(hessian).min() > -1e-12
         # A rigid shift of the whole path must not change the friction action.
-        mapper.dbeads.q_[:] = q + 0.7
+        mapper.dbeads.q_[:] = xp.asarray(q + 0.7)
         shifted_energy, shifted_gradient = mapper.compute_friction_terms()
-        assert shifted_energy == pytest.approx(energy, abs=1e-12)
-        np.testing.assert_allclose(shifted_gradient, gradient, atol=1e-12)
+        assert to_numpy(shifted_energy) == pytest.approx(to_numpy(energy), abs=1e-12)
+        np.testing.assert_allclose(
+            to_numpy(shifted_gradient), to_numpy(gradient), atol=1e-12
+        )
 
 
 def test_friction_without_laplace_transform_is_frequency_independent(simulation):
@@ -77,7 +85,7 @@ def test_friction_without_laplace_transform_is_frequency_independent(simulation)
     with simulation(harmonic_input(nbeads=4)) as sim:
         mapper = friction_mapper(sim.syslist[0], np.eye(6))
         mapper.set_fric_spec_dens(np.ones(0), 0.0)
-        np.testing.assert_allclose(mapper.fric_LTwk[:, 0], mapper.omegak)
+        np.testing.assert_allclose(mapper.fric_LTwk[:, 0], to_numpy(mapper.omegak))
 
 
 def test_laplace_transform_is_normalised_at_the_reference_energy(simulation):
@@ -87,12 +95,13 @@ def test_laplace_transform_is_normalised_at_the_reference_energy(simulation):
     with simulation(harmonic_input(nbeads=4)) as sim:
         mapper = friction_mapper(sim.syslist[0], np.eye(6))
         conversion = unit_to_internal("frequency", "inversecm", 1.0)
-        top = 2 * max(mapper.omegak)
+        omegak = to_numpy(mapper.omegak)
+        top = 2 * max(omegak)
         freq = np.linspace(0, top, 9)
         data = np.column_stack([freq / conversion, 1 + freq / top])
         energy = 0.3 * top
         mapper.set_fric_spec_dens(data, energy)
-        expected = mapper.omegak * (1 + mapper.omegak / top) / (1 + energy / top)
+        expected = omegak * (1 + omegak / top) / (1 + energy / top)
         np.testing.assert_allclose(mapper.fric_LTwk[:, 0], expected, rtol=1e-10)
 
 
@@ -103,13 +112,13 @@ def test_friction_energy_is_a_term_of_the_ring_polymer(simulation):
         mapper = friction_mapper(sim.syslist[0], np.diag(np.arange(1.0, 7.0)))
         mapper.set_fric_spec_dens(np.ones(0), 0.0)
         q = np.linspace(-0.2, 0.4, 4)[:, None] * np.arange(1.0, 7.0)[None, :]
-        mapper.dbeads.q_[:] = q
+        mapper.dbeads.q_[:] = xp.asarray(q)
         mapper.initialize(q, mapper.dforces)
         friction, _ = mapper.compute_friction_terms()
         energy, _ = mapper.evaluate()
         assert friction > 0
-        assert np.sum(energy) == pytest.approx(
-            np.sum(mapper.dforces.pots) + friction, rel=1e-12
+        assert np.sum(to_numpy(energy)) == pytest.approx(
+            np.sum(to_numpy(mapper.dforces.pots)) + to_numpy(friction), rel=1e-12
         )
 
 
@@ -202,7 +211,7 @@ def test_friction_instanton_with_a_fixed_atom(simulation, tmp_path, sd, update):
                 if s.motion.finished:
                     break
             assert s.motion.finished
-            paths.append(np.asarray(s.beads.q)[:, :3])
+            paths.append(to_numpy(s.beads.q)[:, :3].copy())
     assert np.ptp(paths[0][:, 0]) > 0.5
     np.testing.assert_allclose(paths[1], paths[0], atol=1e-7)
 

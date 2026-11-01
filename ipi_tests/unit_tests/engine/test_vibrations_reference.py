@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from ipi.engine.motion.vscf import IMF, _coupling_on_grid
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.tools.instanton_postproc import cm2au, instanton_compute
 from ipi_tests.unit_tests.engine.inputs import motion_input
 
@@ -190,7 +191,7 @@ def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
         motion.exit_on_convergence = False
         sim.run(steps=7, write_outputs=False)
         np.testing.assert_allclose(
-            motion.refdynmatrix, np.diag(0.5 / masses), atol=1e-10
+            to_numpy(motion.refdynmatrix), np.diag(0.5 / masses), atol=1e-10
         )
 
 
