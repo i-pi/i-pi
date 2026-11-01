@@ -79,6 +79,8 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     q = cell.array_pbc(np.array(atoms.q))
     np.testing.assert_allclose(q.reshape(-1, 3), expected, atol=1e-12)
     clone = cell.clone()
+    assert type(clone) is cell_type
+    np.testing.assert_allclose(clone.ih @ clone.h, np.eye(3), atol=1e-12)
     old_volume = cell.V
     cell.h_[:] *= 2
     assert cell.V == pytest.approx(8 * old_volume)

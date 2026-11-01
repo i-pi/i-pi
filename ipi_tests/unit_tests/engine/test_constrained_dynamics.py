@@ -4,6 +4,8 @@
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -124,6 +126,17 @@ def test_constraints_are_enforced(numpy_backend):
         assert np.allclose(m @ q[9:12] / m.sum(), m @ q0[9:12] / m.sum(), atol=1e-8)
 
 
+def test_infinity_norm_survives_a_restart(simulation):
+    """The infinity norm of the solver, given as norm_order -1, is stored as -1"""
+
+    write_init()
+    xml = XML.replace("<norm_order>2</norm_order>", "<norm_order>-1</norm_order>")
+    with simulation(xml) as sim:
+        sim.run(steps=1, write_outputs=False)
+    with simulation(Path("RESTART").read_text()) as sim:
+        assert sim.syslist[0].motion.csolver.norm_order == float("inf")
+
+
 @pytest.mark.parametrize("device", devices)
 def test_constrained_backend_equivalence(
     device, numpy_backend, strict_torch, monkeypatch
@@ -164,6 +177,9 @@ def test_eckart_atoms_in_any_order(numpy_backend):
     shuffled = EckartConstraint(np.array([3, 0, 1]), reference[[3, 0, 1]].ravel())
     for constraint in (ordered, shuffled):
         constraint.bind(beads)
+        constraint.q = beads.q[0, constraint.i3_unique]
+    # the rotational components vanish when the atoms are at the origin
+    assert np.abs(ordered.g[3:]).min() > 1e-2
     np.testing.assert_allclose(shuffled.g, ordered.g, atol=1e-14)
     np.testing.assert_allclose(shuffled.Dg, ordered.Dg, atol=1e-14)
     with pytest.raises(ValueError, match="repeated"):
@@ -177,8 +193,11 @@ def test_bond_jacobian_does_not_depend_on_the_targets(numpy_backend):
     from ipi.utils.constrtools import RigidBondConstraint
 
     constraint = RigidBondConstraint(np.array([[0, 1], [0, 2]]), [1.0, 1.2])
-    constraint.bind(bound_beads())
-    constraint.Dg
+    beads = bound_beads()
+    constraint.bind(beads)
+    constraint.qprev = beads.q[0, constraint.i3_unique]
+    constraint.GramChol
     constraint.constraint_values = np.array([1.5, 1.1])
     assert not constraint.Dg_.tainted()
+    assert not constraint.GramChol_.tainted()
     assert constraint.g_.tainted()

@@ -109,8 +109,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
 
 def wrap_positions(frame):
-    pos = frame["atoms"].q.copy()
-    pos.shape = (len(pos) / 3, 3)
+    pos = frame["atoms"].q.reshape(-1, 3)
     cell = frame["cell"].h
     cell_inv = np.linalg.inv(cell)
     s = np.dot(cell_inv, pos.T)
@@ -123,11 +122,9 @@ def unwrap_positions(frame, framelast):
     if framelast is None:
         return frame
 
-    poslast_uwr = framelast["atoms"].q.copy()
-    poslast_uwr.shape = (len(poslast_uwr) / 3, 3)
+    poslast_uwr = framelast["atoms"].q.reshape(-1, 3)
 
-    pos = frame["atoms"].q.copy()
-    pos.shape = (len(pos) / 3, 3)
+    pos = frame["atoms"].q.reshape(-1, 3)
 
     d = pos - poslast_uwr
 

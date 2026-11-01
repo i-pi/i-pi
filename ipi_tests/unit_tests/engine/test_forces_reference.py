@@ -258,7 +258,7 @@ def test_forward_and_centered_sc_differences_can_be_mixed(reference_system):
     """With alpha = 0, the forward and centered differences of different
     components use auxiliary systems of different sizes"""
     s, r = reference_system(alpha=0.0)
-    forces, refs = combined_case(s, r, contracted=False)
+    forces, _ = combined_case(s, r, contracted=False)
     centered = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
     forces.mforces[0].epsilon = 1e-8
     mixed = [forces.forcesvirs_4th_order(k)[0] for k in range(2)]
@@ -420,17 +420,25 @@ def test_extras_follow_weight_changes(force_system):
 @pytest.mark.parametrize("scaling", [0.0, -0.5, 2.0])
 def test_scaled_component_updates_energy_force_and_virial(force_system, scaling):
 
-    beads, _, forces = force_system([ForceComponent("harmonic")])
+    beads, _, forces = force_system(
+        [ForceComponent("harmonic", interpolate_extras=["energy"])]
+    )
     scaled = ScaledForceComponent(forces.mforces[0], scaling=scaling)
     for displacement in [1.0, 2.0]:
         beads.q_[:] *= displacement
         q = beads.q.copy()
+        energy = 0.5 * np.sum(q * q, axis=1)
         np.testing.assert_allclose(scaled.f, -scaling * q)
-        np.testing.assert_allclose(scaled.pots, scaling * 0.5 * np.sum(q * q, axis=1))
+        np.testing.assert_allclose(scaled.pots, scaling * energy)
         np.testing.assert_allclose(
             scaled.vir, -scaling * np.sum([np.triu(np.outer(a, a)) for a in q], axis=0)
         )
         assert bool(scaled.extras) == (scaling != 0)
+        if scaling != 0:
+            # interpolated extras are scaled as the energy, the others are copied
+            np.testing.assert_allclose(scaled.extras["energy"], scaling * energy)
+            assert scaled.extras["label"] == ["harmonic"] * 4
+            np.testing.assert_allclose(forces.mforces[0].extras["energy"], energy)
     scaled.scaling = 3
     np.testing.assert_allclose(scaled.f, -3 * beads.q)
 
@@ -575,21 +583,24 @@ def test_cancelled_bead_request_cannot_return_force_data(force_system, monkeypat
     bead_force = forces.mforces[0]._forces[0]
     bead_force.queue()
     bead_force.request["status"] = "Exit"
-    messages = []
+    calls = []
+
+    def trigger(**kwargs):
+        # records the request and exits, as softexit.trigger does
+        calls.append(kwargs)
+        raise SystemExit
+
     monkeypatch.setattr(
         force_module,
         "softexit",
-        SimpleNamespace(
-            triggered=False,
-            exiting=False,
-            trigger=lambda **kw: messages.append(kw["message"]),
-        ),
+        SimpleNamespace(triggered=False, exiting=False, trigger=trigger),
     )
     try:
         with pytest.raises(SystemExit):
             bead_force.get_all()
-        assert len(messages) == 1
-        assert "cannot return" in messages[0]
+        assert len(calls) == 1
+        assert calls[0]["status"] == "bad"
+        assert "cannot return" in calls[0]["message"]
     finally:
         bead_force.ff.release(bead_force.request)
 

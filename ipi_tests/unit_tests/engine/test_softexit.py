@@ -401,3 +401,15 @@ open("carried_on", "w").close()
     assert os.path.exists("done")
     assert not os.path.exists("carried_on")
     assert time.time() - start < 20
+
+
+def test_status_and_message_are_keywords():
+    """A message given in place of the status is refused before anything is done."""
+
+    softexit.reset()
+    try:
+        with pytest.raises(TypeError):
+            softexit.trigger("@FIRE is stuck")
+        assert not softexit.triggered
+    finally:
+        softexit.reset()

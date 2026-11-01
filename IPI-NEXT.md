@@ -102,15 +102,30 @@ or because they were approved explicitly:
   passed its error messages as the soft-exit status, so it raised a `ValueError` instead of stopping, and
   read the dipole data before checking it was there. The ASE driver without stress rejected its own zero
   stress. The double-well drivers with an explicit bath (`DW_bath`, `DDW_with_explicit_bath`) could not run
-  since the bath was converted to `compute_structure`. The force of the spline driver (`pes/spline.py`) was
-  the derivative of the tabulated energy with respect to the scaled coordinate, missing the scaling factor
-  (`factor_coord = 5`), so it was 5 times smaller than the derivative of the energy it reports: results with
-  that driver change. Strict xfails of the unit tests, plus a test of `reset` and of the DDW driver.
+  since the bath was converted to `compute_structure`, and returned their energy as an array, which numpy 2.5
+  does not convert with `float()`; `DW_bath` built its bath again at every call. The force of the spline
+  driver (`pes/spline.py`) was the derivative of the tabulated energy with respect to the scaled coordinate,
+  missing the scaling factor (`factor_coord = 5`), so it was 5 times smaller than the derivative of the energy
+  it reports: results with that driver change. A stuck FIRE minimization passed its message as the soft-exit
+  status, so it raised "Unknown option for softexit status" instead of stopping; the status and message of
+  `softexit.trigger` and `cleanup` are keyword-only, and the errors that a restart cannot resolve (also a
+  request cancelled while a bead force waits for it) have status `bad`. Strict xfails of the unit tests, plus
+  a test of `reset` and of the DDW driver.
+- Tools: `neb_interpolate` called `Atoms.copy` (it is `clone`) and divided the read-only masses in place;
+  `mux-positions` with wrapping or unwrapping set a float shape; `install_driver` ignored the exit status of
+  git and make, so a failed compilation was reported as a failed copy; the help of `i-pi -S` described
+  profiler files instead of the prefix of the sockets.
 - Atom swaps (`atomswap`) with more than one bead: the swapped atoms keep their masses, so the spring energy
   of the ring polymers changes when their masses differ; the acceptance and the conserved quantity left this
   change out (since the motion was written), so path-integral simulations did not sample the right
   distribution. It is computed from the normal modes, as in the alchemical exchange. Results of PIMD with
   atom swaps change; classical ones do not. Strict xfail of the unit tests, extended to an accepted swap.
+  Atom swaps and alchemical exchanges stop at bind when an exchanged atom has an open path or is a boson:
+  their change of the spring energy is that of closed paths, while open paths use `o_omegak`, and the spring
+  energy of bosons is the exchange potential, which does not split over atoms (the conserved quantity drifted,
+  and alchemical exchanges of bosons failed).
+- Hamiltonian replica exchange: the scaled force components of the bias scale the extras that are interpolated
+  as physical quantities (`interpolate_extras`), as the energy; they entered the bias unscaled.
 - Geometry optimization with `damped_bfgs` and fixed coordinates (`fixatoms_dof`): the step was limited by the
   displacements of triplets of free coordinates, which failed when their number is not a multiple of 3, and
   mixed the coordinates of different atoms otherwise. The displacements of the atoms are now computed from
@@ -525,10 +540,14 @@ Scope: `ipi/utils/constrtools.py`, `ipi/engine/motion/constrained_dynamics.py`,
   - `array.shape = ...` on the constructor arguments, which mutated the caller's arrays and is deprecated since
     numpy 2.5, is replaced by `reshape`.
   - `constraint_list=[]` (mutable default) is replaced by `None`.
+  - `norm_order` -1 (the infinity norm) was stored as `inf`, so the restart could not be read; it is stored
+    as -1.
 - **Dead code and docs.** Removed `ConstraintList.get_iai` (it called a method that no constraint defines) and
   the `dq`/`dqprev` dproperties of `ConstraintList` (no such depend objects). Fixed the docstrings of `Gfunc`
   and `GCfunc`, and the comment on `_m3`. Also removed a debugging block in `RigidBondConstraint.gfunc` that
-  printed "autsch" and called `exit()` if `q[0]` was infinite.
+  printed "autsch" and called `exit()` if `q[0]` was infinite. Removed the all-zero `constraint_values` of
+  `EckartConstraint`, on which its constraint and Jacobian depended without using them; scipy is imported once,
+  in constrtools.
 - **Index check, defaults, dependencies, coverage.**
   - `EckartConstraint` rejected any atom indices that were not sorted, as "repeated atom indices" (the reference
     positions are matched to the sorted atoms): the atoms are sorted, with their reference positions, and only

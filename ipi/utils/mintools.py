@@ -1074,7 +1074,10 @@ def FIRE(
         N_dn = 0
         N_up += 1
         if N_up > Nmax:
-            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
+            softexit.trigger(
+                status="bad",
+                message="@FIRE is stuck for %d steps. We stop here." % N_up,
+            )
         dt = max(dt * fdec, dtmin)
         a = astart
         # correct uphill motion

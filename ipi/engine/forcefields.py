@@ -12,7 +12,6 @@ layer for a driver that gets positions and returns forces (and energy).
 import time
 import threading
 import json
-import sys
 from contextlib import nullcontext
 
 import numpy as np
@@ -80,9 +79,12 @@ class ForceField:
         _threadlock: Python handle used to lock the thread held in _thread.
         backend_arrays: Whether requests carry, and results are, arrays of the
             array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
+        virial_checked: Whether the symmetry of the virial returned by the
+            forcefield has been checked.
     """
 
     backend_arrays = False
+    virial_checked = False
 
     def __init__(
         self,
@@ -2399,9 +2401,6 @@ class FFCavPhSocket(FFSocket):
                         status="bad",
                         message=" @ FORCES : cannot return so will die off here",
                     )
-                    while softexit.exiting:
-                        time.sleep(self.latency)
-                    sys.exit()
                 self.request._event_done.wait(timeout=1.0)
 
             """

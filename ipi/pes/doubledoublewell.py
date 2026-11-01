@@ -144,4 +144,4 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         vir = cell * 0.0  # makes a zero virial with same shape as cell
         extras = "empty"
 
-        return pot, force, vir, extras
+        return pot.item(), force, vir, extras

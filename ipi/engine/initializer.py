@@ -231,7 +231,7 @@ def init_vector(
         ):  # if there is a bead specifier then we return a single bead slice
             nbeads = 1
         natoms = len(rq) // (nbeads * 3)
-        rq.shape = (nbeads, 3 * natoms)
+        rq = rq.reshape(nbeads, 3 * natoms)
 
     return rq
 
@@ -627,7 +627,7 @@ class Initializer:
                         raise ValueError(
                             "Size mismatch in thermostat initialization data"
                         )
-                    sinput.shape = tuple(ssimul.shape)
+                    sinput = sinput.reshape(tuple(ssimul.shape))
                 elif v.mode == "chk":
                     rmotion = init_chk(v.value)[2]
                     if not hasattr(rmotion, "thermostat") or not hasattr(

@@ -1556,7 +1556,8 @@ class Properties:
             return self.motion.Electric_Field.Efield(self.ensemble.time)
         else:
             softexit.trigger(
-                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+                status="bad",
+                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble.",
             )
 
     def get_conserved(self):
@@ -1587,7 +1588,8 @@ class Properties:
         else:
             # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
             softexit.trigger(
-                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+                status="bad",
+                message=" @ PROPERTIES : the dipole is defined only when using the `eda-nve` or `eda-nvt` ensemble.",
             )
 
         assert out.shape == (
