@@ -228,6 +228,20 @@ def test_jax_depend_copies(jax_backend):
         a._value = xp.zeros(3)
 
 
+def test_torch_random_state_on_the_same_type_of_device(torch_backend, device_random):
+    """The state of the torch generator is restored also when the device is named
+    differently (e.g. "cuda" and "cuda:0")"""
+
+    from ipi.utils.prng import Random
+
+    prng = Random(seed=12345)
+    state = prng.get_state()
+    first = prng.gvec(6)
+    state["torch"]["device"] = "cpu:0"
+    prng.set_state(state)
+    assert torch_backend.equal(prng.gvec(6), first)
+
+
 def test_jax_random_state(jax_backend, device_random):
     """With JAX, Gaussian arrays are drawn with a JAX key, which is restored with
     the state of the generator"""

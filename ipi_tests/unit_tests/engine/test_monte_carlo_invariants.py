@@ -46,11 +46,9 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
         system.motion.step(0)
         assert np.sum(beads.p**2 / np.repeat(beads.m, 3)) / 2 == pytest.approx(kinetic)
         assert system.forces.pot == pytest.approx(potential)
-        if mode == "alchemy" or not attempts or nbeads == 1:
-            assert (
-                beads.vpath * system.nm.omegan2 + system.motion.ealc
-                == pytest.approx(spring)
-            )
+        assert beads.vpath * system.nm.omegan2 + system.motion.ealc == pytest.approx(
+            spring
+        )
         if attempts and mode == "alchemy":
             np.testing.assert_array_equal(beads.names, ["O", "H"])
             np.testing.assert_array_equal(beads.m, m[::-1])
@@ -72,6 +70,23 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
         restored = stored.fetch()
         assert restored.ealc == pytest.approx(system.motion.ealc)
         np.testing.assert_array_equal(restored.names, ["H", "O"])
+
+
+@pytest.mark.parametrize("mode", ["alchemy", "atomswap"])
+@pytest.mark.parametrize("paths", ["open_paths", "bosons"])
+def test_exchange_refuses_open_paths_and_bosons(simulation, mode, paths):
+    """The change of spring energy assumes closed paths of distinguishable atoms."""
+    root = ET.fromstring(harmonic_input(nbeads=4))
+    motion = root.find("system/motion")
+    motion.clear()
+    motion.set("mode", mode)
+    ET.SubElement(motion, "fixcom").text = "False"
+    ET.SubElement(ET.SubElement(motion, mode), "names").text = "[H, O]"
+    normal_modes = ET.SubElement(root.find("system"), "normal_modes")
+    ET.SubElement(normal_modes, paths).text = "[0]"
+    with pytest.raises(ValueError, match="not implemented for open paths or bosons"):
+        with simulation(ET.tostring(root, encoding="unicode")):
+            pass
 
 
 @pytest.mark.parametrize("accepted", [False, True])
@@ -106,3 +121,28 @@ def test_ring_polymer_swap_includes_spring_energy(simulation, accepted):
         else:
             np.testing.assert_array_equal(s.beads.q, q)
             assert s.motion.ealc == 0
+
+
+@pytest.mark.parametrize("nbeads", [1, 4])
+def test_dynamics_after_alchemical_exchange_uses_new_masses(simulation, nbeads):
+    """NVE dynamics conserves the energy across an exchange of masses"""
+    root = ET.fromstring(harmonic_input(nbeads=nbeads))
+    system = root.find("system")
+    dynamics = system.find("motion")
+    system.remove(dynamics)
+    motion = ET.SubElement(system, "motion", mode="multi")
+    motion.append(dynamics)
+    alchemy = ET.SubElement(motion, "motion", mode="alchemy")
+    ET.SubElement(alchemy, "fixcom").text = "False"
+    ET.SubElement(ET.SubElement(alchemy, "alchemy"), "names").text = "[H, O]"
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        s = sim.syslist[0]
+        econs = []
+        for step in range(10):
+            # exchanges the two atoms in the first step only
+            s.motion.mlist[1].prng = Proposal(0.0, int(step == 0))
+            sim.run_step(step)
+            econs.append(s.ensemble.econs)
+        np.testing.assert_array_equal(s.beads.names, ["O", "H"])
+        # the drift is 5e-3 if the positions are propagated with the old masses
+        assert np.ptp(econs) < 1e-5 * abs(econs[0])

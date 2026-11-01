@@ -92,6 +92,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         if not self.init:
             self.nbath = np.size(x)
             self.bath = Harmonic_Bath_explicit(self.nbath, **self.bath_parameters)
+            self.init = True
 
         # Harmonic bath
         pot, fq, fx = self.bath.compute_structure(q, x)
@@ -104,4 +105,4 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         vir = cell * 0.0  # makes a zero virial with same shape as cell
         extras = "empty"
 
-        return pot, force, vir, extras
+        return pot.item(), force, vir, extras

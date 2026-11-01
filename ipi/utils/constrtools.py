@@ -196,7 +196,7 @@ class ValueConstraintBase(ConstraintBase):
     def bind(self, beads):
         super(ValueConstraintBase, self).bind(beads)
 
-        # the Jacobians of bonds and angles do not depend on the targets
+        # the constraint functions depend on the targets, their Jacobians do not
         ddeps(self.g_, [self.constraint_values_])
 
 
@@ -334,9 +334,6 @@ class EckartConstraint(ConstraintBase):
         if len(constraint_values) != 0:
             constraint_values = np.reshape(constraint_values, (-1, 3))[order]
         super(EckartConstraint, self).__init__(indices[order], 6)
-        self.constraint_values_ = depend_array(
-            name="constraint_values", value=np.zeros(self.ncons)
-        )
         self.i3_indirect = self.i3_indirect.reshape((-1, 3))
         if len(constraint_values) == 0:
             self._calc_cons = True
@@ -354,8 +351,6 @@ class EckartConstraint(ConstraintBase):
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
             self.qref_[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
-        ddeps(self.g_, [self.constraint_values_])
-        ddeps(self.Dg_, [self.constraint_values_])
 
         # Total mass of the group of atoms
         self.mtot_ = depend_value(

@@ -178,17 +178,9 @@ def test_cavity_rejects_active_atoms_outside_system(active):
     assert not ff.requests
 
 
-def test_cavity_missing_dipole_data_triggers_soft_exit(monkeypatch):
-
-    exit_state = Softexit()
-    monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
-    ff = FFCavPhSocket(interface=ForceField(), threaded=False, dipole_surface=True)
-    with pytest.raises(SystemExit):
-        ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
-    assert exit_state.triggered
-
-
-@pytest.mark.parametrize("where", ["dipole", "queue", "cancelled-request"])
+@pytest.mark.parametrize(
+    "where", ["dipole", "queue", "cancelled-request", "missing-dipole-surface"]
+)
 def test_cavity_invalid_or_cancelled_request_triggers_soft_exit(where, monkeypatch):
 
     exit_state = Softexit()
@@ -196,7 +188,12 @@ def test_cavity_invalid_or_cancelled_request_triggers_soft_exit(where, monkeypat
     transport = ForceField()
     if where == "cancelled-request":
         monkeypatch.setattr(transport, "poll", transport.stop)
-    ff = FFCavPhSocket(interface=transport, threaded=False, charge_array=np.ones(2))
+    ff = FFCavPhSocket(
+        interface=transport,
+        threaded=False,
+        charge_array=np.ones(2),
+        dipole_surface=where == "missing-dipole-surface",
+    )
     with pytest.raises(SystemExit):
         if where == "dipole":
             ff.calc_dipole_xyz_mm(np.zeros(3), 1, np.ones(2))

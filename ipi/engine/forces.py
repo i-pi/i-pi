@@ -13,7 +13,6 @@ and the driver (that only cares about a single bead).
 
 
 import time
-import sys
 import threading
 from copy import deepcopy
 
@@ -33,9 +32,6 @@ __all__ = ["Forces", "ForceComponent"]
 
 fbuid = 0
 
-# names of the forcefields whose virial has been checked for symmetry
-_checked_virials = set()
-
 
 def _stack(arrays):
     """Stacks the arrays of the beads, as a view of a single one."""
@@ -49,17 +45,17 @@ def _in_mts_level(ff, level):
     return len(ff.mts_weights) > level and ff.mts_weights[level] != 0
 
 
-def _check_virial_symmetry(vir, ffname):
+def _check_virial_symmetry(vir, ff):
     """Warns if a forcefield returns a full virial that is not symmetric,
     as only its upper triangular part is used."""
 
-    _checked_virials.add(ffname)
+    ff.virial_checked = True
     vir = to_numpy(vir)
     lower = np.array([vir[1, 0], vir[2, 0], vir[2, 1]])
     upper = np.array([vir[0, 1], vir[0, 2], vir[1, 2]])
     if lower.any() and np.abs(lower - upper).max() > 1e-4 * np.abs(vir).max():
         warning(
-            f"Forcefield '{ffname}' returned a non-symmetric virial: "
+            f"Forcefield '{ff.name}' returned a non-symmetric virial: "
             "only its upper triangular part is used",
             verbosity.low,
         )
@@ -208,11 +204,9 @@ class ForceBead:
                 # so we can only call soft-exit and wait until that is done. then kill the thread
                 # we are in.
                 softexit.trigger(
-                    message=" @ FORCES : cannot return so will die off here"
+                    status="bad",
+                    message=" @ FORCES : cannot return so will die off here",
                 )
-                while softexit.exiting:
-                    time.sleep(latency)
-                sys.exit()
             request._event_done.wait(timeout=1.0)
 
         # print diagnostics about the elapsed time
@@ -271,8 +265,8 @@ class ForceBead:
         """
 
         vir = self.ufvx[2]
-        if self.ff.name not in _checked_virials:
-            _check_virial_symmetry(vir, self.ff.name)
+        if not self.ff.virial_checked:
+            _check_virial_symmetry(vir, self.ff)
         # upper triangular copy, leaving the forcefield result untouched
         if not isinstance(vir, np.ndarray):
             return xp.triu(xp.asarray(vir))
@@ -589,7 +583,7 @@ class ScaledForceComponent:
         )
         self.extras_ = depend_value(
             name="extras",
-            func=lambda: self.bf.extras if self.scaling != 0 else {},
+            func=self.get_extras,
             value={},
             dependencies=[self.bf.extras_, self.scaling_],
         )
@@ -617,6 +611,19 @@ class ScaledForceComponent:
             if self.scaling != 0
             else xp.zeros(self.bf.nbeads)
         )
+
+    def get_extras(self):
+        """Extras of the base component, scaling those that are interpolated
+        as physical quantities."""
+
+        # the extras are numpy arrays, and the scaling may be a backend scalar
+        scaling = float(self.scaling)
+        if scaling == 0:
+            return {}
+        extras = dict(self.bf.extras)
+        for e in self.interpolate_extras:
+            extras[e] = scaling * extras[e]
+        return extras
 
     def get_vir(self):
         """Sums the virial of each replica.

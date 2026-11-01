@@ -35,12 +35,15 @@ def test_driver_force_is_negative_energy_derivative(kind):
         q = np.array([[0.3, -0.2, 0.1, 0.2, -0.1, 0.05]])
     cell = np.eye(3) * 10
     energy, force, _, _ = driver(cell, q)
-    assert np.isfinite(energy).all()
+    assert isinstance(energy, float) and np.isfinite(energy)
+    baths = [getattr(driver, name, None) for name in ("bath", "bath1", "bath2")]
     for i in range(q.size):
         delta = np.zeros_like(q)
         delta.flat[i] = 1e-5
         gradient = (driver(cell, q + delta)[0] - driver(cell, q - delta)[0]) / (2e-5)
         np.testing.assert_allclose(force.flat[i], -gradient, rtol=1e-6, atol=1e-9)
+    # the bath is built at the first call only
+    assert baths == [getattr(driver, name, None) for name in ("bath", "bath1", "bath2")]
 
 
 @pytest.mark.parametrize("cutoff", [0.0, 0.7])

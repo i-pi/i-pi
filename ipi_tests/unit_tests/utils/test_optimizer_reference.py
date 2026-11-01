@@ -3,7 +3,9 @@
 import numpy as np
 import pytest
 
+from ipi.utils.array_backend import xp
 from ipi.utils.mintools import (
+    FIRE,
     L_BFGS_nls,
     _max_atomic_displacement,
     min_brent_neb,
@@ -11,6 +13,20 @@ from ipi.utils.mintools import (
     nichols,
     Powell,
 )
+from ipi.utils.softexit import softexit
+
+
+def test_stuck_fire_requests_a_soft_exit():
+    """FIRE stops with a soft exit when it has gone uphill for more than Nmax steps"""
+
+    softexit.reset()
+    try:
+        # the force opposes the velocity for more than Nmax steps
+        with pytest.raises(SystemExit):
+            FIRE(xp.zeros(3), None, (0.0, xp.ones(3)), v=xp.ones(3), N_up=5, Nmax=5)
+        assert softexit.triggered
+    finally:
+        softexit.reset()
 
 
 @pytest.mark.parametrize("radius", [0.1, 10.0])

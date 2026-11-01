@@ -77,7 +77,7 @@ class Softexit(object):
 
         self.tlist.append((thread, loop_control))
 
-    def trigger(self, status="restartable", message=""):
+    def trigger(self, *, status="restartable", message=""):
         """Halts the simulation.
 
         Prints out a warning message, then runs all the exit functions in flist
@@ -89,10 +89,10 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        self.cleanup(status, message)
+        self.cleanup(status=status, message=message)
         self.kill()
 
-    def cleanup(self, status="restartable", message=""):
+    def cleanup(self, *, status="restartable", message=""):
         """Runs registered cleanup functions without exiting the process.
 
         The functions are called only once. If another thread holds the lock,

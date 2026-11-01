@@ -334,6 +334,7 @@ class Fix(object):
                 self.fixatoms = np.unique(self.fixatoms_dof // 3)
             else:
                 softexit.trigger(
+                    status="bad",
                     message="fixatoms_dof is not yet implemented. please use fixatoms",
                 )
         else:

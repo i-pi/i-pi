@@ -63,6 +63,10 @@ class AtomSwap(Motion):
         """
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
+        # the change of spring energy is computed for closed, distinguishable paths
+        special = np.concatenate((self.nm.open_paths, self.nm.bosons))
+        if np.isin(self.AXlist(self.names), special).any():
+            raise ValueError("Atom swaps are not implemented for open paths or bosons.")
         self.ensemble.add_econs(self.ealc_)
         self.dbeads = self.beads.clone()
         self.dcell = self.cell.clone()

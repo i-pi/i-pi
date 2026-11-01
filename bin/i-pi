@@ -108,7 +108,7 @@ if __name__ == '__main__':
                       help='Define the verbosity level.')
 
     parser.add_option('-S', '--sockets_prefix', dest='sockets_prefix', default=None,
-                      help='Prefix for profiler files.')
+                      help='Prefix of the paths of the UNIX-domain sockets (overrides the `sockets_prefix` of the input).')
 
     parser.add_option('--backend', dest='backend', default='numpy',
                       choices=['numpy', 'torch', 'jax'],
