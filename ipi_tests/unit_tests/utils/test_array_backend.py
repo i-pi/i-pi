@@ -52,7 +52,31 @@ def test_jit_requires_jax_or_torch_on_cuda():
         ab.set_backend("numpy", jit=True)
     with pytest.raises(ValueError):
         ab.set_backend("torch", device="cpu", jit=True)
+    with pytest.raises(ValueError, match="Unknown array backend"):
+        ab.set_backend("unknown", jit=True)
     assert ab.backend() == "numpy" and not ab.jit()
+
+
+def test_invalid_backend_options_are_usage_errors(tmp_path):
+    """i-pi reports invalid combinations of the backend options as usage
+    errors, rather than with a traceback"""
+
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    ipi = Path(__file__).resolve().parents[3] / "bin" / "i-pi"
+    xml = tmp_path / "input.xml"
+    xml.write_text("<simulation/>")
+    for options in (["--jit"], ["--device", "cuda"]):
+        result = subprocess.run(
+            [sys.executable, str(ipi), *options, str(xml)],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+        )
+        assert result.returncode == 2
+        assert "error:" in result.stderr and "Traceback" not in result.stderr
 
 
 def test_switch_updates_imported_namespace(torch_backend):

@@ -168,6 +168,50 @@ def write_input(case, forcefield, natoms=8):
 """
 
 
+def mts_input(forcefield):
+    """PIMD with a forcefield and the dummy potential applied at two levels of
+    multiple time stepping."""
+
+    xml = write_input("pimd_nvt", forcefield)
+    return (
+        xml.replace(
+            forcefield[0],
+            forcefield[0] + "<ffdirect name='ff2'><pes>dummy</pes></ffdirect>",
+        )
+        .replace(
+            "<force forcefield='ff'/>",
+            "<force forcefield='ff'><mts_weights>[1,0]</mts_weights></force>"
+            "<force forcefield='ff2'><mts_weights>[0,1]</mts_weights></force>",
+        )
+        .replace(
+            "<timestep units='femtosecond'>0.5</timestep>",
+            "<timestep units='femtosecond'>0.5</timestep><nmts>[1,3]</nmts>",
+        )
+    )
+
+
+def nst_input(forcefield):
+    """Classical dynamics at constant stress, with the anisotropic barostat."""
+
+    box = (8 / 0.05) ** (1.0 / 3.0)  # the box of write_input, in angstrom
+    return (
+        write_input("npt_isotropic", forcefield)
+        .replace(
+            "<pressure units='bar'>1</pressure>",
+            "<stress units='bar'>[1, 0, 0, 0, 1, 0, 0, 0, 1]</stress>",
+        )
+        .replace("mode='npt'", "mode='nst'")
+        .replace(
+            "<barostat mode='isotropic'>",
+            "<barostat mode='anisotropic'><h0 units='angstrom'>"
+            f"[{box}, 0, 0, 0, {box}, 0, 0, 0, {box}]</h0>",
+        )
+    )
+
+
+INPUTS = {"mts": mts_input, "nst": nst_input}
+
+
 @pytest.fixture
 def numpy_draws(monkeypatch):
     """Makes the torch and JAX backends draw the same random numbers as
