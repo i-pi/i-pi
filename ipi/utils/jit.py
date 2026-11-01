@@ -138,7 +138,7 @@ class _Recorder:
         if status in self.written or status in self.inputs:
             return
         dep = dep._root()
-        value = dep._wvalue if isinstance(dep, depend.depend_array) else dep._value
+        value = dep._data if isinstance(dep, depend.depend_array) else dep._value
         copy = value.copy() if isinstance(value, np.ndarray) else None
         self.inputs[status] = (dep, value, copy)
 
@@ -148,7 +148,7 @@ class _Recorder:
             self.written.add(dep._status)
             if isinstance(dep, depend.depend_value):
                 self.values[dep] = None
-            elif isinstance(dep._root()._wvalue, np.ndarray):
+            elif isinstance(dep._root()._data, np.ndarray):
                 self.host_writes.add(dep._name)
 
     def synchronized(self, synchro):

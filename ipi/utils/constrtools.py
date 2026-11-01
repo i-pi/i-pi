@@ -482,10 +482,10 @@ class ConstraintList(ConstraintBase):
         for ic, c in enumerate(self.constraint_list):
             c.bind(beads)
             # deal with constraint functions
-            dcompute(c.q_, make_qgetter(ic), [self.q_])
+            dsetfunc(c.q_, make_qgetter(ic), [self.q_])
             ddeps(self.g_, [c.g_])
             # ...and their gradients
-            dcompute(c.qprev_, make_qprevgetter(ic), [self.qprev_])
+            dsetfunc(c.qprev_, make_qprevgetter(ic), [self.qprev_])
             ddeps(self.Dg_, [c.Dg_])
 
     def gfunc(self):

@@ -253,7 +253,7 @@ def _stage(dep, recorded, copy):
 
     current = dep.get()
     if isinstance(dep, depend.depend_array):
-        if dep._wvalue is not recorded:
+        if dep._data is not recorded:
             raise _changed(dep, "has been replaced")
         if copy is not None and not np.array_equal(current, copy):
             raise _changed(dep, "has changed")

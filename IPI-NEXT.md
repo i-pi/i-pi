@@ -219,8 +219,8 @@ or because they were approved explicitly:
   kinetic stress estimators. Results change at the level of rounding errors. `Cell.array_pbc` returns the
   wrapped positions instead of modifying its argument.
 - Depend objects that become computed after they are created (thermostats of the normal modes, constraints,
-  contracted beads, bias scaling) are wired with `dcompute` or `dpipe` instead of setting `_func` by hand.
-  `dcompute` raises an `AssertionError` if the object is already computed, synchronized, or a view. `dpipe`
+  contracted beads, bias scaling) are wired with `dsetfunc` or `dpipe` instead of setting `_func` by hand.
+  `dsetfunc` raises an `AssertionError` if the object is already computed, synchronized, or a view. `dpipe`
   still replaces an earlier pipe (the time step of the normal modes follows the motion, then each dynamics
   bound to them), but now raises for synchronized objects and views, whose function it used to overwrite.
   Dependencies added after an object is created go through `ddeps`, which raises if the object is not
@@ -228,21 +228,39 @@ or because they were approved explicitly:
 - Depend objects are stored in attributes with a trailing underscore, `obj.x_` instead of `obj._x`, and
   `dproperties` exposes their value as `obj.x`. Entries of `dproperties` with no depend object behind them
   (they raised a `KeyError` when read) are removed.
-- In-place operators on depend arrays (`obj.x_ += v`) raise a `TypeError` when they cannot update the stored
-  array in place, e.g. a numpy array added to a torch tensor, which left the array unchanged.
-- Indices of depend arrays with Ellipsis or None (`obj.x_[..., i]`) select views connected to the array, as
-  slices do (they were taken for scalar indices, and gave read-only copies). Deep copies and pickles of depend
-  objects are isolated (no dependants, no synchronization: a deep copy shared the dependants of the original,
-  and an object with dependants could not be pickled), and views cannot be copied. `dpipe` checks that its
-  target is not synchronized or a view before discarding its function.
-- Writing a view of a computed depend array (`v = obj.f_[1:]; v[:] = 0`) raises a `NameError`, as writing the
-  array itself does; it was accepted, and lost at the next recompute (`obj.f_[1:] += v` already raised). Views
-  inherit the function of their parent when they are created.
-- Assigning part of a depend array that is out of date (`obj.x_[i] = v`, e.g. `beads.p` after writing
-  `nm.pnm`) merged the new elements into the old values; the array is now brought up to date first. With
-  `--jit`, the objects that a step only updates in place or assigns in part are now inputs of the recorded
+- Depend objects follow one set of rules, stated in the docstring of `ipi/utils/depend.py`. The function of a
+  computed object is held by the status shared with its views (`obj.x_._status.func`, it was `obj.x_._func`),
+  and the conversions of a synchronized pair by the pair. Views are objects of their own classes
+  (`depend_array_view`, `depend_immutable_view`). The stored array of a depend array is `_data` (it was
+  `_wvalue`). All the writes (`set`, `obj.x = v`, item assignments, in-place operators, also through views) take
+  the same steps, in the same order.
+- Writing a computed depend object raises a `NameError` before changing anything (item assignments changed
+  the value, and left it up to date). This also holds for its views, also those created before the object was
+  made computed with `dsetfunc` or `dpipe` (e.g. the Atoms of contracted beads), which could be written, and
+  the change was lost at the next recompute. `dsynchro` raises for computed objects and views.
+- A write that keeps part of a depend array that is out of date (`obj.x_[i] = v`, `obj.x_ += v`, and any
+  write to a view, e.g. `beads[0].p = v` after writing `nm.pnm`) brings the array up to date first: the new
+  elements were merged into the old values, and writing a whole view lost the other elements. With `--jit`,
+  the objects that a step updates in place or assigns in part (also through a view) are inputs of the recorded
   segments, so that values written between replayed steps (e.g. by `InteractiveSimulation.thermalize_momenta`,
-  through `nm.pnm`) are used (H100: +1-3 us per replayed PIMD step).
+  through `nm.pnm`) are used (H100: +1-3 us per replayed PIMD step). From Python 3.12, `obj.x_[a:b] op= v`
+  assigned the updated view back to the array.
+- Deep copies and pickles of depend objects are isolated (no dependants, no synchronization: a deep copy
+  shared the dependants of the original, and an object with dependants could not be pickled), and views cannot
+  be copied. Those of a synchronized object hold its current value, and can be written (they were computed from
+  the peer of the original, and could not be written). Arrays are copied and pickled once (twice with numpy).
+- Depend arrays behave as numpy arrays with all the backends. Indices with Ellipsis or None (`obj.x_[..., i]`,
+  `obj.x_[None]`) select views connected to the array, as slices do (they were taken for scalar indices, and
+  gave read-only copies); 0-d integer arrays select as integers do (they raised). With torch, `obj.x_[i, j] op= v`
+  on a computed array modifies the stored tensor through the element, which shares memory with it, before the
+  write is refused: the refused write now marks the array out of date, so that it is recomputed (the wrong
+  value was kept). `reshape`/`flatten` raise
+  if the view cannot be reshaped without a copy (writes through the copy were lost), which needs numpy 2.1.
+  In-place operators raise a `TypeError` when they cannot update the stored array in place, e.g. a numpy array
+  added to a torch tensor (which left the array unchanged), and with JAX when the result would change the shape
+  of the array or its type beyond a `same_kind` cast (it replaced the array).
+- New tool `i-pi-depend-graph` (`ipi.utils.tools.DependGraph`): writes the graph of the depend objects of a
+  simulation in the dot format of Graphviz, optionally only around some objects (`--around`, `--depth`).
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
@@ -390,8 +408,9 @@ bugs pass, and are no longer marked.
   writes to the state go through the depend objects (`set`, `__setitem__`, in-place operators), which is where
   jax would need functional updates.
 - JAX, eager: `set_backend("jax")` enables 64-bit types; depend arrays holding
-  JAX arrays become `depend_immutable`, whose writes replace the stored array and whose views (per-bead
-  Atoms, thermostat `bind`s, `obj.x_[i] op= v`) read the parent at each access and write through it; masks and
+  JAX arrays become `depend_immutable`, whose writes replace the stored array and whose views
+  (`depend_immutable_view`: per-bead Atoms, thermostat `bind`s, `obj.x_[i] op= v`) read the parent at each
+  access and write through it; masks and
   arrays of indices select copies, as with the other backends.
   `depend_array` writes go through two hooks (`_assign`, `_apply`), the only change for numpy/torch
   (~0.05 us per write, within noise in the benchmarks). Indexing views uses jitted take/put with the index as
@@ -415,8 +434,8 @@ bugs pass, and are no longer marked.
   with these (and the PRNG key) as arguments of `jax.jit`, returning the values of the objects it writes,
   compiled ahead of time (`lower().compile()`, so it never retraces), and replayed: inputs brought up to
   date with `get()`, host inputs (`dt`, `nmts`, `splitting`, ...) compared with their traced values
-  (`JitError` if they change), outputs stored, statuses restored. depend changes: the root `_value` of
-  `depend_immutable` notifies reads (in-place operators and writes through views read without `get`), and
+  (`JitError` if they change), outputs stored, statuses restored. depend changes: the `_value` of a
+  `depend_immutable` notifies all the reads of its stored array (also those made by writes and views), and
   full assignments replace the stored array without reading it. Unlike CUDA graphs, a trace cannot be
   split: the driver calls marked with `eager` are traced, so only direct forcefields whose potential works
   on JAX arrays (`dummy`) are compiled; other forcefields leave the steps eager, with a warning (they would

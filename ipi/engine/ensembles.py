@@ -224,7 +224,7 @@ class Ensemble:
         for ic in range(len(self.forces.mforces)):
             sfc = ScaledForceComponent(self.forces.mforces[ic], 1.0)
             self.bias.add_component(self.forces.mbeads[ic], self.forces.mrpc[ic], sfc)
-            dcompute(sfc.scaling_, lambda i=ic: self.hweights[i] - 1, [self.hweights_])
+            dsetfunc(sfc.scaling_, lambda i=ic: self.hweights[i] - 1, [self.hweights_])
 
         self._elist = []
 

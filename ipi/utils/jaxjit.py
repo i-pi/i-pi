@@ -239,7 +239,7 @@ def _get(dep):
     """The value held by a depend object, or by the array a view belongs to."""
 
     if isinstance(dep, depend.depend_array):
-        return dep._wvalue
+        return dep._data
     return dep._value
 
 
