@@ -181,9 +181,6 @@ class NormalModes:
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
 
-        # storage space for the propagator
-        self.pq_buffer = np.zeros((2, self.natoms * 3), float)
-
         self.bosons = self.resolve_bosons()
 
         # eco springs are only defined for closed, distinguishable paths
@@ -194,9 +191,6 @@ class NormalModes:
                 raise ValueError(
                     "ECO mode requires one frequency, the maximum physical frequency to be reproduced."
                 )
-
-        # stores a reference to the bound beads and ensemble objects
-        self.ensemble = ensemble
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
@@ -313,7 +307,6 @@ class NormalModes:
             dependencies=[self.nm_factor_, self.omegak_],
         )
 
-        self.dt_ = depend_value(name="dt", value=1.0)
         dpipe(self.motion.dt_, self.dt_)
 
         self.prop_pq_ = depend_array(

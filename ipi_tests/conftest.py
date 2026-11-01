@@ -54,16 +54,11 @@ def pytest_configure(config):
     if test_tools.ipi_backend == "torch":
         import torch
 
-        def gfill(self, out):
-            out[...] = array_backend.xp.asarray(self.gvec_serial(tuple(out.shape)))
-
         _device_random.update(
             gvec_torch=Random.gvec_torch,
-            gfill_torch=Random.gfill_torch,
             gammavec_torch=Random.gammavec_torch,
         )
         Random.gvec_torch = gvec
-        Random.gfill_torch = gfill
         Random.gammavec_torch = gammavec
 
         # torch is slower than numpy for the small systems of the tests

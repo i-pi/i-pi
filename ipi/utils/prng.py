@@ -7,9 +7,8 @@ simulation is restarted from a checkpoint, we will see the same dynamics as if
 it had not been stopped.
 
 Scalars and host-side arrays are drawn with numpy generators. Arrays of
-Gaussian numbers (`gvec`, `gfill`) are drawn with the generator of the array
-backend, i.e. on the device when using torch. With JAX, whose arrays cannot be
-filled in place, only `gvec` is available.
+Gaussian numbers (`gvec`, `gammavec`) are drawn with the generator of the array
+backend, i.e. on the device when using torch or JAX.
 """
 
 # This file is part of i-PI.
@@ -40,13 +39,8 @@ class Random(object):
     Attributes:
         rng: The random number generator to be used.
         seed: The seed number to start the generator.
-        state: A tuple of five objects giving the current state of the random
-            number generator. The first is the type of random number generator,
-            here 'MT19937', the second is an array of 624 integers, the third
-            is the current position in the array that is being read from, the
-            fourth gives whether it has a gaussian random number stored, and
-            the fifth is this stored Gaussian random number, or else the last
-            Gaussian random number returned.
+        state: The state of the generators, which can be stored in a
+            checkpoint and restored (see `get_state` and `set_state`).
     """
 
     def __init__(self, seed=-1, state=None, n_threads=1):
@@ -93,15 +87,12 @@ class Random(object):
                 int(np.random.SeedSequence(seed).generate_state(1, np.uint64)[0])
             )
             self.gvec = self.gvec_torch
-            self.gfill = self.gfill_torch
             self.gammavec = self.gammavec_torch
         elif self.n_threads == 1:
             self.gvec = self.gvec_serial
-            self.gfill = self.gfill_serial
         else:
             self.executor = concurrent.futures.ThreadPoolExecutor(n_threads)
             self.gvec = self.gvec_threaded
-            self.gfill = self.gfill_threaded
 
         if state is not None:
             self.state = state
@@ -342,15 +333,6 @@ class Random(object):
         self.gfill_threaded(rvec)
 
         return rvec
-
-    def gfill_torch(self, out):
-        """Fills a pre-allocated torch array with the torch generator.
-
-        Args:
-            out: The array to be filled.
-        """
-
-        out.normal_(generator=self._torch_rng)
 
     def gvec_torch(self, shape):
         """Returns an array of Gaussian random numbers drawn with the torch

@@ -646,9 +646,6 @@ class NVTCCIntegrator(NVTIntegrator):
 
         # propagates in NM coordinates
         self.nm.pnm_ += self.nm.fnm * (self.dt * 0.5)
-        # self.beads.p += dstrip(self.forces.f)*(self.dt*0.5)
-        # also adds the bias force
-        # self.beads.p += dstrip(self.bias.f)*(self.dt*0.5)
 
     def step(self, step=None):
         """Does one simulation time step."""
@@ -701,16 +698,11 @@ class NPTIntegrator(NVTIntegrator):
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
-            # if verbosity.medium: will uncomment one day
-            #    raise ValueError(
-            #        "Zero stress terminates simulation for medium verbosity and above."
-            #    )
 
         self._stresscheck = False
 
         self.barostat.pstep(level)
         super(NPTIntegrator, self).pstep(level)
-        # self.pconstraints()
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
@@ -722,7 +714,6 @@ class NPTIntegrator(NVTIntegrator):
 
         self.thermostat.step()
         self.barostat.thermostat.step()
-        # self.pconstraints()
 
 
 class NSTIntegrator(NPTIntegrator):

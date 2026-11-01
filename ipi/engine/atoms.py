@@ -93,9 +93,6 @@ class Atoms:
           three times. Used when each degree of freedom needs to be divided
           by the mass.
        M: The total mass of all the atoms.
-       kin: The total kinetic energy of the atoms. Depends on p and m3.
-       kstress: The contribution of the atoms to the kinetic stress tensor.
-          Depends on p and m.
     """
 
     def __init__(self, natoms, _prebind=None):
@@ -135,12 +132,6 @@ class Atoms:
         )
 
         self.M_ = depend_value(name="M", func=self.get_msum, dependencies=[self.m_])
-        self.kin_ = depend_value(
-            name="kin", func=self.get_kin, dependencies=[self.p_, self.m3_]
-        )
-        self.kstress_ = depend_value(
-            name="kstress", func=self.get_kstress, dependencies=[self.p_, self.m_]
-        )
 
     def clone(self):
         """Creates a new Atoms object.
@@ -234,31 +225,5 @@ class Atoms:
 
         return xp.repeat(self.m, 3)
 
-    def get_kin(self):
-        """Calculates the total kinetic energy of the system."""
 
-        p = self.p
-        return 0.5 * (p @ (p / self.m3))
-
-    def get_kstress(self):
-        """Calculates the total contribution of the atoms to the kinetic stress
-        tensor -- not volume-scaled
-        """
-
-        p = self.p
-        m = self.m
-        px = p[0::3]
-        py = p[1::3]
-        pz = p[2::3]
-
-        ks = xp.zeros((3, 3))
-        ks[0, 0] = px @ (px / m)
-        ks[1, 1] = py @ (py / m)
-        ks[2, 2] = pz @ (pz / m)
-        ks[0, 1] = px @ (py / m)
-        ks[0, 2] = px @ (pz / m)
-        ks[1, 2] = py @ (pz / m)
-        return ks
-
-
-dproperties(Atoms, ["p", "q", "m", "m3", "names", "M", "kin", "kstress"])
+dproperties(Atoms, ["p", "q", "m", "m3", "names", "M"])
