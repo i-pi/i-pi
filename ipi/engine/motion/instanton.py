@@ -78,6 +78,8 @@ class InstantonMotion(Motion):
         energy_shift: zero of energy (usually it corresponds to reactant state)
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

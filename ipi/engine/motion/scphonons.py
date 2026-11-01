@@ -41,6 +41,8 @@ class SCPhononsMover(Motion):
     Self-consistent phonons method.
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

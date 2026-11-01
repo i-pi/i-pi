@@ -203,25 +203,24 @@ def test_sc_coefficients_and_corrections(reference_system, alpha):
         )
 
 
+@pytest.mark.parametrize("epsilon", [-1e-5, 1e-6], ids=["centred", "forward"])
 @pytest.mark.parametrize("before,after", [(0.0, 0.3), (0.3, 0.0), (0.3, 0.5)])
-def test_sc_alpha_cannot_switch_between_zero_and_nonzero(
-    reference_system, before, after
+def test_sc_alpha_switch_recomputes_fourth_order_terms(
+    reference_system, epsilon, before, after
 ):
     """The finite differences of the fourth-order correction displace only the
-    odd beads for alpha = 0, and all of them otherwise: once it is computed,
-    alpha can change only between non-zero values"""
-    s, r = reference_system(alpha=before)
-    s.forces.mforces[0].epsilon = -1e-5
-    s.forces.f_4th_order
-    s.forces.alpha = after
-    if (before == 0) != (after == 0):
-        with pytest.raises(ValueError, match="alpha"):
-            s.forces.f_4th_order
-    else:
-        derivative = sc_reference(r.q, r.masses, r.a, r.b, after, 0.4)["derivative"]
-        np.testing.assert_allclose(
-            s.forces.f_4th_order, derivative, rtol=1e-7, atol=2e-8
-        )
+    odd beads for alpha = 0, and all of them otherwise: after alpha changes,
+    the terms are those of a system created with the new alpha"""
+    results = []
+    for alphas in [(before, after), (after,)]:
+        s, _ = reference_system(alpha=alphas[0])
+        s.forces.mforces[0].epsilon = epsilon
+        for alpha in alphas:
+            s.forces.alpha = alpha
+            terms = [s.forces.f_4th_order, s.forces.vir_4th_order]
+        results.append([np.asarray(t, dtype=float) for t in terms])
+    for switched, fresh in zip(*results):
+        np.testing.assert_allclose(switched, fresh, rtol=1e-12, atol=1e-14)
 
 
 @pytest.mark.parametrize("contracted", [False, True])

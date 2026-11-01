@@ -770,8 +770,6 @@ class Forces:
         self.bound = False
         # auxiliary systems for the finite differences of the fourth-order term
         self.aux = {}
-        # whether alpha was zero at the first evaluation of the fourth-order term
-        self.alpha_zero = None
 
     def add_component(self, nbeads, nrpc, nforces):
         self.mrpc.append(nrpc)
@@ -1308,18 +1306,15 @@ class Forces:
             warning("ERROR: Suzuki-Chin factorization requires even number of beads!")
             exit()
 
-        # calculates the finite displacement.
-        fbase = self.f
+        # calculates the finite displacement, along f / m.
+        fm = self.f / self.beads.m3
         eps = self.mforces[index].epsilon
-        foverm = xp.sqrt(
-            (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
-            / (self.nbeads * self.natoms)
-        )
+        foverm = xp.sqrt((fm * fm).sum() / (self.nbeads * self.natoms))
         if float(foverm) > 1e-20:
             delta = abs(eps) / foverm
         else:  # defaults to eps if otherwise we'd get an 1/0
             delta = abs(eps)
-        dq = delta * fbase / self.beads.m3
+        dq = delta * fm
 
         # stores the force component.
         fbase = self.mrpc[index].b2tob1(self.mforces[index].f)
@@ -1349,9 +1344,6 @@ class Forces:
                 # we use an aux force evaluator with half the number of beads.
                 dbeads, dforces = self.aux_system(self.nbeads // 2)
 
-                f_4th_order = fbase * 0.0
-                v_4th_order = vbase * 0.0
-
                 # displaces odd beads only.
                 dbeads.q = self.beads.q[1::2] - dq[1::2]
 
@@ -1362,9 +1354,10 @@ class Forces:
                 dmvirs = dforces.mforces[index].virs
                 vminus = dforces.mrpc[index].b2tob1(dmvirs)
 
-                # calculates the finite difference.
-                f_4th_order[1::2] = 2.0 * (fminus - fbase[1::2]) / delta
-                v_4th_order[1::2] = 2.0 * (vminus - vbase[1::2]) / delta
+                # calculates the finite difference on the odd beads (the
+                # copies on the even beads are zeroed below)
+                f_4th_order = 2.0 * (xp.repeat(fminus, 2, axis=0) - fbase) / delta
+                v_4th_order = 2.0 * (xp.repeat(vminus, 2, axis=0) - vbase) / delta
 
             # For the case of alpha != 0, all the beads are displaced.
             else:
@@ -1393,13 +1386,10 @@ class Forces:
             # we use an aux force evaluator with the same number of beads.
             dbeads, dforces = self.aux_system(self.nbeads)
 
-            f_4th_order = fbase * 0.0
-            v_4th_order = vbase * 0.0
-
             # for the case of alpha = 0, only odd beads are displaced, on a ring whose
             # first and second halves hold the + and - displacements; contracted
-            # components would mix them, and displace the full ring instead (its
-            # even beads, not displaced, have zero coefficients)
+            # components would mix them, and displace the full ring instead (the
+            # terms of its even beads are zeroed below)
             if self.alpha == 0 and self.mrpc[index].noop:
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
                 dbeads.q_[: self.nbeads // 2] = self.beads.q[1::2] + dq[1::2]
@@ -1412,23 +1402,15 @@ class Forces:
                 dmvirs = dforces.mforces[index].virs
                 vplusminus = dforces.mrpc[index].b2tob1(dmvirs)
 
-                # calculates the finite difference.
-                for k in range(self.nbeads // 2):
-                    j = 2 * k + 1
-                    f_4th_order[j] = (
-                        2.0
-                        * (fplusminus[self.nbeads // 2 + k] - fplusminus[k])
-                        / 2.0
-                        / delta
-                    )
-                    v_4th_order[j] = (
-                        2.0
-                        * (vplusminus[self.nbeads // 2 + k] - vplusminus[k])
-                        / 2.0
-                        / delta
-                    )
+                # calculates the centred difference, 2 (f- - f+) / (2 delta), on
+                # the odd beads (the copies on the even beads are zeroed below)
+                h = self.nbeads // 2
+                df = xp.repeat(fplusminus[h:] - fplusminus[:h], 2, axis=0)
+                dv = xp.repeat(vplusminus[h:] - vplusminus[:h], 2, axis=0)
+                f_4th_order = df / delta
+                v_4th_order = dv / delta
 
-            # For the case of alpha != 0, all the beads are displaced.
+            # otherwise, all the beads are displaced.
             else:
                 # displaces the beads.
                 dbeads.q = self.beads.q + dq
@@ -1451,19 +1433,19 @@ class Forces:
                 dmvirs = dforces.mforces[index].virs
                 vminus = dforces.mrpc[index].b2tob1(dmvirs)
 
-                # calculates the finite difference.
-                f_4th_order = 2.0 * (fminus - fplus) / 2.0 / delta
-                v_4th_order = 2.0 * (vminus - vplus) / 2.0 / delta
+                # calculates the centred difference, 2 (f- - f+) / (2 delta).
+                f_4th_order = (fminus - fplus) / delta
+                v_4th_order = (vminus - vplus) / delta
 
         # the strain derivative of |f|^2 / m also contains 2 (f / m) x f, summed over
         # the components (Kapil et al., JCTC 15, 3237 (2019), Eq. 9), in the upper
         # triangle like the virials
-        u = (dq / delta).reshape((self.nbeads, -1, 3))
+        u = fm.reshape((self.nbeads, -1, 3))
         fk = fbase.reshape((self.nbeads, -1, 3))
         v_4th_order = v_4th_order + 2.0 * xp.triu(xp.swapaxes(u, 1, 2) @ fk)
         if self.alpha == 0:
             # only the odd beads have non-zero coefficients
-            odd = xp.asarray(np.arange(self.nbeads) % 2.0)[:, None]
+            odd = (xp.arange(self.nbeads) % 2)[:, None]
             f_4th_order = f_4th_order * odd
             v_4th_order = v_4th_order * odd[:, :, None]
 
@@ -1513,15 +1495,6 @@ class Forces:
 
     def fvir_4th_order_combine(self):
         """Obtains the total fourth order |f^2| correction to the force vector and the virial."""
-
-        # the finite differences displace only the odd beads for alpha = 0, and all
-        # of them otherwise: the scheme is fixed by the first evaluation
-        if self.alpha_zero is None:
-            self.alpha_zero = self.alpha == 0
-        elif self.alpha_zero != (self.alpha == 0):
-            raise ValueError(
-                "The Suzuki-Chin alpha cannot change between zero and non-zero values"
-            )
 
         rf = xp.zeros((self.nbeads, 3 * self.natoms))
         rv = xp.zeros((self.nbeads, 3, 3))

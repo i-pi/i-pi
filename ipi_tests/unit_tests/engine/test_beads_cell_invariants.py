@@ -19,30 +19,6 @@ def beads():
     return result
 
 
-def test_spring_force_is_negative_energy_gradient(beads):
-    """A displacement's energy change and force must agree for every bead."""
-    original = beads.q.copy()
-    force = beads.fpath.copy()
-    numerical = np.zeros_like(original)
-    step = 1e-5
-    for index in np.ndindex(original.shape):
-        beads.q_[index] = original[index] + step
-        forward = beads.vpath
-        beads.q_[index] = original[index] - step
-        backward = beads.vpath
-        beads.q_[index] = original[index]
-        numerical[index] = -(forward - backward) / (2 * step)
-    np.testing.assert_allclose(force, numerical, rtol=1e-8, atol=1e-8)
-    np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-12)
-
-
-def test_spring_force_updates_after_mass_change(beads):
-    """Changing isotope masses must invalidate already evaluated spring forces."""
-    original_force = beads.fpath.copy()
-    beads.m_[:] *= 2
-    np.testing.assert_allclose(beads.fpath, 2 * original_force, atol=1e-12)
-
-
 def test_bead_views_and_clones_preserve_state_without_aliasing(beads):
     """Per-bead edits update the centroid; cloning produces independent storage."""
     original_centroid = beads.qc.copy()

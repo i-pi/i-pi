@@ -24,10 +24,14 @@ class Motion:
             motion will be constrained or not.
         fixatoms_dof: A list of degrees of freedom  that should be held fixed to their
             initial positions.
+        jax_support: Whether the motion runs with the JAX backend, whose arrays
+            cannot be modified in place.
 
     Depend objects:
         none
     """
+
+    jax_support = True
 
     def __init__(self, fixcom=False, fixatoms_dof=None):
         """Initialises Motion object.

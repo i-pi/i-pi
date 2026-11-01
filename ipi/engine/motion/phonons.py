@@ -31,6 +31,8 @@ from ipi.utils.phonontools import apply_asr
 class DynMatrixMover(Motion):
     """Dynamic matrix calculation routine by finite difference."""
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

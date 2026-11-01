@@ -328,6 +328,8 @@ class NEBMover(Motion):
             kappamin: min spring constant if varsprings is T *** NOT YET IMPLEMENTED ***
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,

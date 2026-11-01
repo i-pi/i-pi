@@ -40,15 +40,13 @@ def test_exchange_preserves_energy_and_species(simulation, mode, nbeads, attempt
         beads = system.beads
         q, p, m = beads.q.copy(), beads.p.copy(), beads.m.copy()
         kinetic = np.sum(p**2 / np.repeat(m, 3)) / 2
-        spring = beads.vpath * system.nm.omegan2
+        spring = system.nm.vspring
         potential = system.forces.pot
         system.motion.prng = Proposal(0.0, attempts)
         system.motion.step(0)
         assert np.sum(beads.p**2 / np.repeat(beads.m, 3)) / 2 == pytest.approx(kinetic)
         assert system.forces.pot == pytest.approx(potential)
-        assert beads.vpath * system.nm.omegan2 + system.motion.ealc == pytest.approx(
-            spring
-        )
+        assert system.nm.vspring + system.motion.ealc == pytest.approx(spring)
         if attempts and mode == "alchemy":
             np.testing.assert_array_equal(beads.names, ["O", "H"])
             np.testing.assert_array_equal(beads.m, m[::-1])
