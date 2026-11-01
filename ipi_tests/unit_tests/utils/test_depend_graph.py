@@ -118,7 +118,7 @@ def test_graph_of_a_simulation():
     assert {q, qnm} in [set(pair) for pair in graph.pairs]
     assert status["syslist[0].forces.pot"] in graph.around(["beads.q"])
     assert "syslist[0].beads._blist[0].q" not in status
-    assert "syslist[0].beads._blist[0].kin" in status
+    assert "syslist[0].beads._blist[0].m3" in status
 
 
 @pytest.mark.parametrize("output", ["graph.dot", "graph.svg"])

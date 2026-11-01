@@ -23,7 +23,6 @@ __all__ = [
     "det_ut3x3",
     "root_herm",
     "logsumlog",
-    "sinch",
     "gaussian_inv",
     "get_rotation_quadrature_legendre",
     "get_rotation_quadrature_lebedev",
@@ -314,44 +313,6 @@ def root_herm(A):
         )
 
     return rv
-
-
-def sinch(x):
-    """Computes sinh(x)/x elementwise, in a way that is stable for x->0.
-
-    Works for complex x too (e.g. complex eigenvalues from a non-symmetric
-    barostat momentum tensor), so the small-argument test uses abs()."""
-
-    x2 = x * x
-    small = xp.abs(x2) < 1e-12
-    # the series is used for small arguments, and x is replaced by one to avoid 0/0
-    xs = xp.where(small, xp.ones_like(x), x)
-    series = 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
-    return xp.where(small, series, xp.sinh(xs) / xs)
-
-
-def mat_taylor(x, function):
-    """compute matrix function as direct taylor expansion
-    Args:
-       x: matrix
-       function: the function to be expanded
-    Return:
-       function of matrix.
-    """
-    if not (x.shape[0] == x.shape[1]):
-        warning("input matrix is not squared")
-        return None
-    dim = x.shape[0]
-    I = xp.eye(dim)
-    if function == "sinhx/x":
-        # compute sinhx/x by directly taylor
-        x2 = x @ x
-        return I + (x2 / (2.0 * 3.0)) @ (
-            I + (x2 / (4.0 * 5.0)) @ (I + (x2 / (6.0 * 7.0)) @ (I + x2 / (8.0 * 9.0)))
-        )
-
-    else:
-        warning("function {} not implemented".format(function))
 
 
 def gaussian_inv(x):

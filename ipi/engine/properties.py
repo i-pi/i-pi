@@ -1000,9 +1000,6 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
-        # self.properties_init()  # Initialize the properties here so that all
-        # +all variables are accessible (for example to set
-        # +the size of the hamiltonian_weights).
 
     def __getitem__(self, key):
         """Retrieves the item given by key.
@@ -1734,9 +1731,6 @@ class Properties:
     def get_kstress_md(self):
         """Calculates the (bead-average) classical kinetic stress of the simulation (pp^T/m)"""
 
-        # sp = (dstrip(self.beads.p) / dstrip(self.beads.sm3)).reshape(-1, 3)
-        # return sp.T @ sp
-
         # uses normal modes to keep into account also possible mass-scaling
         return self.nm.kstress
 
@@ -2232,9 +2226,7 @@ class Properties:
         sawke = 1.0
         ni = 0
 
-        # strips dependency control since we are not gonna change the true beads in what follows
         q = self.beads.q
-        #        f = dstrip(self.forces.f)
         qc = self.beads.qc
 
         for i in range(self.beads.natoms):

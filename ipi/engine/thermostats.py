@@ -694,7 +694,6 @@ class ThermoGLE(Thermostat):
         SST = Constants.kb * (self.C - self.T @ self.C @ self.T.T)
         # Uses a symetric decomposition rather than Cholesky, since it is more stable
         return root_herm(SST)
-        # return stab_cholesky(SST)
 
     def get_C(self):
         """Calculates C from temp (if C is not set explicitly)"""

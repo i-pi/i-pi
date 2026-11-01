@@ -26,38 +26,6 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
 
-    href = np.zeros((ndiag, ii))
-
-    # add physical part
-    for i in range(nbeads):
-        h_aux = h[
-            :, i * natoms * 3 : (i + 1) * natoms * 3
-        ]  # Peaks one physical hessian
-        for j in range(1, ndiag):
-            href[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = np.diag(
-                h_aux, ndiag - 1 - j
-            )
-
-    # add spring parts
-    if nbeads > 1:
-        # Diagonal
-        if masses:
-            d_corner = m3[0] * omega2
-        else:
-            d_corner = np.ones(m3[0].shape) * omega2
-
-        d_0 = np.array([[d_corner * 2]]).repeat(nbeads - 2, axis=0).flatten()
-        diag_sp = np.concatenate((d_corner, d_0, d_corner))
-        href[-1, :] += diag_sp
-
-        # Non-Diagonal
-        d_out = -d_corner
-        ndiag_sp = np.array([[d_out]]).repeat(nbeads - 1, axis=0).flatten()
-        href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
-
-    # Add safety shift value
-    href[-1, :] += shift
-
     # ------- new Discretization --------------
     hnew = np.zeros((ndiag, ii))
 
@@ -137,15 +105,13 @@ def invmul_banded(A, B, posdef=False):
         u = len(A) - 1
         lu = u
         newA = sym_band(A)
-        # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
         # print linalg.eigvals_banded(A)
         # sys.exit(0)
         return xp.asarray(linalg.solve_banded((lu, u), newA, B))
 
 
 def diag_banded(A, n=2):
-    """A is in upper banded form.
-    Returns the smallest n eigenvalue and its corresponding eigenvector.
+    """Returns the n + 1 smallest eigenvalues of A, given in upper banded form.
     A and the eigenvalues are numpy arrays.
     """
     try:
@@ -153,7 +119,7 @@ def diag_banded(A, n=2):
 
         info("Import of scipy successful", verbosity.high)
     except ImportError:
-        raise ValueError(" ")
+        raise ValueError("The banded Hessians of instantons need scipy")
 
     d = eig_banded(
         A, select="i", select_range=(0, n), eigvals_only=True, check_finite=False

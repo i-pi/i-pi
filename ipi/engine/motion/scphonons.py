@@ -884,7 +884,6 @@ class SCPhononator(DummyPhononator):
         self.dm.K = self.dm.sqM @ (self.dm.dynmatrix @ self.dm.sqM)
         self.dm.iD = self.dm.sqM @ (self.dm.itD @ self.dm.sqM)
         self.dm.D = self.dm.isqM @ (self.dm.tD @ self.dm.isqM)
-        self.dm.sqD = self.dm.isqM @ (self.dm.sqtD @ self.dm.isqM)
         self.dm.iK = self.dm.isqM @ (self.dm.itK @ self.dm.isqM)
 
     def apply_hpf(self):
