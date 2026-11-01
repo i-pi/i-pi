@@ -330,6 +330,25 @@ bugs pass, and are no longer marked.
   converges), and has no limit on the number of SCF iterations.
 - Constrained dynamics: see [Constrained dynamics](#constrained-dynamics) (angle and linear-group conditioning,
   tolerance units, batching).
+- Socket interface (`ipi/interfaces/sockets.py`, `FFSocket`), also on main, left for the planned rewrite of the
+  sockets with greenlets. They are fixed on `bugfix/clean-next-claude` (0a9a8f46, 5c1992ca, 4387eb32), whose
+  regression tests of the shared-memory interface (72db7086: `SHM/plain`, `SHM/batched`, `SHM/noconsolidate`)
+  can check the rewrite:
+  - in worker mode, a free client that cannot take a request (e.g. one that answered HAVEDATA) makes the
+    polling thread loop forever (the select mode stops when no client takes one), and in select mode the
+    collection waits for replies also after the forcefield is stopped, so the interface cannot be closed
+    while a client does not reply;
+  - the drivers work on a duplicate of the accepted socket, whose descriptor names their shared-memory
+    segments: it is freed at once and reused, so several shm clients get the same segments;
+  - a dead client is closed only if EXIT can be sent, and the accepted socket, or the driver after a rejected
+    handshake, is left open (in shm mode the driver finalizer does not close the socket);
+  - a worker that finds its client in an unexpected state, or gets forces of the wrong size, leaves the
+    request running and the client up, so the run hangs, and the exception is raised later in the polling
+    thread; a client in an unexpected status is kept, with a warning at every poll;
+  - removing a client waits for the workers of all the clients, and requeues requests that are already done;
+  - a socket forcefield shared by systems with different numbers of atoms sends a larger system only the
+    atoms of the first one (the others get zero forces), and fails in the polling thread for a smaller one:
+    the indices of the active atoms, the socket batches and the shm segments assume a single size.
 - Upstream, also on main: `test_metatomic.py` and `test_metatomic_reference.py` error at setup with Python 3.14,
   as TorchScript cannot compile metatomic's `AtomisticModel` with the deferred annotations of Python 3.14 (CI
   runs Python 3.10 and 3.13; the tests skip without metatomic).
@@ -371,7 +390,8 @@ bugs pass, and are no longer marked.
   one in segments separated by eager functions, and replays them. Code in the recorded function marks the
   points where the recording may be interrupted with `jit.split(obj)`, and calls functions eagerly
   with `jit.eager(func, *args)` (plain calls when not recording); these markers, the recording of the
-  operations on the depend objects and `JitError` are in `ipi/utils/jit.py`, shared with jax.jit.
+  operations on the depend objects, `JitError` and the calls shared with jax.jit (`jit.Replay`: check of
+  the fixed values, replay, eager calls, recording, final failure) are in `ipi/utils/jit.py`.
 - `ipi/engine/jit.py` decides which steps are replayed (`unsupported`), and `GraphStep` replaces the
   step of the integrator: the recording is interrupted at each force evaluation (`ForceBead.queue` calls
   `split`), with the forces of the component computed eagerly between the segments.
@@ -385,9 +405,22 @@ bugs pass, and are no longer marked.
   Before a replay, the objects that a segment reads before modifying them are refreshed, tensor scalars that
   were replaced by new objects are copied into the ones read by the graph, and host values must be
   unchanged (`JitError` otherwise, e.g. if the time step changes; the coefficients of the Langevin
-  thermostats are tensor scalars, so the temperature can change). After a replay, the taint status
-  of all the objects downstream of those modified, the `synchro.manual` of synchronized pairs, and the
-  objects held by tensor scalars are restored as at the end of the recorded segment.
+  thermostats are tensor scalars, so the temperature can change). The host values of all the segments are
+  checked before the first one is replayed, so that a change does not leave half a step. After a replay,
+  the taint status of all the objects downstream of those modified, the `synchro.manual` of synchronized
+  pairs, and the objects held by tensor scalars are restored as at the end of the recorded segment.
+- Each segment is captured in its own memory pool: with a pool shared by the segments, a tensor scalar written
+  by a segment (e.g. the cell volume) could take the memory of the temporaries of an earlier segment, which
+  overwrote it before a later segment of the next step read it. This happened when the positions were written
+  before the recorded NPT step (the momentum of the barostat was off by 1e-4 after one replay); the graphs
+  take ~2 MiB more per segment (P400: 2 -> 10 MiB for PIMD with the dummy driver, 5 segments).
+- The recording is also interrupted at a force evaluation when the results of the forcefield are known, but
+  not yet converted to device arrays (e.g. after the potential is read between two steps), as the conversion
+  copies host data.
+- A failed recording is final, as the kernels of the segment being captured have not run while the depend
+  objects have moved on (with JAX, the objects written by the traced call hold tracers): the following calls
+  raise `JitError`. Recording again crashed the CUDA caching allocator (`capture_begin` after an aborted
+  capture into the same pool).
 - Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR,
   PILE_L or PILE_G thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no
   or a Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, GLE,
@@ -409,7 +442,8 @@ bugs pass, and are no longer marked.
   / 0.75 -> 0.60 / 0.53 / 0.54 ms at 100 / 1000 / 10000 atoms, ~400 -> 287 kernels per step (job 4666196). Fusing the whole exponential
   would need a custom kernel, or the series written on the six entries of the upper-triangular matrices
   as scalars (element-wise, so Inductor could fuse it, but hundreds of operations when eager).
-- Replayed trajectories and outputs are bit-identical to eager ones (`test_cuda_graphs.py`). The regression
+- Replayed trajectories and outputs match eager ones (`test_cuda_graphs.py`), bit-identical without the
+  functions compiled by torch.compile, to rounding errors with them (see kernel fusion below). The regression
   tests run with graphs (scratch pytest plugin) pass, except the stochastic ones under `--ipi-backend torch`:
   the conftest patch that draws Gaussian numbers with numpy and copies them to the device cannot be recorded.
 - P400, 64 atoms, eager -> replayed ms/step: NVE 0.29 -> 0.06, Langevin 0.75 -> 0.19, PIMD-4 2.7 -> 0.66 without
@@ -430,8 +464,9 @@ bugs pass, and are no longer marked.
   atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
   14.1), dominated by the model.
 - Kernel fusion: at ~100 atoms the replays are bound by the number of kernels (~1.9 us each on the H100).
-  `jit.compiled` compiles a function with torch.compile only when replaying CUDA graphs (plain call
-  otherwise, or if torch.compile is unavailable, e.g. torch 2.9 on Python 3.14); its arguments should be
+  `jit.compiled` compiles a function with torch.compile when the steps are compiled with torch (`--jit`, also
+  in the eager steps before the recording; plain call otherwise, or if torch.compile is unavailable, e.g.
+  torch 2.9 on Python 3.14, or for GPUs older than compute capability 7.0); its arguments should be
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
   scalars, also making temperature changes replayable). Compiled: the COM removal (`_com_motion`), the
   Langevin step (`_langevin_step`, also used per mode by PILE_L) and the cell propagators of the flexible
@@ -488,18 +523,23 @@ bugs pass, and are no longer marked.
   CUDA-graph replay does).
 - JAX, jit of the MD steps (`--jit` with JAX):
   `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
-  restoration of the taint status, the `split`/`eager` markers, `unsupported` and the warmup steps). The
-  second eager step is observed to find the depend objects read before being written; the third is traced
-  with these (and the PRNG key) as arguments of `jax.jit`, returning the values of the objects it writes,
+  restoration of the taint status, the `split`/`eager` markers, `jit.Replay`, `unsupported` and the warmup
+  steps). The eager steps from the second are observed to find the depend objects read before being
+  written, until two steps read the same ones (the second and the third, unless the state is written
+  between them, e.g. positions written before a step make it recompute the forces; after 8 eager steps
+  without agreement the steps stay eager, with a warning); the next one is traced, with these brought up
+  to date (and the PRNG key) as arguments of `jax.jit`, returning the values of the objects it writes,
   compiled ahead of time (`lower().compile()`, so it never retraces), and replayed: inputs brought up to
   date with `get()`, host inputs (`dt`, `nmts`, `splitting`, ...) compared with their traced values
   (`JitError` if they change), outputs stored, statuses restored. depend changes: the `_value` of a
   `depend_immutable` notifies all the reads of its stored array (also those made by writes and views), and
   full assignments replace the stored array without reading it. Unlike CUDA graphs, a trace cannot be
-  split: the driver calls marked with `eager` are traced, so only direct forcefields whose potential works
-  on JAX arrays (`dummy`) are compiled; other forcefields leave the steps eager, with a warning (they would
+  split: the driver calls marked with `eager` are traced, so only direct forcefields whose driver can be
+  traced (`jax_traceable`, only `dummy`) are compiled; other forcefields (also metatomic, which converts JAX
+  arrays to torch tensors) leave the steps eager, with a warning (they would
   need `jax.pure_callback`, i.e. a host round trip). Same trajectories as eager JAX to ~1e-15, same keys:
-  NVE, NVT Langevin, PIMD PILE_L, NPT isotropic and flexible. CPU, 100 atoms, dummy forcefield, ms/step
+  NVE, NVT Langevin/SVR, PIMD with PILE_L/PILE_G, NPT isotropic and flexible, PIMD-NPT, MTS, NST. CPU,
+  100 atoms, dummy forcefield, ms/step
   numpy / jax eager / jax jit: NVE 0.14 / 1.8 / 0.078, NVT 0.22 / 3.0 / 0.19, PIMD-4 0.93 / 16 / 0.78; at
   1000 atoms jit is slower than numpy with thermostats (NVT 0.43 vs 0.86, PIMD-4 2.6 vs 4.9), partly as
   XLA draws float64 Gaussian numbers 4x slower than numpy on the CPU (160 vs 40 us for 3000).

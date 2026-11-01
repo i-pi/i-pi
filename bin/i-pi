@@ -58,9 +58,6 @@ def main(fn_input, options):
         except ImportError:
             raise ImportError('Profiling requires the `yappi` package.')            
 
-    # selects the library used to store and process arrays
-    set_backend(options.backend, device=options.device, jit=options.jit)
-
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
@@ -131,6 +128,12 @@ if __name__ == '__main__':
         fn_in = args[0]
         if not os.path.exists(fn_in):
             parser.error('Input file not found: {:s}'.format(fn_in))
+
+    # selects the library used to store and process arrays
+    try:
+        set_backend(options.backend, device=options.device, jit=options.jit)
+    except ValueError as err:
+        parser.error(str(err))
 
     # Everything is ready. Go!
     main(args[0], options)

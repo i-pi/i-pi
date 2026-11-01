@@ -3,9 +3,12 @@ replay of the compiled function instead of the function.
 
 This is the counterpart of the CUDA graphs of `ipi.utils.cudagraphs` for the
 JAX backend, and it uses the same recording of the operations on the depend
-objects (see `ipi.utils.jit`). The function runs eagerly for the first calls, and the last of them
-is recorded to find the depend objects that it reads before writing them, i.e.
-its inputs. The next call traces the function with jax.jit: the inputs that
+objects (see `ipi.utils.jit`). The function runs eagerly for the first calls,
+which are recorded to find the depend objects that it reads before writing
+them, i.e. its inputs, until two calls read the same ones (e.g. positions
+written before a call make it recompute the forces, which are then not
+inputs). The next call traces the function with jax.jit, with the inputs
+brought up to date as when the compiled function is called: the inputs that
 hold JAX arrays are the arguments of the traced function, which returns the
 values of the depend objects that the function writes, i.e. its outputs. The
 compiled function then replaces the function: at each call, the inputs are
@@ -24,20 +27,22 @@ compiled if it must be interrupted at a `split`.
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
-import numpy as np
-
 from ipi.utils import depend
-from ipi.utils.jit import WARMUP_CALLS, JitError, _Recorder
+from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _input, _Recorder
 from ipi.utils.messages import info, verbosity, warning
 
 __all__ = ["JitReplay"]
 
+# eager calls after which the function is not compiled, if no two consecutive
+# ones have read the same depend objects
+MAX_EAGER_CALLS = 8
 
-class JitReplay:
-    """Runs a function eagerly for the first calls, compiles it with jax.jit at
-    the next call, and calls the compiled function at the following calls. The
-    arguments of the calls are only passed to the eager calls and to the
-    traced one.
+
+class JitReplay(Replay):
+    """Runs a function eagerly for the first calls, until two calls read the
+    same depend objects, compiles it with jax.jit at the next call, and calls
+    the compiled function at the following calls. The arguments of the calls
+    are only passed to the eager calls and to the traced one.
 
     Attributes:
         func: The function.
@@ -46,26 +51,38 @@ class JitReplay:
         compiled: The compiled function, or None before the compilation.
     """
 
+    method = "compiled with jax.jit"
+
     def __init__(self, func, prng=None):
-        self.func = func
+        super().__init__(func)
         self.prng = prng
-        self.compiled = None
         self.ncalls = 0
-        # the depend objects read before being written, once known
+        # the depend objects read before being written by the last observed
+        # call, and by the function once two observed calls agree
+        self.observed = None
         self.inputs = None
         # why the function cannot be compiled, if it cannot
         self.reason = None
 
-    def __call__(self, *args):
-        if self.compiled is not None:
-            self.replay()
-        elif self.reason is not None or self.ncalls < WARMUP_CALLS - 1:
+    def ready(self):
+        return self.reason is None and self.inputs is not None
+
+    def warm(self, *args):
+        if self.reason is not None or self.ncalls < WARMUP_CALLS - 1:
             self.func(*args)
-            self.ncalls += 1
-        elif self.inputs is None:
-            self.inputs = self.observe(*args)
         else:
-            self.record(*args)
+            inputs = self.observe(*args)
+            if inputs == self.observed:
+                self.inputs = inputs
+            elif self.ncalls >= MAX_EAGER_CALLS:
+                self.reason = (
+                    "the depend objects that the steps read change at every step, "
+                    "e.g. as the state is written between the steps"
+                )
+            self.observed = inputs
+            if self.reason is not None:
+                warning(f"The steps are not compiled: {self.reason}", verbosity.low)
+        self.ncalls += 1
 
     def observe(self, *args):
         """Calls the function eagerly, and returns the depend objects that it
@@ -77,9 +94,6 @@ class JitReplay:
             self.func(*args)
         finally:
             depend.set_recorder(None)
-        self.ncalls += 1
-        if self.reason is not None:
-            warning(f"The steps are not compiled: {self.reason}", verbosity.low)
         return [dep for dep, value, copy in recorder.inputs.values()]
 
     def record(self, *args):
@@ -87,12 +101,15 @@ class JitReplay:
 
         import jax
 
-        values = [_get(dep) for dep in self.inputs]
+        # the inputs are brought up to date, as when the compiled function is called
+        for dep in self.inputs:
+            dep.get()
+        values = [dep._load() for dep in self.inputs]
         arrays = [v for v in values if _is_jax(v)]
         # the inputs passed to the compiled function, and the fixed ones
         self.arrays = [dep for dep, v in zip(self.inputs, values) if _is_jax(v)]
         self.fixed = [
-            (dep, _copy(v)) for dep, v in zip(self.inputs, values) if not _is_jax(v)
+            _input(dep, v) for dep, v in zip(self.inputs, values) if not _is_jax(v)
         ]
         key = None if self.prng is None else self.prng._jax_key
 
@@ -113,12 +130,12 @@ class JitReplay:
         try:
             self.compiled = jax.jit(traced).lower(key, arrays).compile()
         except Exception as err:
-            raise JitError(
-                "The step cannot be compiled with jax.jit: run i-PI without --jit"
-            ) from err
+            raise self.failed(err)
         finally:
             for dep, value in zip(self.arrays, arrays):
                 dep._store(value)
+            if key is not None:
+                self.prng._jax_key = key
         self.statuses, self.synchros = self.recorder.final_state()
         self.run(key, arrays)
         info(
@@ -139,7 +156,7 @@ class JitReplay:
             )
         self.outputs = list(recorder.arrays) + list(recorder.values)
         leaves, self.treedef = jax.tree_util.tree_flatten(
-            [_get(dep) for dep in self.outputs]
+            [dep._load() for dep in self.outputs]
         )
         # the leaves that are not arrays are fixed in the compiled function
         self.leaves = [None if _is_jax(leaf) else leaf for leaf in leaves]
@@ -175,26 +192,12 @@ class JitReplay:
         """Calls the compiled function on the current values of the inputs, and
         restores the state of the depend objects at the end of the traced call."""
 
-        for dep, recorded in self.fixed:
-            if not _equal(dep.get(), recorded):
-                raise JitError(
-                    f"The value of <{dep._name}>, which is fixed in the compiled "
-                    "step, has changed: the parameters of the simulation that are "
-                    "fixed in the compiled step (e.g. the time step) cannot change "
-                    "when running with --jit"
-                )
         key = None if self.prng is None else self.prng._jax_key
         self.run(key, [dep.get() for dep in self.arrays])
         for status, tainted in self.statuses:
             status.tainted = tainted
         for synchro, manual in self.synchros:
             synchro.manual = manual
-
-    def split(self, obj):
-        """Called by `split(obj)` while the function is observed or traced, to
-        check whether the point described by `obj` must run eagerly: does
-        nothing, and is overridden by the classes that compile specific
-        functions, which call `cannot` if it must."""
 
     def cannot(self, reason):
         """Called where the function must run eagerly: the function is then
@@ -235,25 +238,7 @@ class _TraceRecorder(_Recorder):
             self.arrays[dep._root()] = None
 
 
-def _get(dep):
-    """The value held by a depend object, or by the array a view belongs to."""
-
-    if isinstance(dep, depend.depend_array):
-        return dep._data
-    return dep._value
-
-
 def _is_jax(value):
     import jax
 
     return isinstance(value, jax.Array)
-
-
-def _copy(value):
-    return value.copy() if isinstance(value, np.ndarray) else value
-
-
-def _equal(a, b):
-    if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
-        return np.array_equal(a, b)
-    return a is b or a == b

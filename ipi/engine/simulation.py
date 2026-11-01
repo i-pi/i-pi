@@ -248,11 +248,11 @@ class Simulation:
             # binds important computation engines
             s.bind(self)
 
-        if jit():
-            replay_steps(self)
-
         if read_only:  # returns before we open the sockets
             return
+
+        if jit():
+            replay_steps(self)
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
