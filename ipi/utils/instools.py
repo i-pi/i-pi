@@ -329,16 +329,15 @@ class Fix(object):
             self.nbeads = nbeads
 
         self.fixatoms_dof = fixatoms_dof
-        if len(self.fixatoms_dof) > 0:
-            if np.mod(len(self.fixatoms_dof), 3) == 0:
-                self.fixatoms = np.unique(self.fixatoms_dof // 3)
-            else:
-                softexit.trigger(
-                    status="bad",
-                    message="fixatoms_dof is not yet implemented. please use fixatoms",
-                )
-        else:
-            self.fixatoms = self.fixatoms_dof
+        # only whole atoms can be fixed
+        self.fixatoms = np.unique(np.asarray(self.fixatoms_dof, int) // 3)
+        whole = (3 * self.fixatoms[:, None] + np.arange(3)).ravel()
+        if not np.array_equal(np.sort(self.fixatoms_dof), whole):
+            softexit.trigger(
+                status="bad",
+                message="Instantons can only fix whole atoms: fixatoms_dof must hold "
+                "the three coordinates of each fixed atom",
+            )
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)

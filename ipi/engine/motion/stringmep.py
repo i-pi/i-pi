@@ -534,6 +534,7 @@ class StringMover(Motion):
                     fdf0=(self.stringpot, self.stringgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=fixatoms_mask,
                 )
                 info(" @STRING: after Damped_BFGS() call", vrb.debug)
 
@@ -962,6 +963,7 @@ class StringMover(Motion):
                 fdf0=(self.stringpot, self.stringgrad),
                 hessian=self.hessian,
                 big_step=self.big_step,
+                mask=self.climbgm.fixatoms_mask,
             )
             info(" @STRING_CLIMB: after Damped_BFGS() call", vrb.debug)
 

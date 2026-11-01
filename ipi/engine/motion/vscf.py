@@ -112,7 +112,6 @@ class NormalModeMover(Motion):
 
         self.dynmatrix = dynmat
         self.mode = mode
-        self.frefine = False
         self.U = None
         self.V = None
         self.prefix = prefix
@@ -158,7 +157,6 @@ class NormalModeMover(Motion):
             )
 
         self.ism = 1 / xp.sqrt(self.beads.m3[-1])
-        self.m = self.beads.m
         self.calc.bind(self)
 
         # the configurations are evaluated one at a time
@@ -764,7 +762,6 @@ class VSCF(IMF):
             raise scipy_exception
 
         super(VSCF, self).bind(imm)
-        self.nz = self.imm.nz
         # self.print_2b_map = self.imm.print_2b_map
         # self.threebody = self.imm.threebody
         self.solve = self.imm.solve
@@ -1293,7 +1290,8 @@ class VSCF(IMF):
             )
 
         vscf_iter = 0
-        a_imf = self.v0 + ai.sum()
+        # free energies of the simulation cell (v0 is per primitive cell)
+        a_imf = self.v0 * self.nprim + ai.sum()
         a_vscf = a_imf
         mean_field = np.zeros_like(self.v_mft_grids)
         self.evals_vscf, self.evecs_vscf = self.evals_imf.copy(), self.evecs_imf.copy()
@@ -1329,11 +1327,12 @@ class VSCF(IMF):
                     )
 
             # Calculates the VSCF free energy, the variational (Gibbs-Bogoliubov)
-            # free energy of the product of the thermal densities: the free energies
-            # of the modes in their mean-field potentials count each pair coupling
-            # twice, unlike Eq. 19
+            # free energy of the product of the thermal densities. The sum of the
+            # free energies of the modes in their mean-field potentials (Eq. 19)
+            # counts each pair coupling twice, so the average mean field of each
+            # mode is replaced by half of it.
             a_vscf_old = a_vscf
-            a_vscf = self.v0
+            a_vscf = self.v0 * self.nprim
             for inm in self.inms:
                 rho = self.rho_grids[inm]
                 a_vscf += ai[inm] - rho @ (

@@ -188,7 +188,8 @@ def get_hessian(
            fixatoms_dof = indexes of fixed degrees of freedom
            d        = displacement
 
-    OUT    h        = physical hessian  (3*natoms-len(fixatoms_dof)  , nbeads*( 3*natoms-len(fixatoms_dof) ))
+    OUT    h        = physical hessian  (3*natoms, nbeads*3*natoms), with zero
+                      rows for the fixed degrees of freedom
     """
 
     info(" @get_hessian: Computing hessian", verbosity.low)

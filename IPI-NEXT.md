@@ -94,8 +94,12 @@ or because they were approved explicitly:
   of the unit tests.
 - Engine and drivers: `GeopMotion.reset` with `bfgstrm` failed (it read the undefined `initial_values`), which
   stopped the Al6xxx KMC with that optimizer; it restores the initial trust radius, whose default (0.4) is set
-  in `GeopMotion`. The spring forces of the beads (`fpath`) did not depend on the masses, so they were stale
-  after the masses changed; `beads.kin` failed (`kins` was not a property); `vcom(bead=...)` failed. The GLE
+  in `GeopMotion`. `reset` also left a converged optimizer converged, so that the KMC skipped every relaxation
+  after the first converged one (also on main); it now clears the convergence, resets the Hessian of
+  `damped_bfgs` and the adaptive step of the line search of `sd` and `cg`, and no longer zeroes the
+  `corrections` and `scale` settings of L-BFGS (which then went to the restart). The spring forces of the
+  beads (`fpath`) did not depend on the masses, so they were stale after the masses changed; `beads.kin`
+  failed (`kins` was not a property); `vcom(bead=...)` failed. The GLE
   state given in `<initialize><gle>` was looked for in the ensemble instead of the motion, so it could never
   be read. The temperature of a single normal mode (`temperature(nm=...)`) with a fixed centroid counted the
   fixed coordinates as nbeads-1 degrees of freedom in every mode. The cavity forcefield (`FFCavPhSocket`)
@@ -129,7 +133,20 @@ or because they were approved explicitly:
 - Geometry optimization with `damped_bfgs` and fixed coordinates (`fixatoms_dof`): the step was limited by the
   displacements of triplets of free coordinates, which failed when their number is not a multiple of 3, and
   mixed the coordinates of different atoms otherwise. The displacements of the atoms are now computed from
-  the free coordinates. Strict xfail of the unit tests, plus a test of the step measure.
+  the free coordinates. Strict xfail of the unit tests, plus a test of the step measure. NEB and the string
+  method (also when climbing) did not give the free coordinates to the step measure, so they still had the
+  problem; `Damped_BFGS` now requires them. Also with fixed coordinates: conjugate gradient built its
+  directions from all the forces, also those on the fixed atoms, which turned it into steepest descent when
+  they were large (64 steps instead of 3 in the test); with more than one bead, BFGS, BFGSTRM, L-BFGS and
+  damped BFGS failed, as their masks of the Hessian and of the L-BFGS history covered one bead. The
+  optimizers of `GeopMotion` see only the free coordinates, through one code path for all systems (the same
+  results without fixed atoms, to rounding). New unit tests of NEB with a fixed coordinate, of conjugate
+  gradient with a fixed atom, and of optimizations of two beads. At an exact stationary point (zero
+  gradient) the damped BFGS update made the Hessian NaN; it now takes no step. New unit test. In geometry
+  optimization, `damped_bfgs` kept its Hessian, a direct one, in the inverse Hessian of BFGS (stored as
+  `invhessian_bfgs`); it is now kept and stored as the Hessian of BFGSTRM (`hessian_trm`), as NEB and the
+  string method keep theirs in `hessian`, so restarts of `damped_bfgs` optimizations written before start
+  from the identity. New unit test of the restart of the Hessians.
 - IMF and VSCF (`normalmodes`), checked against Kapil, Engel, Rossi, Ceriotti, JCTC 15, 5845 (2019), which
   describes this implementation:
   - VSCF with `grid=True` failed with scipy >= 1.14 (`interp2d` was removed); the pair couplings are
@@ -145,10 +162,19 @@ or because they were approved explicitly:
     correction to the IMF free energy is about half of what it was. VSCF results change.
   - The free energy of each mode is converged to `athresh`, as documented (the change was divided by the
     number of modes), and the internal energies use Boltzmann weights relative to the ground state (they were
-    NaN below a few K). The IMF free energy printed by VSCF includes the potential offset, as in IMF.
+    NaN below a few K). The IMF free energy printed by VSCF includes the potential offset, as in IMF (once
+    per primitive cell: with `nprim > 1` VSCF divided it by `nprim` twice).
   - The IMF and VSCF free energies are stored as `total_imf_free_energy` and `total_vscf_free_energy`.
   New tests on separable and coupled Morse potentials against exact references, and of the pair coupling of
   a polynomial.
+- Instantons with fixed atoms (`fixatoms`): `hessian_update=recompute` and the final Hessian with friction
+  expanded the Hessians of `get_hessian`, which are already full-size, once more, and failed; the NR optimizer
+  combined the masses and spring forces of all the atoms with the Hessian of the active ones, and failed;
+  L-BFGS added the active forces to the full search direction and passed the active positions to the mapper,
+  which took all of them, and failed. The instanton `Mapper` now takes the positions of the active atoms, as
+  the mappers of the other optimizers do, and NR uses its forces, as Lanczos does. `fixatoms_dof` that are
+  not whole atoms, which were fixed as whole atoms when their number was a multiple of 3, are rejected. New
+  unit tests of all the optimizers with a fixed atom.
 - Instanton rates with friction, checked against Litman et al., JCP 156, 194106 (2022): without a tabulated
   Laplace transform of the friction kernel (`fric_spec_dens`), i.e. with frequency-independent friction, the
   setup failed; the friction energy of the ring polymer (Eq. 20) was added to the energy of every bead, so the
@@ -157,11 +183,19 @@ or because they were approved explicitly:
   frequencies in atomic units since d4dd9d70), which changes the results of the runs that set it. Removed
   `DummyOptimizer.opt_coef` and the unreachable full-matrix branch of the Lanczos step; `Mapper` passes
   `new_disc` to `SpringMapper` by keyword (it went into `ret`). New unit tests.
+  With `frictionSD=False` (a constant friction tensor) the first step failed when writing the friction
+  Hessian, which only exists with `frictionSD`; with `frictionSD` and fixed atoms, the friction Hessian
+  integrated the friction along the path of all the atoms with the friction tensor of the active ones, and
+  failed. New unit test, comparing one atom with and without a second, fixed, atom.
 - Self-consistent phonons: with the default `precheck`, the `sd` displacement mode never moved the mean position
   nor updated the Hessian (its branch was an `elif` of the check); the reweighting factors of the samples
   underflowed when the mean position moved far compared to their width (e.g. `ik` with classical statistics),
   which made the force and the Hessian NaN; they are now computed relative to the largest one, which leaves
-  their ratios, the only thing used, unchanged. The duplicated displacement matrices (`tDm`, `itDm`, `iDm`,
+  their ratios, the only thing used, unchanged. The weights of the batches of samples, exp(-var(log w)),
+  underflowed in the same way (e.g. starting 10% farther from the minimum in the tests), giving a NaN Hessian:
+  the batches are averaged with weights relative to the largest one (the absolute ones are kept for the
+  threshold), and those whose relative weight underflows, whose variance may be undefined, are left out of the
+  error of the force, which was NaN. The duplicated displacement matrices (`tDm`, `itDm`, `iDm`,
   `sqtDm`), equal to the others and never used, are removed (the `sqtdm` "typo" had no effect). New tests,
   including the convergence to the optimal Gaussian of a quartic double well, known in closed form for
   classical statistics and from a one-dimensional equation for quantum statistics.

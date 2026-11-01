@@ -78,7 +78,6 @@ class SCPhononsMover(Motion):
 
         # Finite difference option.
         self.dynmatrix = dynmat
-        self.frefine = False
         self.U = None
         self.mode = mode
         self.asr = asr
@@ -146,7 +145,6 @@ class SCPhononsMover(Motion):
 
         # Sets temperature.
         self.temp = self.ensemble.temp
-        self.m = xp.asarray(self.beads.m, copy=True)
 
         # Initializes mass related arrays.
         self.m3 = self.beads.m3[-1]
@@ -275,7 +273,6 @@ class SCPhononator(DummyPhononator):
         self.get_KnD()
         self.iD[self.dm.isc] = self.dm.iD
         self.q[self.dm.isc] = self.dm.beads.q
-        self.dm.oldK = self.dm.K
         self.dm.imc = 1
 
         info("\n @SCP: Beginning SCP step no. %8d" % (self.dm.isc,), verbosity.medium)
@@ -735,26 +732,29 @@ class SCPhononator(DummyPhononator):
         avg_f = self.f[i][-1] * 0.0
         var_f = self.f[i][-1] * 0.0
         norm = 0.0
-        batch_w = np.zeros(self.dm.isc)
+
+        # Calculates the weights to calculate average for the distribution for (qp, iDp).
+        rws, sw, batch_w = self.batch_weights()
 
         for i in range(self.dm.isc):
+            # Skips the steps without weight, whose variance may be undefined
+            if sw[i] == 0:
+                continue
+
             # Calculates the harmonic force.
             f = self.f[i]
             x = self.x[i]
             fh = -1.0 * ((x - qp) @ Kp)
-
-            # Calculates the weights to calculate average for the distribution for (qp, iDp).
-            w, sw, rw = self.calculate_weights(i)
-            batch_w[i] = float(sw)
+            rw = rws[i]
 
             # Simply multiplies the forces by the weights and averages.
             V1 = rw.sum()
             V2 = (rw**2).sum()
             avg_fi = (rw * (f - fh)).sum(axis=0) / V1
             var_fi = (rw * (f - fh - avg_fi) ** 2).sum(axis=0) / (V1 - V2 / V1)
-            avg_f += sw * avg_fi
-            var_f += sw**2 * var_fi
-            norm += sw
+            avg_f += sw[i] * avg_fi
+            var_f += sw[i] ** 2 * var_fi
+            norm += sw[i]
 
         return avg_f / norm, xp.sqrt(var_f / norm**2 / self.dm.max_steps), batch_w
 
@@ -770,6 +770,9 @@ class SCPhononator(DummyPhononator):
         avg_K = self.dm.iD * 0.0
         norm = 0.0
 
+        # Calculates the weights to calculate average for the distribution for (qp, iDp)
+        rws, sw, _ = self.batch_weights()
+
         for i in range(self.dm.isc):
             # Draws the random configurations and forces.
             f = self.f[i]
@@ -777,9 +780,7 @@ class SCPhononator(DummyPhononator):
 
             # Calculates the harmonic forces.
             fh = -1.0 * ((x - qp) @ Kp)
-
-            # Calculates the weights to calculate average for the distribution for (qp, iDp)
-            w, sw, rw = self.calculate_weights(i)
+            rw = rws[i]
 
             # Simply multiplies the forces by the weights and averages
             V1 = rw.sum()
@@ -787,15 +788,17 @@ class SCPhononator(DummyPhononator):
             # Simply multiplies the forces by the weights and averages
             avg_dKi = -(iDp @ (((f - fh) * rw).T @ (x - qp[-1])).T) / V1
             avg_Ki = Kp + 0.50 * (avg_dKi + avg_dKi.T)
-            avg_K += sw * avg_Ki
-            norm += sw
+            avg_K += sw[i] * avg_Ki
+            norm += sw[i]
 
         return avg_K / norm
 
     def calculate_weights(self, i):
         """
         Computes the weights to sample (verb) a distribution described at (qp, iDp) using
-        samples (noun) generated at the i^th SCPhonons step.
+        samples (noun) generated at the i^th SCPhonons step. Returns the logarithm
+        of the weight of the step, and the weights of its samples relative to the
+        largest one.
         """
 
         # Creates new variable names for easier referencing.
@@ -813,16 +816,26 @@ class SCPhononator(DummyPhononator):
         log_rw = -(0.50 * (iDp @ (qp - x).T).T * (qp - x)).sum(axis=1) + (
             0.50 * (iD0 @ (x - q0).T).T * (x - q0)
         ).sum(axis=1)
-        rw = xp.exp(log_rw - xp.max(log_rw))
-        w = rw / rw.sum()
+        rw = xp.exp(log_rw - xp.max(log_rw)).reshape((self.dm.max_steps, 1))
+        # logarithm of the weight of the step, exp(-var(log rw))^exponent
+        log_sw = -xp.var(log_rw) * self.dm.batch_weight_exponent
+        return log_sw, rw
 
-        w = w.reshape((self.dm.max_steps, 1))
-        rw = rw.reshape((self.dm.max_steps, 1))
-        return (
-            w,
-            xp.nan_to_num(xp.exp(-xp.var(xp.log(w)))) ** self.dm.batch_weight_exponent,
-            rw,
-        )
+    def batch_weights(self):
+        """
+        Returns the (relative) weights of the samples of each SCPhonons step,
+        the weights of the steps relative to the largest one, and their
+        absolute values.
+        """
+
+        rws, log_sw = [], []
+        for i in range(self.dm.isc):
+            lsw, rw = self.calculate_weights(i)
+            rws.append(rw)
+            log_sw.append(lsw)
+        log_sw = xp.stack(log_sw)
+        sw = xp.exp(log_sw - xp.max(log_sw))
+        return rws, sw, np.exp(to_numpy(log_sw))
 
     def get_KnD(self):
         """
