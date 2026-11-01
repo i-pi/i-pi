@@ -18,8 +18,6 @@ from ipi.utils.mintools import Damped_BFGS, FIRE
 from ipi.utils.messages import verbosity, info
 from ipi.engine.beads import Beads
 
-np.set_printoptions(threshold=10000, linewidth=1000)  # Remove in cleanup
-
 __all__ = ["NEBGradientMapper", "NEBClimbGrMapper", "NEBMover"]
 
 
@@ -182,9 +180,10 @@ class NEBGradientMapper(object):
             rbf[ii - 1] -= (rbf[ii - 1] @ btau[ii]) * btau[ii]
 
         for ii in range(1, nimg):
-            print(
-                "Bead %2i, distance to previous bead:   %f"
-                % (ii, norm(bq[ii] - bq[ii - 1]))
+            info(
+                " @NEB: bead %2i, distance to previous bead: %f"
+                % (ii, norm(bq[ii] - bq[ii - 1])),
+                verbosity.debug,
             )
 
         # Adds the spring forces
@@ -648,9 +647,11 @@ class NEBMover(Motion):
                         (self.beads.nbeads - 2) * n_activedim,
                         (self.beads.nbeads - 2) * n_activedim,
                     ):
-                        print("Dimensions of the Hessian and of the beads:")
-                        print((self.hessian.shape, self.beads.q.shape))
-                        raise ValueError("Hessian not initialized correctly in NEB.")
+                        raise ValueError(
+                            "Hessian not initialized correctly in NEB: "
+                            f"{self.hessian.shape} for beads of shape "
+                            f"{self.beads.q.shape}."
+                        )
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
@@ -658,9 +659,13 @@ class NEBMover(Motion):
                 # old_nebgrad = self.nebgrad.copy()
 
                 info(" @NEB: before Damped_BFGS() call", verbosity.debug)
-                print("self.old_x.shape: %s" % str(self.old_x.shape))
-                print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
-                print("self.hessian.shape: %s" % str(self.hessian.shape))
+                info("self.old_x.shape: %s" % str(self.old_x.shape), verbosity.debug)
+                info(
+                    "self.nebgrad.shape: %s" % str(self.nebgrad.shape), verbosity.debug
+                )
+                info(
+                    "self.hessian.shape: %s" % str(self.hessian.shape), verbosity.debug
+                )
                 quality = Damped_BFGS(
                     x0=xp.asarray(self.old_x, copy=True),
                     fdf=self.nebgm,
@@ -864,9 +869,13 @@ class NEBMover(Motion):
 
                 # if self.mode == "damped_bfgs":
                 info(" @NEB_CLIMB: before Damped_BFGS() call", verbosity.debug)
-                print("self.old_x.shape: %s" % str(self.old_x.shape))
-                print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
-                print("self.hessian.shape: %s" % str(self.hessian.shape))
+                info("self.old_x.shape: %s" % str(self.old_x.shape), verbosity.debug)
+                info(
+                    "self.nebgrad.shape: %s" % str(self.nebgrad.shape), verbosity.debug
+                )
+                info(
+                    "self.hessian.shape: %s" % str(self.hessian.shape), verbosity.debug
+                )
                 quality = Damped_BFGS(
                     x0=xp.asarray(self.old_x, copy=True),
                     fdf=self.climbgm,

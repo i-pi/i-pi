@@ -12,9 +12,7 @@ Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 import numpy as np
 import warnings
 
-np.set_printoptions(suppress=True, linewidth=1000)
 import time
-import sys
 from importlib import util
 
 from ipi.engine.beads import Beads
@@ -480,8 +478,9 @@ class FrictionMapper(PesMapper):
                     eta[i] + np.eye(self.dbeads.natoms * 3) * 0.000000000001
                 )  # dgdq = s ** 0.5 -> won't work for multiD
             except Warning:
-                print(eta[i])
-                raise ValueError("The provided friction is not positive definite")
+                raise ValueError(
+                    f"The provided friction is not positive definite: {eta[i]}"
+                )
 
     def set_fric_spec_dens(self, fric_spec_dens_data, fric_spec_dens_ener):
         """Computes and sets the laplace transform of the friction tensor"""
@@ -614,8 +613,9 @@ class FrictionMapper(PesMapper):
                         s[i] + np.eye(nphys) * 0.00000001
                     )  # dgdq = s ** 0.5 -> won't work for multiD
                 except Warning:
-                    print(s[i])
-                    raise ValueError("The provided friction is not positive definite")
+                    raise ValueError(
+                        f"The provided friction is not positive definite: {s[i]}"
+                    )
 
         C = to_numpy(self.C)
         gq = self.obtain_g(s, self.dbeads.q)
@@ -751,14 +751,8 @@ class SpringMapper(object):
         self.f = -g
 
     def __call__(self, x, ret=True, new_disc=True):
-        """Computes spring energy and gradient for instanton optimization step"""
-
-        if new_disc:
-            coef = self.coef
-        elif new_disc == "one":
-            coef = xp.ones(self.coef.shape)
-        else:
-            coef = new_disc.reshape(self.coef.shape)
+        """Computes spring energy and gradient for instanton optimization step.
+        The spring term does not depend on the discretization (`new_disc`)."""
 
         if x.shape[0] == 1:  # only one bead
             self.dbeads.q = x
@@ -768,49 +762,10 @@ class SpringMapper(object):
 
         else:
             self.dbeads.q = x
-            e = 0.00
-            g = xp.zeros(self.dbeads.q.shape)
-
-            # OLD reference
-            # for i in range(self.dbeads.nbeads - 1):
-            #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
-            #    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
-            # for i in range(0, self.dbeads.nbeads - 1):
-            #    #g[i, :] += self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
-            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
-            # for i in range(1, self.dbeads.nbeads):
-            #    #g[i, :] +=  self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
-            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             gq_k = self.C @ self.dbeads.q
             e = 0.5 * ((self.omegak**2)[:, None] * (self.dbeads.m3 * gq_k**2)).sum()
 
             g = self.dbeads.m3[0] * (self.C.T @ (gq_k * (self.omegak**2)[:, None]))
-
-            # With new discretization #This can be expressed as matrix multp
-            if False:  # ALBERTO
-                for i in range(self.dbeads.nbeads - 1):
-                    dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / np.sqrt(
-                        coef[i + 1]
-                    )  # coef[0] and coef[-1] do not enter
-                    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
-                for i in range(0, self.dbeads.nbeads - 1):
-                    g[i, :] += (
-                        self.dbeads.m3[i, :]
-                        * self.omega2
-                        * (
-                            self.dbeads.q[i, :] / coef[i + 1]
-                            - self.dbeads.q[i + 1, :] / coef[i + 1]
-                        )
-                    )
-                for i in range(1, self.dbeads.nbeads):
-                    g[i, :] += (
-                        self.dbeads.m3[i, :]
-                        * self.omega2
-                        * (
-                            self.dbeads.q[i, :] / coef[i]
-                            - self.dbeads.q[i - 1, :] / coef[i]
-                        )
-                    )
 
             self.save(e, g)
 
@@ -828,8 +783,10 @@ class SpringMapper(object):
 
         # Check size of discretization:
         if xp_size(coef) != nbeads + 1:
-            print("@spring_hessian: discretization size error")
-            sys.exit()
+            raise ValueError(
+                f"The discretization has {xp_size(coef)} coefficients, "
+                f"{nbeads + 1} are needed"
+            )
 
         info(" @spring_hessian", verbosity.high)
         ii = natoms * 3
@@ -877,9 +834,6 @@ class SpringMapper(object):
             h[(nbeads - 1) * ii : (nbeads) * ii, 0:ii] += ndiag / coef[0]
 
         return h
-
-    # def __call__(self, x, ret=True, new_disc=True):
-    #    """Computes spring energy and gradient for instanton optimization step"""
 
 
 class Mapper(object):
@@ -1279,7 +1233,6 @@ class HessianOptimizer(DummyOptimizer):
         #        self.output_maker = geop.output_maker
         self.options["hessian_init"] = geop.options["hessian_init"]
         self.optarrays["initial_hessian"] = None
-        print(xp_size(geop.optarrays["hessian"]))
 
         if xp_size(geop.optarrays["hessian"]) != (
             self.beads.natoms * 3 * xp_size(self.beads.q)
@@ -1881,16 +1834,6 @@ class LBFGSOptimizer(DummyOptimizer):
         fdf0 = (e, g)
 
         # Do one step. Update the position and force inside the mapper.
-        print(
-            activearrays["big_step"],
-            self.options["ls_options"]["tolerance"],
-            self.options["tolerances"]["energy"],
-            self.options["ls_options"]["iter"],
-            self.options["corrections"],
-            self.options["scale"],
-            step,
-        )
-
         L_BFGS(
             activearrays["old_x"],
             activearrays["d"],
@@ -1904,7 +1847,6 @@ class LBFGSOptimizer(DummyOptimizer):
             self.options["ls_options"]["iter"],
             self.options["corrections"],
             self.options["scale"],
-            step,
         )
 
         self.post_step(step, activearrays)

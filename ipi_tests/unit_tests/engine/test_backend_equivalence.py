@@ -223,11 +223,7 @@ def numpy_draws(monkeypatch):
     def gammavec(self, k, shape):
         return ab.xp.asarray(Random.gammavec(self, k, shape))
 
-    def gfill(self, out):
-        out[...] = ab.xp.asarray(self.gvec_serial(tuple(out.shape)))
-
     monkeypatch.setattr(Random, "gvec_torch", gvec)
-    monkeypatch.setattr(Random, "gfill_torch", gfill)
     monkeypatch.setattr(Random, "gvec_jax", gvec)
     monkeypatch.setattr(Random, "gammavec_torch", gammavec)
     monkeypatch.setattr(Random, "gammavec_jax", gammavec)

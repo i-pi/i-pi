@@ -16,6 +16,11 @@ from ipi.engine.thermostats import (
 from ipi.utils.prng import Random
 
 
+def kinetic(atoms):
+    """Kinetic energy of the atoms."""
+    return 0.5 * float(np.sum(atoms.p**2 / atoms.m3))
+
+
 @pytest.mark.parametrize(
     "kind", ["langevin", "svr", "gle", "soft", "hard", "rescale", "none"]
 )
@@ -34,10 +39,10 @@ def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
     else:
         thermostat = ThermoFFL(tau=0.5, flip=kind, **options)
     thermostat.bind(atoms=atoms, prng=Random(seed=19), fixdof=0)
-    original = atoms.kin + thermostat.ethermo
+    original = kinetic(atoms) + thermostat.ethermo
     for _ in range(5):
         thermostat.step()
-        assert atoms.kin + thermostat.ethermo == pytest.approx(
+        assert kinetic(atoms) + thermostat.ethermo == pytest.approx(
             original, rel=1e-12, abs=1e-12
         )
         assert np.isfinite(atoms.p).all()
@@ -170,10 +175,10 @@ def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
         apat=1.0 if adaptive else 0.0,
     )
     bath.bind(atoms=atoms, prng=Random(seed=71))
-    energy = atoms.kin + bath.ethermo
+    energy = kinetic(atoms) + bath.ethermo
     for _ in range(4):
         bath.step()
-        assert atoms.kin + bath.ethermo == pytest.approx(energy, abs=1e-12)
+        assert kinetic(atoms) + bath.ethermo == pytest.approx(energy, abs=1e-12)
         assert np.isfinite(atoms.p).all()
     if adaptive and intau:
         assert bath.intau > 0 and bath.intau != intau
@@ -190,10 +195,10 @@ def test_multiple_baths_compose_damping_and_sum_heat():
     baths = [ThermoLangevin(tau=0.5), ThermoLangevin(tau=1.0)]
     combined = MultiThermo(temp=0.0, dt=0.2, thermolist=baths)
     combined.bind(atoms=atoms, prng=Random(seed=79))
-    energy = atoms.kin
+    energy = kinetic(atoms)
     combined.step()
     np.testing.assert_allclose(atoms.p, initial * np.exp(-0.2 * (2 + 1)), atol=1e-14)
-    assert atoms.kin + combined.ethermo == pytest.approx(energy)
+    assert kinetic(atoms) + combined.ethermo == pytest.approx(energy)
     combined.dt = 0.1
     combined.step()
     np.testing.assert_allclose(atoms.p, initial * np.exp(-0.3 * (2 + 1)), atol=1e-14)

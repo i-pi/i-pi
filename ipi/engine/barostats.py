@@ -203,29 +203,6 @@ class Barostat:
 
         self.cell_jacobian_ = depend_value(name="kin", value=0.0)
 
-        # Stress depend objects for Suzuki-Chin PIMD
-        self.kstress_sc_ = depend_value(
-            name="kstress_sc",
-            func=self.get_kstress_sc,
-            dependencies=[
-                beads.q_,
-                beads.qc_,
-                forces.fsc_part_2_,
-                forces.f_,
-            ],
-        )
-
-        self.stress_sc_ = depend_value(
-            name="stress_sc",
-            func=self.get_stress_sc,
-            dependencies=[
-                self.kstress_sc_,
-                self.cell.V_,
-                forces.vir_,
-                forces.virssc_part_2_,
-            ],
-        )
-
         if fixdof is None:
             self.mdof = float(self.beads.natoms) * 3.0
         else:
@@ -237,13 +214,6 @@ class Barostat:
         self.pdt_ = depend_array(name="pdt", value=np.zeros(nmts, float), host=True)
         self.tdt_ = depend_value(name="tdt", value=self.dt)
         dpipe(self.tdt_, self.thermostat.dt_)
-
-    def kstress_mts_sc(self, level):
-        """Calculates the Suzuki-Chin quantum centroid virial kinetic stress tensor
-        associated with the forces at a MTS level.
-        """
-
-        return xp.triu(self.kstress_mts(level, sc=True))
 
     def kstress_mts(self, level, sc=False):
         """Calculates the quantum centroid virial kinetic stress tensor
@@ -263,10 +233,6 @@ class Barostat:
         fall = fall.reshape(-1, 3)
 
         kst = -(qqc.T @ fall)
-        # kst = np.zeros((3,3))
-        # kst[0] = -np.dot(qqc[:,0], fall)
-        # kst[1,1:] = -np.dot(qqc[:,1], fall[:,1:])
-        # kst[2,2] = -np.dot(qqc[:,2], fall[:,2])
 
         if level == self.nmtslevels - 1:
             pc = beads.pc.reshape(-1, 3)
@@ -277,33 +243,6 @@ class Barostat:
             kst = kst + xp.eye(3) * ((nbeads / m) @ (pc * pc))
 
         return kst
-
-    def get_kstress_sc(self):
-        """Calculates the high order part of the Suzuki-Chin
-        quantum centroid virial kinetic stress tensor
-        associated with the forces at a MTS level.
-        """
-
-        qqc = (self.beads.q - self.beads.qc).reshape(-1, 3)
-        return xp.triu(-(qqc.T @ self.forces.fsc_part_2.reshape(-1, 3)))
-
-    def get_stress_sc(self):
-        """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
-        return (self.kstress_sc + self.forces.virssc_part_2.sum(axis=0)) / self.cell.V
-
-    def stress_mts_sc(self, level):
-        """Calculates the internal Suzuki-Chin stress tensor
-        associated with the forces at a MTS level.
-        """
-
-        stress = self.kstress_mts_sc(level) + (
-            self.forces.mts_forces[level].virs
-            * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1))
-        ).sum(axis=0)
-        if self.bias is not None and level == 0:
-            stress = stress + self.bias.vir
-
-        return stress / self.cell.V
 
     def stress_mts(self, level):
         """Calculates the internal stress tensor
@@ -339,8 +278,6 @@ dproperties(
         "pot",
         "kin",
         "cell_jacobian",
-        "kstress_sc",
-        "stress_sc",
         "qdt",
         "pdt",
         "tdt",
@@ -859,6 +796,29 @@ class BaroSCBZP(Barostat):
 
         super(BaroSCBZP, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
+        # Stress depend objects for Suzuki-Chin PIMD
+        self.kstress_sc_ = depend_value(
+            name="kstress_sc",
+            func=self.get_kstress_sc,
+            dependencies=[
+                beads.q_,
+                beads.qc_,
+                forces.fsc_part_2_,
+                forces.f_,
+            ],
+        )
+
+        self.stress_sc_ = depend_value(
+            name="stress_sc",
+            func=self.get_stress_sc,
+            dependencies=[
+                self.kstress_sc_,
+                self.cell.V_,
+                forces.vir_,
+                forces.virssc_part_2_,
+            ],
+        )
+
         # obtain the thermostat mass from the given time constant
         self.m_ = depend_array(
             name="m",
@@ -903,6 +863,40 @@ class BaroSCBZP(Barostat):
                 self.thermostat.ethermo_,
             ],
         )
+
+    def kstress_mts_sc(self, level):
+        """Calculates the Suzuki-Chin quantum centroid virial kinetic stress tensor
+        associated with the forces at a MTS level.
+        """
+
+        return xp.triu(self.kstress_mts(level, sc=True))
+
+    def get_kstress_sc(self):
+        """Calculates the high order part of the Suzuki-Chin
+        quantum centroid virial kinetic stress tensor
+        associated with the forces at a MTS level.
+        """
+
+        qqc = (self.beads.q - self.beads.qc).reshape(-1, 3)
+        return xp.triu(-(qqc.T @ self.forces.fsc_part_2.reshape(-1, 3)))
+
+    def get_stress_sc(self):
+        """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
+        return (self.kstress_sc + self.forces.virssc_part_2.sum(axis=0)) / self.cell.V
+
+    def stress_mts_sc(self, level):
+        """Calculates the internal Suzuki-Chin stress tensor
+        associated with the forces at a MTS level.
+        """
+
+        stress = self.kstress_mts_sc(level) + (
+            self.forces.mts_forces[level].virs
+            * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1))
+        ).sum(axis=0)
+        if self.bias is not None and level == 0:
+            stress = stress + self.bias.vir
+
+        return stress / self.cell.V
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
@@ -981,7 +975,7 @@ class BaroSCBZP(Barostat):
         self.cell.h_ *= expq
 
 
-dproperties(BaroSCBZP, ["p", "m"])
+dproperties(BaroSCBZP, ["p", "m", "kstress_sc", "stress_sc"])
 
 
 class BaroRGB(Barostat):
@@ -1411,11 +1405,7 @@ class BaroMTK(Barostat):
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
 
-        # return self.h0.V * np.trace(np.dot(self.stressext, eps)) * self.beads.nbeads
         return self.cell.V * self.pext * self.beads.nbeads
-        # p = np.trace(self.stressext)/3
-        # return (p*(self.cell.V-self.h0.V) +
-        #    self.h0.V * np.trace(np.dot(self.stressext-np.eye(3)*p, eps)) ) * self.beads.nbeads
 
     def get_cell_jacobian(self):
         """Calculates the energy term that accounts for the size of the box."""
@@ -1435,10 +1425,7 @@ class BaroMTK(Barostat):
         dt2 = dt**2
         dt3 = dt**3 / 3.0
 
-        pi_ext = (
-            xp.eye(3) * self.pext
-        )  # np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
-        #        L = np.diag([3, 2, 1])
+        pi_ext = xp.eye(3) * self.pext
 
         stress = self.stress_mts(level)
         self.p_ += dt * (self.cell.V * xp.triu(stress))

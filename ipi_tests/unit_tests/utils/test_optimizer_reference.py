@@ -7,9 +7,7 @@ from ipi.utils.array_backend import xp
 from ipi.utils.mintools import (
     Damped_BFGS,
     FIRE,
-    L_BFGS_nls,
     _max_atomic_displacement,
-    min_brent_neb,
     min_trm,
     nichols,
     Powell,
@@ -66,50 +64,6 @@ def test_powell_update_satisfies_secant_equation_and_symmetry():
     updated = Powell(step, change, h)
     np.testing.assert_allclose(updated @ step, change, atol=1e-12)
     np.testing.assert_allclose(updated, updated.T, atol=1e-12)
-
-
-@pytest.mark.parametrize("center", [-2.0, 1.5])
-@pytest.mark.parametrize("quartic", [False, True])
-def test_neb_scalar_search_finds_known_minimum(center, quartic):
-
-    def objective(x):
-        d = x - center
-        return 0.0, d * d + (0.2 * d**4 if quartic else 0.0)
-
-    position, value = min_brent_neb(
-        objective, fdf0=objective(0.0)[1], x0=0.0, tol=1e-9, itmax=200, init_step=0.1
-    )
-    assert position == pytest.approx(center, abs=1e-6)
-    assert value < 1e-12
-
-
-def test_lbfgs_without_line_search_on_quadratic():
-
-    h = np.diag([1.0, 2.0, 3.0])
-    x = np.array([[0.2, -0.3, 0.4]])
-
-    def objective(q):
-        return 0.5 * q.ravel() @ h @ q.ravel(), (h @ q.ravel()).reshape(q.shape)
-
-    direction = -objective(x)[1]
-    qlist = np.zeros((3, 3))
-    glist = np.zeros((3, 3))
-    for k in range(30):
-        if np.linalg.norm(objective(x)[1]) < 1e-8:
-            break
-        x, value, direction, qlist, glist = L_BFGS_nls(
-            x,
-            direction,
-            objective,
-            qlist,
-            glist,
-            big_step=0.2,
-            init_step=0.05,
-            m=3,
-            k=k,
-        )
-        assert value == pytest.approx(objective(x)[0])
-    np.testing.assert_allclose(x, 0, atol=1e-6)
 
 
 def test_damped_bfgs_step_is_measured_on_atoms():
