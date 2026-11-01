@@ -196,6 +196,9 @@ def test_jax_views_follow_parent(jax_backend):
         name="b", value=np.zeros((2, 3)), func=lambda: 2 * a.get(), dependencies=[a]
     )
     row, flat = a[1], a[1].flatten()
+    assert (
+        type(row) is dp.depend_immutable_view and type(flat) is dp.depend_immutable_view
+    )
     a += 1.0
     assert np.array_equal(ab.to_numpy(flat.get()), np.ones(3))
     row += 1.0

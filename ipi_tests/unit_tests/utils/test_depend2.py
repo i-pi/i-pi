@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 import ipi.engine.atoms
+from ipi.engine.beads import Beads
 import ipi.utils.array_backend as ab
 import ipi.utils.depend as dp
 
@@ -42,6 +43,11 @@ def test_slicing():
     assert not isinstance(d1[[0, 2, 4]], dp.depend_array)
     assert not isinstance(a[0, 0], dp.depend_array)
     assert not isinstance(d1[2], dp.depend_array)
+    assert type(a[0]) is dp.depend_array_view and type(a[0][1:]) is dp.depend_array_view
+    # as integers, 0-d arrays select elements
+    assert not isinstance(d1[np.asarray(2)], dp.depend_array)
+    d1[np.asarray(2)] += 1.0
+    assert d1[2] == 1.0
 
 
 def test_property_returns_readonly_array():
@@ -87,6 +93,26 @@ def test_inplace_operators():
     assert np.array_equal(h.y, [0.0, 6.0, 6.0, 6.0])
 
 
+def test_indexed_inplace_operators_update_views_in_place(monkeypatch):
+    """Depend: `obj.x_[a:b] op= v` updates the view in place, without assigning
+    it back to the array (from Python 3.12, the slices given to `__getitem__`
+    and `__setitem__` are distinct objects)"""
+    h = Holder()
+    assign, assigned = dp.depend_array._assign, []
+
+    def record(self, index, value):
+        if self._root() is h.x_:
+            assigned.append(index)
+        assign(self, index, value)
+
+    monkeypatch.setattr(dp.depend_array, "_assign", record)
+    start, stop = 1, 3
+    h.x_[start:stop] += 2.0
+    h.x_[1:][1:] *= 3.0
+    assert assigned == []
+    assert np.array_equal(h.y, [0.0, 4.0, 12.0, 0.0])
+
+
 def test_indexed_inplace_operators():
     """Depend: `obj.x_[i] op= v` updates the array and taints dependants"""
     h = Holder()
@@ -103,27 +129,22 @@ def test_indexed_inplace_operators():
 
 @pytest.mark.parametrize("backend", ["numpy", "torch"])
 @pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
-def test_advanced_index_inplace_operators(backend, index):
+def test_advanced_index_inplace_operators(select_backend, backend, index):
     """Depend: `obj.x_[i] op= v` with a mask or an array of indices, which
     select a copy rather than a view, updates the array and taints dependants,
     while modifying the copy does not"""
-    if backend == "torch":
-        pytest.importorskip("torch")
-    ab.set_backend(backend)
-    try:
-        index = ab.xp.asarray(index)
-        h = Holder()
-        h.x_[index] += 2.0
-        assert np.array_equal(ab.to_numpy(h.y), [4.0, 0.0, 4.0, 0.0])
-        a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
-        a[:, index] *= 3.0
-        assert np.array_equal(ab.to_numpy(a.get()), [[3.0, 1.0, 3.0, 1.0]] * 2)
-        selection = h.x_[index]
-        selection[0] = 5.0
-        assert not h.y_.tainted()
-        assert np.array_equal(ab.to_numpy(h.x), [2.0, 0.0, 2.0, 0.0])
-    finally:
-        ab.set_backend("numpy")
+    select_backend(backend)
+    index = ab.xp.asarray(index)
+    h = Holder()
+    h.x_[index] += 2.0
+    assert np.array_equal(ab.to_numpy(h.y), [4.0, 0.0, 4.0, 0.0])
+    a = dp.depend_array(name="a", value=ab.xp.ones((2, 4)))
+    a[:, index] *= 3.0
+    assert np.array_equal(ab.to_numpy(a.get()), [[3.0, 1.0, 3.0, 1.0]] * 2)
+    selection = h.x_[index]
+    selection[0] = 5.0
+    assert not h.y_.tainted()
+    assert np.array_equal(ab.to_numpy(h.x), [2.0, 0.0, 2.0, 0.0])
 
 
 def test_depend_objects_are_read_up_to_date():
@@ -142,33 +163,91 @@ def test_depend_objects_are_read_up_to_date():
     assert np.array_equal(c.get(), 10 * np.ones(4))
 
 
-def test_inplace_operators_with_other_arrays_raise():
+def test_inplace_operators_with_other_arrays_raise(select_backend):
     """Depend: an in-place operator that cannot update the stored array in
     place (a torch tensor and a numpy array) raises, rather than losing the
     update"""
-    pytest.importorskip("torch")
-    ab.set_backend("torch")
-    try:
-        h = Holder()
-        assert np.array_equal(ab.to_numpy(h.y), np.zeros(4))
-        with pytest.raises(TypeError):
-            h.x_ += np.ones(4)
-        assert not h.y_.tainted()
-        assert np.array_equal(ab.to_numpy(h.x), np.zeros(4))
-    finally:
-        ab.set_backend("numpy")
+    select_backend("torch")
+    h = Holder()
+    assert np.array_equal(ab.to_numpy(h.y), np.zeros(4))
+    with pytest.raises(TypeError):
+        h.x_ += np.ones(4)
+    assert not h.y_.tainted()
+    assert np.array_equal(ab.to_numpy(h.x), np.zeros(4))
+
+
+@pytest.mark.parametrize("backend", ["numpy", "torch", "jax"])
+def test_inplace_operators_keep_shape_and_type(select_backend, backend):
+    """Depend: an in-place operator that would change the shape or the type of
+    an array raises, and leaves it unchanged, while types are cast as numpy
+    casts them in place"""
+    select_backend(backend)
+    xp = ab.xp
+    a = dp.depend_array(name="a", value=xp.zeros(3))
+    b = dp.depend_array(name="b", value=xp.zeros(3, dtype=xp.int64))
+    with pytest.raises((TypeError, ValueError, RuntimeError)):
+        a += xp.ones((2, 3))
+    with pytest.raises((TypeError, ValueError, RuntimeError)):
+        b += xp.full(3, 0.5)
+    assert a.get().shape == (3,) and b.get().dtype == xp.int64
+    assert np.array_equal(ab.to_numpy(b.get()), np.zeros(3))
+    c = dp.depend_array(name="c", value=xp.zeros(3, dtype=xp.float32))
+    c += xp.full(3, 0.5)
+    assert c.get().dtype == xp.float32
+    assert np.array_equal(ab.to_numpy(c.get()), np.full(3, 0.5))
+
+
+@pytest.mark.parametrize("backend", ["numpy", "torch", "jax"])
+@pytest.mark.parametrize("index", [1, (1, 2), "0-d"])
+def test_indexed_inplace_operators_on_elements(select_backend, backend, index):
+    """Depend: `obj.x_[i] op= v` on an element, or on a row selected by a 0-d
+    array, is refused for a computed array, which keeps its value (with torch,
+    the element shares memory with the array, which is recomputed), and brings
+    an out-of-date array up to date first"""
+    select_backend(backend)
+    xp = ab.xp
+    expected = 2 * np.ones((2, 3))
+    if index == "0-d":
+        index = xp.asarray(1)
+        expected[1] = 3.0
+    else:
+        expected[index] = 3.0
+    a = dp.depend_array(name="a", value=xp.ones((2, 3)))
+    b = dp.depend_array(name="b", value=xp.zeros((2, 3)))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    c = dp.depend_array(
+        name="c", value=xp.zeros((2, 3)), func=lambda: 3 * a.get(), dependencies=[a]
+    )
+    assert np.array_equal(ab.to_numpy(c.get()), 3 * np.ones((2, 3)))
+    with pytest.raises(NameError):
+        c[index] += 1.0
+    assert np.array_equal(ab.to_numpy(c.get()), 3 * np.ones((2, 3)))
+    b[...] = xp.full((2, 3), 4.0)
+    a[index] += 1.0
+    assert np.array_equal(ab.to_numpy(a.get()), expected)
+    assert np.array_equal(ab.to_numpy(b.get()), 2 * expected)
 
 
 def test_computed_cannot_be_set():
-    """Depend: setting a computed quantity raises"""
+    """Depend: setting a computed quantity raises, and leaves its value and
+    those of its dependants unchanged"""
     h = Holder()
+    total = dp.depend_value(name="total", func=lambda: h.y.sum(), dependencies=[h.y_])
+    assert total.get() == 0.0
     with pytest.raises(NameError):
         h.y = np.ones(4)
+    with pytest.raises(NameError):
+        h.y_[0] = 7.0
+    with pytest.raises(NameError):
+        h.y_ += 1.0
+    with pytest.raises(NameError):
+        total.set(5.0)
+    assert np.array_equal(h.y, np.zeros(4)) and total.get() == 0.0
 
 
 def test_views_of_computed_arrays_cannot_be_written():
     """Depend: writing a view of a computed quantity raises, as writing the
-    quantity itself does, instead of being lost at the next recompute"""
+    quantity itself does, and leaves its value unchanged"""
     h = Holder()
     view = h.y_[1:3]
     with pytest.raises(NameError):
@@ -179,6 +258,30 @@ def test_views_of_computed_arrays_cannot_be_written():
         view += 1.0
     with pytest.raises(NameError):
         h.y_.flatten()[0] = 1.0
+    assert np.array_equal(h.y, np.zeros(4))
+
+
+def test_views_of_arrays_made_computed_cannot_be_written():
+    """Depend: the views created before an array is made computed (e.g. the
+    Atoms objects of the beads) cannot be written"""
+    source = Beads(2, 3)
+    source.q = np.ones((3, 6))
+    beads = Beads(2, 3)
+    view = beads.q_[1:]
+    dp.dsetfunc(beads.q_, lambda: 2 * source.q, [source.q_])
+    with pytest.raises(NameError):
+        beads[0].q = np.zeros(6)
+    with pytest.raises(NameError):
+        view[0, 0] = 0.0
+    with pytest.raises(NameError):
+        view += 1.0
+    assert np.array_equal(beads.q, 2 * np.ones((3, 6)))
+    h = Holder()
+    view = h.x_[1:]
+    dp.dpipe(dp.depend_array(name="source", value=np.ones(4)), h.x_)
+    with pytest.raises(NameError):
+        view[...] = 5.0
+    assert np.array_equal(h.x, np.ones(4))
 
 
 def test_readonly():
@@ -197,6 +300,20 @@ def test_reshape_signatures():
     # Reshaped view shares memory with the parent.
     r1[0, 0] = 99.0
     assert da[0] == 99.0
+
+
+@pytest.mark.parametrize("backend", ["numpy", "torch"])
+def test_reshaping_views_that_need_a_copy_raises(select_backend, backend):
+    """Depend: reshaping a view that can only be reshaped by copying it, which
+    would not be connected to the array, raises, while the other views are
+    reshaped"""
+    select_backend(backend)
+    a = dp.depend_array(name="a", value=ab.xp.zeros((4, 3)))
+    with pytest.raises((ValueError, RuntimeError)):
+        a[:, 1:].flatten()
+    a[:, :1].reshape(4)[1] = 1.0
+    a[1:3].reshape(6)[3] = 2.0
+    assert np.array_equal(ab.to_numpy(a.get())[:, 0], [0.0, 1.0, 2.0, 0.0])
 
 
 def test_pickle_roundtrip():
@@ -237,6 +354,34 @@ def test_copies_are_isolated():
         pickle.dumps(h.x_[1:3])
 
 
+def test_copies_hold_the_array_once():
+    """Depend: deep copies and pickles of a depend_array hold one copy of its
+    stored array, from which the value read is made again"""
+    a = dp.depend_array(name="a", value=np.zeros(10000))
+    memo = {}
+    copy = deepcopy(a, memo)
+    assert sum(isinstance(item, np.ndarray) for item in memo.values()) == 1
+    assert len(pickle.dumps(a)) < 1.5 * a.get().nbytes
+    for copy in (copy, pickle.loads(pickle.dumps(a))):
+        assert not copy.get().flags.writeable
+        copy[0] = 1.0
+        assert copy.get()[0] == 1.0
+
+
+def test_copies_of_synchronized_objects():
+    """Depend: deep copies and pickles of a synchronized object hold its
+    current value, and can be written"""
+    a = dp.depend_array(name="a", value=np.ones(3))
+    b = dp.depend_array(name="b", value=np.zeros(3))
+    dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
+    a.set(np.full(3, 2.0))
+    for copy in (deepcopy(b), pickle.loads(pickle.dumps(b))):
+        assert np.array_equal(copy.get(), 4 * np.ones(3))
+        copy[0] = 1.0
+        assert np.array_equal(copy.get(), [1.0, 4.0, 4.0])
+    assert np.array_equal(b.get(), 4 * np.ones(3))
+
+
 def test_ellipsis_and_new_axes_select_views():
     """Depend: indices with Ellipsis or None select views connected to the
     array, as those with slices do"""
@@ -247,6 +392,10 @@ def test_ellipsis_and_new_axes_select_views():
     column = a[..., 1]
     assert isinstance(column, dp.depend_array)
     assert isinstance(a[0, None], dp.depend_array)
+    assert isinstance(a[0][None], dp.depend_array)
+    assert isinstance(
+        dp.depend_array(name="s", value=np.zeros(()))[None], dp.depend_array
+    )
     column[0] = 1.0
     a[1, ...] += 2.0
     assert np.array_equal(b.get(), [[0.0, 2.0, 0.0], [4.0, 4.0, 4.0]])
@@ -267,7 +416,7 @@ def test_strided_slice_refresh_via_parent():
     full = dp.depend_array(
         name="full", value=np.zeros(3 * natoms), func=get_full, dependencies=[trigger]
     )
-    sx = full._view(full._value[0::3], full._wvalue[0::3])
+    sx = full[0::3]
 
     # first access through the view delegates refresh to the parent
     sx_first = sx.get().copy()
@@ -304,11 +453,16 @@ def test_synchronizer():
     assert np.array_equal(a.get(), [2.5, 0.5, 2.5])
     with pytest.raises(AssertionError):
         dp.dsynchro(a, dp.depend_array(name="c", value=np.zeros(3)), None, None)
+    # computed objects and views cannot be synchronized
+    h = Holder()
+    for dep in (h.y_, h.x_[1:]):
+        with pytest.raises(AssertionError):
+            dp.dsynchro(dep, dp.depend_array(name="c", value=np.zeros(4)), None, None)
 
 
 def test_partial_assignment_of_an_out_of_date_array():
     """Depend: assigning part of an out-of-date array keeps the other elements
-    up to date"""
+    up to date, and in-place operators update the current value"""
     a = dp.depend_array(name="a", value=np.ones(3))
     b = dp.depend_array(name="b", value=np.zeros(3))
     dp.dsynchro(a, b, lambda: 0.5 * b.get(), lambda: 2 * a.get())
@@ -316,15 +470,38 @@ def test_partial_assignment_of_an_out_of_date_array():
     a[0] = 0.0
     assert np.array_equal(a.get(), [0.0, 2.0, 2.0])
     assert np.array_equal(b.get(), [0.0, 4.0, 4.0])
+    b[:] = 6.0
+    a += 1.0
+    assert np.array_equal(a.get(), [4.0, 4.0, 4.0])
+    assert np.array_equal(b.get(), [8.0, 8.0, 8.0])
 
 
-def test_dcompute():
-    """Depend: dcompute and dpipe make a primitive object computed"""
+@pytest.mark.parametrize("backend", ["numpy", "torch", "jax"])
+def test_writing_a_view_of_an_out_of_date_array(select_backend, backend):
+    """Depend: writing a whole view of an out-of-date array (e.g. the momenta of
+    a bead, after those of the normal modes are written) keeps the other
+    elements up to date"""
+    select_backend(backend)
+    xp = ab.xp
+    beads = Beads(2, 3)
+    pnm = dp.depend_array(name="pnm", value=xp.zeros((3, 6)))
+    dp.dsynchro(beads.p_, pnm, lambda: pnm.get() / 2, lambda: 2 * beads.p)
+    last = beads.p_[1:].flatten()[6:]
+    pnm.set(xp.full((3, 6), 4.0))
+    beads[0].p = xp.zeros(6)
+    assert np.array_equal(ab.to_numpy(beads.p), [[0.0] * 6, [2.0] * 6, [2.0] * 6])
+    pnm.set(xp.full((3, 6), 4.0))
+    last[...] = xp.zeros(6)
+    assert np.array_equal(ab.to_numpy(pnm.get()), [[4.0] * 6, [4.0] * 6, [0.0] * 6])
+
+
+def test_dsetfunc():
+    """Depend: dsetfunc and dpipe make a primitive object computed"""
     h = Holder()
     z = dp.depend_value(name="z", value=5.0)
     zz = dp.depend_value(name="zz", func=lambda: 2 * z.get(), dependencies=[z])
     assert zz.get() == 10.0
-    dp.dcompute(z, lambda: h.x.sum(), [h.x_])
+    dp.dsetfunc(z, lambda: h.x.sum(), [h.x_])
     # the current value is discarded, and the dependants are tainted
     assert z.tainted() and zz.tainted()
     assert z.get() == 0.0
@@ -343,7 +520,7 @@ def test_dcompute():
     # computed objects, views, and synchronized objects cannot be made computed
     for dep in (z, h.x_[1:]):
         with pytest.raises(AssertionError):
-            dp.dcompute(dep, lambda: 0.0, [])
+            dp.dsetfunc(dep, lambda: 0.0, [])
     a = dp.depend_array(name="a", value=np.ones(3))
     dp.dsynchro(a, dp.depend_array(name="b", value=np.zeros(3)), None, None)
     with pytest.raises(AssertionError):

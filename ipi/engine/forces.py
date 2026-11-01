@@ -846,7 +846,7 @@ class Forces:
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
-            dcompute(newbeads.q_, make_rpc(newrpc, beads), [beads.q_])
+            dsetfunc(newbeads.q_, make_rpc(newrpc, beads), [beads.q_])
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)

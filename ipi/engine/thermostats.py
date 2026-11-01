@@ -396,8 +396,8 @@ class ThermoPILE_L(Thermostat):
             t = ThermoLangevin()
             t.bind(pm=(nm.pnm_[first:], nm.dynm3_[first:]), prng=self.prng)
             dpipe(self.dt_, t.dt_)
-            dcompute(t.tau_, lambda: self.get_taus()[first:], [self.tau_, self.tauk_])
-            dcompute(
+            dsetfunc(t.tau_, lambda: self.get_taus()[first:], [self.tau_, self.tauk_])
+            dsetfunc(
                 t.temp_,
                 lambda: self.get_temps()[first:],
                 [self.temp_, self.npilect_],
@@ -409,7 +409,7 @@ class ThermoPILE_L(Thermostat):
         if bindcentroid:
             for t in self._thermos:
                 t.ethermo = prev_ethermo / len(self._thermos)
-            dcompute(
+            dsetfunc(
                 self.ethermo_,
                 self.get_ethermo,
                 [t.ethermo_ for t in self._thermos],
@@ -646,7 +646,7 @@ class ThermoPILE_G(ThermoPILE_L):
         # splits any previous ethermo between the thermostats, and finishes to bind ethermo to the sum function
         for t in self._thermos:
             t.ethermo = prev_ethermo / len(self._thermos)
-        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
+        dsetfunc(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
 
 
 class ThermoGLE(Thermostat):
@@ -988,7 +988,7 @@ class ThermoNMGLE(Thermostat):
         for t in self._thermos:
             t.ethermo = prev_ethermo / self.nb
 
-        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
+        dsetfunc(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
 
     def step(self):
         """Updates the thermostat in NM representation by looping over the
@@ -1346,7 +1346,7 @@ class MultiThermo(Thermostat):
         # just binds all the sub-thermostats
         for t in self.tlist:
             t.bind(beads=beads, atoms=atoms, pm=pm, nm=nm, prng=prng, fixdof=fixdof)
-        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self.tlist])
+        dsetfunc(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self.tlist])
 
     def step(self):
         """Steps through all sub-thermostats."""

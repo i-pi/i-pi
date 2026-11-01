@@ -462,7 +462,8 @@ def test_inputs_of_a_segment(fake_cuda):
 
 def test_updated_objects_are_inputs_of_a_segment(fake_cuda):
     """The depend objects that a segment updates in place, or of which it
-    assigns a part, are inputs that are brought up to date before its replays"""
+    assigns a part (also by writing a view), are inputs that are brought up to
+    date before its replays"""
 
     from ipi.utils.cudagraphs import GraphReplay
     from ipi.utils.depend import depend_array
@@ -470,17 +471,20 @@ def test_updated_objects_are_inputs_of_a_segment(fake_cuda):
     added = depend_array(name="added", value=torch.zeros(3))
     assigned = depend_array(name="assigned", value=torch.zeros(3))
     replaced = depend_array(name="replaced", value=torch.zeros(3))
+    viewed = depend_array(name="viewed", value=torch.zeros(3))
+    view = viewed[1:]
 
     def func():
         added.__iadd__(1.0)
         assigned[0] = 1.0
         replaced[...] = 1.0
+        view.set(torch.ones(2))
 
     replay = GraphReplay(func)
     for _ in range(3):
         replay()
     inputs = sorted(dep._name for dep, _, _ in replay.segments[0].inputs)
-    assert inputs == ["added", "assigned"]
+    assert inputs == ["added", "assigned", "viewed"]
 
 
 @pytest.mark.parametrize("kind", ["array", "value"])
@@ -616,14 +620,14 @@ def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
         _stage(host, held, copy)
 
     array = depend_array(name="array", value=torch.zeros(3, dtype=torch.float64))
-    _stage(array, array._wvalue, None)
+    _stage(array, array._data, None)
     with pytest.raises(JitError, match="has been replaced"):
         _stage(array, torch.zeros(3, dtype=torch.float64), None)
     names = depend_array(name="names", value=np.zeros(3), host=True)
-    copy = names._wvalue.copy()
+    copy = names._data.copy()
     names[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _stage(names, names._wvalue, copy)
+        _stage(names, names._data, copy)
 
 
 @pytest.mark.parametrize("capability,is_compiled", [((6, 1), False), ((9, 0), True)])
