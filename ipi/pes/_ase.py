@@ -105,7 +105,11 @@ class ASEDriver(Dummy_driver):
             if "forces" in self.capabilities
             else np.zeros_like(structure.positions)
         )
-        stress = properties["stress"] if "stress" in self.capabilities else np.zeros((3, 3))
+        stress = (
+            properties["stress"]
+            if "stress" in self.capabilities
+            else np.zeros((3, 3))
+        )
         if len(stress) == 6:
             # converts from voigt notation
             stress = np.array(stress[[0, 5, 4, 5, 1, 3, 4, 3, 2]])
