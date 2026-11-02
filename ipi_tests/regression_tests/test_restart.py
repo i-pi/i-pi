@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from ipi_tests.test_tools import unsupported_marks
+
 try:
     from ipi_tests.regression_tests.runstools import Runner_regression
 except ImportError:
@@ -11,41 +13,22 @@ except ImportError:
 RESTART_TESTS_FOLDER = Path(__file__).resolve().parent / "restart_tests"
 RESTART_CASES = [
     pytest.param(
-        0,
-        "dynamics",
-        RESTART_TESTS_FOLDER / "NVE" / "NVE_1" / "harmonic_f90",
-        id="dynamics",
-    ),
-    pytest.param(
-        1,
-        "minimize",
-        RESTART_TESTS_FOLDER / "GEOP" / "CG" / "harmonic",
-        id="minimize",
-    ),
-    pytest.param(
-        2,
-        "vibrations",
-        RESTART_TESTS_FOLDER / "PHONONS" / "fd_phonons" / "ch4hcbe",
-        id="vibrations",
-    ),
-    pytest.param(
-        3,
-        "neb",
-        RESTART_TESTS_FOLDER / "NEB" / "FIRE" / "zundel",
-        id="neb",
-    ),
-    pytest.param(
-        4,
-        "instanton",
-        RESTART_TESTS_FOLDER / "INSTANTON" / "070K_D",
-        id="instanton",
-    ),
-    pytest.param(
-        5,
-        "driven_dynamics",
-        RESTART_TESTS_FOLDER / "EDANVE",
-        id="driven_dynamics",
-    ),
+        nid,
+        mode,
+        RESTART_TESTS_FOLDER / folder,
+        id=mode,
+        marks=unsupported_marks(folder),
+    )
+    for nid, (mode, folder) in enumerate(
+        [
+            ("dynamics", "NVE/NVE_1/harmonic_f90"),
+            ("minimize", "GEOP/CG/harmonic"),
+            ("vibrations", "PHONONS/fd_phonons/ch4hcbe"),
+            ("neb", "NEB/FIRE/zundel"),
+            ("instanton", "INSTANTON/070K_D"),
+            ("driven_dynamics", "EDANVE"),
+        ]
+    )
 ]
 
 

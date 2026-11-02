@@ -266,9 +266,9 @@ selecting the array backend when launching i-PI:
 ``--backend`` is ``numpy`` (the default), ``torch`` or ``jax`` (experimental,
 see below), and ``--device`` is a device name understood by the library, e.g.
 ``cpu``, ``cuda`` or ``cuda:1`` with PyTorch (the numpy backend only supports
-``cpu``). PyTorch is an optional dependency, that can be installed together
-with i-PI as ``pip install ipi[torch]``; JAX is installed separately, following
-its instructions for the device to be used.
+``cpu``). PyTorch and JAX are optional dependencies, that can be installed
+together with i-PI as ``pip install ipi[torch]`` and ``pip install ipi[jax]``
+(JAX for the CPU: for a GPU, follow the instructions of JAX).
 
 The backend is chosen at run time and is not part of the input: the same
 input and checkpoint files can be used with either backend, and the

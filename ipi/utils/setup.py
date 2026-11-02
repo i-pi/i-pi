@@ -18,7 +18,8 @@ def get_ipi_path():
 
     path = os.getenv("IPI_ROOT")
     if path is None or path == "":
-        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../"))
+        # the folder above the ipi package, i.e. ipi/utils/setup.py/../../..
+        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../.."))
 
     return path
 

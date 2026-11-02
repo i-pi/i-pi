@@ -45,8 +45,8 @@ directory tree. Please resolve any warnings or errors that may appear. Your
 commit will not pass the CI tests otherwise.
 
 Other useful environments: `tox -e unit`, `tox -e regtests`, `tox -e examples`,
-`tox -e docs`, and `tox -e torch` (the unit and regression tests with the torch
-backend). Run `tox list` to see them all.
+`tox -e docs`, and `tox -e backends` (the unit and regression tests with the
+torch backend, and the regression tests with JAX). Run `tox list` to see them all.
 
 For a more flexible setup, we also provide the script `i-pi-style`, for
 which instructions can be obtained by typing
