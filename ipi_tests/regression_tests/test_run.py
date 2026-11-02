@@ -6,10 +6,10 @@ import time
 
 try:
     from ipi_tests.regression_tests.runstools import Runner_regression
-    from ipi_tests.test_tools import get_test_list
+    from ipi_tests.test_tools import get_test_list, unsupported_marks
 except ImportError:
     from runstools import Runner_regression
-    from ipi_tests.test_tools import get_test_list
+    from ipi_tests.test_tools import get_test_list, unsupported_marks
 
 
 """ Run regression test """
@@ -32,7 +32,9 @@ def plumed_unavailable():
     return None
 
 
-@pytest.mark.parametrize("regtest", reg_tests)
+@pytest.mark.parametrize(
+    "regtest", [pytest.param(test, marks=unsupported_marks(test)) for test in reg_tests]
+)
 def test_regtest(regtest):
     """Intermediate function to run the regression test (by calling Runner) and makes
     possible to parametrize the arguments

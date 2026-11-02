@@ -10,13 +10,9 @@ and the guards against incompatible options."""
 import pytest
 import numpy as np
 
-from ipi.engine.beads import Beads
-from ipi.engine.cell import Cell
-from ipi.inputs.beads import InputBeads
-from ipi.inputs.cell import InputCell
 from ipi.inputs.normalmodes import InputNormalModes
-from ipi.scripting import InteractiveSimulation
 from ipi.utils import nmtransform
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.io.inputs.io_xml import xml_parse_string
 from ipi.utils.units import Constants
 
@@ -43,17 +39,10 @@ def eco_xml(
     </motion>"""
 
     rng = np.random.RandomState(27182)
-    beads = Beads(nbeads=NBEADS, natoms=NATOMS)
     # spreads the beads so that the internal modes are excited
-    beads.q = np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0] * NBEADS).reshape(
+    q = np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0] * NBEADS).reshape(
         NBEADS, 3 * NATOMS
     ) + 0.1 * rng.normal(size=(NBEADS, 3 * NATOMS))
-    beads.m = np.full(NATOMS, 1837.36)
-    beads.names = np.full(NATOMS, "H")
-    input_beads = InputBeads()
-    input_beads.store(beads)
-    input_cell = InputCell()
-    input_cell.store(Cell(h=20.0 * np.eye(3)))
 
     return f"""
 <simulation verbosity='quiet'>
@@ -64,8 +53,12 @@ def eco_xml(
   <prng> <seed> 31415 </seed> </prng>
   <ffdirect name='harm'> <pes> harmonic </pes> <parameters> {{k1: 0.01}} </parameters> </ffdirect>
   <system>
-    {input_beads.write("beads")}
-    {input_cell.write("cell")}
+    <beads natoms='{NATOMS}' nbeads='{NBEADS}'>
+      <q shape='({NBEADS},{3 * NATOMS})'> {q.ravel().tolist()} </q>
+      <m shape='({NATOMS})'> {[1837.36] * NATOMS} </m>
+      <names shape='({NATOMS})'> [{", ".join(["H"] * NATOMS)}] </names>
+    </beads>
+    <cell shape='(3,3)'> [20, 0, 0, 0, 20, 0, 0, 0, 20] </cell>
     <initialize nbeads='{NBEADS}'>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
@@ -82,23 +75,23 @@ def eco_xml(
 
 
 @pytest.fixture
-def eco_sim(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    return InteractiveSimulation(eco_xml())
+def eco_sim(simulation):
+    with simulation(eco_xml()) as sim:
+        yield sim
 
 
 def test_omegak_and_masses(eco_sim):
     """Checks the eco frequencies against the fit, and the dynamical masses."""
 
     nm = eco_sim.syslist[0].nm
-    omegak = nm.omegak
+    omegak = to_numpy(nm.omegak)
     xmax = float(nm.nm_freqs[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
         omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-10
     )
     assert omegak[0] == 0.0
     # eco changes the springs but not the dynamical masses
-    np.testing.assert_allclose(nm.nm_factor, np.ones(NBEADS))
+    np.testing.assert_allclose(to_numpy(nm.nm_factor), np.ones(NBEADS))
 
 
 def test_spring_and_kinetic_td(eco_sim):
@@ -107,13 +100,13 @@ def test_spring_and_kinetic_td(eco_sim):
 
     sys = eco_sim.syslist[0]
     nm = sys.nm
-    qnm = nm.qnm
-    m3 = sys.beads.m3
-    wk2 = nm.omegak**2
+    qnm = to_numpy(nm.qnm)
+    m3 = to_numpy(sys.beads.m3)
+    wk2 = to_numpy(nm.omegak) ** 2
     vspring = 0.5 * np.sum(wk2[:, np.newaxis] * m3 * qnm**2)
-    np.testing.assert_allclose(nm.vspring, vspring, rtol=1e-12)
+    np.testing.assert_allclose(float(nm.vspring), vspring, rtol=1e-12)
 
-    ktd = sys.properties["kinetic_td"][0]
+    ktd = float(sys.properties["kinetic_td"][0])
     kt = Constants.kb * sys.ensemble.temp
     np.testing.assert_allclose(
         ktd, 1.5 * NATOMS * NBEADS * kt - vspring / NBEADS, rtol=1e-10
@@ -126,9 +119,9 @@ def test_temperature_refit(eco_sim):
 
     sys = eco_sim.syslist[0]
     nm = sys.nm
-    gamma_old = nm.omegak.copy() / nm.omegan
+    gamma_old = np.array(to_numpy(nm.omegak)) / nm.omegan
     sys.ensemble.temp = sys.ensemble.temp * 1.13
-    omegak = nm.omegak
+    omegak = to_numpy(nm.omegak)
     xmax = float(nm.nm_freqs[0] * nm.nbeads / nm.omegan)
     np.testing.assert_allclose(
         omegak, nm.omegan * nmtransform.eco_eva(nm.nbeads, xmax), rtol=1e-8
@@ -139,60 +132,59 @@ def test_temperature_refit(eco_sim):
 
 
 @pytest.mark.parametrize("propagator", ["exact", "cayley", "bab"])
-def test_eco_dynamics(tmp_path, monkeypatch, propagator):
+def test_eco_dynamics(simulation, propagator):
     """Runs a few steps of eco PIMD with each free-ring-polymer propagator."""
 
-    monkeypatch.chdir(tmp_path)
-    sim = InteractiveSimulation(eco_xml(propagator=propagator))
-    e0 = sim.properties("conserved")
-    sim.run(4, write_outputs=False)
-    assert np.isfinite(sim.properties("conserved"))
-    assert abs(sim.properties("conserved") - e0) < 1e-2 * abs(e0)
+    with simulation(eco_xml(propagator=propagator)) as sim:
+        e0 = sim.properties("conserved")
+        sim.run(4, write_outputs=False)
+        assert np.isfinite(sim.properties("conserved"))
+        assert abs(sim.properties("conserved") - e0) < 1e-2 * abs(e0)
 
 
-def test_guard_bosons(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_bosons(simulation):
     with pytest.raises(ValueError, match="bosons or open paths"):
-        InteractiveSimulation(eco_xml(nm_extra="<bosons id='index'> [0] </bosons>"))
+        with simulation(eco_xml(nm_extra="<bosons id='index'> [0] </bosons>")):
+            pass
 
 
-def test_guard_open_paths(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_open_paths(simulation):
     with pytest.raises(ValueError, match="bosons or open paths"):
-        InteractiveSimulation(eco_xml(nm_extra="<open_paths> [0] </open_paths>"))
+        with simulation(eco_xml(nm_extra="<open_paths> [0] </open_paths>")):
+            pass
 
 
-def test_guard_nm_freqs(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_nm_freqs(simulation):
     with pytest.raises(ValueError, match="requires one frequency"):
-        InteractiveSimulation(
+        with simulation(
             eco_xml(
                 frequencies="<frequencies style='eco' units='inversecm'> [2500, 3000] </frequencies>"
             )
-        )
+        ):
+            pass
 
 
-def test_guard_suzuki_chin(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_suzuki_chin(simulation):
     with pytest.raises(ValueError, match="Suzuki-Chin"):
-        InteractiveSimulation(eco_xml(dynamics="sc"))
+        with simulation(eco_xml(dynamics="sc")):
+            pass
 
 
-def test_guard_nm_gle(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_nm_gle(simulation):
     a_matrix = str([1e-3] * NBEADS)
     thermostat = f"<thermostat mode='nm_gle'> <A shape='({NBEADS},1,1)'> {a_matrix} </A> </thermostat>"
     with pytest.raises(ValueError, match="nm_gle"):
-        InteractiveSimulation(eco_xml(thermostat=thermostat))
+        with simulation(eco_xml(thermostat=thermostat)):
+            pass
 
 
-def test_guard_instanton(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_guard_instanton(simulation):
     motion = """<motion mode='instanton'>
       <instanton mode='rate'> <opt> nichols </opt> </instanton>
     </motion>"""
     with pytest.raises(ValueError, match="Instanton"):
-        InteractiveSimulation(eco_xml(motion=motion))
+        with simulation(eco_xml(motion=motion)):
+            pass
 
 
 @pytest.mark.parametrize(
@@ -211,15 +203,13 @@ def test_guard_estimators(eco_sim, prop):
         eco_sim.syslist[0].properties[prop]
 
 
-def test_trotter_estimators_unaffected(tmp_path, monkeypatch):
+def test_trotter_estimators_unaffected(simulation):
     """The same estimators keep working with Trotter springs."""
 
-    monkeypatch.chdir(tmp_path)
-    sim = InteractiveSimulation(
-        eco_xml(frequencies="<frequencies style='rpmd'> [] </frequencies>")
-    )
-    value = sim.syslist[0].properties["isotope_zetatd(alpha=1.1;atom=H)"][0]
-    assert np.all(np.isfinite(value))
+    xml = eco_xml(frequencies="<frequencies style='rpmd'> [] </frequencies>")
+    with simulation(xml) as sim:
+        value = sim.syslist[0].properties["isotope_zetatd(alpha=1.1;atom=H)"][0]
+        assert np.all(np.isfinite(value))
 
 
 def test_input_roundtrip(eco_sim):

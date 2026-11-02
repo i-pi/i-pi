@@ -469,15 +469,17 @@ check, for a table of dynamics (``CASES``), that the torch and JAX backends
 reproduce the numpy trajectories when they draw the same random numbers
 (``numpy_draws``), and that an MD step does not synchronize with the GPU. The
 unit tests select a backend with the ``select_backend`` fixture, which restores
-numpy afterwards, and the simulations of the engine fixtures (``simulation``,
-``reference_system``) use the backend given with ``--ipi-backend``. The unit
-tests, the regression tests and the examples can be run with another backend
-with ``pytest --ipi-backend torch [--ipi-device cuda]`` or ``--ipi-backend
-jax``; the torch CI job does so for the unit and regression tests (``tox -e
-torch``). In these runs (and in the tests that use the ``strict_torch``
-fixture) implicit conversions of torch tensors to numpy arrays raise an error
-also on the CPU, as they do on GPUs, so that missing ``to_numpy`` calls are
-detected without a GPU.
+numpy afterwards, and the simulations of the ``simulation`` and
+``reference_system`` fixtures use the backend given with ``--ipi-backend``. The
+unit tests, the regression tests and the examples can be run with another
+backend with ``pytest --ipi-backend torch [--ipi-device cuda]`` or
+``--ipi-backend jax``; the CI runs the unit and regression tests with torch,
+and the regression tests with JAX (``tox -e backends``). The regression tests
+of the features that JAX does not support (``JAX_UNSUPPORTED`` in
+``ipi_tests/test_tools.py``) are expected to fail with JAX. In the torch runs
+(and in the tests that use the ``strict_torch`` fixture) implicit conversions
+of torch tensors to numpy arrays raise an error also on the CPU, as they do on
+GPUs, so that missing ``to_numpy`` calls are detected without a GPU.
 
 Compiled steps (``--jit``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
