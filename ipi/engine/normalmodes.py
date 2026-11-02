@@ -366,42 +366,33 @@ class NormalModes:
             dependencies=[self.pnm_, self.beads.sm3_, self.nm_factor_],
         )
 
-        self.vspring_and_fspring_ = depend_value(
-            name="v_and_fs",
-            value=[None, None],
-            func=self.get_vspring_and_fspring,
-            dependencies=[
-                self.qnm_,
-                self.omegak_,
-                self.o_omegak_,
-                self.beads.m3_,
-                self.beads.q_,
-            ],
-        )
-
+        spring_dependencies = [
+            self.qnm_,
+            self.omegak_,
+            self.o_omegak_,
+            self.beads.m3_,
+            self.beads.q_,
+        ]
         if len(self.bosons) > 0:
             self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
             self.exchange_potential.bind(self.beads, self.ensemble, self)
-            ddeps(
-                self.vspring_and_fspring_,
-                [self.exchange_potential.vspring_and_fspring_],
-            )
+            spring_dependencies.append(self.exchange_potential.vspring_and_fspring_)
         else:
             self.exchange_potential = None
 
-        # just return split potential and force for ease of access
+        # the spring energy and forces are computed separately, as the energy is
+        # read at every step and the forces only by some propagators
         self.vspring_ = depend_value(
             name="vspring",
             value=0.0,
-            func=lambda: self.vspring_and_fspring[0],
-            dependencies=[self.vspring_and_fspring_],
+            func=self.get_vspring,
+            dependencies=spring_dependencies,
         )
-
         self.fspring_ = depend_array(
             name="fspring",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func=lambda: self.vspring_and_fspring[1],
-            dependencies=[self.vspring_and_fspring_],
+            func=self.get_fspring,
+            dependencies=list(spring_dependencies),
         )
 
         if self.propagator == "cayley" and not bool(
@@ -739,13 +730,13 @@ class NormalModes:
             dm3[1:, opc] = m3[1:, opc] * self.o_nm_factor[1:, None]
         return dm3
 
-    def get_vspring_and_fspring(self):
-        """Returns the total spring energy and spring force."""
+    def get_vspring(self):
+        """Returns the total spring energy."""
 
         # classical simulation - do nothing!
-        vspring, fspring = 0.0, xp.zeros_like(self.qnm)
+        vspring = 0.0
         if self.nbeads == 1:
-            return vspring, fspring
+            return vspring
 
         if len(self.bosons) < self.natoms:
             # computes harmonic potential in normal-modes representation
@@ -754,10 +745,6 @@ class NormalModes:
             q2 = (sqnm**2).sum(axis=1)
 
             vspring += (self.omegak2 * q2).sum()
-            # spring forces (this is only the closed path version -
-            # open path correction is applied in the propagator)
-            # TODO make it happen here, it'd be probably cleaner
-            fspringnm = -self.beads.m3 * self.omegak[:, None] ** 2 * qnm
 
             # correction for open paths
             for j in self.open_paths:
@@ -765,45 +752,62 @@ class NormalModes:
                     self.beads.m[j]
                     * (self.o_omegak**2 - self.omegak**2)
                     * (
-                        self.qnm[:, 3 * j] ** 2
-                        + self.qnm[:, 3 * j + 1] ** 2
-                        + self.qnm[:, 3 * j + 2] ** 2
+                        qnm[:, 3 * j] ** 2
+                        + qnm[:, 3 * j + 1] ** 2
+                        + qnm[:, 3 * j + 2] ** 2
                     )
                 )
 
-                # overrides open path forces
+            # correction for bosons
+            for j in self.bosons:
+                vspring -= xp.sum(
+                    self.beads.m[j]
+                    * self.omegak**2
+                    * (
+                        qnm[:, 3 * j] ** 2
+                        + qnm[:, 3 * j + 1] ** 2
+                        + qnm[:, 3 * j + 2] ** 2
+                    )
+                )
+
+            vspring *= 0.5
+
+        if len(self.bosons) > 0:
+            vspring += self.exchange_potential.vspring_and_fspring[0]
+
+        return vspring
+
+    def get_fspring(self):
+        """Returns the spring forces."""
+
+        # classical simulation - do nothing!
+        fspring = xp.zeros_like(self.qnm)
+        if self.nbeads == 1:
+            return fspring
+
+        if len(self.bosons) < self.natoms:
+            # spring forces (this is only the closed path version -
+            # open path correction is applied in the propagator)
+            qnm = self.qnm
+            fspringnm = -self.beads.m3 * self.omegak[:, None] ** 2 * qnm
+
+            # overrides the forces of open paths
+            for j in self.open_paths:
                 fspringnm[:, 3 * j : 3 * (j + 1)] = (
                     -self.beads.m3[:, 3 * j : 3 * (j + 1)]
                     * self.o_omegak[:, None] ** 2
                     * qnm[:, 3 * j : 3 * (j + 1)]
                 )
 
-            # correction for bosons
-            if len(self.bosons) > 0:
-                for j in self.bosons:
-                    vspring -= xp.sum(
-                        self.beads.m[j]
-                        * self.omegak**2
-                        * (
-                            self.qnm[:, 3 * j] ** 2
-                            + self.qnm[:, 3 * j + 1] ** 2
-                            + self.qnm[:, 3 * j + 2] ** 2
-                        )
-                    )
-
-            vspring *= 0.5
             fspring += self.transform.nm2b(fspringnm)
 
         if len(self.bosons) > 0:
-            vspring_b, fspring_b = self.exchange_potential.vspring_and_fspring
-
-            vspring += vspring_b
             # overwrites the spring forces for the bosonic particles
             fspring = fspring.reshape(self.nbeads, self.natoms, 3)
-            fspring[:, self.bosons, :] = fspring_b
+            fspring[:, self.bosons, :] = self.exchange_potential.vspring_and_fspring[1]
             fspring = fspring.reshape(self.nbeads, 3 * self.natoms)
 
-        return vspring, fspring
+        return fspring
 
     def free_babstep(self):
         """
@@ -957,7 +961,6 @@ dproperties(
         "kin",
         "kstress",
         "vspring",
-        "vspring_and_fspring",
         "fspring",
     ],
 )
