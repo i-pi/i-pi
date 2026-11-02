@@ -7,7 +7,7 @@ import argparse
 # Y. Litman, 2017.
 
 from ipi.engine.simulation import Simulation
-from ipi.utils.array_backend import backend, device, jit, set_backend
+from ipi.utils.array_backend import backend, device, jit_enabled, set_backend
 from ipi.utils.units import unit_to_internal, Constants
 from ipi.utils.messages import verbosity, info
 from ipi.utils.instools import red2comp
@@ -138,7 +138,7 @@ def numpy_backend(func):
 
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        previous = backend(), device(), jit()
+        previous = backend(), device(), jit_enabled()
         set_backend("numpy")
         try:
             return func(*args, **kwargs)

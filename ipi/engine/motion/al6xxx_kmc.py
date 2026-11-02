@@ -16,6 +16,7 @@ import collections
 from ipi.engine.motion import Motion, GeopMotion
 from ipi.engine.cell import Cell
 from ipi.utils.units import Constants
+from ipi.utils.messages import info, warning, verbosity
 
 
 class AlKMC(Motion):
@@ -132,7 +133,7 @@ class AlKMC(Motion):
         self.dcell = Cell()
         self.dcell.h = xp.asarray(self.scell * self.ncell)
 
-        print("LATTICE PARAM ", self.a0)
+        info(f"Lattice parameter: {self.a0}", verbosity.medium)
         # this is the list of lattice sites, in 3D coordinates
         ix, iy, iz = np.meshgrid(
             list(range(self.ncell)),
@@ -143,7 +144,7 @@ class AlKMC(Motion):
         self.sites = np.dot(
             np.asarray([ix.flatten(), iy.flatten(), iz.flatten()]).T, self.scell.T
         )
-        print(len(self.sites), self.nsites, "###")
+        info(f"Lattice sites: {len(self.sites)}, {self.nsites}", verbosity.debug)
         # now we build list of nearest neighbors (fcc-lattice hardcoded!)
         self.neigh = np.zeros((self.nsites, 12), int)
         nneigh = np.zeros(self.nsites, int)
@@ -190,14 +191,12 @@ class AlKMC(Motion):
             ff = open(self.qcache_file, "rb")
             self.qcache = pickle.load(ff)
             ff.close()
-            print("Loaded %d cached energies" % (len(self.ecache)))
+            info("Loaded %d cached energies" % (len(self.ecache)), verbosity.low)
         except (OSError, ValueError, NameError):
-            print(
-                "Couldn't load cache files "
-                + self.ecache_file
-                + ","
-                + self.qcache_file
-                + " - resetting"
+            info(
+                f"Couldn't load cache files {self.ecache_file},{self.qcache_file}"
+                " - resetting",
+                verbosity.low,
             )
             self.ecache = collections.OrderedDict()
             self.qcache = collections.OrderedDict()
@@ -266,17 +265,19 @@ class AlKMC(Motion):
         self.ridx[self.idx] = list(range(self.nsites))
 
         self.state = np.asarray(list(state))
-        print("".join(self.state))
+        info("Initial state: " + "".join(self.state), verbosity.medium)
 
-        print("CHECKING INITIAL ASSIGNMENTS")
+        # checks the initial assignments
         for i in range(self.nsites):
             if self.ridx[i] < self.natoms:
-                print(self.beads.names[self.ridx[i]], self.state[i])
+                name = self.beads.names[self.ridx[i]]
             else:
-                print("V", self.state[i])
+                name = "V"
+            info(f"Site {i}: {name} {self.state[i]}", verbosity.debug)
             if self.idx[self.ridx[i]] != i:
-                print(
-                    "inconsistent site string for atom ", i, " and site ", self.ridx[i]
+                warning(
+                    f"Inconsistent site string for atom {i} and site {self.ridx[i]}",
+                    verbosity.low,
                 )
 
         if not f_restart:
@@ -346,8 +347,11 @@ class AlKMC(Motion):
             self.feval[ieval] = 1
 
         with self._threadlock:
-            print("Finished ", nstr)
-            print("Energy, initial - TS - final: ", ipot, nevent[-1], newpot)
+            info(f"Finished {nstr}", verbosity.debug)
+            info(
+                f"Energy, initial - TS - final: {ipot} {nevent[-1]} {newpot}",
+                verbosity.debug,
+            )
 
     def find_eval(self, ethreads):
         # finds first free evaluator
@@ -503,11 +507,10 @@ class AlKMC(Motion):
                     st.start()
                     ethreads[ieval] = st
                 else:
-                    print(
-                        "Found state ",
-                        nstr,
-                        " retrieving cached energy ",
-                        self.ecache[nstr],
+                    info(
+                        f"Found state {nstr}, retrieving cached energy "
+                        f"{self.ecache[nstr]}",
+                        verbosity.debug,
                     )
 
                     # fetch energy from previous calculation
@@ -519,11 +522,10 @@ class AlKMC(Motion):
             while st is not None and st.is_alive():
                 st.join(2)
 
-        print(
-            "Computed ",
-            len(levents),
-            " possible reactions. Cache len ",
-            len(self.ecache),
+        info(
+            f"Computed {len(levents)} possible reactions. "
+            f"Cache length {len(self.ecache)}",
+            verbosity.high,
         )
 
         # get list of rates
@@ -531,12 +533,13 @@ class AlKMC(Motion):
         crates = np.zeros(len(levents), float)
         cdf = 0.0
         for i in range(len(levents)):
-            # print ("Barrier, naive: %f, static: %f" % (0.5*(ecurr + levents[i][2]) + self.diffusion_barrier_al, levents[i][4]))
-
             ets = (
                 0.5 * (ecurr + levents[i][2]) + self.barriers[levents[i][-1]]
             )  # naive heuristic for the ts energy
-            print("Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2])
+            info(
+                f"Event {i} {levents[i][-1]} {ecurr} >> {ets} >> {levents[i][2]}",
+                verbosity.debug,
+            )
             rates[i] = self.prefactors[levents[i][-1]] * np.exp(
                 -float(ets - ecurr) / kT
             )
@@ -549,8 +552,8 @@ class AlKMC(Motion):
         while fpick > crates[isel]:
             isel += 1
         dt = -1.0 / cdf * np.log(1.0 - self.prng.u)
-        print(("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr, ecurr)))
-        print("Selected event ", isel, " with rate ", rates[isel], " / ", cdf)
+        info("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr, ecurr), verbosity.high)
+        info(f"Selected event {isel} with rate {rates[isel]} / {cdf}", verbosity.high)
 
         iev = levents[isel]  # levents[self.prng.randint(len(levents))]
         svac, sneigh = iev[0], iev[1]
@@ -568,7 +571,7 @@ class AlKMC(Motion):
         self.kmcfile.force_flush()
         self.tottime += dt
         self.ensemble.time += dt  # updates time counter
-        print("Finishing step at ", "".join(self.state))
+        info("Finishing step at " + "".join(self.state), verbosity.high)
 
         # updates the positions
         self.cell.h = self.dcell.h

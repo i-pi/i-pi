@@ -41,6 +41,8 @@ class Random(object):
         seed: The seed number to start the generator.
         state: The state of the generators, which can be stored in a
             checkpoint and restored (see `get_state` and `set_state`).
+        jax_key: The JAX key from which the random arrays are drawn with the
+            JAX backend, replaced by a new one at each draw, or None.
     """
 
     def __init__(self, seed=-1, state=None, n_threads=1):
@@ -66,13 +68,13 @@ class Random(object):
 
         self.n_threads = n_threads
         self._torch_rng = None
-        self._jax_key = None
+        self.jax_key = None
         if backend() == "jax":
             import jax
 
             # Gaussian arrays are drawn with a JAX key, split at each draw and
             # seeded independently of the numpy generators
-            self._jax_key = jax.random.key(
+            self.jax_key = jax.random.key(
                 int(np.random.SeedSequence(seed).generate_state(1)[0])
             )
             self.gvec = self.gvec_jax
@@ -120,9 +122,9 @@ class Random(object):
         as the state of torch or JAX is kept as an array."""
 
         states = [r.bit_generator.state for r in self.rng]
-        if self._jax_key is not None:
+        if self.jax_key is not None:
             # JAX arrays cannot be modified, so the key is not copied
-            return states, ("jax", self._jax_key)
+            return states, ("jax", self.jax_key)
         if self._torch_rng is not None:
             return states, (str(self._torch_rng.device), self._torch_rng.get_state())
         return states, None
@@ -157,11 +159,11 @@ class Random(object):
             value = value["numpy"]
         for r, s in zip(self.rng, value):
             r.bit_generator.state = s
-        if self._jax_key is not None:
+        if self.jax_key is not None:
             import jax
 
             if jax_state is not None:
-                self._jax_key = jax.random.wrap_key_data(
+                self.jax_key = jax.random.wrap_key_data(
                     jax.numpy.asarray(jax_state, dtype=jax.numpy.uint32)
                 )
             else:
@@ -373,7 +375,7 @@ class Random(object):
             shape: The shape of the array to be returned.
         """
 
-        self._jax_key, rvec = _jax_normal()(self._jax_key, shape)
+        self.jax_key, rvec = _jax_normal()(self.jax_key, shape)
         return rvec
 
     def gammavec_torch(self, k, shape):
@@ -389,7 +391,7 @@ class Random(object):
         """Returns an array of gamma-distributed random numbers drawn with a new
         key split from the JAX key (see `gammavec`)."""
 
-        self._jax_key, rvec = _jax_gamma()(self._jax_key, k, shape)
+        self.jax_key, rvec = _jax_gamma()(self.jax_key, k, shape)
         return rvec
 
 

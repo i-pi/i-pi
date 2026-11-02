@@ -41,11 +41,11 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     )
     natoms = beads.natoms
     nbeads = beads.nbeads
+    qs = to_numpy(beads.q) * atoms_conv
+    lab = beads.names
     for j in range(nbeads):
         filedesc.write(fmt_header % (natoms, j, a, b, c, alpha, beta, gamma))
         for i in range(natoms):
-            qs = to_numpy(beads.q) * atoms_conv
-            lab = beads.names
             filedesc.write(
                 "%8s %12.5e %12.5e %12.5e\n"
                 % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])
