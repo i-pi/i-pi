@@ -81,10 +81,13 @@ class ForceField:
             array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
         virial_checked: Whether the symmetry of the virial returned by the
             forcefield has been checked.
+        copy_inputs: Whether the requests hold copies of the positions and of
+            the cell, rather than the arrays of the system.
     """
 
     backend_arrays = False
     virial_checked = False
+    copy_inputs = True
 
     def __init__(
         self,
@@ -193,14 +196,16 @@ class ForceField:
         # the request holds the positions folded in the cell, or a copy of them
         if self.dopbc:
             pbcpos = cell.array_pbc(pbcpos)
-        else:
+        elif self.copy_inputs:
             pbcpos = xp.asarray(pbcpos, copy=True)
 
         # requests hold copies of the positions and of the cell, as numpy arrays
         # or, for forcefields that work on them directly, as backend arrays
         if self.backend_arrays:
             pos = pbcpos
-            h, ih = xp.asarray(cell.h, copy=True), xp.asarray(cell.ih, copy=True)
+            h, ih = cell.h, cell.ih
+            if self.copy_inputs:
+                h, ih = xp.asarray(h, copy=True), xp.asarray(ih, copy=True)
         else:
             pos = to_numpy(pbcpos)
             h, ih = np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))
@@ -510,7 +515,9 @@ class FFDirect(ForceField):
     in `ipi.pes`) in the i-PI process, rather than through a socket. The
     structures can be evaluated in batches (`batch_size`), and drivers that set
     `backend_arrays` receive and return the arrays of the array backend (e.g.
-    torch tensors on a GPU) rather than numpy arrays.
+    torch tensors on a GPU) rather than numpy arrays. Drivers that also set
+    `traceable` are evaluated within the steps compiled with `--jit`, other
+    drivers are called eagerly between the CUDA graphs (`jit.eager`).
     """
 
     def __init__(
@@ -575,6 +582,14 @@ class FFDirect(ForceField):
             print("Error trace: ")
             raise err
         self.backend_arrays = getattr(self.driver, "backend_arrays", False)
+        self.traceable = self.backend_arrays and getattr(
+            self.driver, "traceable", False
+        )
+        # without threads, the requests are evaluated as soon as those of all
+        # the beads have been queued, before the positions or the cell change,
+        # so drivers that take backend arrays (and do not modify them) receive
+        # the arrays of the system
+        self.copy_inputs = self.threaded or not self.backend_arrays
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -601,6 +616,15 @@ class FFDirect(ForceField):
                     self._batch_idle_cycles += 1
                 if self._batch_idle_cycles >= self._batch_idle_threshold:
                     self.launch_batch()
+
+    def _call_driver(self, cell, pos):
+        """Returns the processed results of the driver: a traceable driver is
+        part of the compiled step, the others run eagerly between the CUDA
+        graphs."""
+
+        if self.traceable:
+            return self._results(cell, pos)
+        return jit.eager(self._results, cell, pos)
 
     def _results(self, cell, pos):
         """Evaluates the driver on a structure, or on lists of structures, and
@@ -630,15 +654,14 @@ class FFDirect(ForceField):
     def launch_batch(self):
         """Dispatches the current batch for evaluation."""
 
-        info(
-            f"Launching batch evaluation, "
-            f"{len(self.request_batch)} / {self.batch_size}",
-            verbosity.high,
-        )
+        if verbosity.high:
+            info(
+                f"Launching batch evaluation, "
+                f"{len(self.request_batch)} / {self.batch_size}"
+            )
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
-        # with CUDA graphs, the driver runs eagerly between the replays (jit.eager)
-        results_batch = jit.eager(self._results, cell_batch, pos_batch)
+        results_batch = self._call_driver(cell_batch, pos_batch)
         for results, request in zip(results_batch, self.request_batch):
             self._finish(request, results)
         self.request_batch = []
@@ -646,9 +669,8 @@ class FFDirect(ForceField):
 
     def evaluate(self, request):
         if self.batch_size == 1:
-            # with CUDA graphs, the driver runs eagerly between the replays (jit.eager)
-            results = jit.eager(
-                self._results, request["cell"][0], request["pos"].reshape(-1, 3)
+            results = self._call_driver(
+                request["cell"][0], request["pos"].reshape(-1, 3)
             )
             self._finish(request, results)
         else:

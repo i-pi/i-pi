@@ -9,7 +9,9 @@ which is done eagerly between the replays of the segments. For direct
 forcefields whose driver works on the arrays of the backend, only the calls
 to the driver are eager: the preparation of the requests and the collection
 of the results are recorded, and the results of the driver are copied into
-those it returned while the step was recorded.
+those it returned while the step was recorded. The calls to drivers that are
+`traceable` (e.g. the `dummy` potential) are recorded too, so that the step
+is a single CUDA graph.
 
 Only the dynamics that are known to work in this way are replayed (see
 `unsupported`), and a `JitError` stops the simulation if a host value read by
@@ -17,8 +19,8 @@ a graph changes.
 
 With JAX, the whole step is compiled, including the requests to direct
 forcefields whose driver works on the arrays of the backend and can be traced
-by jax.jit (`jax_traceable`, e.g. the `dummy` potential). The steps that need
-forces from other forcefields run eagerly.
+by jax.jit (`traceable`). The steps that need forces from other forcefields
+run eagerly.
 """
 
 # This file is part of i-PI.
@@ -100,8 +102,8 @@ def compile_steps(simulation):
 
 def _driver_in_step(ff):
     """Whether the requests to `ff` can be made in the compiled step: CUDA
-    graphs record them and call only its driver eagerly, and jax.jit traces
-    them if the driver is `jax_traceable`."""
+    graphs record them, and call its driver eagerly unless it is `traceable`,
+    and jax.jit traces them if the driver is `traceable`."""
 
     from ipi.engine.forcefields import FFDirect
 
@@ -117,15 +119,6 @@ class GraphStep(GraphReplay):
         super().__init__(system.motion.integrator.step, system.prng.torch_generator)
         self.prng = system.prng
 
-        # the force components, which may be computed eagerly, of each bead
-        self.components = {}
-        for forces in (system.forces, system.ensemble.bias):
-            for component in getattr(forces, "mforces", []):
-                # scaled components are computed from a base component
-                component = getattr(component, "bf", component)
-                for bead in component._forces:
-                    self.components[bead] = component
-
     def __call__(self, step=None):
         if (
             self.segments is not None
@@ -135,14 +128,15 @@ class GraphStep(GraphReplay):
         super().__call__(step)
 
     def split(self, bead):
-        """Interrupts the recording to compute the forces on `bead` eagerly,
-        unless they are already computed (also the force, potential and virial
-        taken from the results of the forcefield, which are host values), or
-        only the calls to the driver of its forcefield are eager."""
+        """Interrupts the recording to compute the forces of the component of
+        `bead` eagerly, unless they are already computed (as arrays of the
+        backend, from the results of the forcefield, which may be host
+        values), or only the calls to the driver of its forcefield are eager."""
 
-        computed = (bead.ufvx_, bead.f_, bead.pot_, bead.vir_)
+        component = bead.component
+        computed = (component.f_, component.pots_, component.virs_)
         if any(dep.tainted() for dep in computed) and not _driver_in_step(bead.ff):
-            self.interrupt(partial(_compute, self.components[bead]))
+            self.interrupt(partial(_compute, component))
 
 
 def _compute(component):
@@ -167,7 +161,7 @@ class JaxStep(JaxReplay):
         be traced by jax.jit."""
 
         ff = bead.ff
-        if bead.ufvx_.tainted() and not (
-            _driver_in_step(ff) and getattr(ff.driver, "jax_traceable", False)
+        if bead.component.results_.tainted() and not (
+            _driver_in_step(ff) and ff.traceable
         ):
             self.cannot(f"the forces of the forcefield '{ff.name}' are needed")

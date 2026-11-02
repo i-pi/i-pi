@@ -15,6 +15,7 @@ and the driver (that only cares about a single bead).
 import time
 import threading
 from copy import deepcopy
+from functools import partial
 
 import numpy as np
 
@@ -118,8 +119,8 @@ class ForceBead:
     Depend objects:
        ufvx: A list of the form [pot, f, vir, extra]. These quantities are calculated
           all at one time by the driver, so are collected together. Each separate
-          object is then taken from the list. Depends on the atom positions and
-          the system box.
+          object is then taken from the list. Taken from the results of all the
+          beads of the force component.
        extra: A string containing some formatted output returned by the client. Depends on ufvx.
        pot: A float giving the potential energy of the system. Depends on ufvx.
        f: An array containing all the components of the force. Depends on ufvx.
@@ -128,11 +129,23 @@ class ForceBead:
        request: a handle to the request that has been filed by the FF object
     """
 
-    def __init__(self):
-        """Initialises ForceBead."""
+    def __init__(self, component, index):
+        """Initialises ForceBead.
 
-        # ufvx is a list [ u, f, vir, extra ]  which stores the results of the force calculation
-        self.ufvx_ = depend_value(name="ufvx", func=self.get_all)
+        Args:
+           component: The force component the bead belongs to, which collects
+              the results of the requests of all its beads.
+           index: The index of the bead in the component.
+        """
+
+        self.component = component
+        # ufvx is a list [ u, f, vir, extra ] which holds the results of the force
+        # calculation, taken from those of all the beads (`ForceComponent.results`)
+        self.ufvx_ = depend_value(
+            name="ufvx",
+            func=partial(component.bead_results, index),
+            dependencies=[component.results_],
+        )
         self._threadlock = threading.Lock()
         self.request = None
         self._getallcount = 0
@@ -157,9 +170,6 @@ class ForceBead:
         self.atoms = atoms
         self.cell = cell
         self.ff = ff
-
-        # ufvx depends on the atomic positions and on the cell
-        ddeps(self.ufvx_, [self.atoms.q_, self.cell.h_])
 
         # potential and virial are to be extracted very simply from ufvx
         self.pot_ = depend_value(
@@ -198,9 +208,9 @@ class ForceBead:
         # the forces eagerly (see ipi.engine.jit)
         jit.split(self)
 
-        # only dispatches a request if the forcefield needs it
+        # only dispatches a request if the results of the beads are out of date
         with self._threadlock:
-            is_tainted = self.ufvx_.tainted()
+            is_tainted = self.component.results_.tainted()
             if self.request is None and is_tainted:
                 self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
         return is_tainted
@@ -208,10 +218,10 @@ class ForceBead:
     def get_all(self):
         """Driver routine.
 
-        When one of the force, potential or virial are called, this sends the
-        atoms and cell to the client code, requesting that it calculates the
-        potential, forces and virial tensor. This then waits until the
-        driver is finished, and then returns the ufvx list.
+        Sends the atoms and cell to the forcefield, if they have not been sent,
+        requesting that it calculates the potential, forces and virial tensor.
+        This then waits until the driver is finished, and then returns the
+        results of the request.
 
         Returns:
            A list of the form [potential, force, virial, extra].
@@ -243,15 +253,15 @@ class ForceBead:
             request._event_done.wait(timeout=1.0)
 
         # print diagnostics about the elapsed time
-        info(
-            " @forces: FF %s evaluated in %f (queue) and %f (dispatched) sec."
-            % (
-                self.ff.name,
-                request["t_finished"] - request["t_queued"],
-                request["t_finished"] - request["t_dispatched"],
-            ),
-            verbosity.debug,
-        )
+        if verbosity.debug:
+            info(
+                " @forces: FF %s evaluated in %f (queue) and %f (dispatched) sec."
+                % (
+                    self.ff.name,
+                    request["t_finished"] - request["t_queued"],
+                    request["t_finished"] - request["t_dispatched"],
+                )
+            )
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
@@ -301,12 +311,7 @@ class ForceBead:
         if not self.ff.virial_checked:
             _check_virial_symmetry(vir, self.ff)
         # upper triangular copy, leaving the forcefield result untouched
-        if not isinstance(vir, np.ndarray):
-            return xp.triu(xp.asarray(vir))
-        vir = vir.copy()
-        vir[1, 0] = 0.0
-        vir[2, 0:2] = 0.0
-        return xp.asarray(vir)
+        return xp.triu(vir)
 
     def get_extra(self):
         """Calls get_all routine of forcefield to update the extras string.
@@ -341,12 +346,14 @@ class ForceComponent:
           the replicas of the system.
 
     Depend objects:
-       f: An array containing the components of the force. Depends on each
-          replica's ufvx list.
+       results: The results of the requests of all the replicas, as [pots, f,
+          virs, extras] with the arrays stacked, from which the ufvx list of
+          each replica is taken. Depends on the positions and on the cell.
+       f: An array containing the components of the force. Taken from results.
        pots: A list containing the potential energy for each system replica.
-          Depends on each replica's ufvx list.
+          Taken from results.
        virs: A list containing the virial tensor for each system replica.
-          Depends on each replica's ufvx list.
+          Taken from results.
        pot: The sum of the potential energy of the replicas.
        vir: The sum of the virial tensor of the replicas.
        extras: The extra quantities returned by the forcefield, as a dictionary
@@ -432,10 +439,16 @@ class ForceComponent:
 
         self.ff = fflist[self.ffield]
 
+        # the results of all the beads are collected at once, with their arrays
+        # stacked, and those of each bead are taken from them
+        self.results_ = depend_value(
+            name="results", func=self.results_gather, dependencies=[beads.q_, cell.h_]
+        )
+
         self._forces = []
         self.beads = beads
         for b in range(self.nbeads):
-            new_force = ForceBead()
+            new_force = ForceBead(self, b)
             new_force.bind(beads[b], cell, self.ff, output_maker=output_maker)
             self._forces.append(new_force)
 
@@ -444,7 +457,7 @@ class ForceComponent:
             name="f",
             value=np.zeros((self.nbeads, 3 * self.natoms)),
             func=self.f_gather,
-            dependencies=[self._forces[b].f_ for b in range(self.nbeads)],
+            dependencies=[self.results_],
         )
 
         # collection of pots, virs and extras from individual beads
@@ -452,13 +465,13 @@ class ForceComponent:
             name="pots",
             value=np.zeros(self.nbeads, float),
             func=self.pot_gather,
-            dependencies=[self._forces[b].pot_ for b in range(self.nbeads)],
+            dependencies=[self.results_],
         )
         self.virs_ = depend_array(
             name="virs",
             value=np.zeros((self.nbeads, 3, 3), float),
             func=self.vir_gather,
-            dependencies=[self._forces[b].vir_ for b in range(self.nbeads)],
+            dependencies=[self.results_],
         )
         self.extras_ = depend_value(
             name="extras",
@@ -477,6 +490,25 @@ class ForceComponent:
             value=np.zeros((3, 3)),
             dependencies=[self.virs_],
         )
+
+    def results_gather(self):
+        """Collects the results of the requests of all the beads, as [pots, f,
+        virs, extras], with the arrays stacked."""
+
+        self.queue()
+        results = [b.get_all() for b in self._forces]
+        return [
+            _stack([xp.asarray(r[0]) for r in results]),
+            _stack([xp.asarray(r[1]) for r in results]),
+            _stack([xp.asarray(r[2]) for r in results]),
+            [r[3] for r in results],
+        ]
+
+    def bead_results(self, index):
+        """Returns the results of the bead `index`, as [pot, f, vir, extra]."""
+
+        pots, f, virs, extras = self.results
+        return [pots[index], f[index], virs[index], extras[index]]
 
     def queue(self):
         """Submits all the required force calculations to the interface.
@@ -500,11 +532,7 @@ class ForceComponent:
            A list of the potential energy of each replica of the system.
         """
 
-        self.queue()
-        if self.ff.backend_arrays:
-            # backend scalars, possibly on a device
-            return _stack([xp.asarray(b.pot) for b in self._forces])
-        return xp.asarray([float(b.pot) for b in self._forces])
+        return self.results[0]
 
     def extra_gather(self):
         """Obtains the extra string information for each replica.
@@ -554,8 +582,10 @@ class ForceComponent:
            A list of the virial of each replica of the system.
         """
 
-        self.queue()
-        return _stack([b.vir for b in self._forces])
+        virs = self.results[2]
+        if not self.ff.virial_checked:
+            _check_virial_symmetry(virs[0], self.ff)
+        return xp.triu(virs)
 
     def f_gather(self):
         """Obtains the force vector for each replica.
@@ -565,8 +595,7 @@ class ForceComponent:
            array for replica i of the system.
         """
 
-        self.queue()
-        return _stack([b.f for b in self._forces])
+        return self.results[1]
 
     def get_vir(self):
         """Sums the virial of each replica.
@@ -581,7 +610,9 @@ class ForceComponent:
         return self.virs.sum(axis=0)
 
 
-dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
+dproperties(
+    ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras", "results"]
+)
 
 
 class ScaledForceComponent:
@@ -1112,17 +1143,14 @@ class Forces:
             mself = self.mforces[k]
             # access the actual data values
 
-            bead_forces = []
-            for b in range(mself.nbeads):
-                ufvx = mself._forces[b].ufvx_
-                # forces that are not up to date (e.g. those of components with
-                # zero weight, that are not computed) are not stored
-                bead_forces.append(None if ufvx.tainted() else deepcopy(ufvx._load()))
+            # forces that are not up to date (e.g. those of components with
+            # zero weight, that are not computed) are not stored
+            results = mself.results_
             force_data.append(
                 (
                     # will also need bead positions, see _load_state
                     deepcopy(mself.beads.q),
-                    bead_forces,
+                    None if results.tainted() else deepcopy(results._load()),
                 )
             )
         return force_data
@@ -1141,7 +1169,7 @@ class Forces:
 
         for k in range(len(self.mforces)):
             mself = self.mforces[k]
-            q, fb = state[k]
+            q, results = state[k]
 
             # this is VERY subtle. beads in this force component are
             # obtained as a contraction, and so are computed automatically.
@@ -1154,18 +1182,16 @@ class Forces:
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
             mself.beads.q_.set(q, manual=False)
-            if len(fb) != mself.nbeads:
+            if results is None:
+                mself.results_.taint()
+            elif len(results[3]) != mself.nbeads:
                 raise ValueError(
                     "Cannot copy forces between objects with different numbers of beads for the "
                     + str(k)
                     + "th component"
                 )
-
-            for b in range(mself.nbeads):
-                if fb[b] is None:
-                    mself._forces[b].ufvx_.taint()
-                else:
-                    mself._forces[b].ufvx_.set(fb[b], manual=False)
+            else:
+                mself.results_.set(results, manual=False)
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,
@@ -1211,7 +1237,6 @@ class Forces:
         assert len(self.mforces) == len(new_x), msg
 
         for k in range(len(self.mforces)):
-            # the results of the forcefields are stored as numpy arrays
             mv = np.array(to_numpy(new_v[k]))
             mf = np.array(to_numpy(new_forces[k]))
             mq = new_q[k]
@@ -1223,12 +1248,11 @@ class Forces:
             assert mself.nbeads == mq.shape[0], msg
 
             mself.beads.q_.set(mq, manual=False)
-            for b in range(mself.nbeads):
-                mx = {}
-                for key in mextra.keys():
-                    mx[key] = mextra[key][b]
-                ufvx = [mv[b], mf[b], vir, mx]
-                mself._forces[b].ufvx_.set(ufvx, manual=False)
+            extras = [{key: mextra[key][b] for key in mextra} for b in range(mself.nbeads)]
+            virs = np.tile(vir, (mself.nbeads, 1, 1))
+            mself.results_.set(
+                [xp.asarray(mv), xp.asarray(mf), xp.asarray(virs), extras], manual=False
+            )
 
     def queue(self):
         """Submits all the required force calculations to the forcefields."""

@@ -363,6 +363,8 @@ class Simulation:
 
         steptime = 0.0
         simtime = time.time()
+        # time of the last check for an EXIT file, made at most once per second
+        exitcheck = 0.0
 
         cstep = 0
         # tptime = 0.0
@@ -424,9 +426,13 @@ class Simulation:
                     for line in top_stats[0].traceback.format():
                         info(line)
 
-            if os.path.exists("EXIT"):
-                info(" @simulation.run: EXIT file detected! Bye bye!", verbosity.low)
-                break
+            if time.time() - exitcheck > 1.0:
+                exitcheck = time.time()
+                if os.path.exists("EXIT"):
+                    info(
+                        " @simulation.run: EXIT file detected! Bye bye!", verbosity.low
+                    )
+                    break
 
             if (self.ttime > 0) and (time.time() - simtime > self.ttime):
                 info(

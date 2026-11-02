@@ -515,11 +515,16 @@ of an MD step must follow a few rules.
 
 The potentials of direct forcefields (:ref:`ffdirect`) receive and return
 numpy arrays, unless their driver sets ``backend_arrays = True``: it then works
-on the arrays of the backend (e.g. torch tensors on a GPU), which it must not
-modify nor keep after the call, as they may be overwritten when the steps are
-replayed. A driver that also sets ``jax_traceable = True`` computes its results
-with JAX operations, so that the force evaluation is part of the step compiled
-with ``jax.jit``.
+on the arrays of the backend (e.g. torch tensors on a GPU). Without threads,
+these are the arrays of the system rather than copies, so the driver must not
+modify them (e.g. it converts their units out of place, ``pos * factor`` rather
+than ``pos *= factor``), nor keep them after the call, as they may be
+overwritten when the steps are replayed. A driver that also sets
+``traceable = True`` computes its results with operations of the backend only,
+without synchronizing with the device or changing the shapes of the arrays: its
+calls are then part of the compiled steps, traced by ``jax.jit`` with JAX and
+recorded in the CUDA graphs with torch, and the other results it returns (e.g.
+the extras) are fixed in them.
 
 
 Licence and credits
