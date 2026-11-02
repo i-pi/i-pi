@@ -597,16 +597,20 @@ def test_values_fixed_in_a_graph_are_checked(fake_cuda):
         _check(single, [2.0], None)
     held = np.zeros(2)
     host.set(held)
-    copy = held.copy()
+    data = held.tobytes()
     held[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _check(host, held, copy)
+        _check(host, held, data)
+    # a replaced host array must have the same shape and type
+    host.set(np.zeros(2, dtype=np.int64))
+    with pytest.raises(JitError, match="has changed"):
+        _check(host, held, np.zeros(2).tobytes())
 
     names = depend_array(name="names", value=np.zeros(3), host=True)
-    copy = names._data.copy()
+    data = names._data.tobytes()
     names[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _check(names, names._data, copy)
+        _check(names, names._data, data)
 
 
 def test_fixed_values_are_checked_before_the_replay(fake_cuda):

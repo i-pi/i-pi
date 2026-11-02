@@ -7,6 +7,8 @@
 import math
 import xml.etree.ElementTree as ET
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -20,16 +22,17 @@ from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import pressure_input
 
 
-class MockNormalModes:
-    """Normal-mode positions and momenta, with the masses of the modes."""
+class MockBeads:
+    """Positions and momenta of a single bead."""
 
-    def __init__(self, qnm, pnm, dynm3):
-        self.qnm_ = depend_array(name="qnm", value=qnm)
-        self.pnm_ = depend_array(name="pnm", value=pnm)
-        self.dynm3 = dynm3
+    nbeads = 1
+
+    def __init__(self, q, p):
+        self.q_ = depend_array(name="q", value=q)
+        self.p_ = depend_array(name="p", value=p)
 
 
-dproperties(MockNormalModes, ["qnm", "pnm"])
+dproperties(MockBeads, ["q", "p"])
 
 
 class FixedGaussian:
@@ -337,7 +340,8 @@ def test_scr_trotter_map_and_effective_energy():
     positions = np.asarray([[0.2, -0.3, 0.4, 0.5, -0.1, 0.7]])
     momenta = np.asarray([[0.8, -0.4, 0.2, 0.3, 0.5, -0.6]])
     masses = np.asarray([[1.0, 1.0, 1.0, 2.0, 2.0, 2.0]])
-    barostat.nm = MockNormalModes(positions.copy(), momenta.copy(), masses)
+    barostat.beads = MockBeads(positions.copy(), momenta.copy())
+    barostat.nm = SimpleNamespace(dynm3=masses)
     barostat.qdt_ = depend_value(name="qdt", value=barostat.dt / 2.0)
 
     old_volume = barostat.cell.V
@@ -362,10 +366,10 @@ def test_scr_trotter_map_and_effective_energy():
     barostat.qcstep()
 
     np.testing.assert_allclose(
-        barostat.nm.qnm[0],
+        barostat.beads.q[0],
         scale * positions[0] + drift_scale * momenta[0] * barostat.dt / masses[0],
     )
-    np.testing.assert_allclose(barostat.nm.pnm[0], inverse_scale * momenta[0])
+    np.testing.assert_allclose(barostat.beads.p[0], inverse_scale * momenta[0])
     assert barostat.cell.V == pytest.approx(old_volume * scale**3)
 
     # Bernetti and Bussi (2020), Supplementary Methods, Eqs. S7--S9:

@@ -94,7 +94,7 @@ class JaxReplay(Replay):
             self.func(*args)
         finally:
             depend.set_recorder(None)
-        return [dep for dep, value, copy in recorder.inputs.values()]
+        return [dep for dep, value, data in recorder.inputs.values()]
 
     def record(self, *args):
         """Traces and compiles the function, and calls the compiled function."""
