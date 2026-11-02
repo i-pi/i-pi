@@ -1250,8 +1250,9 @@ class InputArray(InputValue):
         if _is_device_array(value):
             flat = value.reshape(-1)
         else:
+            # a copy, of which flat is a view
             value = np.array(value, dtype=self.type)
-            flat = value.flatten()
+            flat = value.reshape(-1)
         super(InputArray, self).store(value=flat, units=units)
         self.shape.store(tuple(value.shape))
 
