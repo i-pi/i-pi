@@ -74,7 +74,9 @@ def test_replay_matches_eager_steps(
     evaluations (of a force component), and a single one with a traceable
     driver"""
 
-    assert_replay_matches_eager_steps(case_input(case, forcefield), nsegments, simulation)
+    assert_replay_matches_eager_steps(
+        case_input(case, forcefield), nsegments, simulation
+    )
 
 
 EAGER_DRIVER_CASES = [

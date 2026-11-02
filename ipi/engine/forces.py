@@ -1248,7 +1248,9 @@ class Forces:
             assert mself.nbeads == mq.shape[0], msg
 
             mself.beads.q_.set(mq, manual=False)
-            extras = [{key: mextra[key][b] for key in mextra} for b in range(mself.nbeads)]
+            extras = [
+                {key: mextra[key][b] for key in mextra} for b in range(mself.nbeads)
+            ]
             virs = np.tile(vir, (mself.nbeads, 1, 1))
             mself.results_.set(
                 [xp.asarray(mv), xp.asarray(mf), xp.asarray(virs), extras], manual=False
