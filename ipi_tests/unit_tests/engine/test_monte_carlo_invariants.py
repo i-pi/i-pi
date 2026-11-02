@@ -144,5 +144,6 @@ def test_dynamics_after_alchemical_exchange_uses_new_masses(simulation, nbeads):
             sim.run_step(step)
             econs.append(float(s.ensemble.econs))
         np.testing.assert_array_equal(s.beads.names, ["O", "H"])
-        # the drift is 5e-3 if the positions are propagated with the old masses
+        # propagating the positions with the masses before the exchange gives
+        # a drift of 5e-3
         assert np.ptp(econs) < 1e-5 * abs(econs[0])

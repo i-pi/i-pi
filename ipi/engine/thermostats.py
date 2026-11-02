@@ -1,7 +1,7 @@
 """Classes that deal with constant temperature simulations.
 
 Contains the algorithms which propagate the thermostatting steps in the constant
-temperature ensembles. Includes the new GLE thermostat, which can be used to
+temperature ensembles. Includes the GLE thermostat, which can be used to
 run PI+GLE dynamics, reducing the number of path integral beads required.
 """
 
@@ -640,7 +640,8 @@ class ThermoPILE_G(ThermoPILE_L):
 
         dpipe(self.dt_, t.dt_)
         dpipe(self.tau_, t.tau_)
-        # the centroid thermostat comes first, as for the order of the random draws
+        # the centroid thermostat comes first, and draws its random numbers
+        # before those of the other modes
         self._thermos.insert(0, t)
 
         # splits any previous ethermo between the thermostats, and finishes to bind ethermo to the sum function
