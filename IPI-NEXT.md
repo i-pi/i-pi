@@ -65,6 +65,8 @@ or because they were approved explicitly:
   per-bead ones (it depended on the SC potential), and the combined extras and the components added to a bias
   (`add_component`) on the component weights; they gave stale values when these changed (e.g. the extras of a
   bias whose weights are exchanged by replica exchange). New unit tests.
+- A forcefield that returns a non-symmetric virial gets a warning, once per forcefield: as on main, only the
+  upper triangle of the virial is used.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
@@ -375,8 +377,8 @@ bugs pass, and are no longer marked.
 
 ### GPU performance and `torch.compile`
 - The cell and barostat state stay on the device, so that whole steps can be compiled. The remaining host
-  syncs in step code are graph breaks: `float(K)` in the SVR thermostat, the scalar acceptance logic of stochastic cell rescaling, the
-  convergence loop of the constraint solver.
+  syncs in step code are graph breaks: the scalar acceptance logic of stochastic cell rescaling, the convergence
+  loop of the constraint solver.
 - Fixed per-step cost on CUDA (Quadro P400): ~0.35 ms NVE, ~0.9 ms Langevin, ~2.7 ms NPT, 4-6.5 ms PIMD,
   independent of size (many small kernel launches). NPT on CUDA is slower than torch on CPU: fusing the 3x3
   cell/barostat operations, CUDA graphs or `torch.compile` should remove most of this.
@@ -401,8 +403,9 @@ bugs pass, and are no longer marked.
   the offset only if it is not zero (in place, it modified the energy returned by the driver);
   `ForceField.queue` copies the positions once.
 - Host-side code that could move to the device if it becomes a bottleneck: properties estimators that loop over
-  atoms (they run on numpy copies), the bosonic exchange recursions (cycle energies and prefix/suffix
-  potentials), the constraint solver (batch groups of the same shape).
+  atoms and beads (on the arrays of the backend, with a host synchronization per element on GPUs), the bosonic
+  exchange recursions (cycle energies and prefix/suffix potentials), the constraint solver (batch groups of the
+  same shape).
 - Benchmarks to repeat on a compute GPU (the numbers above come from a 2 GB Quadro P400 with slow float64).
 - H100 with metatomic models through `ffdirect` (in-process steps without outputs, ms/step, i-PI overhead
   = step - model): with the torch backend the overhead is ~0.44 ms (NVE) and ~2.2 ms (4-bead PIMD), independent
@@ -514,7 +517,7 @@ bugs pass, and are no longer marked.
   1.53 -> 1.28; eager 1.48 -> 1.07 (4 beads), 2.01 -> 1.61 (8), 5.26 -> 4.94 (32); numpy 8 beads 0.47 -> 0.33 /
   20.2 -> 15.2, 32 beads 1.35 -> 1.14 / 84.5 -> 65.8. With PET-MAD-xs (water, 384 and 768 atoms, 4 and 8
   beads, 25-74 ms/step) no difference within noise.
-- Possible extensions: stochastic cell rescaling (host logic and `float` syncs), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
+- Possible extensions: stochastic cell rescaling (host logic and `float` syncs), evaluating the forces of all the components of a level at once
   (now each component is computed when its first bead is queued), cheaper staging of the inputs (host
   arrays such as `nmts` and `pdt` are compared with `np.array_equal` at each replay).
 
@@ -591,8 +594,9 @@ bugs pass, and are no longer marked.
   14.3 -> 11.4. 32-bead NPT at 100 / 1000 atoms: torch `--jit` 0.89 -> 0.78 -> 0.75 / 1.04 -> 0.91 -> 0.89,
   numpy 1.55 -> 1.30 -> 1.14 / 8.54 -> 7.75 -> 5.88.
 - One option, `--jit` (`set_backend(..., jit=True)`, `InteractiveSimulation(jit=True)`), compiles the steps
-  with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX (it was `--cuda-graphs` for
-  torch); with numpy, or torch on the CPU, it is an error.
+  with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX; with numpy, or torch on the
+  CPU, it is an error (a usage error of `i-pi`). `InteractiveSimulation` raises if `device` or `jit` is given
+  without `backend`, which it ignored.
 
 ### Multiple systems and replica exchange
 - Systems are stepped in threads by default (`threading='true'`). With in-process forcefields this only adds

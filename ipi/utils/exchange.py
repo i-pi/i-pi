@@ -104,7 +104,7 @@ class ExchangePotential:
         # prefix potentials:
         # self.prefix_V[l] = V^[1,l+1]
         self.prefix_V_ = depend_array(
-            name="V",
+            name="prefix_V",
             func=self.get_prefix_V,
             value=np.zeros(self.nbosons + 1, float),
             dependencies=[self.cycle_energies_, self.betaP_],
@@ -114,7 +114,7 @@ class ExchangePotential:
         # suffix potentials:
         # self.suffix_V[l] = V^[l+1, N]
         self.suffix_V_ = depend_value(
-            name="V",
+            name="suffix_V",
             func=self.get_suffix_V,
             value=np.zeros(self.nbosons + 1, float),
             dependencies=[self.cycle_energies_, self.betaP_],

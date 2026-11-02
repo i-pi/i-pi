@@ -536,7 +536,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
 class LBFGSOptimizer(DummyOptimizer):
     """L-BFGS Minimization: Note that the accuracy you can achieve with this method depends
-    on how many ''corrections'' you store (default is 5)."""
+    on how many ''corrections'' you store (default is 6)."""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer

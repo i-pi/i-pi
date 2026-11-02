@@ -506,6 +506,13 @@ class FFMPI(ForceField):
 
 
 class FFDirect(ForceField):
+    """Forcefield that evaluates a Python potential (`pes`, one of the drivers
+    in `ipi.pes`) in the i-PI process, rather than through a socket. The
+    structures can be evaluated in batches (`batch_size`), and drivers that set
+    `backend_arrays` receive and return the arrays of the array backend (e.g.
+    torch tensors on a GPU) rather than numpy arrays.
+    """
+
     def __init__(
         self,
         latency=1e-4,
@@ -630,7 +637,7 @@ class FFDirect(ForceField):
         )
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
-        # the driver is not part of the CUDA graphs that record a step
+        # with CUDA graphs, the driver runs eagerly between the replays (jit.eager)
         results_batch = jit.eager(self._results, cell_batch, pos_batch)
         for results, request in zip(results_batch, self.request_batch):
             self._finish(request, results)
@@ -639,7 +646,7 @@ class FFDirect(ForceField):
 
     def evaluate(self, request):
         if self.batch_size == 1:
-            # the driver is not part of the CUDA graphs that record a step
+            # with CUDA graphs, the driver runs eagerly between the replays (jit.eager)
             results = jit.eager(
                 self._results, request["cell"][0], request["pos"].reshape(-1, 3)
             )

@@ -263,21 +263,24 @@ selecting the array backend when launching i-PI:
 
     > i-pi --backend torch --device cuda input_file.xml
 
-``--backend`` is either ``numpy`` (the default) or ``torch``, and ``--device``
-is a device name understood by PyTorch, e.g. ``cpu``, ``cuda`` or ``cuda:1``
-(the numpy backend only supports ``cpu``). PyTorch is an optional dependency,
-that can be installed together with i-PI as ``pip install ipi[torch]``.
+``--backend`` is ``numpy`` (the default), ``torch`` or ``jax`` (experimental,
+see below), and ``--device`` is a device name understood by the library, e.g.
+``cpu``, ``cuda`` or ``cuda:1`` with PyTorch (the numpy backend only supports
+``cpu``). PyTorch is an optional dependency, that can be installed together
+with i-PI as ``pip install ipi[torch]``; JAX is installed separately, following
+its instructions for the device to be used.
 
 The backend is chosen at run time and is not part of the input: the same
 input and checkpoint files can be used with either backend, and the
 simulation results are the same up to rounding errors. The only exception
-is the stream of random numbers: with the torch backend, the Gaussian noise
-used by the thermostats and to draw the initial velocities is generated
-directly on the device by a PyTorch generator, so the trajectories differ
-from those obtained with numpy. The state of this generator is stored in the
-checkpoint files, so restarts are reproducible on the same device; restarting
-on a different device, or from a checkpoint written with the numpy backend,
-re-initializes it from the seed (with a warning).
+is the stream of random numbers: with the torch and jax backends, the
+Gaussian noise used by the thermostats and to draw the initial velocities is
+generated directly on the device, by a PyTorch generator or from a JAX random
+key, so the trajectories differ from those obtained with numpy. The state of
+the generator, or the key, is stored in the checkpoint files, so restarts are
+reproducible on the same type of device; restarting on another type of device,
+or from a checkpoint written with another backend, re-initializes it from the
+seed (with a warning).
 
 Forcefields exchange numpy arrays with the client codes (and with most of the
 Python potentials of :ref:`ffdirect`), so with a GPU backend the positions and
@@ -304,8 +307,13 @@ backend, such as ``metatomic``, only the potential is evaluated between the
 replays, while the requests and the collection of the results are part of the
 graphs. The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
 integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
-PILE-G thermostats and the isotropic, flexible and anisotropic barostats, while the
-other simulations run as usual. The parameters that are fixed in the recorded
+PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
+no thermostat or a Langevin one on the barostat. The other simulations run as
+usual, with a warning: other motions, thermostats or barostats, fixed atoms,
+open paths, bosons, motions of several systems (e.g. replica exchange), and
+several systems stepped in threads. ``--jit`` needs the torch backend on a
+CUDA device, or the jax backend: with numpy, or torch on the CPU, i-PI stops
+with an error. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
 barostat, cannot change while the steps are replayed: i-PI stops with an error
 if they do, or if a step cannot be recorded (the simulation can then be
