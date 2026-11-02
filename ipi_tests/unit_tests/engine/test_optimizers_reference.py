@@ -379,7 +379,7 @@ def test_instanton_optimizer_with_a_fixed_atom(simulation, optimizer, update):
 
 def test_instanton_rejects_partly_fixed_atoms(simulation):
     """Instantons fix whole atoms: three fixed coordinates of two atoms are
-    rejected (they used to fix both atoms)"""
+    rejected"""
     root = ET.fromstring(instanton_input("nichols", -np.eye(6), np.zeros((1, 6))))
     ET.SubElement(root.find("system/motion"), "fixatoms_dof").text = "[0, 1, 5]"
     with pytest.raises(SystemExit):

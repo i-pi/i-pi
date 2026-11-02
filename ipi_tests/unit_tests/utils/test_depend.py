@@ -406,9 +406,8 @@ def test_ellipsis_and_new_axes_select_views():
 
 
 def test_strided_slice_refresh_via_parent():
-    """Depend: a strided 1D view of an auto-computed array refreshes
-    through its parent, so first access through the view does not crash
-    with a shape mismatch."""
+    """Depend: a strided 1D view of a computed array is computed through
+    its parent, at the first access and after the parent is tainted."""
     natoms = 4
     counter = [0]
 

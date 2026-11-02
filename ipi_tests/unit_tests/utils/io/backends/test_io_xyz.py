@@ -158,36 +158,6 @@ def test_read_xyz(create_random_xyz_traj_to_read):
         npt.assert_array_almost_equal(tcell, expected_cell, decimal=precision)
 
 
-@pytest.mark.skipif(True, reason="iter_xyz has been removed")
-def test_iter_xyz(create_random_xyz_traj_to_read):
-    (
-        filedesc,
-        xyz,
-        atom_names,
-        natoms,
-        junk,
-        comment,
-        expected_cell,
-        precision,
-    ) = create_random_xyz_traj_to_read
-
-    _fr = 0
-    for _io in io_xyz.iter_xyz(filedesc):
-        tcomment, tcell, tqatoms, tnames, tmasses = _io
-        assert tcomment.strip() == comment
-        npt.assert_array_almost_equal(
-            tqatoms,
-            xyz[_fr * natoms * 3 : _fr * 3 * natoms + 3 * natoms],
-            decimal=precision,
-        )
-        npt.assert_array_equal(
-            np.array(atom_names[_fr * natoms : _fr * natoms + natoms], dtype="|S4"),
-            tnames,
-        )
-        npt.assert_array_almost_equal(tcell, expected_cell, decimal=precision)
-        _fr += 1
-
-
 #
 # Testing writing xyz #
 #
