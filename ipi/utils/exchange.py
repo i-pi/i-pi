@@ -60,12 +60,20 @@ class ExchangePotential:
             dependencies=[self.beads.m_, self.bosons_],
         )
 
+        # the indices of the bosons, as an array of the backend
+        self.boson_index_ = depend_array(
+            name="boson_index",
+            value=np.zeros(self.nbosons, dtype=int),
+            func=lambda: xp.asarray(self.bosons),
+            dependencies=[self.bosons_],
+        )
+
         # boson coordinates are just a slice of the beads coordinates
         self.qbosons_ = depend_array(
             name="qbosons",
             value=np.zeros((self.nbeads, self.nbosons, 3)),
-            func=lambda: self.beads.q.reshape(self.nbeads, -1, 3)[:, self.bosons],
-            dependencies=[self.beads.q_, self.bosons_],
+            func=lambda: self.beads.q.reshape(self.nbeads, -1, 3)[:, self.boson_index],
+            dependencies=[self.beads.q_, self.boson_index_],
         )
 
         # self.bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
@@ -472,6 +480,7 @@ dproperties(
     [
         "omegan2",
         "bosons",
+        "boson_index",
         "qbosons",
         "betaP",
         "boson_m",
