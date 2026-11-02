@@ -20,10 +20,21 @@ class MockForceField:
         self.name = name
 
 
+class MockComponent:
+    """Force component whose results are not used, as the tests set those of
+    its bead."""
+
+    def __init__(self):
+        self.results_ = depend_value(name="results", value=None)
+
+    def bead_results(self, index):
+        return None
+
+
 def bead_with_virial(vir, ff):
     """Returns a ForceBead holding a given forcefield result."""
 
-    bead = ForceBead()
+    bead = ForceBead(MockComponent(), 0)
     bead.ff = ff
     bead.ufvx_ = depend_value(name="ufvx", value=[0.0, np.zeros(3), vir, {}])
     return bead

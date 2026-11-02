@@ -305,7 +305,9 @@ the step that precede and follow each force evaluation, so any forcefield can
 be used. For direct forcefields whose potential works with the arrays of the
 backend, such as ``metatomic``, only the potential is evaluated between the
 replays, while the requests and the collection of the results are part of the
-graphs. The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
+graphs, and potentials that can be recorded too (``traceable``, such as
+``dummy``) are part of the graphs, so that the whole step is a single graph.
+The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
 integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
 PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
 no thermostat or a Langevin one on the barostat. The other simulations run as
@@ -330,7 +332,7 @@ much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
 the forces are computed by a direct forcefield whose potential can be
-compiled by JAX (at present only ``dummy``): the whole step, including the
+compiled by JAX (``traceable``, at present only ``dummy``): the whole step, including the
 force evaluation, is then compiled. Otherwise, the steps run as usual. As
 with torch, the parameters that are fixed in the compiled step, such as the
 time step, cannot change, and i-PI stops with an error if a step cannot be
