@@ -95,7 +95,7 @@ def test_forces_of_untraceable_drivers_are_eager(driver, simulation, monkeypatch
         xml = write_input("nvt_langevin", HARMONIC)
     else:
         monkeypatch.setattr(Zero_driver, "compute_structure", untraceable)
-        monkeypatch.setattr(Zero_driver, "jax_traceable", False, raising=False)
+        monkeypatch.setattr(Zero_driver, "traceable", False)
         xml = write_input("nvt_langevin", DUMMY)
     with simulation(xml, **JAX) as eager, simulation(xml, **JAX, jit=True) as compiled:
         for step in range(5):

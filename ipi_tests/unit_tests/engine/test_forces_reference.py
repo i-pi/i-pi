@@ -530,7 +530,8 @@ def test_clone_and_force_transfer_preserve_independent_state(force_system):
     np.testing.assert_array_equal(beads.q, q)
     np.testing.assert_array_equal(forces.f, expected)
     snapshot = forces.dump_state()
-    snapshot[0][1].pop()
+    # the extras of the last bead are missing
+    snapshot[0][1][3].pop()
     with pytest.raises(ValueError, match="numbers of beads"):
         forces.load_state(snapshot)
 
