@@ -11,6 +11,9 @@ or because they were approved explicitly:
 
 - Normal modes: `nm_rescale.b2tob1` with open paths discarded the open-path transformation (for-else bug,
   since ece43207). Affects ring-polymer contraction combined with open paths.
+- Normal modes: the dynamical mass factors (`manual`, `pa-cmd` and `wmax-cmd` frequencies) did not depend
+  on the frequencies of the free ring polymer, so they kept the values of the initial temperature when it
+  changed, e.g. with replica exchange. Also on main. New unit test.
 - Flexible/MTK barostats: when the cell velocity has an all-zero diagonal (e.g. `hfix` on xx, yy, zz) the
   Taylor branch of dt sinh(v dt)/(v dt) missed the factor dt (since 33acc29a). Now computed with
   exp(+-v dt) by `barostats.cell_propagators`, from one exponential of 6x6 block matrices (no branch, no

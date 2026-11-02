@@ -24,6 +24,29 @@ PROPAGATOR_CASES = [
 ]
 
 
+# Four-bead unit-spring matrices have these eigenvalues: a cyclic chain in
+# Fourier mode order, and a chain with free ends in ascending order.
+CLOSED_SPRING = np.sqrt([0.0, 2.0, 4.0, 2.0])
+OPEN_SPRING = np.sqrt([0.0, 2 - np.sqrt(2), 2.0, 2 + np.sqrt(2)])
+
+
+def mass_factors(style, freqs, spring):
+    """The mass factors of the modes of frequencies `spring`."""
+    factors = np.ones(4)
+    if style == "manual":
+        factors[1:] = (spring[1:] / freqs) ** 2
+    elif style == "pa-cmd":
+        factors[1:] = (spring[1:] / freqs[0]) ** 2
+    elif style == "wmax-cmd":
+        # The first free internal mode must oscillate at wtarget. Adding
+        # physical curvature wmax**2 must make all internal modes oscillate at
+        # the same frequency. Those two conditions determine each mass factor.
+        wmax, wtarget = freqs
+        common_frequency = wtarget * np.sqrt(1 + (wmax / spring[1]) ** 2)
+        factors[1:] = (spring[1:] ** 2 + wmax**2) / common_frequency**2
+    return factors
+
+
 def normal_mode_input(style, freqs, propagator):
     root = ET.fromstring(harmonic_input(nbeads=4, timestep=0.1))
     # In atomic units P*kB*T/hbar = 4*0.2.
@@ -40,39 +63,45 @@ def normal_mode_input(style, freqs, propagator):
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)
 def test_frequencies_and_mass_factors(simulation, style, freqs, propagator):
     """Spring eigenvalues and mass factors of closed and open paths."""
-    # Four-bead unit-spring matrices have these eigenvalues: a cyclic chain
-    # in Fourier mode order, and a chain with free ends in ascending order.
-    closed_spring = 0.8 * np.sqrt([0.0, 2.0, 4.0, 2.0])
-    open_spring = 0.8 * np.sqrt([0.0, 2 - np.sqrt(2), 2.0, 2 + np.sqrt(2)])
     with simulation(normal_mode_input(style, freqs, propagator)) as sim:
         nm = sim.syslist[0].nm
         assert float(nm.omegan) == pytest.approx(0.8, rel=1e-12)
         for spring, factors, expected_spring in [
-            (nm.omegak, nm.nm_factor, closed_spring),
-            (nm.o_omegak, nm.o_nm_factor, open_spring),
+            (nm.omegak, nm.nm_factor, 0.8 * CLOSED_SPRING),
+            (nm.o_omegak, nm.o_nm_factor, 0.8 * OPEN_SPRING),
         ]:
             np.testing.assert_allclose(
                 to_numpy(spring), expected_spring, rtol=1e-12, atol=1e-14
             )
-            expected_factors = np.ones(4)
-            if style == "manual":
-                expected_factors[1:] = (expected_spring[1:] / freqs) ** 2
-            elif style == "pa-cmd":
-                expected_factors[1:] = (expected_spring[1:] / freqs[0]) ** 2
-            elif style == "wmax-cmd":
-                # The first free internal mode must oscillate at wtarget.
-                # Adding physical curvature wmax**2 must make all internal
-                # modes oscillate at the same frequency. Those two conditions
-                # determine each mass factor.
-                wmax, wtarget = freqs
-                common_frequency = wtarget * np.sqrt(
-                    1 + (wmax / expected_spring[1]) ** 2
-                )
-                expected_factors[1:] = (
-                    expected_spring[1:] ** 2 + wmax**2
-                ) / common_frequency**2
             np.testing.assert_allclose(
-                to_numpy(factors), expected_factors, rtol=1e-12, atol=1e-14
+                to_numpy(factors),
+                mass_factors(style, freqs, expected_spring),
+                rtol=1e-12,
+                atol=1e-14,
+            )
+
+
+@pytest.mark.parametrize("style,freqs", MODE_SETTINGS)
+def test_mass_factors_follow_the_temperature(simulation, style, freqs):
+    """The mass factors of closed and open paths are recomputed when the
+    temperature changes the frequencies of the free ring polymer"""
+    with simulation(normal_mode_input(style, freqs, "exact")) as sim:
+        system = sim.syslist[0]
+        nm = system.nm
+        # computes the factors at the initial temperature
+        for factors in (nm.nm_factor_, nm.o_nm_factor_):
+            factors.get()
+        system.ensemble.temp = 0.4
+        assert float(nm.omegan) == pytest.approx(1.6, rel=1e-12)
+        for factors, spring in [
+            (nm.nm_factor, 1.6 * CLOSED_SPRING),
+            (nm.o_nm_factor, 1.6 * OPEN_SPRING),
+        ]:
+            np.testing.assert_allclose(
+                to_numpy(factors),
+                mass_factors(style, freqs, spring),
+                rtol=1e-12,
+                atol=1e-14,
             )
 
 
