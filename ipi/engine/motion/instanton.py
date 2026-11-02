@@ -18,6 +18,7 @@ from importlib import util
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
+from ipi.engine.motion.motion import zeros_or_check
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 from ipi.utils.array_backend import xp, xp_size, to_numpy
@@ -964,25 +965,13 @@ class DummyOptimizer:
 
         # The resize action must be done before the bind
 
-        if xp_size(geop.optarrays["old_x"]) != xp_size(self.beads.q):
-            if xp_size(geop.optarrays["old_x"]) == 0:
-                geop.optarrays["old_x"] = xp.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms)
-                )
-            else:
-                raise ValueError("Old positions size does not match system size")
-        if xp_size(geop.optarrays["old_u"]) != self.beads.nbeads:
-            if xp_size(geop.optarrays["old_u"]) == 0:
-                geop.optarrays["old_u"] = xp.zeros(self.beads.nbeads)
-            else:
-                raise ValueError("Old potential energy size does not match system size")
-        if xp_size(geop.optarrays["old_f"]) != xp_size(self.beads.q):
-            if xp_size(geop.optarrays["old_f"]) == 0:
-                geop.optarrays["old_f"] = xp.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms)
-                )
-            else:
-                raise ValueError("Old forces size does not match system size")
+        optarrays = geop.optarrays
+        shape = (self.beads.nbeads, 3 * self.beads.natoms)
+        optarrays["old_x"] = zeros_or_check(optarrays["old_x"], shape, "Old positions")
+        optarrays["old_u"] = zeros_or_check(
+            optarrays["old_u"], (self.beads.nbeads,), "Old potential energy"
+        )
+        optarrays["old_f"] = zeros_or_check(optarrays["old_f"], shape, "Old forces")
 
         # Temperature
         self.temp = geop.ensemble.temp
@@ -997,11 +986,12 @@ class DummyOptimizer:
         self.options["mode"] = geop.options["mode"]
 
         # Generic optimization
-        if geop.options["discretization"].size != self.beads.nbeads + 1:
-            if geop.options["discretization"].size == 0:
-                geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
-            else:
-                raise ValueError("Discretization coefficients do not match system size")
+        geop.options["discretization"] = zeros_or_check(
+            geop.options["discretization"],
+            (self.beads.nbeads + 1,),
+            "Discretization coefficients",
+            np.ones(self.beads.nbeads + 1, float),
+        )
 
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
@@ -1725,24 +1715,9 @@ class LBFGSOptimizer(DummyOptimizer):
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]
         self.options["ls_options"] = geop.options["ls_options"]
-        if xp_size(geop.optarrays["qlist"]) != (
-            self.options["corrections"] * xp_size(self.beads.q)
-        ):
-            if xp_size(geop.optarrays["qlist"]) == 0:
-                geop.optarrays["qlist"] = xp.zeros(
-                    (self.options["corrections"], xp_size(self.beads.q))
-                )
-            else:
-                raise ValueError("qlist size does not match system size")
-        if xp_size(geop.optarrays["glist"]) != (
-            self.options["corrections"] * xp_size(self.beads.q)
-        ):
-            if xp_size(geop.optarrays["glist"]) == 0:
-                geop.optarrays["glist"] = xp.zeros(
-                    (self.options["corrections"], xp_size(self.beads.q))
-                )
-            else:
-                raise ValueError("qlist size does not match system size")
+        shape = (self.options["corrections"], xp_size(self.beads.q))
+        for name in ("qlist", "glist"):
+            geop.optarrays[name] = zeros_or_check(geop.optarrays[name], shape, name)
 
         self.optarrays["qlist"] = geop.optarrays["qlist"]
         self.optarrays["glist"] = geop.optarrays["glist"]
@@ -1752,13 +1727,11 @@ class LBFGSOptimizer(DummyOptimizer):
 
         self.options["scale"] = geop.options["scale"]
 
-        if xp_size(geop.optarrays["d"]) != xp_size(self.beads.q):
-            if xp_size(geop.optarrays["d"]) == 0:
-                geop.optarrays["d"] = xp.zeros(
-                    (self.beads.nbeads, 3 * self.beads.natoms)
-                )
-            else:
-                raise ValueError("Initial direction size does not match system size")
+        geop.optarrays["d"] = zeros_or_check(
+            geop.optarrays["d"],
+            (self.beads.nbeads, 3 * self.beads.natoms),
+            "Initial direction",
+        )
 
         self.optarrays["d"] = geop.optarrays["d"]
 

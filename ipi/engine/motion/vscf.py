@@ -25,6 +25,7 @@ import os
 from math import factorial
 
 from ipi.engine.motion import Motion
+from ipi.engine.motion.motion import zeros_or_check
 
 # from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
@@ -205,16 +206,10 @@ class IMF(DummyCalculator):
 
         nq = xp_size(self.imm.beads.q)
 
-        # Initialises a 3*number of atoms X 3*number of atoms dynamic matrix.
-        if xp_size(self.imm.dynmatrix) != (nq * nq):
-            if xp_size(self.imm.dynmatrix) == 0:
-                self.imm.dynmatrix = xp.zeros((nq, nq))
-            else:
-                raise ValueError(
-                    "Force constant matrix size does not match system size"
-                )
-        else:
-            self.imm.dynmatrix = xp.asarray(self.imm.dynmatrix).reshape((nq, nq))
+        # the dynamical matrix, of size 3 natoms x 3 natoms
+        self.imm.dynmatrix = xp.asarray(
+            zeros_or_check(self.imm.dynmatrix, (nq, nq), "Force constant matrix")
+        ).reshape((nq, nq))
 
         # Applies ASR
         self.imm.dynmatrix = apply_asr(self.imm.asr, self.imm.dynmatrix, self.imm.beads)
