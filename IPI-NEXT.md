@@ -17,6 +17,9 @@ or because they were approved explicitly:
 - Instantons: the symmetric band given to `scipy.linalg.solve_banded` (`instools.sym_band`) left the corners
   outside the band uninitialized, so the solver failed at random when they held infinities or NaNs, which
   it checks for. Also on main. New unit test.
+- NEB and string method: a Hessian given for all the coordinates of the path (or of the climbing image) raised
+  an AttributeError, as the mask of the moving coordinates was read before the gradient mappers were bound.
+  Also on main. New unit test (NEB; the string method is disabled at input level).
 - Flexible/MTK barostats: when the cell velocity has an all-zero diagonal (e.g. `hfix` on xx, yy, zz) the
   Taylor branch of dt sinh(v dt)/(v dt) missed the factor dt (since 33acc29a). Now computed with
   exp(+-v dt) by `barostats.cell_propagators`, from one exponential of 6x6 block matrices (no branch, no

@@ -353,6 +353,16 @@ class StringMover(Motion):
             raise scipy_exception
 
         super(StringMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
+            raise ValueError(
+                "All atoms are fixed, geometry won't change. Exiting simulation."
+            )
+
+        # the mappers hold the mask of the moving coordinates, used below
+        self.stringgm.bind(self)
+        self.climbgm.bind(self)
+
         # We check dimensionality of the Hessian in the beginning
         # and reduce it if needed, because someone may want to provide
         # existing Hessian of the full system.
@@ -420,14 +430,6 @@ class StringMover(Motion):
                     self.hessian = xp.eye(n_activedim)
                 else:
                     raise ValueError("Hessian size does not match system size.")
-
-        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            raise ValueError(
-                "All atoms are fixed, geometry won't change. Exiting simulation."
-            )
-
-        self.stringgm.bind(self)
-        self.climbgm.bind(self)
 
     def init_climb(self):
         """Operations to resize hessian for the climbing bead(s),
