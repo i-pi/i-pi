@@ -112,20 +112,34 @@ class Random(object):
         if present.
         """
 
+        return self.encode_state(self.snapshot())
+
+    def snapshot(self):
+        """Returns a copy of the state of the generators, which `encode_state`
+        converts to the state returned by `get_state`. It is faster to take,
+        as the state of torch or JAX is kept as an array."""
+
         states = [r.bit_generator.state for r in self.rng]
         if self._jax_key is not None:
+            # JAX arrays cannot be modified, so the key is not copied
+            return states, ("jax", self._jax_key)
+        if self._torch_rng is not None:
+            return states, (str(self._torch_rng.device), self._torch_rng.get_state())
+        return states, None
+
+    @staticmethod
+    def encode_state(snapshot):
+        """Converts a `snapshot` of the state to lists, as returned by `get_state`."""
+
+        states, device_state = snapshot
+        if device_state is None:
+            return states
+        kind, state = device_state
+        if kind == "jax":
             import jax
 
-            return {"numpy": states, "jax": jax.random.key_data(self._jax_key).tolist()}
-        if self._torch_rng is None:
-            return states
-        return {
-            "numpy": states,
-            "torch": {
-                "device": str(self._torch_rng.device),
-                "state": self._torch_rng.get_state().tolist(),
-            },
-        }
+            return {"numpy": states, "jax": jax.random.key_data(state).tolist()}
+        return {"numpy": states, "torch": {"device": kind, "state": state.tolist()}}
 
     def set_state(self, value):
         """Interface to the standard set_state() function.

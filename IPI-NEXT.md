@@ -390,7 +390,16 @@ bugs pass, and are no longer marked.
 - The metatomic driver synchronizes the device before each batched model call (`_compute_chunk`).
 - Storing the state for soft exits walks the whole input tree: ~0.3 ms per step with numpy, ~0.5-1.4 ms
   with torch on CUDA (P400, 100-10000 atoms), more than an NVE step. Runs with cheap forcefields should use
-  `safe_stride` > 1.
+  `safe_stride` > 1. The state of the PRNG is kept as a copy and encoded as JSON only when the checkpoint is
+  written or read back (`Random.snapshot`/`encode_state`): storing it takes ~50 us with all the backends, it
+  took 120 us with numpy and 320 us with torch on the CPU (copying the state of the numpy MT19937 generator
+  takes most of the 50 us). `InputArray.store` copies the arrays once.
+- Reading the spring energy (`nm.vspring`, e.g. for the conserved quantity at every step) no longer computes
+  the spring forces, which only the propagator of bosons and the `forces_spring` output read: 37 -> 20 us
+  with 100 atoms and 8 beads, 890 -> 390 us with 1000 atoms and 32 beads, after a change of the positions.
+  The virials of the beads and of the components are summed with `sum` instead of a loop; `FFDirect` applies
+  the offset only if it is not zero (in place, it modified the energy returned by the driver);
+  `ForceField.queue` copies the positions once.
 - Host-side code that could move to the device if it becomes a bottleneck: properties estimators that loop over
   atoms (they run on numpy copies), the bosonic exchange recursions (cycle energies and prefix/suffix
   potentials), the constraint solver (batch groups of the same shape).

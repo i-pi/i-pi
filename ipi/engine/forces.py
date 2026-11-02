@@ -543,10 +543,7 @@ class ForceComponent:
             Virial sum.
         """
 
-        vir = xp.zeros((3, 3))
-        for v in self.virs:
-            vir += v
-        return vir
+        return self.virs.sum(axis=0)
 
 
 dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
@@ -635,10 +632,7 @@ class ScaledForceComponent:
             Virial sum.
         """
 
-        vir = xp.zeros((3, 3))
-        for v in self.virs:
-            vir += v
-        return vir
+        return self.virs.sum(axis=0)
 
     def queue(self):
         pass  # this should be taken care of when the force/potential/etc is accessed
@@ -1215,10 +1209,7 @@ class Forces:
             Virial sum.
         """
 
-        vir = xp.zeros((3, 3))
-        for v in self.virs:
-            vir += v
-        return vir
+        return self.virs.sum(axis=0)
 
     def pots_component(self, index, weighted=True, interpolate=True):
         """Fetches the index^th component of the total potential."""
