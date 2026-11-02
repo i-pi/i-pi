@@ -266,6 +266,28 @@ def test_damped_bfgs_neb_with_a_fixed_coordinate(simulation, climb):
             assert abs(final[s.motion.cl_indx, 0]) < 1e-4
 
 
+@pytest.mark.parametrize("stage", ["neb", "climb"])
+def test_neb_reduces_a_full_size_hessian(simulation, stage):
+    """A Hessian of all the coordinates of the path (or of one image, when
+    climbing) is reduced to the moving images and coordinates"""
+    q = np.zeros((4, 3))
+    q[:, 0] = [-1, -0.4, 0.3, 1]
+    root = ET.fromstring(saddle_input("damped_bfgs", q))
+    options = root.find("system/motion/neb_optimizer")
+    options.find("use_climb").text = str(stage == "climb")
+    ET.SubElement(options, "stage").text = stage
+    n = 3 if stage == "climb" else 12
+    ET.SubElement(options, "hessian_bfgs", shape=f"({n},{n})").text = str(
+        np.diag(np.arange(1.0, n + 1)).ravel().tolist()
+    )
+    ET.SubElement(root.find("system/motion"), "fixatoms_dof").text = "[2]"
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        hessian = to_numpy(sim.syslist[0].motion.hessian)
+    # the end points and the fixed coordinate are removed
+    expected = [1.0, 2.0] if stage == "climb" else [4.0, 5.0, 7.0, 8.0]
+    np.testing.assert_array_equal(hessian, np.diag(expected))
+
+
 def instanton_input(optimizer, h, q, update="powell", fixatoms=None):
     """Instanton optimization on U = q h q / 2 from the path q, with all atoms of
     unit mass."""
