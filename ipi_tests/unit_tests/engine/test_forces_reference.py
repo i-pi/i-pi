@@ -580,10 +580,10 @@ def test_suzuki_chin_rejects_unsupported_bead_discretization(force_system, inval
         ],
         nbeads=3 if invalid == "odd-beads" else 4,
     )
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="even number|centered"):
         forces.forcesvirs_4th_order(0)
     if invalid == "odd-beads":
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError, match="even number"):
             forces.get_potssc()
 
 
