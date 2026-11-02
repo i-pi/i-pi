@@ -107,7 +107,9 @@ def sym_band(A):
     u = len(A) - 1
     lu = u
     M = A.shape[1]
-    newA = np.empty((u + lu + 1, M))
+    # the corners outside the band are not used, but must be finite for the
+    # checks of the scipy solvers
+    newA = np.zeros((u + lu + 1, M))
     newA[: u + 1] = A
     for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
