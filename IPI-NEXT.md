@@ -333,7 +333,9 @@ or because they were approved explicitly:
   distances between the beads at every evaluation, and debugging information at each step: these are now
   messages at debug verbosity. The NEB, string and instanton modules no longer change the global print
   options of numpy when they are imported. The Al6xxx KMC motion prints its messages through i-PI, with the
-  details of each event at debug verbosity and a summary of each step at high verbosity.
+  details of each event at debug verbosity and a summary of each step at high verbosity. Suzuki-Chin with
+  an odd number of beads, or with a forward difference and ring-polymer contraction, raises an error
+  instead of exiting.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
