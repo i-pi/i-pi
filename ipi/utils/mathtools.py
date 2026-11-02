@@ -64,9 +64,9 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
        M: Matrix to be exponentiated, or a stack of matrices with shape
           (..., n, n), which are exponentiated together.
        ntaylor: Optional integer giving the number of terms in the Taylor series.
-          Defaults to 15.
+          Defaults to 20.
        nsquare: Optional integer giving how many times the original matrix will
-          be halved. Defaults to 15.
+          be halved. Defaults to 10.
 
     Returns:
        The matrix exponential of M.
