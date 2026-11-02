@@ -150,20 +150,17 @@ class AlKMC(Motion):
         nneigh = np.zeros(self.nsites, int)
         # could be done in a more analytic way but whatever, I'm too lazy
         a02 = 1.01 * 0.5 * self.a0**2  # perhaps 1.01 it is not enough, must check!
+        # minimum-image displacements, computed on the host
+        h, ih = to_numpy(self.dcell.h), to_numpy(self.dcell.ih)
         for i in range(self.nsites):  # determines the connectivity of the lattice
-            rij = self.sites.copy().flatten()
-            for j in range(self.nsites):
-                rij[3 * j : 3 * j + 3] -= self.sites[i]
-            rij = xp.asarray(rij)
-            rij = self.dcell.array_pbc(rij)
-            rij = to_numpy(rij)
-            rij = rij.reshape(self.nsites, 3)
-            for j in range(i):
-                if np.dot(rij[j], rij[j]) < a02:  # found nearest neighbor
-                    self.neigh[i, nneigh[i]] = j
-                    self.neigh[j, nneigh[j]] = i
-                    nneigh[i] += 1
-                    nneigh[j] += 1
+            s = (self.sites[:i] - self.sites[i]) @ ih.T
+            rij = (s - np.round(s)) @ h.T
+            # the nearest neighbors among the previous sites
+            for j in np.flatnonzero((rij * rij).sum(axis=1) < a02):
+                self.neigh[i, nneigh[i]] = j
+                self.neigh[j, nneigh[j]] = i
+                nneigh[i] += 1
+                nneigh[j] += 1
 
         self.idx = idx
 

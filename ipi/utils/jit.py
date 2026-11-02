@@ -145,7 +145,7 @@ class Replay:
         func: The function.
         compiled: The compiled function, or None before the compilation.
         fixed: The inputs of the compiled function that are fixed in it, as
-            (depend object, value, copy of a host array).
+            (depend object, value, bytes of a host array).
     """
 
     # how the function is compiled, for the error messages
@@ -161,8 +161,8 @@ class Replay:
     def __call__(self, *args):
         if self.compiled is not None:
             # the values fixed in the compiled function are checked before it runs
-            for dep, value, copy in self.fixed:
-                _check(dep, value, copy)
+            for dep, value, data in self.fixed:
+                _check(dep, value, data)
             self.replay()
         elif self.error is not None:
             raise JitError("The compilation of the step has failed") from self.error
@@ -194,21 +194,29 @@ class Replay:
 
 def _input(dep, value):
     """An input of a compiled function, as recorded: the depend object, the
-    value it holds, and a copy of the value if it is a host array."""
+    value it holds, and the bytes of the value if it is a host array (which
+    are faster to compare than the arrays)."""
 
-    return dep, value, value.copy() if isinstance(value, np.ndarray) else None
+    return dep, value, value.tobytes() if isinstance(value, np.ndarray) else None
 
 
-def _check(dep, recorded, copy):
+def _check(dep, recorded, data):
     """Checks that the value of the input `dep`, which is fixed in a compiled
-    function that read the object `recorded` (with a copy `copy` of its host
-    array), is unchanged."""
+    function that read the object `recorded` (with the bytes `data` of its
+    host array), is unchanged."""
 
     current = dep.get()
     if isinstance(dep, depend.depend_array) and dep._data is not recorded:
         raise _changed(dep, "has been replaced")
-    if copy is not None:
-        if not np.array_equal(current, copy):
+    if data is not None:
+        # a host array that has been replaced must have the same shape and type
+        if current is not recorded and not (
+            isinstance(current, np.ndarray)
+            and current.shape == recorded.shape
+            and current.dtype == recorded.dtype
+        ):
+            raise _changed(dep, "has changed")
+        if current.tobytes() != data:
             raise _changed(dep, "has changed")
     elif current is not recorded and not _equal(current, recorded):
         raise _changed(dep, "has changed")

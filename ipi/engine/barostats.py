@@ -262,6 +262,16 @@ class Barostat:
 
         return stress / self.cell.V
 
+    def centroid_arrays(self):
+        """Returns the depend arrays whose first rows hold the centroid
+        positions and momenta: those of the beads if there is only one, which
+        avoids the transformations to normal modes and back, and those of the
+        normal modes otherwise."""
+
+        if self.beads.nbeads == 1:
+            return self.beads.q_, self.beads.p_
+        return self.nm.qnm_, self.nm.pnm_
+
     def pstep(self, level=0):
         """Dummy momenta propagator step."""
 
@@ -470,23 +480,24 @@ class BaroSCR(Barostat):
         """
 
         masses = self.nm.dynm3[0]
+        q_, p_ = self.centroid_arrays()
 
         if self._scr_state is None:
             scale = self.prepare()
             half_scale = np.sqrt(scale)
             self._scr_state["half_scale"] = half_scale
 
-            self.nm.qnm_[0, :] += self.nm.pnm[0] * self.qdt / masses
-            self.nm.qnm_[0, :] *= half_scale
-            self.nm.pnm_[0, :] *= 1.0 / half_scale
+            q_[0, :] += p_.get()[0] * self.qdt / masses
+            q_[0, :] *= half_scale
+            p_[0, :] *= 1.0 / half_scale
             self.cell.h_ *= half_scale
         else:
             half_scale = self._scr_state["half_scale"]
 
-            self.nm.qnm_[0, :] *= half_scale
-            self.nm.pnm_[0, :] *= 1.0 / half_scale
+            q_[0, :] *= half_scale
+            p_[0, :] *= 1.0 / half_scale
             self.cell.h_ *= half_scale
-            self.nm.qnm_[0, :] += self.nm.pnm[0] * self.qdt / masses
+            q_[0, :] += p_.get()[0] * self.qdt / masses
             self.finalize()
 
     def finalize(self):
@@ -700,10 +711,10 @@ class BaroBZP(Barostat):
 
         m = self.beads.m3[0]
 
-        self.nm.qnm_[0, :] = (self.nm.qnm[0, :] * expq) + (
-            (expq - expp) / (2.0 * v)
-        ) * (self.nm.pnm[0, :] / m)
-        self.nm.pnm_[0, :] = expp * self.nm.pnm[0, :]
+        q_, p_ = self.centroid_arrays()
+        q, p = q_.get()[0], p_.get()[0]
+        q_[0, :] = (q * expq) + ((expq - expp) / (2.0 * v)) * (p / m)
+        p_[0, :] = expp * p
 
         self.cell.h_ *= expq
 
@@ -987,30 +998,33 @@ class BaroFlexibleCell(Barostat):
                 xp.triu(dt2 * (fcTonm @ pc) + dt3 * (fcTonm @ fc)) * self.beads.nbeads
             )
 
-        # now apply the mask (and accumulate the associated change in conserved quantity)
-        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
-        self.thermostat.ethermo += self.kin
-        self.p_ *= self.hmask
-        if self.vol_constraint is True:
-            # a traceless momentum tensor will not change the volume, see
-            # Rogge, S. M. J. et al. Theory Comput. 11, 5583–5597 (2015) DOI: 10.1021/acs.jctc.5b00748
-            self.p_ -= xp.eye(3) * xp.linalg.trace(self.p) / 3.0
-        self.thermostat.ethermo -= self.kin
+        # applies the mask of the fixed cell elements and the volume constraint,
+        # and accumulates the change of kinetic energy in the energy of the
+        # thermostat, so that the conserved quantity is unchanged
+        if len(self.hfix) > 0 or self.vol_constraint is True:
+            self.thermostat.ethermo += self.kin
+            self.p_ *= self.hmask
+            if self.vol_constraint is True:
+                # a traceless momentum tensor will not change the volume, see
+                # Rogge, S. M. J. et al. Theory Comput. 11, 5583–5597 (2015) DOI: 10.1021/acs.jctc.5b00748
+                self.p_ -= xp.eye(3) * xp.linalg.trace(self.p) / 3.0
+            self.thermostat.ethermo -= self.kin
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
         expq, expp, sinh = cell_propagators(self.p / self.m[0], self.qdt)
 
-        q = self.nm.qnm[0].reshape(self.beads.natoms, 3)
-        p = self.nm.pnm[0]
+        q_, p_ = self.centroid_arrays()
+        q = q_.get()[0].reshape(self.beads.natoms, 3)
+        p = p_.get()[0]
 
         q = q @ expq.T
         q += (p / self.beads.m3[0]).reshape(self.beads.natoms, 3) @ sinh.T
         p = p.reshape(self.beads.natoms, 3) @ expp.T
 
-        self.nm.qnm_[0] = q.reshape(self.beads.natoms * 3)
-        self.nm.pnm_[0] = p.reshape(self.beads.natoms * 3)
+        q_[0] = q.reshape(self.beads.natoms * 3)
+        p_[0] = p.reshape(self.beads.natoms * 3)
 
         self.cell.h = expq @ self.cell.h
 

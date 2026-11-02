@@ -127,7 +127,6 @@ class DynMatrixMover(Motion):
             wstr = ""
 
         # Get active arrays:
-        activedof = 3 * self.beads.natoms - fixatoms_dof.size
         if fixatoms_dof.size > 0:
             active_atoms_mask = np.delete(
                 np.arange(3 * self.beads.natoms), fixatoms_dof
@@ -140,31 +139,27 @@ class DynMatrixMover(Motion):
         dmatx = dmatx[active_atoms_mask][:, active_atoms_mask]
         ism = self.ism[active_atoms_mask]
 
-        # prints out the dynamical matrix
-        outfile = self.output_maker.get_output(self.prefix + ".dynmat", "w")
-        outfile.write("# Dynamical matrix (atomic units)" + wstr + "\n")
-        for i in range(activedof):
-            outfile.write(" ".join(map(str, to_numpy(dmatx[i]))) + "\n")
-        outfile.close_stream()
+        def write_matrix(suffix, header, matrix):
+            """Writes a header and the rows of a matrix to an output file."""
+            outfile = self.output_maker.get_output(self.prefix + suffix, "w")
+            outfile.write(header + "\n")
+            for row in to_numpy(matrix):
+                outfile.write(" ".join(map(str, row)) + "\n")
+            outfile.close_stream()
 
-        # prints out the Hessian for the activedof
-        outfile = self.output_maker.get_output(self.prefix + ".hess", "w")
-        outfile.write("# Hessian matrix (atomic units)" + wstr + "\n")
-        for i in range(activedof):
-            outfile.write(
-                " ".join(map(str, to_numpy(dmatx[i] / (ism[i] * ism)))) + "\n"
-            )
-        outfile.close_stream()
-
-        # prints out the full Hessian (with all zeros)
-        outfile = self.output_maker.get_output(self.prefix + "_full.hess", "w")
-        outfile.write("# Hessian matrix (atomic units)" + wstr + "\n")
-        for i in range(3 * self.beads.natoms):
-            outfile.write(
-                " ".join(map(str, to_numpy(dmatx_full[i] / (ism_full[i] * ism_full))))
-                + "\n"
-            )
-        outfile.close_stream()
+        # the dynamical matrix, the Hessian for the active dofs, and the full
+        # Hessian (with all zeros)
+        write_matrix(".dynmat", "# Dynamical matrix (atomic units)" + wstr, dmatx)
+        write_matrix(
+            ".hess",
+            "# Hessian matrix (atomic units)" + wstr,
+            dmatx / (ism[:, None] * ism),
+        )
+        write_matrix(
+            "_full.hess",
+            "# Hessian matrix (atomic units)" + wstr,
+            dmatx_full / (ism_full[:, None] * ism_full),
+        )
 
         eigsys = xp.linalg.eigh(dmatx)
 
@@ -174,27 +169,18 @@ class DynMatrixMover(Motion):
         outfile.write("\n".join(map(str, to_numpy(eigsys[0]))))
         outfile.close_stream()
 
-        # prints eigenvectors
-        outfile = self.output_maker.get_output(self.prefix + ".eigvec", "w")
-        outfile.write(
-            "# Eigenvector  matrix from the dynamical matrix (normalized)" + "\n"
+        write_matrix(
+            ".eigvec",
+            "# Eigenvector  matrix from the dynamical matrix (normalized)",
+            eigsys[1],
         )
-        for i in range(activedof):
-            outfile.write(" ".join(map(str, to_numpy(eigsys[1][i]))) + "\n")
-        outfile.close_stream()
 
-        # prints eigenmodes
-        eigmode = 1.0 * eigsys[1]
-        for i in range(activedof):
-            eigmode[i] *= ism[i]
-        for i in range(activedof):
-            eigmode[:, i] /= xp.sqrt(eigmode[:, i] @ eigmode[:, i])
-        outfile = self.output_maker.get_output(self.prefix + ".mode", "w")
-
-        outfile.write("# Phonon modes (cartesian space and normalized)" + "\n")
-        for i in range(activedof):
-            outfile.write(" ".join(map(str, to_numpy(eigmode[i]))) + "\n")
-        outfile.close_stream()
+        # the eigenmodes in cartesian coordinates, normalized
+        eigmode = eigsys[1] * ism[:, None]
+        eigmode = eigmode / xp.sqrt((eigmode * eigmode).sum(axis=0))
+        write_matrix(
+            ".mode", "# Phonon modes (cartesian space and normalized)", eigmode
+        )
 
 
 class DummyPhononCalculator:
