@@ -383,10 +383,8 @@ def test_mts_barostat_stress_uses_complete_cell_derivatives(virial_case, sc, bia
             + np.sum(weights[:, None, None] * virial, axis=0)
             + (bias_virial if level == 0 else 0)
         ) / np.linalg.det(r.h)
-        actual_k = barostat.kstress_mts_sc(level) if sc else barostat.kstress_mts(level)
-        actual_s = barostat.stress_mts_sc(level) if sc else barostat.stress_mts(level)
-        close(actual_k, kst)
-        close(actual_s, expected)
+        close(barostat.kstress_mts(level), kst)
+        close(barostat.stress_mts(level), expected)
 
 
 @pytest.mark.parametrize("virial_case", [(6, True)], indirect=True)
