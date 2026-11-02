@@ -332,7 +332,8 @@ or because they were approved explicitly:
   (`kstress_sc`, `stress_sc`) are members of `BaroSCBZP` only. NEB and the string method printed the
   distances between the beads at every evaluation, and debugging information at each step: these are now
   messages at debug verbosity. The NEB, string and instanton modules no longer change the global print
-  options of numpy when they are imported.
+  options of numpy when they are imported. The Al6xxx KMC motion prints its messages through i-PI, with the
+  details of each event at debug verbosity and a summary of each step at high verbosity.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
@@ -553,7 +554,7 @@ bugs pass, and are no longer marked.
   jit of whole steps, which would need the depend state passed in and out of the traced function (as the
   CUDA-graph replay does).
 - JAX, jit of the MD steps (`--jit` with JAX):
-  `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
+  `ipi.utils.jaxjit.JaxReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
   restoration of the taint status, the `split`/`eager` markers, `jit.Replay`, `unsupported` and the warmup
   steps). The eager steps from the second are observed to find the depend objects read before being
   written, until two steps read the same ones (the second and the third, unless the state is written

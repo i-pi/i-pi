@@ -31,10 +31,10 @@ JIT = [
 def compiled(sim):
     """Whether the steps of the first system are compiled."""
 
-    from ipi.engine.jit import GraphStep, JitStep
+    from ipi.engine.jit import GraphStep, JaxStep
 
     step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return isinstance(step, (GraphStep, JitStep))
+    return isinstance(step, (GraphStep, JaxStep))
 
 
 @pytest.mark.parametrize(
@@ -85,7 +85,7 @@ def test_unsupported_steps(case, change, reason, simulation):
     """The steps of the supported dynamics are compiled, and the reason why the
     others are not is given"""
 
-    from ipi.engine.jit import replay_steps, unsupported
+    from ipi.engine.jit import compile_steps, unsupported
 
     xml = write_input(case, NO_FORCES)
     if change is not None:
@@ -95,7 +95,7 @@ def test_unsupported_steps(case, change, reason, simulation):
             assert unsupported(sim, sim.syslist[0]) is None
         else:
             assert reason in unsupported(sim, sim.syslist[0])
-            replay_steps(sim)
+            compile_steps(sim)
             assert not compiled(sim)
 
 
