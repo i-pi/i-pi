@@ -1211,8 +1211,9 @@ class Forces:
         assert len(self.mforces) == len(new_x), msg
 
         for k in range(len(self.mforces)):
-            mv = new_v[k]
-            mf = new_forces[k]
+            # the results of the forcefields are stored as numpy arrays
+            mv = np.array(to_numpy(new_v[k]))
+            mf = np.array(to_numpy(new_forces[k]))
             mq = new_q[k]
             mextra = new_x[k]
             mself = self.mforces[k]

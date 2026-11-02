@@ -20,7 +20,6 @@ from ipi.engine.motion.dynamics import DummyIntegrator
 
 from ipi.utils.depend import *
 from ipi.utils.constrtools import *
-from ipi.utils.constrtools import spla  # scipy.linalg, or None without scipy
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 
@@ -275,13 +274,7 @@ class ConstraintSolver(ConstraintSolverBase):
             dg = constr.Dg
             ic = constr.i3_unique
             b = dg @ (p[ic] / constr.m3)
-
-            if use_cho_factor():
-                x = spla.cho_solve(constr.GramChol, b)
-            else:
-                x = xp.linalg.solve(constr.Gram, b)
-
-            p[ic] -= dg.T @ x
+            p[ic] -= dg.T @ constr.solve_gram(b)
         self.beads.p_[0] = p
 
     def proj_manifold(self):
@@ -297,12 +290,6 @@ class ConstraintSolver(ConstraintSolverBase):
 
         for constr in self.constraint_list:
             dg = constr.Dg
-
-            if use_cho_factor():
-                chol_gram = constr.GramChol
-            else:
-                gram = constr.Gram
-
             ic = constr.i3_unique
             constr.q = q[ic]
 
@@ -315,11 +302,8 @@ class ConstraintSolver(ConstraintSolverBase):
                 ):
                     break
 
-                if use_cho_factor():
-                    dlambda = spla.cho_solve(chol_gram, g)
-                else:
-                    dlambda = xp.linalg.solve(gram, g)
-                delta = dg.T @ dlambda
+                # the Gram matrix is that of the previous positions (qprev)
+                delta = dg.T @ constr.solve_gram(g)
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic]  # updates the constraint to recompute g
 
