@@ -108,7 +108,7 @@ def read_ase(filedesc):
         _ase_open_files.pop(filedesc)
         raise EOFError()
 
-    # Issue #477 fix
+    # ASE reads custom masses only from a 'masses' array
     if "mass" in atoms.arrays and "masses" not in atoms.arrays:
         raise RuntimeError(
             "ASE reader found 'mass' array but will ignore it. "

@@ -81,7 +81,7 @@ def test_damped_bfgs_step_is_measured_on_atoms():
 
 def test_damped_bfgs_at_a_stationary_point():
     """At a zero gradient, Damped_BFGS stays at the same point and leaves the
-    Hessian unchanged (instead of making it NaN)"""
+    Hessian unchanged"""
 
     positions = []
 

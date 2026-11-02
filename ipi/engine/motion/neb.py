@@ -118,7 +118,7 @@ class NEBGradientMapper(object):
             d2 = bq[ii + 1] - bq[ii]  # tau plus
 
             if self.tangent == "plain":
-                # Old implementation of NEB tangents
+                # normalized sum of the unit vectors along the two segments
                 btau[ii] = d1 / norm(d1) + d2 / norm(d2)
                 btau[ii] /= norm(btau[ii])
 
@@ -188,13 +188,6 @@ class NEBGradientMapper(object):
 
         # Adds the spring forces
         for ii in range(1, nimg - 1):
-            # Old implementation (simple tangents, single kappa)
-            # rbf[ii] += (
-            #     kappa[ii]
-            #     * btau[ii]
-            #     * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
-            # )
-
             # Improved tangent implementation
             # Eq. 12 in J. Chem. Phys. 113, 9978 (2000):
             rbf[ii - 1] += (
