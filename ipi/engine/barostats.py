@@ -201,7 +201,7 @@ class Barostat:
 
         self.kin_ = depend_value(name="kin", value=0.0)
 
-        self.cell_jacobian_ = depend_value(name="kin", value=0.0)
+        self.cell_jacobian_ = depend_value(name="cell_jacobian", value=0.0)
 
         if fixdof is None:
             self.mdof = float(self.beads.natoms) * 3.0

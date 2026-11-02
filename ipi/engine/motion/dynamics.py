@@ -35,10 +35,10 @@ class Dynamics(Motion):
         prng: A random number generator object.
         nm: An object which does the normal modes transformation.
 
+    The conserved quantity is that of the ensemble (`ensemble.econs`), to which
+    the energies of the thermostat and of the barostat are added.
+
     Depend objects:
-        econs: The conserved energy quantity appropriate to the given
-            ensemble. Depends on the various energy terms which make it up,
-            which are different depending on the ensemble.he
         temp: The system temperature.
         dt: The timestep for the algorithms.
         ntemp: The simulation temperature. Will be nbeads times higher than
@@ -409,16 +409,10 @@ class DummyIntegrator:
         pass
 
     def pconstraints(self):
-        """This removes the centre of mass contribution to the kinetic energy.
-
-        Calculates the centre of mass momenta, then removes the mass weighted
-        contribution from each atom. If the ensemble defines a thermostat, then
-        the contribution to the conserved quantity due to this subtraction is
-        added to the thermostat heat energy, as it is assumed that the centre of
-        mass motion is due to the thermostat.
-
-        If there is a choice of thermostats, the thermostat
-        connected to the centroid is chosen.
+        """Removes the momentum of the centre of mass (if fixcom), and the
+        momenta of the fixed degrees of freedom. Their kinetic energy is added to
+        the energy exchanged with the ensemble (`eens`), so that the conserved
+        quantity is unchanged.
         """
 
         beads = self.beads
@@ -473,18 +467,10 @@ dproperties(
 class NVEIntegrator(DummyIntegrator):
     """Integrator object for constant energy simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant energy ensemble. Note that a temperature of some kind must be
-    defined so that the spring potential can be calculated.
-
-    Attributes:
-        ptime: The time taken in updating the velocities.
-        qtime: The time taken in updating the positions.
-        ttime: The time taken in applying the thermostat steps.
-
-    Depend objects:
-        econs: Conserved energy quantity. Depends on the bead kinetic and
-            potential energy, and the spring potential energy.
+    Propagates the momenta with the forces (`pstep`, with multiple time
+    stepping), the centroid positions (`qcstep`), and the free ring polymer
+    in normal modes, in the order given by the splitting. The integrators of
+    the other ensembles add the steps of their thermostat and barostat.
     """
 
     def pstep(self, level=0):
@@ -728,10 +714,6 @@ class NSTIntegrator(NPTIntegrator):
     barostat: A barostat object to keep the pressure constant.
 
     Depend objects:
-    econs: Conserved energy quantity. Depends on the bead and cell kinetic
-    and potential energy, the spring potential energy, the heat
-    transferred to the beads and cell thermostat, the temperature and
-    the cell volume.
     pext: External pressure.
     """
 

@@ -4,7 +4,8 @@ Contributing
 i-PI is an open source project, and everyone is welcome to contribute
 with bug fixes, documentation, examples, new features, regression tests, etc.
 
-Your contribution should be based on the main branch. We kindly ask you to first fork the project,
+Your contribution should be based on, and target, the `next` branch, where i-PI 4.0 is developed.
+We kindly ask you to first fork the project,
 make your changes, make sure you comply with all items in our checklist below, and finally create a pull request (PR).
 
 Checklist to create a pull request:
@@ -44,7 +45,8 @@ directory tree. Please resolve any warnings or errors that may appear. Your
 commit will not pass the CI tests otherwise.
 
 Other useful environments: `tox -e unit`, `tox -e regtests`, `tox -e examples`,
-`tox -e docs`. Run `tox list` to see them all.
+`tox -e docs`, and `tox -e torch` (the unit and regression tests with the torch
+backend). Run `tox list` to see them all.
 
 For a more flexible setup, we also provide the script `i-pi-style`, for
 which instructions can be obtained by typing
@@ -52,6 +54,15 @@ which instructions can be obtained by typing
 ```
 $ i-pi-style -h
 ```
+
+Array backends and compiled steps
+---------------------------------
+
+i-PI can store its arrays with numpy, PyTorch or JAX, and compile the MD steps
+(`--jit`). Code that handles the arrays of a simulation must work with all the
+backends, and the code of an MD step with its compiled version: the rules are
+given in the sections "Array backends" and "Compiled steps" of the developer
+documentation (`docs/src/introduction.rst`).
 
 Making a release
 ----------------

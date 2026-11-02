@@ -7,10 +7,12 @@ from ipi.utils.messages import warning, verbosity
 
 
 class Dummy_driver(object):
-    """Base class providing the structure of a PES for the python driver.
+    """Base class of the potentials of the Python driver and of the direct
+    forcefields. A potential implements `compute_structure(cell, pos)`, which
+    returns the energy, the forces, the virial and a string or dictionary of
+    extra quantities for one structure, and possibly `check_parameters`;
+    `compute` evaluates one structure, or lists of them.
 
-    Command line:
-        i-pi-py_driver -m dummy [...]
     Init arguments:
         :param verbose: bool to determine whether the PES should output verbose info.
     """

@@ -37,8 +37,8 @@ __all__ = ["replay_steps"]
 
 
 def unsupported(simulation, system):
-    """Returns why the steps of `system` cannot be replayed as CUDA graphs, or
-    None if they can."""
+    """Returns why the steps of `system` cannot be compiled (replayed as CUDA
+    graphs, or compiled with jax.jit), or None if they can."""
 
     from ipi.engine.barostats import Barostat, BaroBZP, BaroMTK, BaroRGB
     from ipi.engine.motion.dynamics import (

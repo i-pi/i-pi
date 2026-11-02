@@ -95,8 +95,8 @@ class Thermostat:
               from.
            atoms: An optional atoms object to take the mass and momentum vectors
               from.
-           pm: An optional tuple containing a single momentum value and its
-              conjugate mass.
+           pm: An optional pair of depend arrays holding the momenta and the
+              masses to be thermostatted (e.g. those of a barostat).
            prng: An optional pseudo random number generator object. Defaults to
               Random().
            fixdof: An optional integer which can specify the number of constraints
@@ -762,8 +762,8 @@ class ThermoGLE(Thermostat):
               from.
            atoms: An optional atoms object to take the mass and momentum vectors
               from.
-           pm: An optional tuple containing a single momentum value and its
-              conjugate mass.
+           pm: An optional pair of depend arrays holding the momenta and the
+              masses to be thermostatted (e.g. those of a barostat).
            prng: An optional pseudo random number generator object. Defaults to
               Random().
            fixdof: An optional integer which can specify the number of constraints
