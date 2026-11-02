@@ -688,7 +688,7 @@ class NPTIntegrator(NVTIntegrator):
         self._stresscheck = False
 
         self.barostat.pstep(level)
-        super(NPTIntegrator, self).pstep(level)
+        super().pstep(level)
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
@@ -771,6 +771,12 @@ class SCIntegrator(NVTIntegrator):
             * self.pdt[level]
         )
 
+    def pscstep(self):
+        """Propagates the momenta for half a time step with the high-order
+        part of the Suzuki-Chin force."""
+
+        self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+
     def step(self, step=None):
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
         # if nmts is not specified, this is just the same as doing the full SC integration
@@ -781,90 +787,36 @@ class SCIntegrator(NVTIntegrator):
             self.pconstraints()
 
             # forces are integerated for dt with MTS.
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+            self.pscstep()
             self.mtsprop(0)
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+            self.pscstep()
 
             # thermostat is applied for dt/2
             self.tstep()
             self.pconstraints()
 
         elif self.splitting == "baoab":
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+            self.pscstep()
             self.mtsprop_ba(0)
             # thermostat is applied for dt
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+            self.pscstep()
 
 
-class SCNPTIntegrator(SCIntegrator):
+class SCNPTIntegrator(NPTIntegrator, SCIntegrator):
     """Integrator object for constant pressure Suzuki-Chin simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant pressure ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant, and a barostat to keep the
-    pressure constant.
+    Combines the barostat steps of `NPTIntegrator` with the Suzuki-Chin
+    momentum steps of `SCIntegrator`: the momentum step of the barostat
+    precedes that of the beads, and the high-order part of the Suzuki-Chin
+    stress also propagates the barostat.
     """
 
-    # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
-    def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
+    def pscstep(self):
+        """Propagates the momenta of the barostat and of the beads for half a
+        time step with the high-order part of the Suzuki-Chin forces."""
 
-        if self._stresscheck and not bool(xp.any(self.forces.vir != 0)):
-            warning(
-                "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
-                verbosity.low,
-            )
-            if verbosity.medium:
-                raise ValueError(
-                    "Zero stress terminates simulation for medium verbosity and above."
-                )
-
-        self._stresscheck = False
-
-        self.barostat.pstep(level)
-        super(SCNPTIntegrator, self).pstep(level)
-
-    def qcstep(self):
-        """Velocity Verlet centroid position propagator."""
-
-        self.barostat.qcstep()
-
-    def tstep(self):
-        """Velocity Verlet thermostat step"""
-
-        self.thermostat.step()
-        self.barostat.thermostat.step()
-
-    def step(self, step=None):
-        # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
-        # if nmts is not specified, this is just the same as doing the full SC integration
-
-        if self.splitting == "obabo":
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-            # forces are integerated for dt with MTS.
-            self.barostat.pscstep()
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
-            self.mtsprop(0)
-            self.barostat.pscstep()
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
-
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-        elif self.splitting == "baoab":
-            self.barostat.pscstep()
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
-            self.mtsprop_ba(0)
-            # thermostat is applied for dt
-            self.tstep()
-            self.pconstraints()
-            self.mtsprop_ab(0)
-            self.barostat.pscstep()
-            self.beads.p_ += self.forces.fsc_part_2 * self.dt * 0.5
+        self.barostat.pscstep()
+        super().pscstep()
