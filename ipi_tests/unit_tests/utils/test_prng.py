@@ -36,6 +36,34 @@ def test_gaussian_arrays_fill_every_element(random_factory, n_threads, shape):
     assert np.any(output != output.flat[0])
 
 
+def test_checkpoint_holds_the_state_at_the_store():
+    """The state is encoded when the checkpoint is written, but it is the one
+    of the generator when it was stored"""
+
+    prng = Random(seed=21)
+    checkpoint = InputRandom()
+    checkpoint.store(prng)
+    expected = prng.gvec(5)
+    prng.gvec(5)
+    assert "<state>" in checkpoint.write("prng")
+    np.testing.assert_array_equal(checkpoint.fetch().gvec(5), expected)
+
+
+def test_the_seed_of_the_input_replaces_a_stored_state():
+    """A seed given in the input is used, also if a state (e.g. the default one)
+    was stored before the input was parsed"""
+
+    from ipi.utils.io.inputs.io_xml import xml_parse_string
+
+    checkpoint = InputRandom()
+    checkpoint.store(Random(seed=99))
+    xml = xml_parse_string("<prng><seed>12345</seed></prng>")
+    checkpoint.parse(xml.fields[0][1])
+    np.testing.assert_array_equal(
+        checkpoint.fetch().gvec(5), Random(seed=12345).gvec(5)
+    )
+
+
 @pytest.mark.parametrize("n_threads", [1, 2, 4])
 def test_checkpoint_restores_all_random_streams(random_factory, n_threads):
     """Restarting preserves the next draws, including each worker's state."""

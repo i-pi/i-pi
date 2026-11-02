@@ -168,7 +168,7 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = xp.asarray(atoms.q, copy=True)
+        pbcpos = atoms.q
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -190,8 +190,11 @@ class ForceField:
 
             self.iactive = activehere
 
+        # the request holds the positions folded in the cell, or a copy of them
         if self.dopbc:
             pbcpos = cell.array_pbc(pbcpos)
+        else:
+            pbcpos = xp.asarray(pbcpos, copy=True)
 
         # requests hold copies of the positions and of the cell, as numpy arrays
         # or, for forcefields that work on them directly, as backend arrays
@@ -604,7 +607,8 @@ class FFDirect(ForceField):
         # ensure shapes, apply the offset and parse the extra string
         asarray = xp.asarray if self.backend_arrays else np.asarray
         results = list(results)
-        results[0] -= self.offset
+        if self.offset != 0:
+            results[0] = results[0] - self.offset
         results[1] = asarray(results[1]).reshape(-1)
         results[2] = asarray(results[2]).reshape(3, 3)
         results[3] = parse_extra(results[3])
