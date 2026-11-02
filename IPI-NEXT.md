@@ -622,9 +622,15 @@ bugs pass, and are no longer marked.
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
-- The torch CI jobs run the unit tests, the regression tests and the examples with the torch backend
-  (`tox -e torch`, `tox -e torch-examples`); the unit tests use it for the simulations of the engine fixtures
-  (`simulation`, `reference_system`), the other tests select their backend.
+- The array-backend CI jobs run the unit tests and the regression tests with the torch backend, the regression
+  tests with JAX (`tox -e backends`, with the `jax` extra), and the examples with torch (`tox -e torch-examples`);
+  the unit tests use the backend of `--ipi-backend` for the simulations of the `simulation` and
+  `reference_system` fixtures, the other tests select their backend (`select_backend`). With JAX, the
+  regression tests of the features it does not support (`JAX_UNSUPPORTED` in `ipi_tests/test_tools.py`: they
+  stop at the start, or write arrays in place) are strict expected failures.
+- Opt-in tests are pytest options: `--ipi-mpi` (the ffmpi end-to-end tests, `tox -e mpitests`),
+  `--ipi-metatomic-model PATH` (an exported PET-MAD-xs, otherwise exported with upet), `--ipi-fetch-driver`
+  (fetching the Fortran driver from GitHub; the other `test_setup` tests compile it from the source tree).
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
 - PLUMED: the regression tests `PLUMED/METAD` and `PLUMED/BIAS` (they were `.NOAUTO`, with an outdated input

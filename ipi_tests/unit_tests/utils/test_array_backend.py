@@ -23,13 +23,11 @@ except ImportError:
 
 
 @pytest.fixture
-def torch_backend():
-    """Selects the torch backend on CPU, and restores numpy afterwards."""
+def torch_backend(select_backend):
+    """Selects the torch backend on CPU."""
 
-    torch = pytest.importorskip("torch")
-    ab.set_backend("torch")
-    yield torch
-    ab.set_backend("numpy")
+    select_backend("torch")
+    return pytest.importorskip("torch")
 
 
 def test_numpy_default():
@@ -147,10 +145,10 @@ def test_depend_storage(torch_backend):
 
 
 @pytest.mark.skipif(not cuda_available, reason="CUDA not available")
-def test_cuda_device(torch_backend):
+def test_cuda_device(select_backend):
     """Arrays are allocated on the selected device"""
 
-    ab.set_backend("torch", device="cuda")
+    select_backend("torch", device="cuda")
     a = dp.depend_array(name="a", value=np.arange(3.0))
     assert a.get().device.type == "cuda"
     assert xp.zeros(2).device.type == "cuda"
@@ -158,13 +156,11 @@ def test_cuda_device(torch_backend):
 
 
 @pytest.fixture
-def jax_backend():
-    """Selects the JAX backend on CPU, and restores numpy afterwards."""
+def jax_backend(select_backend):
+    """Selects the JAX backend on CPU."""
 
-    jax = pytest.importorskip("jax")
-    ab.set_backend("jax")
-    yield jax
-    ab.set_backend("numpy")
+    select_backend("jax")
+    return pytest.importorskip("jax")
 
 
 def test_synchronize_waits_for_the_selected_device(monkeypatch):
