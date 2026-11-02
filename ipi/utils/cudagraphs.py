@@ -243,7 +243,7 @@ class _Segment:
         self.after = after
 
     def replay(self):
-        for dep, value, copy in self.inputs:
+        for dep, value, data in self.inputs:
             _stage(dep, value)
         self.graph.replay()
         for status, tainted in self.statuses:
@@ -256,12 +256,12 @@ class _Segment:
             self.after()
 
 
-def _is_fixed(dep, recorded, copy):
+def _is_fixed(dep, recorded, data):
     """Whether the value of the input `dep`, recorded as the object `recorded`
-    (with a copy of its host array `copy`), is held on the host."""
+    (with the bytes `data` of its host array), is held on the host."""
 
     if isinstance(dep, depend.depend_array):
-        return copy is not None
+        return data is not None
     return not _is_cuda_tensor(recorded)
 
 

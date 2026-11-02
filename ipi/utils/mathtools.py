@@ -108,9 +108,11 @@ def stab_cholesky(M):
        M: The matrix to be decomposed.
     """
 
+    # the matrices are small, and decomposed element by element on the host
+    M = np.array(to_numpy(M), dtype=float)
     n = M.shape[1]
-    D = xp.zeros(n)
-    L = xp.zeros(M.shape)
+    D = np.zeros(n)
+    L = np.zeros(M.shape)
     for i in range(n):
         L[i, i] = 1.0
         for j in range(i):
@@ -124,7 +126,7 @@ def stab_cholesky(M):
             D[i] -= L[i, k] * L[i, k] * D[k]
 
     negev = False
-    S = xp.zeros(M.shape)
+    S = np.zeros(M.shape)
     for i in range(n):
         if D[i] > 0:
             D[i] = math.sqrt(D[i])
@@ -144,7 +146,7 @@ def stab_cholesky(M):
             verbosity.low,
         )
 
-    return S
+    return xp.asarray(S)
 
 
 def h2abc(h):
@@ -291,22 +293,17 @@ def root_herm(A):
     if not bool(xp.all(xp.abs(A.T - A) < 1e-10)):
         raise ValueError("Non-Hermitian matrix passed to root_herm function")
     eigvals, eigvecs = xp.linalg.eigh(A)
-    ndgrs = eigvals.shape[0]
-    diag = xp.zeros((ndgrs, ndgrs))
-    negev = False
-    for i in range(ndgrs):
-        if eigvals[i] >= 0:
-            diag[i, i] = math.sqrt(eigvals[i])
-        else:
-            warning(
-                "Zeroing negative %d-th element in matrix square root: %e"
-                % (i, eigvals[i]),
-                verbosity.low,
-            )
-            diag[i, i] = 0
-            negev = True
-    rv = eigvecs @ (diag @ eigvecs.T)
-    if negev:
+    negative = np.flatnonzero(to_numpy(eigvals) < 0)
+    for i in negative:
+        warning(
+            "Zeroing negative %d-th element in matrix square root: %e"
+            % (i, eigvals[i]),
+            verbosity.low,
+        )
+    # the eigenvectors scaled by the square roots of the (non-negative) eigenvalues
+    roots = xp.sqrt(xp.where(eigvals >= 0, eigvals, xp.zeros_like(eigvals)))
+    rv = (eigvecs * roots) @ eigvecs.T
+    if len(negative) > 0:
         warning(
             "Checking decomposition after negative eigenvalue: \n" + str(A - rv @ rv.T),
             verbosity.low,
