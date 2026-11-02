@@ -1,52 +1,15 @@
 """Shared simulation fixtures for engine tests."""
 
-import io
 import xml.etree.ElementTree as ET
-from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from ipi.engine.simulation import Simulation
-from ipi.scripting import InteractiveSimulation
 from ipi.utils.array_backend import xp
-from ipi.utils.softexit import softexit
 from ipi_tests import test_tools
 from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
-
-
-@pytest.fixture
-def simulation(tmp_path, monkeypatch, select_backend):
-    """Isolate output and close force services even when an assertion fails.
-    Simulations use the backend of --ipi-backend, unless the test selects another."""
-    select_backend(test_tools.ipi_backend, test_tools.ipi_device)
-    monkeypatch.chdir(tmp_path)
-    # The soft-exit monitor polls at this interval; joining it otherwise takes ~1 s.
-    monkeypatch.setattr("ipi.utils.softexit.SOFTEXITLATENCY", 0.01)
-
-    @contextmanager
-    def create(xml):
-        softexit.reset()
-        sim = None
-        try:
-            sim = InteractiveSimulation(io.StringIO(xml))
-            yield sim
-        finally:
-            if sim is not None:
-                sim.stop()
-            # Stop monitors before reset replaces the shared loop controls.
-            for thread, loop_control in softexit.tlist:
-                if loop_control is not None:
-                    loop_control[0] = False
-            for thread, _ in softexit.tlist:
-                thread.join()
-            softexit.reset()
-
-    try:
-        yield create
-    finally:
-        softexit.reset()
 
 
 @pytest.fixture
