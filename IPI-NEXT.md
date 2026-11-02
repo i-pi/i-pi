@@ -335,7 +335,8 @@ or because they were approved explicitly:
   options of numpy when they are imported. The Al6xxx KMC motion prints its messages through i-PI, with the
   details of each event at debug verbosity and a summary of each step at high verbosity. Suzuki-Chin with
   an odd number of beads, or with a forward difference and ring-polymer contraction, raises an error
-  instead of exiting.
+  instead of exiting. Suzuki-Chin NPT only warns when the forcefield returns a zero stress, like NPT: it
+  stopped the simulation at medium verbosity and above.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
