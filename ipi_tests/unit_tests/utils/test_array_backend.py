@@ -52,7 +52,7 @@ def test_jit_requires_jax_or_torch_on_cuda():
         ab.set_backend("torch", device="cpu", jit=True)
     with pytest.raises(ValueError, match="Unknown array backend"):
         ab.set_backend("unknown", jit=True)
-    assert ab.backend() == "numpy" and not ab.jit()
+    assert ab.backend() == "numpy" and not ab.jit_enabled()
 
 
 def test_invalid_backend_options_are_usage_errors(tmp_path):

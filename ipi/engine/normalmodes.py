@@ -584,10 +584,19 @@ class NormalModes:
         """Returns dynamical mass factors, i.e. the scaling of normal mode
         masses that determine the path dynamics (but not statics)."""
 
-        # also checks that the frequencies and the mode given in init are
-        # consistent with the beads and ensemble
+        return self._mass_factors(self.omegak)
 
-        omegak = to_numpy(self.omegak)
+    def get_o_nmm(self):
+        """Returns the dynamical mass factors of the atoms with open paths."""
+
+        return self._mass_factors(self.o_omegak)
+
+    def _mass_factors(self, omegak):
+        """Returns the dynamical mass factors for the normal-mode frequencies
+        `omegak`, and checks that the frequencies and the mode given in input
+        are consistent with the number of beads."""
+
+        omegak = to_numpy(omegak)
         dmf = np.ones(self.nbeads, float)
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
@@ -595,74 +604,6 @@ class NormalModes:
         elif self.mode == "eco":
             # eco changes the spring frequencies (statics), not the dynamical masses
             pass
-        elif self.mode == "manual":
-            if len(self.nm_freqs) != self.nbeads - 1:
-                raise ValueError(
-                    "Manual path mode requires (nbeads-1) frequencies, one for each internal mode of the path."
-                )
-            for b in range(1, self.nbeads):
-                sk = omegak[b] / self.nm_freqs[b - 1]
-                dmf[b] = sk**2
-        elif self.mode == "pa-cmd":
-            if len(self.nm_freqs) > 1:
-                warning(
-                    "Only the first element in nm.frequencies will be considered for PA-CMD mode.",
-                    verbosity.low,
-                )
-            if len(self.nm_freqs) == 0:
-                raise ValueError(
-                    "PA-CMD mode requires the target frequency of all the internal modes."
-                )
-            for b in range(1, self.nbeads):
-                sk = omegak[b] / self.nm_freqs[0]
-                info(
-                    " ".join(
-                        [
-                            "NM FACTOR",
-                            str(b),
-                            str(sk),
-                            str(omegak[b]),
-                            str(self.nm_freqs[0]),
-                        ]
-                    ),
-                    verbosity.medium,
-                )
-                dmf[b] = sk**2
-        elif self.mode == "wmax-cmd":
-            if len(self.nm_freqs) > 2:
-                warning(
-                    "Only the first two element in nm.frequencies will be considered for WMAX-CMD mode.",
-                    verbosity.low,
-                )
-            if len(self.nm_freqs) < 2:
-                raise ValueError(
-                    "WMAX-CMD mode requires [wmax, wtarget]. The normal modes will be scaled such that the first internal mode is at frequency wtarget and all the normal modes coincide at frequency wmax."
-                )
-            wmax = self.nm_freqs[0]
-            wt = self.nm_freqs[1]
-            for b in range(1, self.nbeads):
-                sk = 1.0 / np.sqrt(
-                    (wt) ** 2
-                    * (1 + (wmax / omegak[1]) ** 2)
-                    / (wmax**2 + (omegak[b]) ** 2)
-                )
-                dmf[b] = sk**2
-
-        return xp.asarray(dmf)
-
-    # define a function o_nm_factor so we have dynamical masses for the open case
-    def get_o_nmm(self):
-        """Returns dynamical mass factors, i.e. the scaling of normal mode
-        masses that determine the path dynamics (but not statics)."""
-
-        # also checks that the frequencies and the mode given in init are
-        # consistent with the beads and ensemble
-
-        omegak = to_numpy(self.o_omegak)
-        dmf = np.ones(self.nbeads, float)
-        if self.mode == "rpmd":
-            if len(self.nm_freqs) > 0:
-                warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
         elif self.mode == "manual":
             if len(self.nm_freqs) != self.nbeads - 1:
                 raise ValueError(

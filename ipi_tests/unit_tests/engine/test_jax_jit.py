@@ -33,10 +33,10 @@ def jax_random(device_random):
 def jit_step(sim):
     """The object compiling the steps of the first system, if any."""
 
-    from ipi.engine.jit import JitStep
+    from ipi.engine.jit import JaxStep
 
     step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return step if isinstance(step, JitStep) else None
+    return step if isinstance(step, JaxStep) else None
 
 
 def assert_same_state(a, b):
@@ -145,13 +145,13 @@ def test_changed_input_types_stop_the_compiled_step(select_backend):
     import jax.numpy as jnp
 
     from ipi.utils.depend import depend_array, depend_value
-    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jaxjit import JaxReplay
     from ipi.utils.jit import JitError
 
     select_backend("jax")
     scale = depend_value(name="scale", value=jnp.asarray(2.0))
     y = depend_array(name="y", value=jnp.zeros(3))
-    replay = JitReplay(lambda: y.set(y.get() + scale.get()))
+    replay = JaxReplay(lambda: y.set(y.get() + scale.get()))
     for _ in range(4):
         replay()
     assert replay.compiled is not None
@@ -184,7 +184,7 @@ def test_failed_compilation_is_final(simulation, monkeypatch):
         with pytest.raises(JitError, match="cannot be compiled"):
             for i in range(8):
                 sim.run_step(i)
-        assert not isinstance(sim.syslist[0].prng._jax_key, jax.core.Tracer)
+        assert not isinstance(sim.syslist[0].prng.jax_key, jax.core.Tracer)
         for _ in range(2):
             with pytest.raises(JitError, match="has failed"):
                 sim.run_step(i + 1)
@@ -193,16 +193,16 @@ def test_failed_compilation_is_final(simulation, monkeypatch):
 @pytest.mark.parametrize("kind", ["array", "value"])
 def test_host_writes_cannot_be_compiled(kind, select_backend):
     from ipi.utils.depend import depend_array, depend_value
-    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jaxjit import JaxReplay
     from ipi.utils.jit import JitError
 
     select_backend("jax")
     if kind == "array":
         dep = depend_array(name="host", value=np.zeros(3), host=True)
-        replay = JitReplay(lambda: dep.__setitem__(0, 1.0))
+        replay = JaxReplay(lambda: dep.__setitem__(0, 1.0))
     else:
         dep = depend_value(name="host", value=1.0)
-        replay = JitReplay(lambda: dep.set(2.0))
+        replay = JaxReplay(lambda: dep.set(2.0))
     with pytest.raises(JitError, match="modifies the host|modifies host"):
         for _ in range(8):
             replay()
@@ -217,10 +217,10 @@ def test_points_that_must_run_eagerly_stop_the_tracing(select_backend):
 
     from ipi.utils import jit
     from ipi.utils.depend import depend_array
-    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jaxjit import JaxReplay
     from ipi.utils.jit import JitError
 
-    class Replay(JitReplay):
+    class Replay(JaxReplay):
         def split(self, obj):
             if self.inputs is not None:
                 self.cannot(f"the point '{obj}' must run eagerly")
@@ -246,13 +246,13 @@ def test_fixed_values_are_compared_as_arrays(select_backend):
     import jax.numpy as jnp
 
     from ipi.utils.depend import depend_array, depend_value
-    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jaxjit import JaxReplay
     from ipi.utils.jit import JitError
 
     select_backend("jax")
     fixed = depend_value(name="fixed", value=(np.ones(2), np.ones(2)))
     y = depend_array(name="y", value=jnp.zeros(2))
-    replay = JitReplay(lambda: y.set(y.get() + fixed.get()[1]))
+    replay = JaxReplay(lambda: y.set(y.get() + fixed.get()[1]))
     for _ in range(4):
         replay()
     assert replay.compiled is not None
@@ -270,7 +270,7 @@ def test_steps_that_read_other_objects_at_each_call_are_eager(select_backend):
     import jax.numpy as jnp
 
     from ipi.utils.depend import depend_array
-    from ipi.utils.jaxjit import JitReplay
+    from ipi.utils.jaxjit import JaxReplay
 
     select_backend("jax")
     a = depend_array(name="a", value=jnp.ones(2))
@@ -282,7 +282,7 @@ def test_steps_that_read_other_objects_at_each_call_are_eager(select_backend):
         calls.append(None)
         y.set(y.get() + (a if len(calls) % 2 else b).get())
 
-    replay = JitReplay(func)
+    replay = JaxReplay(func)
     for _ in range(20):
         replay()
     assert replay.compiled is None

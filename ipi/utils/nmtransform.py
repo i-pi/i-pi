@@ -384,11 +384,11 @@ class nm_rescale(object):
         self._open = open_paths
         self._open_cols = _open_columns(open_paths)
 
-        if nbeads1 == nbeads2:
-            # avoids doing much if we try to contract between sambe beads number
-            self.noop = True
+        self.noop = nbeads1 == nbeads2
+        if self.noop:
+            # a contraction between the same numbers of beads only copies
+            self._b1tob2 = self._b2tob1 = self._o_b1tob2 = self._o_b2tob1 = None
         else:
-            self.noop = False
             b1tob2 = mk_rs_matrix(nbeads1, nbeads2)
             self._b1tob2 = xp.asarray(b1tob2)
             self._b2tob1 = xp.asarray(b1tob2.T * (float(nbeads1) / float(nbeads2)))
@@ -427,8 +427,6 @@ class nm_rescale(object):
            q: A matrix with nbeads1 rows, in the bead representation.
         """
 
-        if self.noop:
-            return self._rescale(q, None, None)
         return self._rescale(q, self._b1tob2, self._o_b1tob2)
 
     def b2tob1(self, q):
@@ -438,8 +436,6 @@ class nm_rescale(object):
            q: A matrix with nbeads2 rows, in the bead representation.
         """
 
-        if self.noop:
-            return self._rescale(q, None, None)
         return self._rescale(q, self._b2tob1, self._o_b2tob1)
 
 

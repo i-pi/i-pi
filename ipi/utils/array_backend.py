@@ -40,7 +40,7 @@ __all__ = [
     "set_backend",
     "backend",
     "device",
-    "jit",
+    "jit_enabled",
     "to_numpy",
     "synchronize",
 ]
@@ -155,7 +155,7 @@ def device():
     return _current["device"]
 
 
-def jit():
+def jit_enabled():
     """True if the steps of the simulations are compiled: replayed as CUDA graphs
     with torch, compiled with jax.jit with JAX."""
 

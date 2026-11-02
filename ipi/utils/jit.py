@@ -43,7 +43,7 @@ import functools
 import numpy as np
 
 from ipi.utils import depend
-from ipi.utils.array_backend import backend, device, jit
+from ipi.utils.array_backend import backend, device, jit_enabled
 from ipi.utils.messages import verbosity, warning
 
 __all__ = ["JitError", "Replay", "split", "eager", "compiled"]
@@ -86,7 +86,7 @@ def compiled(func):
 
     @functools.wraps(func)
     def wrapper(*args):
-        if jit() and backend() == "torch":
+        if jit_enabled() and backend() == "torch":
             return _compiled(func)(*args)
         return func(*args)
 
@@ -241,8 +241,6 @@ class _Recorder:
     def __init__(self, replay):
         self.split = replay.split
         self.call = replay.call
-        # the lists returned by eager calls, which are kept up to date
-        self.outputs = set()
         self.reset()
 
     def reset(self):
@@ -275,12 +273,6 @@ class _Recorder:
 
     def synchronized(self, synchro):
         self.synchros.add(synchro)
-
-    def add_outputs(self, outputs):
-        if isinstance(outputs, list):
-            self.outputs.add(id(outputs))
-            for item in outputs:
-                self.add_outputs(item)
 
     def final_state(self):
         """Returns the taint status of all the objects that may have been
