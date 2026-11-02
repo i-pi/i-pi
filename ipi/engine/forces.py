@@ -161,8 +161,8 @@ class ForceBead:
         Returns True if a calculation is running
         """
 
-        # the recording of a step as CUDA graphs may be interrupted here, to
-        # compute the forces eagerly (see ipi.engine.jit)
+        # the compilation of a step (--jit) may be interrupted here, to compute
+        # the forces eagerly (see ipi.engine.jit)
         jit.split(self)
 
         # only dispatches a request if the forcefield needs it
@@ -316,8 +316,10 @@ class ForceComponent:
           Depends on each replica's ufvx list.
        pot: The sum of the potential energy of the replicas.
        vir: The sum of the virial tensor of the replicas.
-       extras: Strings containing some formatted output returned by the client.
-          Depends on each replica's ufvx list.
+       extras: The extra quantities returned by the forcefield, as a dictionary
+          that maps each key to the list of its values for the replicas, or, for
+          the keys in `interpolate_extras`, to a numpy array of shape
+          (nbeads, ...). Depends on each replica's ufvx list.
     """
 
     def __init__(
@@ -550,6 +552,18 @@ dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extra
 
 
 class ScaledForceComponent:
+    """A force component that is another one (`baseforce`) multiplied by
+    `scaling`: its energies, forces, virials and the extras that are
+    interpolated as physical quantities are those of the base component times
+    the scaling, e.g. for the bias of Hamiltonian replica exchange.
+
+    Depend objects:
+       scaling: The scaling factor. The base component is not evaluated when
+          it is zero.
+       f, pots, virs, extras: The scaled quantities of the base component.
+       pot, vir: Their sums over the replicas.
+    """
+
     def __init__(self, baseforce, scaling=1):
         self.bf = baseforce
         self.name = baseforce.name
@@ -645,7 +659,15 @@ dproperties(
 
 
 class MTSForces:
-    """Single-purpose class to compute the MTS forces at a given level"""
+    """The forces and virials of the components that act at a level of a
+    multiple time stepping scheme, weighted by their weights and by their MTS
+    weights at that level.
+
+    Depend objects:
+       f: The forces on the beads.
+       virs: The virials of the beads.
+       vir: Their sum.
+    """
 
     def __init__(self, parent, level):
         self.nbeads = parent.nbeads
@@ -755,7 +777,13 @@ class Forces:
           Depends on each replica's ufvx list.
        virs: A list containing the virial tensor for each system replica.
           Depends on each replica's ufvx list.
-       extras: A list containing the "extra" strings for each replica.
+       extras: The extras of the components, as a dictionary. The keys in the
+          `interpolate_extras` of a component are treated as the energy: contracted
+          or expanded to the beads of the system, weighted and summed over the
+          components, as numpy arrays of shape (nbeads, ...). "raw" holds the raw
+          strings of the components, concatenated for each bead. The other keys
+          map to the list of values of each bead (the last component that returns
+          a key wins), and are dropped for contracted components.
        pot: The sum of the potential energy of the replicas.
        vir: The sum of the virial tensor of the replicas.
     """

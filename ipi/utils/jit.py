@@ -4,15 +4,30 @@ A function that operates on depend objects, such as the step of an
 integrator, runs eagerly for the first calls, which fill the caches of the
 depend objects, and is then replaced by a compiled version: CUDA graphs with
 the torch backend on a CUDA device (see `ipi.utils.cudagraphs`), or a function
-compiled with jax.jit with the jax backend (see `ipi.utils.jaxjit`). Both find
-what the function reads and writes by recording the operations on the depend
-objects while it runs (`_Recorder`, see `depend.set_recorder`), and share the
-calls of the function and of its compiled version (`Replay`).
+compiled with jax.jit with the jax backend (see `ipi.utils.jaxjit`). Both share
+the calls of the function and of its compiled version (`Replay`).
+
+As the compiled version does not run the Python code, it is built from the
+operations on the depend objects made by a call of the function, which are
+recorded (`_Recorder`, notified by the depend objects, see
+`depend.set_recorder`):
+
+- the inputs, i.e. the objects read before being written. Those held on the
+  device are read by the compiled version at each call; those held on the
+  host (Python scalars, numpy arrays, e.g. the time step) are fixed in it, and
+  checked before each call (`_check`);
+- the outputs, i.e. the objects written, which hold the values computed by
+  the compiled version after each call;
+- the taint status of the objects that are written or recomputed, and of
+  their dependants, and which object of each synchronized pair holds the
+  data, at the end of the call. As the code of the depend objects does not
+  run, they are restored after each call of the compiled version.
 
 Code that is part of a compiled function marks with `split` the points where
-the recording may be interrupted, and calls with `eager` the functions that
-must run eagerly. Functions of arrays decorated with `compiled` are compiled
-with torch.compile when the steps are compiled with the torch backend.
+the recording may be interrupted (e.g. a force evaluation), and calls with
+`eager` the functions that must run eagerly at each call (e.g. a driver).
+Functions of arrays decorated with `compiled` are compiled with torch.compile
+when the steps are compiled with the torch backend.
 
 A `JitError` is raised if the function cannot be compiled, or if a value that
 is fixed in the compiled function changes. A failed compilation leaves the
