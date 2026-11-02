@@ -85,15 +85,14 @@ Arrays are stored with the array backend selected in
 # See the "licenses" directory for full license information.
 
 
-import functools
 import operator
 import threading
-import types
 import weakref
 
 import array_api_compat
 import numpy as np
 
+from ipi.utils import jaxindexing
 from ipi.utils.array_backend import xp
 
 __all__ = [
@@ -688,90 +687,30 @@ class depend_array_view(depend_view, depend_array):
 #
 # JAX arrays cannot be modified in place, so they are held by a
 # `depend_immutable`, whose writes replace the stored array with an updated
-# copy, and whose views read and write through their parent. The `_jax_*`
-# helpers read, update and fill JAX arrays with jitted functions.
+# copy, and whose views read and write through their parent. `_jax_take` and
+# `_jax_put` read and update JAX arrays with the jitted functions of
+# `ipi.utils.jaxindexing`.
 # --------------------------------------------------------------------------
-
-
-class _jax_static:
-    """Hashable wrapper of a basic index, given to jitted functions as a static
-    argument (slices are hashable only from Python 3.12)."""
-
-    __slots__ = ("index", "key")
-
-    def __init__(self, index):
-        self.index = index
-        self.key = repr(index)
-
-    def __hash__(self):
-        return hash(self.key)
-
-    def __eq__(self, other):
-        return self.key == other.key
-
-
-@functools.cache
-def _jax_indexing():
-    """Jitted functions that read, update and fill JAX arrays, given basic
-    indices, shapes or types (as JAX is much slower at indexing eagerly)."""
-
-    import jax
-    import jax.numpy as jnp
-
-    def put(a, index, v):
-        # like numpy, ignores the leading dimensions of size one of v
-        v = jnp.asarray(v)
-        v = v.reshape(v.shape[max(v.ndim - a[index].ndim, 0) :])
-        return a.at[index].set(v)
-
-    def put_static(a, index, v):
-        return put(a, index.index, v)
-
-    def fill(v, shape, dtype):
-        return jnp.broadcast_to(jnp.asarray(v, dtype), shape)
-
-    return types.SimpleNamespace(
-        take=jax.jit(lambda a, index: a[index.index], static_argnums=1),
-        put=jax.jit(put_static, static_argnums=1),
-        put_eagerly=put,
-        reshape=jax.jit(lambda a, shape: a.reshape(shape), static_argnums=1),
-        fill=jax.jit(fill, static_argnums=(1, 2)),
-    )
 
 
 def _jax_take(value, index):
     """Returns the part of `value` selected by `index`."""
 
-    jx = _jax_indexing()
     if type(index) is _reshaped:
-        return jx.reshape(value, index.shape)
+        return jaxindexing.reshape(value, index.shape)
     if _is_basic_index(index):
-        return jx.take(value, _jax_static(index))
+        return jaxindexing.take(value, index)
     return value[index]
 
 
 def _jax_put(value, index, part):
     """Returns `value` with the part selected by `index` replaced by `part`."""
 
-    jx = _jax_indexing()
     if type(index) is _reshaped:
-        return jx.reshape(part, value.shape)
+        return jaxindexing.reshape(part, value.shape)
     if _is_basic_index(index):
-        return jx.put(value, _jax_static(index), part)
-    return jx.put_eagerly(value, index, part)
-
-
-def _jax_fill(like, part):
-    """Returns an array with the shape and type of `like`, whose values are not
-    read, filled with `part`."""
-
-    if (
-        array_api_compat.is_jax_array(part)
-        and part.shape == like.shape
-        and part.dtype == like.dtype
-    ):
-        return part  # arrays are immutable, so it can be shared
-    return _jax_indexing().fill(part, like.shape, like.dtype)
+        return jaxindexing.put(value, index, part)
+    return jaxindexing.put_eagerly(value, index, part)
 
 
 class depend_immutable(depend_array):
@@ -808,7 +747,7 @@ class depend_immutable(depend_array):
     def _assign(self, index, value):
         if index is Ellipsis:
             # replaces the array without reading it
-            self._store(_jax_fill(self._data, value))
+            self._store(jaxindexing.fill(self._data, value))
         else:
             self._store(_jax_put(self._value, index, value))
 

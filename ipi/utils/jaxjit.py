@@ -31,14 +31,14 @@ from ipi.utils import depend
 from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _input, _Recorder
 from ipi.utils.messages import info, verbosity, warning
 
-__all__ = ["JitReplay"]
+__all__ = ["JaxReplay"]
 
 # eager calls after which the function is not compiled, if no two consecutive
 # ones have read the same depend objects
 MAX_EAGER_CALLS = 8
 
 
-class JitReplay(Replay):
+class JaxReplay(Replay):
     """Runs a function eagerly for the first calls, until two calls read the
     same depend objects, compiles it with jax.jit at the next call, and calls
     the compiled function at the following calls. The arguments of the calls
@@ -111,20 +111,20 @@ class JitReplay(Replay):
         self.fixed = [
             _input(dep, v) for dep, v in zip(self.inputs, values) if not _is_jax(v)
         ]
-        key = None if self.prng is None else self.prng._jax_key
+        key = None if self.prng is None else self.prng.jax_key
 
         def traced(key, arrays):
             for dep, value in zip(self.arrays, arrays):
                 dep._store(value)
             if key is not None:
-                self.prng._jax_key = key
+                self.prng.jax_key = key
             self.recorder = _TraceRecorder(self, {dep._status for dep in self.inputs})
             depend.set_recorder(self.recorder)
             try:
                 self.func(*args)
             finally:
                 depend.set_recorder(None)
-            key = None if key is None else self.prng._jax_key
+            key = None if key is None else self.prng.jax_key
             return key, self.outputs_of(self.recorder)
 
         try:
@@ -135,7 +135,7 @@ class JitReplay(Replay):
             for dep, value in zip(self.arrays, arrays):
                 dep._store(value)
             if key is not None:
-                self.prng._jax_key = key
+                self.prng.jax_key = key
         self.statuses, self.synchros = self.recorder.final_state()
         self.run(key, arrays)
         info(
@@ -180,7 +180,7 @@ class JitReplay(Replay):
                 "step cannot change when running with --jit"
             ) from err
         if key is not None:
-            self.prng._jax_key = key
+            self.prng.jax_key = key
         results = iter(results)
         leaves = [next(results) if leaf is None else leaf for leaf in self.leaves]
         for dep, value in zip(
@@ -192,7 +192,7 @@ class JitReplay(Replay):
         """Calls the compiled function on the current values of the inputs, and
         restores the state of the depend objects at the end of the traced call."""
 
-        key = None if self.prng is None else self.prng._jax_key
+        key = None if self.prng is None else self.prng.jax_key
         self.run(key, [dep.get() for dep in self.arrays])
         for status, tainted in self.statuses:
             status.tainted = tainted

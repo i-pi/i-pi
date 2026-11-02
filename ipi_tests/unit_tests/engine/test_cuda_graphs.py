@@ -739,7 +739,7 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     )
     call = _Call(lambda: next(results), ())
     call()
-    recorded = call.outputs
+    recorded = call.results
     scalar = recorded[0][0]
     call()
     assert recorded[0][0] is scalar and float(scalar) == 2.0
