@@ -22,7 +22,7 @@ __all__ = ["SCPhononsMover"]
 
 import os
 import numpy as np
-from ipi.engine.motion.motion import Motion
+from ipi.engine.motion.motion import Motion, zeros_or_check
 from ipi.engine.beads import Beads
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.messages import verbosity, info, warning
@@ -123,16 +123,10 @@ class SCPhononsMover(Motion):
 
         nq = xp_size(beads.q)
 
-        # Initialises a 3*number of atoms X 3*number of atoms dynamic matrix.
-        if xp_size(self.dynmatrix) != (nq * nq):
-            if xp_size(self.dynmatrix) == 0:
-                self.dynmatrix = xp.zeros((nq, nq))
-                self.dynmatrix_r = xp.zeros((nq, nq))
-            else:
-                raise ValueError(
-                    "Force constant matrix size does not match system size"
-                )
-        self.dynmatrix = xp.asarray(self.dynmatrix).reshape((nq, nq))
+        # the dynamical matrix, of size 3 natoms x 3 natoms
+        self.dynmatrix = xp.asarray(
+            zeros_or_check(self.dynmatrix, (nq, nq), "Force constant matrix")
+        ).reshape((nq, nq))
         self.atol = self.chop
 
         # Creates duplicate classes to simplify computation of forces, with

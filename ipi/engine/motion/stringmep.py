@@ -12,6 +12,7 @@ from numpy.linalg import norm as npnorm
 import time
 
 from ipi.engine.motion import Motion
+from ipi.engine.motion.neb import ClimbGradientMapper, path_hessian
 from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
 from ipi.utils.messages import verbosity as vrb, info  # , warning
@@ -28,7 +29,6 @@ decor = 60 * "=" + "\n"
 
 __all__ = [
     "StringGradientMapper",
-    "StringClimbGrMapper",
     "StringMover",
 ]
 
@@ -97,79 +97,6 @@ class StringGradientMapper(object):
         # Return potential energy of the whole string and minus f_perpendicular
         e = be.sum()
         g = -rbf_perp
-        return e, g
-
-
-class StringClimbGrMapper(object):
-    """Creation of the multi-dimensional function that will be minimized.
-    Functional analog of a GradientMapper in geop.py
-
-    Constructs climbing forces for a single node.
-    Node index is determined inside bind()
-    Fixed atoms are excluded via boolean mask. 1 = moving, 0 = fixed.
-    """
-
-    def __init__(self):
-        pass
-
-    def bind(self, ens):
-        if scipy is None:
-            info(" @NM: scipy import failed", vrb.low)
-            raise scipy_exception
-
-        """Creates reduced Beads object in order to calculate forces
-        only for the climbing bead, and binds it to beads
-        """
-        self.fixatoms_dof = ens.fixatoms_dof.copy()
-        # A mask to exclude fixed atoms from 3N-arrays
-        self.fixatoms_mask = np.ones(3 * ens.beads.natoms, dtype=bool)
-        if len(ens.fixatoms_dof) > 0:
-            self.fixatoms_mask[ens.fixatoms_dof] = 0
-
-        # Reduced Beads object is needed to calculate only required beads.
-        self.rbeads = Beads(ens.beads.natoms, 1)
-        self.rcell = ens.cell.clone()
-        # Coords of the bead before and after the climbing one.
-        self.q_prev = xp.zeros(3 * ens.beads.natoms - len(ens.fixatoms_dof))
-        self.q_next = xp.zeros(3 * ens.beads.natoms - len(ens.fixatoms_dof))
-        # Make reduced forces dependent on reduced beads
-        self.rforces = ens.forces.clone(self.rbeads, self.rcell)
-
-    def __call__(self, x):
-        """Returns climbing force for a climbing image."""
-        if self.q_prev is None or self.q_next is None:
-            raise RuntimeError("StringClimbGrMapper.q_prev or q_next is None.")
-
-        info(
-            "@STRING_CLIMB: StringClimbGrMapper.x.shape: %s" % str(x.shape),
-            vrb.debug,
-        )
-        # Touch positions only if they have changed (to avoid triggering forces)
-        if (self.rbeads.q[:, self.fixatoms_mask] != x).any():
-            self.rbeads.q_[:, self.fixatoms_mask] = x
-        # Compared to stringgradientMapper, I need to flatten here,
-        # otherwise it's (1, 3N) instead of just 3N.
-        rbq = self.rbeads.q[:, self.fixatoms_mask].reshape(-1)
-
-        # Reduced forces
-        # We don't need copy() because boolean-mask indexing implies copying.
-        rbf = self.rforces.f[:, self.fixatoms_mask].reshape(-1)
-
-        # I think here it's better to use plain tangents.
-        # Then we don't need energies of the neighboring beads.
-        norm = xp.linalg.vector_norm
-        d1 = rbq - self.q_prev  # tau minus
-        d2 = self.q_next - rbq  # tau plus
-        tau = d1 / norm(d1) + d2 / norm(d2)
-        tau /= norm(tau)
-
-        # Inverting the force component along the path
-        rbf -= 2 * (rbf @ tau) * tau
-
-        # Return the potential energy and gradient of the climbing bead
-        e = self.rforces.pot
-        g = -rbf
-        info("@STRING_CLIMB: StringClimbGrMapper finished.", vrb.debug)
         return e, g
 
 
@@ -279,7 +206,7 @@ class StringMover(Motion):
         self.dtmax = dtmax_fire  # maximum dt for FIRE
 
         self.stringgm = StringGradientMapper()
-        self.climbgm = StringClimbGrMapper()
+        self.climbgm = ClimbGradientMapper()
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         if scipy is None:
@@ -297,73 +224,19 @@ class StringMover(Motion):
         self.stringgm.bind(self)
         self.climbgm.bind(self)
 
-        # We check dimensionality of the Hessian in the beginning
-        # and reduce it if needed, because someone may want to provide
-        # existing Hessian of the full system.
-        if self.mode in ["damped_bfgs", "bfgstrm"]:
-            n_activedim = xp_size(beads.q[0]) - len(self.fixatoms_dof)
-            if self.stage == "string":
-                if xp_size(self.hessian) == (n_activedim * (beads.nbeads - 2)) ** 2:
-                    # Desired dimension
-                    info(
-                        " @STRINGMover: String Hessian is treated as reduced "
-                        "and masked already, according to its size.",
-                        vrb.high,
-                    )
-                elif xp_size(self.hessian) == xp_size(beads.q) ** 2:
-                    info(
-                        " @STRINGMover: String Hessian has full-dimensional size, "
-                        "will be reduced and masked by fixatoms.",
-                        vrb.high,
-                    )
-                    # First trim the endpoints, then mask fixed atoms
-                    self.hessian = (
-                        self.hessian[
-                            3 * self.beads.natoms : -3 * self.beads.natoms,
-                            3 * self.beads.natoms : -3 * self.beads.natoms,
-                        ]
-                    )[
-                        np.ix_(
-                            np.tile(self.stringgm.fixatoms_mask, self.beads.nbeads - 2),
-                            np.tile(self.stringgm.fixatoms_mask, self.beads.nbeads - 2),
-                        )
-                    ]
-                elif xp_size(self.hessian) == 0:
-                    info(
-                        " @STRINGMover: No Hessian provided, starting from unity matrix",
-                        vrb.high,
-                    )
-                    self.hessian = xp.eye((self.beads.nbeads - 2) * n_activedim)
-                else:
-                    raise ValueError("Hessian size does not match system size.")
-            # In climb stage, hessian has only 1 bead.
-            # Not sure whether fixatoms should be handled here or not, let's see...
-            elif self.stage == "climb":
-                if xp_size(self.hessian) == n_activedim * n_activedim:
-                    # desired dimension
-                    info(
-                        " @STRINGMover: Hessian of the climber is treated as masked one,"
-                        " according to its size.",
-                        vrb.high,
-                    )
-                elif xp_size(self.hessian) == xp_size(beads.q[0]) ** 2:
-                    info(
-                        " @STRINGMover: Hessian of the climber has size (3natoms x 3natoms), "
-                        "will be masked by fixatoms.",
-                        vrb.high,
-                    )
-                    self.hessian = self.hessian[
-                        np.ix_(self.climbgm.fixatoms_mask, self.climbgm.fixatoms_mask)
-                    ]
-                elif xp_size(self.hessian) == 0:
-                    info(
-                        " @STRINGMover: No Hessian provided for climbing, "
-                        "starting from unity matrix",
-                        vrb.high,
-                    )
-                    self.hessian = xp.eye(n_activedim)
-                else:
-                    raise ValueError("Hessian size does not match system size.")
+        # the Hessian of the moving coordinates, from the one in the input, which
+        # may be of the full system
+        if self.mode in ["damped_bfgs", "bfgstrm"] and self.stage in [
+            "string",
+            "climb",
+        ]:
+            self.hessian = path_hessian(
+                self.hessian,
+                self.stringgm.fixatoms_mask,
+                beads.nbeads,
+                self.stage == "climb",
+                "STRINGMover",
+            )
 
     def init_climb(self):
         """Operations to resize hessian for the climbing bead(s),
@@ -567,11 +440,10 @@ class StringMover(Motion):
         tmp_v[1:-1] = self.stringgm.rforces.pots
         tmp_f = xp.asarray(self.full_f, copy=True)
         tmp_f[1:-1] = self.stringgm.rforces.f
-        # Forcefield results are stored as numpy arrays
         self.forces.transfer_forces_manual(
             new_q=[self.beads.q],
-            new_v=[to_numpy(tmp_v)],
-            new_forces=[to_numpy(tmp_f)],
+            new_v=[tmp_v],
+            new_forces=[tmp_f],
         )
         # Full-dimensional forces are needed in reduced-beads modes,
         # i.e. in "endpoints" and "climb".
@@ -731,16 +603,15 @@ class StringMover(Motion):
         # the physical forces of the climbing bead, not the climbing ones
         tmp_f[self.cl_indx] = self.climbgm.rforces.f[0]
         tmp_v[self.cl_indx] = self.stringpot
-        # Forcefield results are stored as numpy arrays
         self.forces.transfer_forces_manual(
             new_q=[
                 self.beads.q,
             ],
             new_v=[
-                to_numpy(tmp_v),
+                tmp_v,
             ],
             new_forces=[
-                to_numpy(tmp_f),
+                tmp_f,
             ],
         )
         self.full_f = self.forces.f
@@ -833,7 +704,7 @@ class StringMover(Motion):
                 # Initialize the mapper forces for the first time
                 # Since we just called full forces, it makes sense to transfer them to the
                 # reduced beads (rbeads). No fixmask here, rforces are not the same
-                # as stringgrad! Forcefield results are stored as numpy arrays.
+                # as stringgrad!
                 info(
                     " @STRING: shapes of rforces.f and full_f: %s, %s"
                     % (self.stringgm.rforces.f.shape, self.full_f.shape),
@@ -841,8 +712,8 @@ class StringMover(Motion):
                 )
                 self.stringgm.rforces.transfer_forces_manual(
                     new_q=[self.beads.q[1:-1]],
-                    new_v=[to_numpy(self.full_v[1:-1])],
-                    new_forces=[to_numpy(self.full_f[1:-1])],
+                    new_v=[self.full_v[1:-1]],
+                    new_forces=[self.full_f[1:-1]],
                 )
                 info(" @STRING: calling StringGradientMapper at step 0.", vrb.debug)
                 self.stringpot, self.stringgrad = self.stringgm(
