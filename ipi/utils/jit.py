@@ -109,7 +109,10 @@ def _compiled(func):
         )
         return func
     try:
-        compiled = torch.compile(func, fullgraph=True, dynamic=False)
+        # combo_kernels launches independent kernels of the function as one
+        compiled = torch.compile(
+            func, fullgraph=True, dynamic=False, options={"combo_kernels": True}
+        )
     except RuntimeError as err:
         warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
         return func
