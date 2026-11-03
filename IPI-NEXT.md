@@ -508,7 +508,8 @@ bugs pass, and are no longer marked.
   atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
   14.1), dominated by the model.
 - Kernel fusion: at ~100 atoms the replays are bound by the number of kernels (~1.9 us each on the H100).
-  `jit.compiled` compiles a function with torch.compile when the steps are compiled with torch (`--jit`, also
+  `jit.compiled` compiles a function with torch.compile (with Inductor's `combo_kernels`, which launches
+  independent kernels of the function as one) when the steps are compiled with torch (`--jit`, also
   in the eager steps before the recording; plain call otherwise, or if torch.compile is unavailable, e.g.
   torch 2.9 on Python 3.14, or for GPUs older than compute capability 7.0); its arguments should be
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
@@ -618,7 +619,7 @@ bugs pass, and are no longer marked.
   `safe_stride=100`, no outputs). kuma H100 (driver 560: CUDA 12.6 wheels, torch 2.10, JAX 0.10), 20 warm-up
   and 5x100 timed steps. The kernels of this model are launch-bound (1.2-3 µs each): the time of a step is set
   by the number of kernels (torch) and by the host work per step (JAX), not by the arithmetic.
-- µs/step (fp32 forces) at P = 1 / 8, same node, before -> after: i-PI torch `--jit` 452 / 686 -> 130 / 231
+- µs/step (fp32 forces) at P = 1 / 8, same node, before -> after: i-PI torch `--jit` 452 / 686 -> 125 / 226
   (pure torch 86 / 125), i-PI JAX `--jit` 174 / 275 -> 153 / 182 (pure JAX 103 / 121); fp64 forces are similar.
   Tables and plots of each version in `results-current.md` and `results-history/` (not tracked).
 - What matters, by decreasing gain: traceable drivers recorded in the CUDA graph (rather than an eager driver
@@ -635,8 +636,16 @@ bugs pass, and are no longer marked.
   array in place, used for the COM removal and the energy exchanged with the ensemble (-10 µs with torch).
   Comparisons of versions must be paired runs on the same GPU and CPU cores: JAX timings differ by 5-15%
   between nodes, and between the GPUs of a node.
+- Compiler settings (paired runs, µs/step at P = 1 / 8, i-PI torch / pure torch), set for the whole process:
+  Inductor's `combo_kernels=True` -6 / -21 and -7 / -17, `split_reductions=False` -6 / -17 and -5 / -13, both
+  -11 / -23 and -13 / -18. Most of the gain at P=8 is in the compiled evaluator of the model (e.g. its per-bead
+  reductions), whose compilation is left to the driver. `jit.compiled` passes `combo_kernels=True` to its own
+  torch.compile calls: the two outputs of `_com_motion` take one kernel instead of two (72 / 117 kernels per
+  step instead of 76 / 121), -4 to -8 µs at all P, mixed and double (job 4780284). `split_reductions=False`
+  trades the parallelism of the reductions for fewer kernels, which suits small systems only. JAX:
+  `--xla_gpu_graph_min_graph_size=1` and preallocation change 0-4 µs; the platform allocator is 2-4x slower.
 - Where the rest goes. Torch is bound by the device (~15-30 µs of host work per step): 72 kernels per step
-  at P=1 against 48 (P=8: 114 against 60), of which 13 (26) come from the driver adapter (per-bead fp32 casts
+  at P=1 against 48 (P=8: 117 against 60), of which 13 (26) come from the driver adapter (per-bead fp32 casts
   and stacks, unit conversions, which the pure code merges in its compiled step), and most of the others from
   depend-level operations (each kick, drift, thermostat output, COM removal or random draw is its own kernel).
   JAX is bound by the host: the compiled call alone takes ~120 / ~137 µs (pure JAX's whole step ~105 / ~121),
