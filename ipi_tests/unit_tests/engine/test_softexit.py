@@ -27,10 +27,10 @@ NSTEPS = 6
 EXIT_STEP = 3  # index of the step during which the exit is requested
 
 
-def simulation_xml(threading_mode):
+def simulation_xml(interleave):
     """Returns a small self-contained simulation with two outputs."""
 
-    return f"""<simulation verbosity="quiet" threading="{threading_mode}">
+    return f"""<simulation verbosity="quiet" interleave="{interleave}">
   <output prefix="sim">
     <properties stride="1" filename="out">[ step, potential ]</properties>
     <trajectory stride="1" filename="pos">positions</trajectory>
@@ -190,11 +190,11 @@ def assert_outputs_continuous():
     assert frames == list(range(NSTEPS + 1))
 
 
-@pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_during_step_rolls_back(workdir, threading_mode):
+@pytest.mark.parametrize("interleave", ["false", "true"])
+def test_exit_during_step_rolls_back(workdir, interleave):
     """A step interrupted halfway is discarded and redone on restart."""
 
-    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(interleave)))
     inject_before(
         simulation.syslist[0].motion,
         "step",
@@ -206,12 +206,12 @@ def test_exit_during_step_rolls_back(workdir, threading_mode):
     assert_continuous()
 
 
-@pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_request_during_outputs_completes_the_step(workdir, threading_mode):
+@pytest.mark.parametrize("interleave", ["false", "true"])
+def test_request_during_outputs_completes_the_step(workdir, interleave):
     """A request made while the outputs are written, which need no more
     forces, is made at the start of the next step."""
 
-    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(interleave)))
     inject_after(
         simulation.outputs[0],
         "write",
@@ -223,12 +223,12 @@ def test_request_during_outputs_completes_the_step(workdir, threading_mode):
     assert_continuous()
 
 
-@pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_between_outputs_rolls_back(workdir, threading_mode):
+@pytest.mark.parametrize("interleave", ["false", "true"])
+def test_exit_between_outputs_rolls_back(workdir, interleave):
     """An exit made after some of the outputs of a step are written removes
     them, and the step is redone on restart."""
 
-    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(interleave)))
     inject_after(
         simulation.outputs[0],
         "write",
@@ -240,11 +240,11 @@ def test_exit_between_outputs_rolls_back(workdir, threading_mode):
     assert_continuous()
 
 
-@pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_during_a_row_rolls_back(workdir, threading_mode):
+@pytest.mark.parametrize("interleave", ["false", "true"])
+def test_exit_during_a_row_rolls_back(workdir, interleave):
     """An exit made in the middle of a row removes it."""
 
-    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(interleave)))
     properties = simulation.outputs[0]
     properties.out = StreamProxy(
         properties.out, once_at_exit_step(simulation, make_exit)

@@ -1,4 +1,4 @@
-<simulation verbosity='high' threading='true'>
+<simulation verbosity='high' interleave='true'>
   <output prefix='simulation'>
     <properties stride='4' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}] </properties>
     <trajectory filename='pos' stride='40'> positions </trajectory>

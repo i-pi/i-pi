@@ -75,7 +75,7 @@ class Simulation:
                 if verbosity is higher than 'quiet'.
             sockets_prefix (str): Use the specified prefix for all Unix domain sockets.
             read_only (bool): If set to true, it creates the simulation object but
-                doesn't initialize/open the sockets or start the output threads.
+                doesn't open the sockets or the outputs.
             post_init_hook (function): If provided, this function is called
                 after the simulation object is created, with the simulation object
                 as the only argument. This can be used to modify the simulation
@@ -153,7 +153,7 @@ class Simulation:
         step=0,
         tsteps=1000,
         ttime=0,
-        threads=False,
+        interleave=False,
         safe_stride=1,
         sockets_prefix="ipi_",
     ):
@@ -177,7 +177,7 @@ class Simulation:
         info(" @simulation: Initializing simulation object ", verbosity.low)
         self.prng = prng
         self.mode = mode
-        self.threading = threads
+        self.interleave = interleave
         self.safe_stride = safe_stride
         self.sockets_prefix = sockets_prefix
 
@@ -212,6 +212,8 @@ class Simulation:
         self.smotion = smotion
 
         self.chk = None
+        # whether the steps are compiled (--jit), as set when the simulation is bound
+        self.jit = False
         self.finished = False
         self.exit_status = "success"
         self.exit_message = " @ SIMULATION: Exiting cleanly."
@@ -221,7 +223,7 @@ class Simulation:
 
         Args:
             read_only: If set to true, it creates the simulation object but
-                doesn't initialize/open the sockets or start the output threads.
+                doesn't open the sockets or the outputs.
         """
 
         if self.tsteps <= self.step:
@@ -245,11 +247,12 @@ class Simulation:
         if read_only:  # returns before we open the sockets
             return
 
-        if jit_enabled():
+        self.jit = jit_enabled()
+        if self.jit:
             compile_steps(self)
 
         # start forcefields here so we avoid having a shitload of files printed
-        # out only to find the socket is busy or whatever prevented starting the threads
+        # out only to find the socket is busy or whatever prevented starting them
         for k, f in self.fflist.items():
             f.bind(self.output_maker)
             f.start()
@@ -448,7 +451,7 @@ class Simulation:
 
         A soft exit made while they are written (e.g. while an estimator
         waits for forces) truncates them to the last stored state. With
-        `threading`, the outputs of each system are written in a task of
+        `interleave`, the outputs of each system are written in a task of
         their own, so that the forces they need are computed together with
         those of the other systems. The checkpoints, which read all the
         systems, are written afterwards.
@@ -458,7 +461,7 @@ class Simulation:
             for o in outputs:
                 o.write()
 
-        if self.threading and len(self.syslist) > 1:
+        if self.interleave and len(self.syslist) > 1:
             system_outputs = [
                 [o for o in self.outputs if getattr(o, "system", None) is s]
                 for s in self.syslist
@@ -470,12 +473,13 @@ class Simulation:
 
     def run_step(self, step):
         """Makes a step of all the systems, and then of the motion that
-        couples them. With `threading`, each system makes its step in a task,
+        couples them. With `interleave`, each system makes its step in a task,
         and the tasks run in turn while the others wait for forces, unless the
         steps are compiled (`--jit`): the systems then make their steps one
-        after the other."""
+        after the other, and the first one makes the steps of all of them if
+        they are compiled together (see ipi.engine.jit)."""
 
-        if len(self.syslist) > 1 and self.threading and not jit_enabled():
+        if len(self.syslist) > 1 and self.interleave and not self.jit:
             scheduler.run([partial(s.motion.step, step=step) for s in self.syslist])
             if softexit.triggered:
                 return

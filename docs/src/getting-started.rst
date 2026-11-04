@@ -311,8 +311,11 @@ graphs, and potentials that can be recorded too (``traceable``, such as
 The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
 integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
 PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
-no thermostat or a Langevin one on the barostat. The systems of a simulation
-are then stepped one after the other (whatever ``threading``), and replica
+no thermostat or a Langevin one on the barostat. With ``interleave`` (the
+default), the steps of several systems whose forces all come from such direct
+forcefields are recorded together, so that a batched forcefield
+(``batch_size``) evaluates the structures of all the systems at once, also in
+the replays; otherwise the systems are stepped one after the other. Replica
 exchange is supported, unless the replicas have a barostat or different
 weights of the forces, which are fixed in the graphs. The other simulations
 run as usual, with a warning: other motions, thermostats or barostats, fixed
@@ -336,7 +339,8 @@ much slower than numpy, as JAX executes the operations one at a time. With
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
 the forces are computed by a direct forcefield whose potential can be
 compiled by JAX (``traceable``, at present only ``dummy``): the whole step, including the
-force evaluation, is then compiled. Otherwise, the steps run as usual. As
+force evaluation, is then compiled, together with the steps of the other
+systems as with torch. Otherwise, the steps run as usual. As
 with torch, the parameters that are fixed in the compiled step, such as the
 time step, cannot change, and i-PI stops with an error if a step cannot be
 compiled.

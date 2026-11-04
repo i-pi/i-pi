@@ -1,4 +1,4 @@
-<simulation mode='static' verbosity='medium' threading='false'>
+<simulation mode='static' verbosity='medium' interleave='false'>
   <output prefix='simulation'>
   </output>
   <total_steps>50000000</total_steps>
