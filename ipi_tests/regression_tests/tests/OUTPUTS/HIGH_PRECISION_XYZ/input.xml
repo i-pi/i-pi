@@ -1,0 +1,31 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <trajectory filename='pos_high_precision' stride='2' format='xyz_high_precision' cell_units='angstrom'> x_centroid{angstrom} </trajectory>
+  </output>
+  <total_steps>1</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='harmonic' mode='unix' pbc='false'>
+    <address>localhost</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [100, 100, 100] </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='harmonic'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 1e-6 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
