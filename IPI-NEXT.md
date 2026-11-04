@@ -786,7 +786,25 @@ bugs pass, and are no longer marked.
     the structures of all the systems in one call, and the replays keep these batches. The first system
     stepped at each step makes the steps of all. Otherwise the steps are compiled per system, and the systems
     are stepped one after the other. Compiled and eager runs are bit-identical (CUDA graphs and JAX, dummy
-    driver, batches of 4 replicas, exchanges at every step); timings with q-TIP4P/F on kuma are pending.
+    driver, batches of 4 replicas, exchanges at every step).
+  - H100 (kuma jobs 4815066, 4815169, 4815170), q-TIP4P/F (64 waters, mixed precision, Triton kernels,
+    `traceable` ffdirect with `batch_size` = replicas x beads, PILE_L), µs/step of the whole simulation,
+    replicas compiled one by one -> together, paired runs on the same GPU:
+    - without exchanges, 1 / 2 / 4 / 8 replicas:
+      - torch, P=1: 125 / 248 / 491 / 993 -> 124 / 211 / 354 / 645 (1.54x at 8 replicas);
+      - torch, P=8: 226 / 453 / 905 / 1810 -> 226 / 387 / 717 / 1349 (1.34x);
+      - JAX, P=1: 150 / 299 / 643 / 1252 -> 150 / 214 / 331 / 560 (2.24x);
+      - JAX, P=8: 173 / 359 / 754 / 1535 -> 177 / 240 / 388 / 693 (2.21x): 87 µs per replica, half of one
+        system alone.
+    - Torch is bound by the device (wall time within 5-10% of the device time): at 8 replicas of 8 beads the
+      shared step launches 670 kernels instead of 936, as the model (~38 kernels) runs once, and the ~79
+      kernels of the integrator of each replica remain. JAX is bound by the host, and one call per step
+      replaces one per replica.
+    - Exchanges tried every 100 steps add ~5.1 ms per step to JAX and ~0.65 ms to torch at 8 replicas of 8
+      beads (~70 ms and ~9 ms per attempt), so the gains drop to 1.2x (JAX) and 1.2-1.3x (torch): the
+      exchange step is the next bottleneck.
+    - Eager, for reference (with exchanges every 100 steps): torch 10.7 ms, JAX 130 ms at 8 replicas of 8
+      beads.
   - `Simulation.jit` records whether the steps of a simulation are compiled, when it is bound: `run_step` used
     the global flag, so an eager simulation stepped its systems in turn once another one compiled its steps.
   - Tests in `test_jit.py`: compiled REMD with exchanges at every step matches eager steps (JAX, CUDA; NVT,
