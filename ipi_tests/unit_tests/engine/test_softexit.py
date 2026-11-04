@@ -79,6 +79,12 @@ def request_exit():
     softexit.request(" @SOFTEXIT: test")
 
 
+def make_exit():
+    """Makes a soft exit now, as when it is made while waiting for forces."""
+
+    softexit.trigger(message=" @SOFTEXIT: test")
+
+
 def exit_from_signal():
     """Delivers a kill signal to the main thread, which records the request."""
 
@@ -201,8 +207,9 @@ def test_exit_during_step_rolls_back(workdir, threading_mode):
 
 
 @pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_between_outputs_completes_the_step(workdir, threading_mode):
-    """Once a step started writing outputs, all of them are written."""
+def test_request_during_outputs_completes_the_step(workdir, threading_mode):
+    """A request made while the outputs are written, which need no more
+    forces, is made at the start of the next step."""
 
     simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
     inject_after(
@@ -217,32 +224,34 @@ def test_exit_between_outputs_completes_the_step(workdir, threading_mode):
 
 
 @pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_during_write_completes_the_row(workdir, threading_mode):
-    """An output being written is not closed under the writer's feet."""
-
-    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
-    properties = simulation.outputs[0]
-    properties.out = StreamProxy(
-        properties.out, once_at_exit_step(simulation, request_exit)
-    )
-    finish(simulation)
-
-    assert_continuous()
-
-
-@pytest.mark.parametrize("threading_mode", ["false", "true"])
-def test_exit_requested_by_an_output_completes_the_step(workdir, threading_mode):
-    """An output that triggers the exit itself does not abort the others."""
+def test_exit_between_outputs_rolls_back(workdir, threading_mode):
+    """An exit made after some of the outputs of a step are written removes
+    them, and the step is redone on restart."""
 
     simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
     inject_after(
         simulation.outputs[0],
         "write",
-        once_at_exit_step(simulation, softexit.trigger),
+        once_at_exit_step(simulation, make_exit),
     )
     finish(simulation)
 
-    assert restart_step() == EXIT_STEP + 1
+    assert restart_step() == EXIT_STEP
+    assert_continuous()
+
+
+@pytest.mark.parametrize("threading_mode", ["false", "true"])
+def test_exit_during_a_row_rolls_back(workdir, threading_mode):
+    """An exit made in the middle of a row removes it."""
+
+    simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
+    properties = simulation.outputs[0]
+    properties.out = StreamProxy(
+        properties.out, once_at_exit_step(simulation, make_exit)
+    )
+    finish(simulation)
+
+    assert restart_step() == EXIT_STEP
     assert_continuous()
 
 
@@ -260,23 +269,37 @@ def test_signal_during_outputs_completes_the_step(workdir):
     assert_continuous()
 
 
-@pytest.mark.parametrize("make_request", [request_exit, softexit.cleanup])
-def test_held_exit_runs_callbacks_once(workdir, make_request):
-    """A request, or a cleanup, made while the exit is held back is made at
-    the next check, a single time."""
+def test_request_runs_callbacks_once(workdir):
+    """A request is made at the next check, a single time."""
 
     calls = []
     softexit.register_function(lambda: calls.append(True))
 
-    with softexit.hold():
-        make_request()
-        softexit.check()
-        assert calls == []
-
+    request_exit()
+    assert calls == []
     softexit.check()
     softexit.check()
     softexit.cleanup()
     assert calls == [True]
+
+
+def test_outputs_go_back_to_the_stored_state(workdir):
+    """An exit that goes back to the stored state truncates the outputs
+    written since then, and removes those that were empty."""
+
+    kept, new = BaseOutput("kept"), BaseOutput("new")
+    for output in (kept, new):
+        output.bind()
+    kept.write("before\n")
+    softexit.stored()
+    kept.write("after\n")
+    new.write("after\n")
+    softexit.rollback = True
+    softexit.cleanup()
+
+    with open("kept") as stream:
+        assert stream.read() == "before\n"
+    assert not os.path.exists("new")
 
 
 def test_forked_child_is_detached(workdir):
@@ -389,6 +412,13 @@ def test_watchdog_ends_a_hung_process(workdir, exit_request):
 
     start = time.time()
     process = run_script(f"""{WATCHDOG}
+from ipi.engine.outputs import BaseOutput
+output = BaseOutput("floating")
+output.bind()
+output.write("before\\n")
+softexit.stored()
+output.write("after\\n")
+output.out.flush()
 # the signal reaches the watchdog thread, as when the main thread is stuck
 signal.pthread_sigmask(signal.SIG_BLOCK, [signal.SIGTERM])
 {exit_request}
@@ -401,26 +431,22 @@ open("carried_on", "w").close()
     assert not os.path.exists("done")
     assert not os.path.exists("carried_on")
     assert time.time() - start < 20
+    # the output goes back to the stored state with the checkpoint
+    with open("floating") as stream:
+        assert stream.read() == "before\n"
 
 
-def test_watchdog_leaves_a_responsive_process(workdir):
-    """An exit held back by the outputs for longer than GRACE is not cut
-    short while the main thread checks, nor while it cleans up."""
+def test_watchdog_leaves_a_process_that_cleans_up(workdir):
+    """A cleanup that takes longer than GRACE is not cut short."""
 
     process = run_script(f"""{WATCHDOG}
 softexit_module.GRACE = 0.2
 softexit.request("test")
-with softexit.hold():
-    for _ in range(100):
-        softexit.check()
-        time.sleep(0.01)
-open("held", "w").close()
 softexit.check()
 softexit.kill()
 """)
 
     assert process.returncode == 0
-    assert os.path.exists("held")
     assert os.path.exists("done")
     assert not os.path.exists("emergency")
 
