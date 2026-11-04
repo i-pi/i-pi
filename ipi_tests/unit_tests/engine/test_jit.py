@@ -11,6 +11,7 @@ import pytest
 
 import ipi.utils.array_backend as ab
 from ipi_tests.unit_tests.engine.inputs import (
+    CASES,
     DUMMY,
     ISOTROPIC,
     NO_FORCES,
@@ -40,10 +41,9 @@ JIT = [
 def compiled(sim):
     """Whether the steps of the first system are compiled."""
 
-    from ipi.engine.jit import GraphStep, JaxStep
+    from ipi.engine.jit import compiled_step
 
-    step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return isinstance(step, (GraphStep, JaxStep))
+    return compiled_step(sim.syslist[0]) is not None
 
 
 @pytest.mark.parametrize(
@@ -112,7 +112,7 @@ def test_unsupported_steps(case, change, reason, simulation):
 REMD = "<smotion mode='remd'><remd><stride>1</stride></remd></smotion>"
 
 
-def replicas(xml, temperatures, smotion=REMD, threading="true"):
+def replicas(xml, temperatures, smotion=REMD, interleave="true"):
     """Replicates the system of an input at the given temperatures, with an
     optional motion of the systems."""
 
@@ -126,7 +126,7 @@ def replicas(xml, temperatures, smotion=REMD, threading="true"):
         for i, temperature in enumerate(temperatures)
     )
     xml = xml[:start] + systems + smotion + xml[end:]
-    return xml.replace("threading='false'", f"threading='{threading}'")
+    return xml.replace("interleave='false'", f"interleave='{interleave}'")
 
 
 @pytest.mark.parametrize(
@@ -168,22 +168,53 @@ def test_supported_multiple_systems(case, smotion, change, reason, simulation):
         assert unsupported(sim, sim.syslist[0]) == reason
 
 
+def record_batches(forcefield):
+    """Wraps the driver of a direct forcefield, and returns the list of the
+    numbers of structures that it is given at each call."""
+
+    batches = []
+    driver = forcefield.driver
+
+    def call(cell, pos):
+        batches.append(len(cell) if isinstance(cell, list) else 1)
+        return driver(cell, pos)
+
+    forcefield.driver = call
+    return batches
+
+
 @pytest.mark.parametrize("options", JIT)
+@pytest.mark.parametrize("batched", [False, True])
 @pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt"])
-def test_replica_exchange_is_compiled(case, options, simulation, device_random):
+def test_replica_exchange_is_compiled(
+    case, batched, options, simulation, device_random
+):
     """The steps of replicas whose temperatures are exchanged at every step,
-    also before the steps are compiled, are compiled, and follow the eager ones"""
+    also before the steps are compiled, are compiled together, and follow the
+    eager ones. A batched driver evaluates the structures of all the replicas
+    at once, also in the compiled steps, which repeat the recorded calls"""
+
+    from ipi.engine.jit import compiled_step
 
     pytest.importorskip(options["backend"])
-    xml = replicas(write_input(case, DUMMY), [300, 330, 360, 400])
+    temperatures = [300, 330, 360, 400]
+    nbatch = len(temperatures) * CASES[case][0] if batched else 1
+    forcefield = (
+        f"<ffdirect name='ff'><pes>dummy</pes><batch_size>{nbatch}</batch_size></ffdirect>",
+        "<force forcefield='ff'/>",
+    )
+    xml = replicas(write_input(case, forcefield), temperatures)
     eager_options = {k: v for k, v in options.items() if k != "jit"}
     with simulation(xml, **eager_options) as eager, simulation(xml, **options) as sim:
+        batches = record_batches(sim.fflist["ff"])
         temperatures = set()
         for step in range(10):
             eager.run_step(step)
             sim.run_step(step)
             temperatures.add(float(sim.syslist[0].ensemble.temp))
         assert all(compiled_system(s) for s in sim.syslist)
+        assert len({compiled_step(s) for s in sim.syslist}) == 1
+        assert set(batches) == {nbatch}
         assert list(sim.smotion.repindex) == list(eager.smotion.repindex)
         # the replica has been exchanged
         assert len(temperatures) > 1
@@ -194,6 +225,25 @@ def test_replica_exchange_is_compiled(case, options, simulation, device_random):
         for a, b in zip(eager.syslist, sim.syslist):
             for x, y in [(a.beads.q, b.beads.q), (a.beads.p, b.beads.p)]:
                 np.testing.assert_allclose(ab.to_numpy(y), ab.to_numpy(x), **TOLERANCE)
+
+
+@pytest.mark.parametrize("options", JIT)
+@pytest.mark.parametrize(
+    "interleave,forcefield,together",
+    [("true", DUMMY, True), ("false", DUMMY, False), ("true", NO_FORCES, False)],
+)
+def test_steps_compiled_together(interleave, forcefield, together, options, simulation):
+    """The steps of several systems are compiled together if the systems are
+    stepped as tasks, and all their forces are computed in the step"""
+
+    from ipi.engine.jit import compiled_step
+
+    pytest.importorskip(options["backend"])
+    xml = replicas(write_input("nvt_langevin", forcefield), [300, 310], "", interleave)
+    with simulation(xml, **options) as sim:
+        steps = [compiled_step(s) for s in sim.syslist]
+        assert all(step is not None for step in steps)
+        assert (steps[0] is steps[1]) == together
 
 
 @pytest.mark.parametrize("options", JIT)
@@ -230,10 +280,10 @@ def test_stale_objects_are_refreshed_only_with_exchanges(
 def compiled_system(system):
     """Whether the steps of a system are compiled."""
 
-    from ipi.engine.jit import GraphStep, JaxStep
+    from ipi.engine.jit import compiled_step
 
-    step = getattr(getattr(system.motion, "integrator", None), "step", None)
-    return isinstance(step, (GraphStep, JaxStep)) and step.compiled is not None
+    step = compiled_step(system)
+    return step is not None and step.compiled is not None
 
 
 @pytest.mark.parametrize("options", JIT)

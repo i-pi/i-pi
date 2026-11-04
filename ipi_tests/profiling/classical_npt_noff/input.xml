@@ -1,4 +1,4 @@
-<simulation verbosity='medium' threading='false' safe_stride='100'>
+<simulation verbosity='medium' interleave='false' safe_stride='100'>
     <fflj name='dummy' pbc='False'>
       <parameters>{eps: 0.0, sigma: 1.0}</parameters>
    </fflj>

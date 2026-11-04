@@ -23,7 +23,7 @@ except ImportError:
 # initial geometry, bond and angle constraints with explicit values,
 # bond constraints only, and Eckart constraints
 XML = """
-<simulation verbosity='quiet' threading='false' safe_stride='100000000'>
+<simulation verbosity='quiet' interleave='false' safe_stride='100000000'>
   <ffdirect name='ff'><pes>harmonic</pes><parameters>{k1: 1e-2}</parameters></ffdirect>
   <total_steps>1000</total_steps>
   <output prefix='simulation'/>

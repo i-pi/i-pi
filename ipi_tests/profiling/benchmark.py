@@ -17,10 +17,10 @@ With `--forcefield socket` the forces come from `--clients` instances of the
 Fortran driver (`--driver`), connected through a unix socket, which return
 zero forces after waiting `--delay` seconds.
 With `--systems N`, the simulation has N replicas of the system at different
-temperatures, stepped in turn or, with `--threading`, interleaved while they
+temperatures, stepped in turn or, with `--interleave`, interleaved while they
 wait for forces, and exchanged every `--remd-stride` steps (never if zero).
 The timed loop calls `Simulation.run_step` directly for a single system
-without `--threading`, and `Simulation.run` otherwise, so outputs and
+without `--interleave`, and `Simulation.run` otherwise, so outputs and
 checkpointing are excluded. Every (case, size) combination runs in a
 separate subprocess.
 
@@ -31,7 +31,7 @@ Usage:
     python benchmark.py --forcefield metatomic --model pet-mad-xs-v1.6.0.pt \\
         --model-device cuda --structure water -c nve,pimd4_nvt -s 1,2,3
     python benchmark.py --compare reference.json new.json
-    python benchmark.py -c nvt_langevin -n 100 --systems 8 --threading
+    python benchmark.py -c nvt_langevin -n 100 --systems 8 --interleave
     python benchmark.py -c pimd_nvt -n 100 --forcefield socket --clients 8 \
         --delay 0.01 --driver ../../bin/i-pi-driver
 
@@ -196,9 +196,9 @@ def write_input(args, seed=12345, address=""):
             f"<smotion mode='remd'><remd><stride>{args.remd_stride}</stride>"
             "</remd></smotion>"
         )
-    threading = "true" if args.threading else "false"
+    interleave = "true" if args.interleave else "false"
     xml = f"""
-<simulation verbosity='quiet' threading='{threading}' safe_stride='100000000'>
+<simulation verbosity='quiet' interleave='{interleave}' safe_stride='100000000'>
   {ffxml}
   <total_steps>100000000</total_steps>
   <output prefix='benchmark'/>
@@ -287,7 +287,7 @@ def run_worker(args):
         ]
 
     # several systems, or systems in tasks or threads, need the whole loop
-    stepwise = args.systems == 1 and not args.threading
+    stepwise = args.systems == 1 and not args.interleave
     step = 0
 
     def advance(nsteps):
@@ -380,7 +380,7 @@ def metadata(args):
         jit=args.jit,
         threads=args.threads,
         systems=args.systems,
-        threading=args.threading,
+        interleave=args.interleave,
         remd_stride=args.remd_stride,
         batch_size=args.batch_size,
         clients=args.clients if args.forcefield == "socket" else None,
@@ -441,8 +441,8 @@ def run_all(args):
                 cmd += ["--batch-size", str(args.batch_size)]
                 cmd += ["--clients", str(args.clients), "--delay", str(args.delay)]
                 cmd += ["--driver", args.driver]
-                if args.threading:
-                    cmd += ["--threading"]
+                if args.interleave:
+                    cmd += ["--interleave"]
                 if args.jit:
                     cmd += ["--jit"]
                 if args.threads is not None:
@@ -549,9 +549,9 @@ def main():
         "--systems", type=int, default=1, help="number of replicas of the system"
     )
     parser.add_argument(
-        "--threading",
+        "--interleave",
         action="store_true",
-        help="interleaves the steps of the systems (threading='true')",
+        help="interleaves the steps of the systems (interleave='true')",
     )
     parser.add_argument(
         "--remd-stride",

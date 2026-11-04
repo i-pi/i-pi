@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 
-def harmonic_input(nbeads=1, thermostat=None, threading=False, timestep=0.02):
+def harmonic_input(nbeads=1, thermostat=None, interleave=False, timestep=0.02):
     """Two atoms (masses 2 and 3) in U = 0.25 |q|^2, in atomic units."""
     q = np.tile([0.2, -0.3, 0.1, -0.4, 0.2, 0.3], (nbeads, 1))
     q[:, 0] += np.arange(nbeads) * 0.01
@@ -17,7 +17,7 @@ def harmonic_input(nbeads=1, thermostat=None, threading=False, timestep=0.02):
         else f'<thermostat mode="{thermostat}"><tau>0.5</tau></thermostat>'
     )
     mode = "nve" if thermostat is None else "nvt"
-    return f"""<simulation verbosity="quiet" threading="{threading}" floatformat="%24.16e">
+    return f"""<simulation verbosity="quiet" interleave="{interleave}" floatformat="%24.16e">
       <total_steps>100</total_steps><prng><seed>317</seed></prng>
       <ffdirect name="harmonic"><pes>harmonic</pes><parameters>{{k1: 0.5}}</parameters></ffdirect>
       <system><forces><force forcefield="harmonic"/></forces>
@@ -212,7 +212,7 @@ def write_input(case, forcefield, natoms=8):
     ffxml, forcexml = forcefield
     forcexml = extra.get("forces", forcexml)
     return f"""
-<simulation verbosity='quiet' threading='false' safe_stride='100000000'>
+<simulation verbosity='quiet' interleave='false' safe_stride='100000000'>
   {ffxml}{extra.get("ff", "")}
   <total_steps>100000000</total_steps>
   <output prefix='simulation'/>
