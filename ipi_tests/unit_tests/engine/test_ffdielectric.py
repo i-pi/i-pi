@@ -1,9 +1,13 @@
 """Tests for server-side fixed-electric-field FFDielectric support."""
 
+import threading
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
 from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
+from ipi.engine.properties import Properties
 
 
 def _server_dielectric(**kwargs):
@@ -81,6 +85,19 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
     np.testing.assert_allclose(forces, [6.0, 0.0, 0.0])
     np.testing.assert_allclose(
         virial, [[16.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+    )
+
+    dielectric.electric_fields = [object()]
+    dielectric._field_cache = (field, None)
+    properties = Properties()
+    properties.simul = SimpleNamespace(fflist={"dielectric": dielectric})
+    properties._threadlock = threading.Lock()
+    np.testing.assert_allclose(
+        properties["electric_field(dielectric)"][0], field
+    )
+    np.testing.assert_allclose(
+        properties["electric_displacement(dielectric)"][0],
+        [2.0 + np.pi, 0.0, 0.0],
     )
 
 

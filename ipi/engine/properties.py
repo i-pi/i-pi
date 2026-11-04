@@ -290,6 +290,18 @@ class Properties:
                 "size": 3,
                 "func": self.get_Efield,
             },
+            "electric_field": {
+                "dimension": "electric-field",
+                "help": "The electric field configured on an FFDielectric forcefield. Takes the forcefield name as its mandatory argument.",
+                "size": 3,
+                "func": self.get_dielectric_electric_field,
+            },
+            "electric_displacement": {
+                "dimension": "electric-field",
+                "help": "The electric displacement corresponding to a fixed-electric-field FFDielectric calculation. Takes the forcefield name as its mandatory argument.",
+                "size": 3,
+                "func": self.get_dielectric_electric_displacement,
+            },
             "Eenvelope": {
                 "dimension": "undefined",
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
@@ -1556,6 +1568,29 @@ class Properties:
             softexit.trigger(
                 message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
             )
+
+    def _get_dielectric_forcefield(self, name):
+        """Return the named FFDielectric forcefield used by this system."""
+        if name == "":
+            raise ValueError("Specify the FFDielectric forcefield name.")
+        try:
+            forcefield = self.simul.fflist[name]
+        except KeyError as error:
+            raise ValueError(f"No forcefield named '{name}' exists.") from error
+
+        from ipi.engine.forcefields import FFDielectric
+
+        if not isinstance(forcefield, FFDielectric):
+            raise ValueError(f"Forcefield '{name}' is not an FFDielectric.")
+        return forcefield
+
+    def get_dielectric_electric_field(self, name=""):
+        """Return the electric field configured on an FFDielectric forcefield."""
+        return self._get_dielectric_forcefield(name).get_electric_field()
+
+    def get_dielectric_electric_displacement(self, name=""):
+        """Return the displacement corresponding to a fixed-E FFDielectric run."""
+        return self._get_dielectric_forcefield(name).get_electric_displacement()
 
     def get_conserved(self):
         """Returns the conserved quantity of the system."""

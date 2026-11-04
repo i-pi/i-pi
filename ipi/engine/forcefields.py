@@ -2655,6 +2655,17 @@ class FFDielectric(ForceField):
         """Return the configured electric field."""
         return self._get_cached_vector_field(0, "electric field", self.electric_fields)
 
+    def get_electric_displacement(self):
+        """Return ``E + 4 pi mu / Omega`` from the latest fixed-E request."""
+        with self._field_cache_lock:
+            request = getattr(self, "_electric_field_request_cache", None)
+            if request is None:
+                raise RuntimeError(
+                    "The electric displacement for FFDielectric "
+                    f"'{self.name}' has not been evaluated yet."
+                )
+            return self._electric_displacement_from_field(request).copy()
+
     @staticmethod
     def _sum_vector_fields(fields, actual_time):
         """Evaluates and sums one category of user-provided vector fields."""

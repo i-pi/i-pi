@@ -195,19 +195,22 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
-        if self.enstype == "nvt-cc":
-            from ipi.engine.forcefields import FFDielectric
+        from ipi.engine.forcefields import FFDielectric
 
-            active_forcefields = (
-                bforce.ff[component.ffield] for component in bforce.fcomp
+        active_forcefields = [
+            bforce.ff[component.ffield] for component in bforce.fcomp
+        ]
+        has_dielectric = any(
+            isinstance(forcefield, FFDielectric) for forcefield in active_forcefields
+        )
+        if self.enstype == "nvt-cc" and has_dielectric:
+            raise ValueError(
+                "NVTCCIntegrator is not compatible with FFDielectric: "
+                "the centroid coordinate is constrained."
             )
-            if any(isinstance(ff, FFDielectric) for ff in active_forcefields):
-                raise ValueError(
-                    "NVTCCIntegrator is not compatible with FFDielectric: "
-                    "the centroid coordinate is constrained."
-                )
 
         self.integrator.bind(self)
+        self.integrator.track_actual_time = has_dielectric
 
         self.ensemble.add_econs(self.thermostat.ethermo_)
         self.ensemble.add_econs(self.barostat.ebaro_)
@@ -262,13 +265,18 @@ class Dynamics(Motion):
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
-        if np.abs(self.ensemble.time - self.integrator.actual_time) > self.dt / 100.0:
-            softexit.trigger(
-                status="bad", message=" @ SIMULATION: Error in the actual time update."
-            )
-        self.integrator.actual_time = (
-            self.ensemble.time
-        )  # overwrite to avoid accumulating numerical noise
+        if self.integrator.track_actual_time:
+            if (
+                np.abs(self.ensemble.time - self.integrator.actual_time)
+                > self.dt / 100.0
+            ):
+                softexit.trigger(
+                    status="bad",
+                    message=" @ SIMULATION: Error in the actual time update.",
+                )
+            self.integrator.actual_time = (
+                self.ensemble.time
+            )  # overwrite to avoid accumulating numerical noise
 
 
 dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
@@ -421,6 +429,7 @@ class DummyIntegrator:
         # check stress tensor
         self._stresscheck = True
         self.actual_time_ = depend_value(name="actual_time", value=self.ensemble.time)
+        self.track_actual_time = False
 
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
@@ -436,7 +445,8 @@ class DummyIntegrator:
 
     def update_actual_time(self, qdt: float):
         """Update the actual time of the simulation using the positions qdt"""
-        self.actual_time += qdt
+        if self.track_actual_time:
+            self.actual_time += qdt
 
     def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
