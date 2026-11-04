@@ -39,10 +39,10 @@ class MPIWorldManager:
     the single collective ``COMM_WORLD.Split(color=0)`` (so the drivers can form
     their own sub-communicators), and the handshake that discovers every driver
     group root together with the forcefield name it was launched for. Each
-    interface then claims the roots tagged with its own name. A shared lock
-    serialises all MPI calls across the per-forcefield poll threads, so
-    MPI_THREAD_SERIALIZED is enough and the (disjoint) point-to-point traffic
-    never collides.
+    interface then claims the roots tagged with its own name. The MPI calls are
+    made by the main thread, except when a soft exit closes the interfaces from
+    its own thread: a shared lock serialises them, so MPI_THREAD_SERIALIZED is
+    enough.
     """
 
     def __init__(self):
@@ -51,7 +51,6 @@ class MPIWorldManager:
         self.roots_by_name = {}  # forcefield name -> sorted list of root ranks
         self.registered_names = set()
         self.mpi_lock = threading.Lock()
-        self._setup_lock = threading.Lock()
 
     def register(self, name):
         """Records a forcefield name before the handshake (idempotent)."""
@@ -59,21 +58,20 @@ class MPIWorldManager:
 
     def setup(self, MPI):
         """One-time collective split + handshake; later calls are no-ops."""
-        with self._setup_lock:
-            if self._setup_done:
-                return
-            self.comm = MPI.COMM_WORLD
-            if self.comm.Get_rank() != 0:
-                raise ValueError("ffmpi expects i-PI to be rank 0 of MPI_COMM_WORLD.")
-            if self.comm.Get_size() < 2:
-                raise ValueError(
-                    "ffmpi found no driver ranks: launch with "
-                    "`mpirun -n 1 i-pi input.xml : -n N <driver> --mpi ...`."
-                )
-            # i-PI sits alone in color 0; the driver ranks build their own pools
-            MPI.COMM_WORLD.Split(color=0, key=0)
-            self._handshake(MPI)
-            self._setup_done = True
+        if self._setup_done:
+            return
+        self.comm = MPI.COMM_WORLD
+        if self.comm.Get_rank() != 0:
+            raise ValueError("ffmpi expects i-PI to be rank 0 of MPI_COMM_WORLD.")
+        if self.comm.Get_size() < 2:
+            raise ValueError(
+                "ffmpi found no driver ranks: launch with "
+                "`mpirun -n 1 i-pi input.xml : -n N <driver> --mpi ...`."
+            )
+        # i-PI sits alone in color 0; the driver ranks build their own pools
+        MPI.COMM_WORLD.Split(color=0, key=0)
+        self._handshake(MPI)
+        self._setup_done = True
 
     def _handshake(self, MPI):
         """Collects one HELLO per driver group root: an int payload
@@ -159,6 +157,7 @@ class InterfaceMPI:
         self.driver_ranks = []
         self._ranks = {}
         self._initialized = False
+        self._closed = False
         # register the name now, before any open()/handshake, so the manager
         # knows the full set of forcefields when it partitions the drivers; the
         # shared MPI lock is also taken from the manager (usable before open())
@@ -175,9 +174,9 @@ class InterfaceMPI:
             info("ffmpi requires a functioning mpi4py installation")
             raise
 
-        # MPI calls happen on the main thread (setup) and then on the poll
-        # thread, one at a time; request a thread level that allows that.
-        mpi4py.rc.thread_level = "multiple"
+        # MPI calls happen on the main thread, and on the thread of a soft
+        # exit when closing, serialised by the shared lock
+        mpi4py.rc.thread_level = "serialized"
         from mpi4py import MPI
 
         mgr = get_mpi_world_manager()
@@ -212,18 +211,28 @@ class InterfaceMPI:
         )
 
     def poll(self):
-        """Dispatches queued requests to idle driver roots and collects the
-        results of the ones that have finished."""
+        """Collects the results of the driver roots that have finished, and
+        dispatches queued requests to the idle ones. Returns True if a request
+        was completed or dispatched."""
 
         from mpi4py import MPI
 
-        # the shared lock serialises MPI across the poll threads of every FFMPI
+        # the shared lock serialises MPI with a soft exit closing the interfaces
         with self._mpi_lock:
+            if self._closed:
+                # the requests cannot be computed once the interface is closed
+                pending = [
+                    r for r in self.requests if r["status"] in ("Queued", "Running")
+                ]
+                for r in pending:
+                    r["status"] = "Exit"
+                return bool(pending)
             if not self._initialized:
                 self._send_init(MPI)
                 self._initialized = True
-            self._collect(MPI)
-            self._dispatch(MPI)
+            collected = self._collect(MPI)
+            dispatched = self._dispatch(MPI)
+        return collected or dispatched
 
     def _send_init(self, MPI):
         """Sends the INIT to each driver root, mirroring the socket protocol:
@@ -243,8 +252,10 @@ class InterfaceMPI:
             self.comm.Send([pbytes, MPI.BYTE], dest=r, tag=MPI_TAG_INIT)
 
     def _collect(self, MPI):
-        """Receives results from any busy slot whose driver has replied."""
+        """Receives results from any busy slot whose driver has replied, and
+        returns True if any did."""
 
+        collected = False
         status = MPI.Status()
         for slot in self._ranks.values():
             if slot["state"] != "BUSY":
@@ -268,6 +279,8 @@ class InterfaceMPI:
             self._unpack_results(reqs, nat, numeric, ebuf)
             slot["state"] = "IDLE"
             slot["requests"] = []
+            collected = True
+        return collected
 
     def _unpack_results(self, reqs, nat, numeric, ebuf):
         """Splits the packed numeric buffer and extra strings back into the
@@ -285,17 +298,15 @@ class InterfaceMPI:
             extra = ebuf[epos : epos + elen].tobytes().decode("utf-8") if elen else ""
             epos += elen
 
-            req["result"] = [pot - self.offset, force, vir, parse_extra(extra)]
-            req["status"] = "Done"
-            req["t_finished"] = time.time()
-            req._event_done.set()
+            req.finish([pot - self.offset, force, vir, parse_extra(extra)])
 
     def _dispatch(self, MPI):
-        """Sends queued requests to idle slots, up to batch_size per slot."""
+        """Sends queued requests to idle slots, up to batch_size per slot, and
+        returns True if any was sent."""
 
         queued = [r for r in self.requests if r["status"] == "Queued"]
         if not queued:
-            return
+            return False
 
         qi = 0
         for slot in self._ranks.values():
@@ -321,6 +332,7 @@ class InterfaceMPI:
             self.comm.Send([body, MPI.DOUBLE], dest=slot["rank"], tag=MPI_TAG_WORK)
             slot["requests"] = batch
             slot["state"] = "BUSY"
+        return qi > 0
 
     def close(self):
         """Tells every driver root to exit.
@@ -334,8 +346,11 @@ class InterfaceMPI:
         from mpi4py import MPI
 
         buf = np.zeros(1, dtype=np.int32)
-        # other forcefields' poll threads may still be live, so serialise the
-        # EXIT sends through the shared MPI lock
+        # a soft exit closes the interfaces from its own thread, so the EXIT
+        # sends are serialised with the polls through the shared MPI lock
         with self._mpi_lock:
+            if self._closed:
+                return
+            self._closed = True
             for r in self.driver_ranks:
                 self.comm.Send([buf, MPI.INT], dest=r, tag=MPI_TAG_EXIT)

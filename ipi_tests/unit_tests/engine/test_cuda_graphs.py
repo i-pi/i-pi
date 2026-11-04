@@ -6,6 +6,7 @@
 
 import contextlib
 import json
+from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -28,6 +29,15 @@ cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not availa
 
 # the options of the simulations replayed on the GPU
 CUDA = dict(backend="torch", device="cuda")
+
+
+def recording():
+    """Whether a function is being recorded, rather than run (and observed)
+    eagerly."""
+
+    from ipi.utils import depend
+
+    return depend._recorder is not None and not depend._recorder.observes
 
 
 def graph_step(sim):
@@ -214,13 +224,12 @@ def test_failed_recording_stops_the_replay(
     apply the thermostat) stops the steps, also at the following calls"""
 
     from ipi.engine.thermostats import ThermoLangevin
-    from ipi.utils import depend
     from ipi.utils.jit import JitError
 
     step, calls = ThermoLangevin.step, []
 
     def failing(self):
-        if depend._recorder is not None:
+        if recording():
             calls.append(None)
             if len(calls) == segment:
                 raise RuntimeError("recording failed")
@@ -545,7 +554,7 @@ def test_failed_recording_is_final(kind, fake_cuda):
     between two segments, is not called again, as the kernels of the segment
     being recorded have not run: the following calls raise a JitError"""
 
-    from ipi.utils import depend, jit
+    from ipi.utils import jit
     from ipi.utils.cudagraphs import GraphReplay
     from ipi.utils.jit import JitError
 
@@ -560,7 +569,7 @@ def test_failed_recording_is_final(kind, fake_cuda):
         calls.append(None)
         if kind == "eager":
             jit.eager(fail)
-        elif depend._recorder is not None:
+        elif recording():
             fail()
 
     replay = GraphReplay(func)
@@ -581,7 +590,6 @@ def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
     ending it fails, and is raised as a JitError; JitErrors are raised as they
     are"""
 
-    from ipi.utils import depend
     from ipi.utils.cudagraphs import GraphReplay
     from ipi.utils.jit import JitError
 
@@ -593,7 +601,7 @@ def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
     error = JitError("raised in the step") if kind == "jit" else ValueError()
 
     def func():
-        if depend._recorder is not None:
+        if recording():
             raise error
 
     replay = GraphReplay(func)
@@ -768,7 +776,7 @@ def test_compilation_errors_during_a_recording_are_raised(monkeypatch):
 
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: (9, 0))
     monkeypatch.setattr(torch, "compile", lambda func, **kwargs: failing)
-    monkeypatch.setattr(depend, "_recorder", object())
+    monkeypatch.setattr(depend, "_recorder", SimpleNamespace(observes=False))
 
     def func(x):
         return 2 * x

@@ -109,7 +109,7 @@ class InputSimulation(Input):
             {
                 "dtype": bool,
                 "default": True,
-                "help": "Whether multiple-systems execution should be parallel. Makes execution non-reproducible due to the random number generator being used from concurrent threads.",
+                "help": "Whether the steps (and the outputs) of multiple systems are interleaved: each system runs until it waits for forces, and the others run meanwhile, so that their forces are computed in parallel by the clients, or together by in-process forcefields. All this happens in a single thread. The systems share the random number generator, so with socket or MPI forcefields, whose results arrive in an unpredictable order, the runs are not reproducible. With --jit, the systems are stepped one after the other.",
             },
         ),
         "mode": (

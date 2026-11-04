@@ -85,8 +85,9 @@ class JaxReplay(Replay):
         self.ncalls += 1
 
     def observe(self, *args):
-        """Calls the function eagerly, and returns the depend objects that it
-        reads before writing them."""
+        """Calls the function eagerly, notes the computed objects that it
+        reads, and returns the depend objects that it reads before writing
+        them."""
 
         recorder = _Recorder(self)
         depend.set_recorder(recorder)
@@ -94,6 +95,7 @@ class JaxReplay(Replay):
             self.func(*args)
         finally:
             depend.set_recorder(None)
+        self.note(recorder)
         return [dep for dep, value, data in recorder.inputs.values()]
 
     def record(self, *args):

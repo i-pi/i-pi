@@ -15,8 +15,8 @@ Classes:
 
 State. A depend object holds its value, and a `depend_status` holding
 everything else: the function that computes the value, a tainted flag (the
-value is out of date), the dependants to taint when the value changes, the
-synchronization with a peer, and a lock. The views of an array share the
+value is out of date), the dependants to taint when the value changes,
+and the synchronization with a peer. The views of an array share the
 status of the array they belong to (their root), so they are always in the
 same state as the root.
 
@@ -86,7 +86,6 @@ Arrays are stored with the array backend selected in
 
 
 import operator
-import threading
 import weakref
 
 import array_api_compat
@@ -160,17 +159,15 @@ class depend_status(object):
         dependants: Weak references to the objects to taint when the value
             changes.
         synchro: The `depend_synchro` linking the object to a peer, or None.
-        lock: Lock making the updates of the value thread-safe.
     """
 
-    __slots__ = ("func", "tainted", "dependants", "synchro", "lock")
+    __slots__ = ("func", "tainted", "dependants", "synchro")
 
     def __init__(self, func=None, tainted=False):
         self.func = func
         self.tainted = tainted
         self.dependants = []
         self.synchro = None
-        self.lock = threading.RLock()
 
     # copies have no dependants and no synchronization. Deep copies share
     # `func`, which is often a bound method whose `__self__` holds state that
@@ -264,22 +261,20 @@ class depend_base(object):
     def _refresh(self):
         """Recomputes the value if it is out of date, and marks it up to date.
 
-        Callers check `self._status.tainted` first, so that reading a value
-        that is up to date does not call it. The check is repeated under the
-        lock, so that only one thread recomputes the value.
+        Readers check `self._status.tainted` first, so that reading a value
+        that is up to date does not call it.
         """
 
         status = self._status
-        with status.lock:
-            if status.tainted:
-                synchro = status.synchro
-                if synchro is not None and synchro.manual is not status:
-                    self.set(synchro.compute(status), manual=False)
-                elif synchro is None and status.func is not None:
-                    self.set(status.func(), manual=False)
-                else:
-                    # nothing to recompute (e.g. the peer that holds the data)
-                    self.taint(taintme=False)
+        if status.tainted:
+            synchro = status.synchro
+            if synchro is not None and synchro.manual is not status:
+                self.set(synchro.compute(status), manual=False)
+            elif synchro is None and status.func is not None:
+                self.set(status.func(), manual=False)
+            else:
+                # nothing to recompute (e.g. the peer that holds the data)
+                self.taint(taintme=False)
 
     def _root(self):
         """Returns the object that stores the value: the object itself, or the
@@ -353,17 +348,16 @@ class depend_value(depend_base):
         """
 
         status = self._status
-        with status.lock:
-            # 1. computed objects cannot be written
-            if manual and status.func is not None:
-                raise _computed_error(self)
-            # 3. (a value is written whole, so there is no step 2)
-            self._value = value
-            # 4. the written peer holds the data
-            if manual and status.synchro is not None:
-                self._taint_synchro()
-            # 5. taints the dependants
-            self.taint(taintme=False)
+        # 1. computed objects cannot be written
+        if manual and status.func is not None:
+            raise _computed_error(self)
+        # 3. (a value is written whole, so there is no step 2)
+        self._value = value
+        # 4. the written peer holds the data
+        if manual and status.synchro is not None:
+            self._taint_synchro()
+        # 5. taints the dependants
+        self.taint(taintme=False)
 
 
 # --------------------------------------------------------------------------
@@ -433,22 +427,21 @@ def _inplace(op):
         if isinstance(other, depend_base):
             other = other.get()
         status = self._status
-        with status.lock:
-            # 1. computed objects cannot be written
-            if status.func is not None:
-                raise _computed_error(self)
-            # 2. the operator reads the value it updates
-            if status.tainted:
-                self._refresh()
-            if _recorder is not None:
-                _recorder.read(self)
-            # 3. updates the stored array
-            self._apply(op, other)
-            # 4. the written peer holds the data
-            if status.synchro is not None:
-                self._taint_synchro()
-            # 5. taints the dependants
-            self.taint(taintme=False)
+        # 1. computed objects cannot be written
+        if status.func is not None:
+            raise _computed_error(self)
+        # 2. the operator reads the value it updates
+        if status.tainted:
+            self._refresh()
+        if _recorder is not None:
+            _recorder.read(self)
+        # 3. updates the stored array
+        self._apply(op, other)
+        # 4. the written peer holds the data
+        if status.synchro is not None:
+            self._taint_synchro()
+        # 5. taints the dependants
+        self.taint(taintme=False)
         return self
 
     method.__name__ = f"__{op.__name__}__"
@@ -531,24 +524,23 @@ class depend_array(depend_base):
         if isinstance(value, depend_base):
             value = value.get()
         status = self._status
-        with status.lock:
-            if manual:
-                # 1. computed objects cannot be written
-                if status.func is not None:
-                    raise _computed_error(self)
-                # 2. a view is part of its root, whose other elements are kept
-                if self._is_view:
-                    if status.tainted:
-                        self._refresh()
-                    if _recorder is not None:
-                        _recorder.read(self)
-            # 3. writes the stored array
-            self._assign(Ellipsis, value)
-            # 4. the written peer holds the data
-            if manual and status.synchro is not None:
-                self._taint_synchro()
-            # 5. taints the dependants
-            self.taint(taintme=False)
+        if manual:
+            # 1. computed objects cannot be written
+            if status.func is not None:
+                raise _computed_error(self)
+            # 2. a view is part of its root, whose other elements are kept
+            if self._is_view:
+                if status.tainted:
+                    self._refresh()
+                if _recorder is not None:
+                    _recorder.read(self)
+        # 3. writes the stored array
+        self._assign(Ellipsis, value)
+        # 4. the written peer holds the data
+        if manual and status.synchro is not None:
+            self._taint_synchro()
+        # 5. taints the dependants
+        self.taint(taintme=False)
 
     def __setitem__(self, index, value):
         if isinstance(value, depend_base):
@@ -563,26 +555,25 @@ class depend_array(depend_base):
                 return
             value = value.get()
         status = self._status
-        with status.lock:
-            # 1. computed objects cannot be written. With torch, the elements
-            # given by `obj.x_[i]` share memory with the stored array, so
-            # `obj.x_[i] op= v` has already modified it: it is recomputed
-            if status.func is not None:
-                self.taint()
-                raise _computed_error(self)
-            # 2. the elements that are not assigned are kept
-            if index is not Ellipsis or self._is_view:
-                if status.tainted:
-                    self._refresh()
-                if _recorder is not None:
-                    _recorder.read(self)
-            # 3. writes the stored array
-            self._assign(index, value)
-            # 4. the written peer holds the data
-            if status.synchro is not None:
-                self._taint_synchro()
-            # 5. taints the dependants
-            self.taint(taintme=False)
+        # 1. computed objects cannot be written. With torch, the elements
+        # given by `obj.x_[i]` share memory with the stored array, so
+        # `obj.x_[i] op= v` has already modified it: it is recomputed
+        if status.func is not None:
+            self.taint()
+            raise _computed_error(self)
+        # 2. the elements that are not assigned are kept
+        if index is not Ellipsis or self._is_view:
+            if status.tainted:
+                self._refresh()
+            if _recorder is not None:
+                _recorder.read(self)
+        # 3. writes the stored array
+        self._assign(index, value)
+        # 4. the written peer holds the data
+        if status.synchro is not None:
+            self._taint_synchro()
+        # 5. taints the dependants
+        self.taint(taintme=False)
 
     __iadd__ = _inplace(operator.iadd)
     __isub__ = _inplace(operator.isub)
