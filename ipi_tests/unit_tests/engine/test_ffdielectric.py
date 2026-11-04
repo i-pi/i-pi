@@ -34,9 +34,17 @@ def test_dielectric_rejects_wrapped_forcefield():
     with pytest.raises(ValueError, match="does not support pbc='True'"):
         FFDielectric(
             name="dielectric",
-            dipole={"family": "electric-dipole", "units": "atomic_unit", "key": "dipole"},
+            dipole={
+                "family": "electric-dipole",
+                "units": "atomic_unit",
+                "key": "dipole",
+            },
             bec={"family": "charge", "units": "e", "key": "BEC"},
-            piezo={"family": "electric-polarization", "units": "atomic_unit", "key": "piezoelectric"},
+            piezo={
+                "family": "electric-polarization",
+                "units": "atomic_unit",
+                "key": "piezoelectric",
+            },
             electric_fields=[],
             forcefield=ForceField(dopbc=True),
         )
@@ -58,7 +66,9 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
                 np.zeros((3, 3)),
                 {
                     "dipole": np.array([0.5, 0.0, 0.0]),
-                    "BEC": np.array([[[3.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]),
+                    "BEC": np.array(
+                        [[[3.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]
+                    ),
                     "piezoelectric": piezoelectric,
                 },
             ),
@@ -69,7 +79,9 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
 
     assert energy == pytest.approx(9.0)
     np.testing.assert_allclose(forces, [6.0, 0.0, 0.0])
-    np.testing.assert_allclose(virial, [[16.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    np.testing.assert_allclose(
+        virial, [[16.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+    )
 
 
 def test_dielectric_expands_voigt_piezoelectric_tensor():
