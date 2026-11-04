@@ -4,10 +4,7 @@ Reference values come from explicit Fourier projections and from derivatives
 of the polynomial and harmonic models.
 """
 
-import time
 import xml.etree.ElementTree as ET
-from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
 from types import SimpleNamespace
 
 import numpy as np
@@ -18,6 +15,7 @@ from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFDirect, FFEval
 from ipi.engine.forces import Forces, ForceComponent, ScaledForceComponent
+from ipi.utils import scheduler
 from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
 from ipi_tests.unit_tests.engine.mathematical_references import (
@@ -334,10 +332,7 @@ def force_system():
             extras = {"energy": energy, "label": self.name, "raw": self.name}
             if self.extra_values is not None:
                 extras = self.extra_values(q)
-            request["result"] = [energy, -q, -np.outer(q, q), extras]
-            request["t_finished"] = time.time()
-            request["status"] = "Done"
-            request._event_done.set()
+            return [energy, -q, -np.outer(q, q), extras]
 
     def create(components, nbeads=4, extra_values=None):
         beads = Beads(1, nbeads)
@@ -346,9 +341,7 @@ def force_system():
         beads.q_[:] = np.arange(1, 3 * nbeads + 1).reshape(nbeads, 3) / 10
         cell = Cell(np.eye(3) * 10)
         providers = {
-            component.ffield: Harmonic(
-                name=component.ffield, threaded=False, dopbc=False
-            )
+            component.ffield: Harmonic(name=component.ffield, dopbc=False)
             for component in components
         }
         for provider in providers.values():
@@ -624,39 +617,21 @@ def test_bead_force_waits_for_evaluation_and_releases_request(
     _, _, forces = force_system([ForceComponent("harmonic")])
     bead_force = forces.mforces[0]._forces[0]
     provider = bead_force.ff
-    # Queue first; evaluation starts only after the readers wait.
-    provider.threaded = True
+    # the request is evaluated only once the readers wait for it
     bead_force.queue()
     request = bead_force.request
-    waiting = Barrier(readers + 1)
-    event_wait = request._event_done.wait
-
-    def wait_for_result(timeout=None):
-        waiting.wait(timeout=2)
-        return event_wait(timeout)
-
-    monkeypatch.setattr(request._event_done, "wait", wait_for_result)
+    assert request["status"] == "Queued"
     monkeypatch.setattr(
         force_module,
         "softexit",
         SimpleNamespace(triggered=False, exiting=False, trigger=lambda **kw: None),
     )
-    with ThreadPoolExecutor(max_workers=readers) as executor:
-        results = [executor.submit(bead_force.get_all) for _ in range(readers)]
-        try:
-            waiting.wait(timeout=2)
-            assert all(not result.done() for result in results)
-            provider.poll()
-            for result in results:
-                energy, force, virial, extra = result.result(timeout=2)
-                assert energy == pytest.approx(0.07)
-                np.testing.assert_allclose(force, [-0.1, -0.2, -0.3])
-            assert not provider.requests
-            assert bead_force.request is None
-        finally:
-            if any(not result.done() for result in results):
-                request["status"] = "Exit"
-                request._event_done.set()
+    results = scheduler.run([bead_force.get_all] * readers)
+    for energy, force, virial, extra in results:
+        assert energy == pytest.approx(0.07)
+        np.testing.assert_allclose(force, [-0.1, -0.2, -0.3])
+    assert not provider.requests
+    assert bead_force.request is None
 
 
 def test_unqueued_bead_force_evaluates_and_releases_request(force_system):

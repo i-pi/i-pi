@@ -15,7 +15,10 @@ is a single CUDA graph.
 
 Only the dynamics that are known to work in this way are replayed (see
 `unsupported`), and a `JitError` stops the simulation if a host value read by
-a graph changes.
+a graph changes. The systems of a simulation are stepped in turn, and replica
+exchange is supported as long as the parameters that it exchanges reach the
+steps as arrays: the temperature of the thermostats and of the normal modes,
+but not that of the barostats, their pressure, or the weights of the forces.
 
 With JAX, the whole step is compiled, including the requests to direct
 forcefields whose driver works on the arrays of the backend and can be traced
@@ -28,6 +31,8 @@ run eagerly.
 # See the "licenses" directory for full license information.
 
 from functools import partial
+
+import numpy as np
 
 from ipi.utils.array_backend import backend
 from ipi.utils.cudagraphs import GraphReplay
@@ -50,7 +55,7 @@ def unsupported(simulation, system):
         NPTIntegrator,
         NSTIntegrator,
     )
-    from ipi.engine.smotion import Smotion
+    from ipi.engine.smotion import Smotion, ReplicaExchange
     from ipi.engine.thermostats import (
         ThermoLangevin,
         ThermoPILE_G,
@@ -77,10 +82,20 @@ def unsupported(simulation, system):
         return "fixed atoms"
     if len(system.nm.open_paths) > 0 or len(system.nm.bosons) > 0:
         return "open paths or bosons"
-    if simulation.smotion is not None and type(simulation.smotion) is not Smotion:
+    smotions = (Smotion, ReplicaExchange)
+    if simulation.smotion is not None and type(simulation.smotion) not in smotions:
         return "a motion of multiple systems"
-    if simulation.threading and len(simulation.syslist) > 1:
-        return "stepping systems in threads"
+    if type(simulation.smotion) is ReplicaExchange:
+        # the barostats and the sums of the forces read the parameters that
+        # would be exchanged as host values, fixed in the compiled steps
+        if type(motion.barostat) is not Barostat:
+            return "replica exchange with a barostat"
+        weights = {
+            (tuple(np.ravel(s.ensemble.hweights)), tuple(np.ravel(s.ensemble.bweights)))
+            for s in simulation.syslist
+        }
+        if len(weights) > 1:
+            return "replica exchange of the weights of the forces"
     return None
 
 
@@ -107,7 +122,7 @@ def _driver_in_step(ff):
 
     from ipi.engine.forcefields import FFDirect
 
-    return type(ff) is FFDirect and ff.backend_arrays and not ff.threaded
+    return type(ff) is FFDirect and ff.backend_arrays
 
 
 class GraphStep(GraphReplay):

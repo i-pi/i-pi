@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 import ipi.utils.array_backend as ab
+from ipi.engine.atoms import Atoms
+from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFPlumed, ForceRequest
 from ipi.utils.softexit import Softexit
 
@@ -47,25 +49,18 @@ def plumed_field(tmp_path, monkeypatch):
         ff.softexit()
 
 
-@pytest.mark.parametrize(
-    "threaded,step,compute_work", [(False, 0, True), (True, 3, False)]
-)
-def test_plumed_distance_restraint_matches_quadratic(
-    plumed_field, threaded, step, compute_work
-):
+@pytest.mark.parametrize("step,compute_work", [(0, True), (3, False)])
+def test_plumed_distance_restraint_matches_quadratic(plumed_field, step, compute_work):
     ff = plumed_field(
-        threaded=threaded,
         plumed_step=step,
         compute_work=compute_work,
         plumed_extras=["d"],
     )
-    assert not ff.threaded
     assert ff.plumedrestart == (step > 0)
     positions = np.array([0.0, 0.0, 0.0, 1.0, 2.0, -1.0])
     cell = np.eye(3) * 20
     request = ForceRequest(pos=positions, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(request)
-    energy, force, virial, extra = request["result"]
+    energy, force, virial, extra = ff.evaluate(request)
     assert energy == pytest.approx(6, rel=1e-6)
     np.testing.assert_allclose(force, [2, 4, -2, -2, -4, 2], rtol=1e-6)
     np.testing.assert_allclose(
@@ -73,7 +68,6 @@ def test_plumed_distance_restraint_matches_quadratic(
     )
     assert extra["raw"] == ""
     np.testing.assert_allclose(extra["d"], [np.sqrt(6)], rtol=1e-6)
-    assert request._event_done.is_set()
     assert ff.mtd_update(positions, cell) == pytest.approx(0, abs=1e-12)
     assert ff.plumed_step == step + 1
     with pytest.raises(ValueError, match="Size of atom array"):
@@ -81,11 +75,20 @@ def test_plumed_distance_restraint_matches_quadratic(
 
 
 def bias_with_physical_forces(ff):
-    """Results without and with a separate harmonic pair potential U = |r|^2/2."""
+    """Results without and with a separate harmonic pair potential U = |r|^2/2,
+    whose energy, forces and virial are read when the request is queued."""
     q = np.array([0.0, 0.0, 0.0, 1.0, 2.0, -1.0])
-    cell = np.eye(3) * 20
-    first = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(first)
+    atoms = Atoms(2)
+    atoms.q_[:] = ab.xp.asarray(q)
+    cell = Cell(ab.xp.eye(3) * 20)
+
+    def compute():
+        request = ff.queue(atoms, cell)
+        ff.poll()
+        ff.release(request)
+        return request["result"]
+
+    first = compute()
     # the physical forces are arrays of the backend
     system = ab.xp.asarray(q)
     ff.system_force = SimpleNamespace(
@@ -93,9 +96,7 @@ def bias_with_physical_forces(ff):
         f=ab.xp.concat([system[3:], -system[3:]]),
         vir=-ab.xp.linalg.outer(system[3:], system[3:]),
     )
-    second = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(second)
-    return first["result"], second["result"]
+    return first, compute()
 
 
 def test_plumed_returns_only_bias_energy_and_forces(plumed_field):

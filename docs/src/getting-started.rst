@@ -14,9 +14,10 @@ compiled and installed. The ``i-pi`` file in the ``bin`` directory of
 the distribution is the main (executable) script, and can be run as long
 as the system has installed:
 
--  Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
-   compatible)
--  The Python numerical library NumPy
+-  Python version 3.10 or greater
+-  The Python numerical library NumPy, and ``array-api-compat``
+-  ``greenlet``, with which i-PI runs several systems, and waits for several
+   clients, in a single thread
 
 See :ref:`runningsimulations` for more details on how to launch i-PI.
 
@@ -310,12 +311,14 @@ graphs, and potentials that can be recorded too (``traceable``, such as
 The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
 integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
 PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
-no thermostat or a Langevin one on the barostat. The other simulations run as
-usual, with a warning: other motions, thermostats or barostats, fixed atoms,
-open paths, bosons, motions of several systems (e.g. replica exchange), and
-several systems stepped in threads. ``--jit`` needs the torch backend on a
-CUDA device, or the jax backend: with numpy, or torch on the CPU, i-PI stops
-with an error. The parameters that are fixed in the recorded
+no thermostat or a Langevin one on the barostat. The systems of a simulation
+are then stepped one after the other (whatever ``threading``), and replica
+exchange is supported, unless the replicas have a barostat or different
+weights of the forces, which are fixed in the graphs. The other simulations
+run as usual, with a warning: other motions, thermostats or barostats, fixed
+atoms, open paths, bosons, and other motions of several systems. ``--jit``
+needs the torch backend on a CUDA device, or the jax backend: with numpy, or
+torch on the CPU, i-PI stops with an error. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
 barostat, cannot change while the steps are replayed: i-PI stops with an error
 if they do, or if a step cannot be recorded (the simulation can then be

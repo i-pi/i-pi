@@ -10,8 +10,6 @@ forcefields which govern the interaction potential.
 # See the "licenses" directory for full license information.
 
 
-import threading
-
 from ipi.utils.array_backend import backend
 from ipi.utils.depend import dpipe
 from ipi.utils.messages import verbosity, info
@@ -124,6 +122,5 @@ class System:
         self.init.init_stage2(self)
 
         # binds output management objects
-        self._propertylock = threading.Lock()
         self.properties.bind(self)
         self.trajs.bind(self)

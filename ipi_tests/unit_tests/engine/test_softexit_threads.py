@@ -1,9 +1,8 @@
-"""Soft exit requested by the polling thread of a socket forcefield.
+"""Soft exit requested while a socket forcefield is polled.
 
 The exit is requested while a force request is pending, as when a client
-fails, so the cleanup runs in the thread that the forcefield would otherwise
-join when it stops. i-PI and the driver run as separate processes, with the
-hard exit used by bin/i-pi.
+fails, so the cleanup closes the socket that is being polled. i-PI and the
+driver run as separate processes, with the hard exit used by bin/i-pi.
 """
 
 import os
@@ -61,11 +60,11 @@ def run_simulation(input_file, request_exit):
         forcefield = simulation.fflist["harmonic"]
         poll = forcefield.poll
 
-        def poll_and_exit():
+        def poll_and_exit(idle=False):
             if simulation.step == EXIT_STEP and forcefield.requests:
                 Path("origin").write_text(threading.current_thread().name)
-                softexit.trigger(message="Test exit from the polling thread")
-            poll()
+                softexit.trigger(message="Test exit while polling")
+            return poll(idle)
 
         forcefield.poll = poll_and_exit
 
@@ -127,7 +126,7 @@ def run_with_driver(tmp_path, input_file, request_exit, address):
             Path("/tmp/ipi_" + address).unlink(missing_ok=True)
 
 
-def test_exit_from_the_polling_thread(tmp_path, monkeypatch):
+def test_exit_while_polling(tmp_path, monkeypatch):
     """The driver is told to exit, and RESTART continues the outputs."""
 
     monkeypatch.chdir(tmp_path)
@@ -135,7 +134,8 @@ def test_exit_from_the_polling_thread(tmp_path, monkeypatch):
     (tmp_path / "input.xml").write_text(socket_input(address))
     run_with_driver(tmp_path, "input.xml", "true", address)
 
-    assert (tmp_path / "origin").read_text() == "poll_harmonic"
+    # the forcefields are polled by the main thread
+    assert (tmp_path / "origin").read_text() == "MainThread"
     with open(tmp_path / "RESTART") as restart:
         assert 0 < Simulation.load_from_xml(restart, read_only=True).step < NSTEPS
 

@@ -335,9 +335,10 @@ Common pitfalls:
   they are called at unpredictable times, whenever a stale value is read.
 
 Each read of ``obj.x`` checks whether the value is stale, and recomputes
-it if needed. Recomputation is protected by a lock, so values can be read
-from several threads, e.g. when the outputs of different systems are
-written in parallel. Reading an up-to-date value is cheap (a fraction of a
+it if needed. Depend objects are not thread-safe: the steps and the outputs
+of different systems run as tasks in a single thread (``ipi/utils/scheduler.py``),
+which switch to each other only while they wait for forces, and do not share
+depend objects. Reading an up-to-date value is cheap (a fraction of a
 microsecond), but in loops that do not modify it, it is still better to
 read the value once into a local variable.
 
@@ -515,8 +516,8 @@ of an MD step must follow a few rules.
 
 The potentials of direct forcefields (:ref:`ffdirect`) receive and return
 numpy arrays, unless their driver sets ``backend_arrays = True``: it then works
-on the arrays of the backend (e.g. torch tensors on a GPU). Without threads,
-these are the arrays of the system rather than copies, so the driver must not
+on the arrays of the backend (e.g. torch tensors on a GPU). These are the
+arrays of the system rather than copies, so the driver must not
 modify them (e.g. it converts their units out of place, ``pos * factor`` rather
 than ``pos *= factor``), nor keep them after the call, as they may be
 overwritten when the steps are replayed. A driver that also sets
