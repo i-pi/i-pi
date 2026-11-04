@@ -321,13 +321,12 @@ def test_reshaping_views_that_need_a_copy_raises(select_backend, backend):
 
 
 def test_pickle_roundtrip():
-    """Depend: pickle/unpickle preserves values and recreates the lock."""
+    """Depend: pickle/unpickle preserves values and the status."""
     da = dp.depend_array(name="p", value=np.array([1.0, 2.0, 3.0]))
     rt = pickle.loads(pickle.dumps(da))
     assert isinstance(rt, dp.depend_array)
     assert np.array_equal(rt.get(), da.get())
-    with rt._status.lock:
-        pass
+    assert not rt.tainted()
     rt[0] = 5.0
     assert rt[0] == 5.0
 

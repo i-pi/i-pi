@@ -8,3 +8,5 @@ exclude = 'test_properties.py'
 [tool.coverage.run]
 # i-pi ends with os._exit(), which would otherwise skip saving the coverage data
 patch = ["_exit"]
+# the systems are stepped in greenlets, and soft exits run in their own thread
+concurrency = ["greenlet", "thread"]

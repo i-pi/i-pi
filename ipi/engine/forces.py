@@ -12,8 +12,6 @@ and the driver (that only cares about a single bead).
 # See the "licenses" directory for full license information.
 
 
-import time
-import threading
 from copy import deepcopy
 from functools import partial
 
@@ -21,7 +19,7 @@ import numpy as np
 
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
-from ipi.utils import jit
+from ipi.utils import jit, scheduler
 from ipi.utils.depend import *
 from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils.nmtransform import nm_rescale
@@ -111,10 +109,6 @@ class ForceBead:
           forcefields.
        request: A dictionary containing information about the currently
           running job.
-       _threadlock: Python handle used to lock the thread used to run the
-          communication with the client code.
-       _getallcount: An integer giving how many times the getall function has
-          been called.
 
     Depend objects:
        ufvx: A list of the form [pot, f, vir, extra]. These quantities are calculated
@@ -146,9 +140,7 @@ class ForceBead:
             func=partial(component.bead_results, index),
             dependencies=[component.results_],
         )
-        self._threadlock = threading.Lock()
         self.request = None
-        self._getallcount = 0
 
     def bind(self, atoms, cell, ff, output_maker):
         """Binds atoms, cell and a forcefield template to the ForceBead object.
@@ -162,9 +154,8 @@ class ForceBead:
         """
 
         global fbuid  # assign a unique identifier to each forcebead object
-        with self._threadlock:
-            self.uid = fbuid
-            fbuid += 1
+        self.uid = fbuid
+        fbuid += 1
 
         # stores a reference to the atoms and cell we are computing forces for
         self.atoms = atoms
@@ -209,10 +200,9 @@ class ForceBead:
         jit.split(self)
 
         # only dispatches a request if the results of the beads are out of date
-        with self._threadlock:
-            is_tainted = self.component.results_.tainted()
-            if self.request is None and is_tainted:
-                self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
+        is_tainted = self.component.results_.tainted()
+        if self.request is None and is_tainted:
+            self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
         return is_tainted
 
     def get_all(self):
@@ -227,30 +217,20 @@ class ForceBead:
            A list of the form [potential, force, virial, extra].
         """
 
-        # because we thread over many systems and outputs, we might get called
-        # more than once. keep track of how many times we are called so we
-        # can make sure to wait until the last call has returned before we release
-        with self._threadlock:
-            self._getallcount += 1
-
-        # this is converting the distribution library requests into [ u, f, v ]  lists
         if self.request is None:
             self.queue()
 
-        # sleeps until the request has been evaluated
+        # runs other tasks and polls the forcefields until the request is done,
+        # or stopped (by a soft exit, or because its forcefield has stopped)
         request = self.request
-        latency = self.ff.latency
-        while request["status"] != "Done":
-            if request["status"] == "Exit" or softexit.triggered:
-                # now, this is tricky. we are stuck here and we cannot return meaningful results.
-                # if we return, we may as well output wrong numbers, or mess up things.
-                # so we can only call soft-exit and wait until that is done. then kill the thread
-                # we are in.
-                softexit.trigger(
-                    status="bad",
-                    message=" @ FORCES : cannot return so will die off here",
-                )
-            request._event_done.wait(timeout=1.0)
+        scheduler.wait(lambda: request["status"] in ("Done", "Exit"))
+        if request["status"] != "Done":
+            # the forcefield has been stopped, so there are no meaningful
+            # results to return: this can only end the run
+            softexit.trigger(
+                status="bad",
+                message=" @ FORCES : cannot return so will die off here",
+            )
 
         # print diagnostics about the elapsed time
         if verbosity.debug:
@@ -263,23 +243,12 @@ class ForceBead:
                 )
             )
 
-        # data has been collected, so the request can be released and a slot
-        # freed up for new calculations
-        result = request["result"]
-
-        # reduce the reservation count (and wait for all calls to return)
-        with self._threadlock:
-            self._getallcount -= 1
-
-        # releases just once, but wait for all requests to be complete
-        if self._getallcount == 0:
-            self.ff.release(request)
+        # the request can be released, unless another task reading the same
+        # bead has already done it, and queued a new one
+        self.ff.release(request)
+        if self.request is request:
             self.request = None
-        else:
-            while self._getallcount > 0:
-                time.sleep(latency)
-
-        return result
+        return request["result"]
 
     def get_pot(self):
         """Calls get_all routine of forcefield to update the potential.
