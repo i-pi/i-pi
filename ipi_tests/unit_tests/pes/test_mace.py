@@ -9,7 +9,7 @@ from ase.io import read
 
 pytest.importorskip("mace")
 
-from ipi.pes._mace import BatchedMACE, ase_like_properties, proper_dipole
+from ipi.pes._mace import BatchedMACE, proper_dipole
 from ipi.pes.tools import ModelResults
 from mace.calculators import MACECalculator
 
