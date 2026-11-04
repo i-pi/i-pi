@@ -62,7 +62,8 @@ class InputForceField(Input):
           code. Default is False.
 
     Fields:
-       latency: The number of seconds to sleep between looping over the requests.
+       latency: The time in seconds between polls of drivers that cannot be
+          waited on (MPI).
        parameters: A dictionary containing the forcefield parameters.
        activelist: A list of indexes (starting at 0) of the atoms that will be active in this force field.
     """
@@ -88,7 +89,7 @@ class InputForceField(Input):
             {
                 "dtype": bool,
                 "default": False,
-                "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial",
+                "help": "Deprecated and ignored. The forces are evaluated in a single thread, which switches between the systems (and the outputs) while they wait for forces.",
             },
         ),
     }
@@ -98,7 +99,7 @@ class InputForceField(Input):
             {
                 "dtype": float,
                 "default": 1e-4,
-                "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
+                "help": "The number of seconds between polls of drivers that cannot be waited on, i.e. those of `ffmpi`.",
             },
         ),
         "offset": (
@@ -142,9 +143,22 @@ class InputForceField(Input):
         self.parameters.store(ff.pars)
         self.pbc.store(ff.dopbc)
         self.activelist.store(ff.active)
-        self.threaded.store(ff.threaded)
 
     _FFCLASS = ForceField
+
+    # options accepted for compatibility with older inputs, and ignored
+    _deprecated = ("threaded",)
+
+    def warn_deprecated(self):
+        """Warns about the deprecated options set in the input."""
+
+        for option in self._deprecated:
+            if getattr(self, option)._explicit:
+                warning(
+                    f"The option '{option}' of the forcefield '{self.name.fetch()}' "
+                    "is deprecated, and ignored.",
+                    verbosity.low,
+                )
 
     def fetch(self):
         """Creates a ForceField object.
@@ -154,6 +168,7 @@ class InputForceField(Input):
         """
 
         super(InputForceField, self).fetch()
+        self.warn_deprecated()
 
         return self._FFCLASS(
             pars=self.parameters.fetch(),
@@ -162,7 +177,6 @@ class InputForceField(Input):
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
-            threaded=self.threaded.fetch(),
         )
 
 
@@ -229,7 +243,7 @@ class InputFFSocket(InputForceField):
             {
                 "dtype": int,
                 "default": 128,
-                "help": "This gives the maximum number of job threads that are active simultaneously.",
+                "help": "Deprecated and ignored: there are no worker threads.",
             },
         ),
         "consolidate_messages": (
@@ -237,9 +251,7 @@ class InputFFSocket(InputForceField):
             {
                 "dtype": bool,
                 "default": True,
-                "help": """If True, fuse the STATUS/POSDATA/GETFORCE exchange into a single send and uses
-                a single thread to collect the FORCEREADY responses. Lower latency, but assumes clients
-                strictly follow the base protocol.""",
+                "help": "Deprecated and ignored: POSDATA and GETFORCE are always sent together, and the replies of all the clients are awaited together.",
             },
         ),
         "batch_size": (
@@ -250,8 +262,8 @@ class InputFFSocket(InputForceField):
                 "help": """If greater than 1, each client evaluates up to this many queued structures in a
                 single batched request, reusing the driver(cell_list, pos_list) calculator interface. The
                 batch size is announced to the driver in the INIT string. Batches are padded to batch_size by
-                replicating the last structure when fewer requests are queued. Requires consolidate_messages
-                and drops per-replica client matching (do not combine with stateful/matching='lock' drivers).""",
+                replicating the last structure when fewer requests are queued. Drops per-replica client
+                matching (do not combine with stateful/matching='lock' drivers).""",
             },
         ),
     }
@@ -279,15 +291,7 @@ class InputFFSocket(InputForceField):
     attribs.update(InputForceField.attribs)
     fields.update(InputForceField.fields)
 
-    # FFSocket polling mechanism won't work with non-threaded execution
-    attribs["threaded"] = (
-        InputValue,
-        {
-            "dtype": bool,
-            "default": True,
-            "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets",
-        },
-    )
+    _deprecated = ("threaded", "max_workers", "consolidate_messages")
 
     default_help = "Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication."
     default_label = "FFSOCKET"
@@ -313,10 +317,7 @@ class InputFFSocket(InputForceField):
         self.mode.store(ff.socket.mode)
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
-        self.max_workers.store(ff.socket.max_workers)
-        self.consolidate_messages.store(ff.socket.consolidate_messages)
         self.batch_size.store(ff.socket.batch_size)
-        self.threaded.store(True)  # hard-coded
 
     def fetch(self):
         """Creates a ForceSocket object.
@@ -325,9 +326,7 @@ class InputFFSocket(InputForceField):
            A ForceSocket object with the correct socket parameters.
         """
 
-        if self.threaded.fetch() is False:
-            raise ValueError("FFSockets cannot poll without threaded mode.")
-        # just use threaded throughout
+        self.warn_deprecated()
 
         # if using forced match mode, ensure softexit called upon disconnection of a client.
         if self.matching.fetch() == "lock":
@@ -344,7 +343,6 @@ class InputFFSocket(InputForceField):
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
-            threaded=self.threaded.fetch(),
             interface=InterfaceSocket(
                 address=self.address.fetch(),
                 port=self.port.fetch(),
@@ -352,9 +350,7 @@ class InputFFSocket(InputForceField):
                 mode=self.mode.fetch(),
                 timeout=self.timeout.fetch(),
                 match_mode=self.matching.fetch(),
-                max_workers=self.max_workers.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
-                consolidate_messages=self.consolidate_messages.fetch(),
                 batch_size=self.batch_size.fetch(),
             ),
         )
@@ -408,10 +404,10 @@ class InputFFDirect(InputForceField):
                 "dtype": int,
                 "default": 1,
                 "help": (
-                    "The number of structures that should be batched in a single evaluation."
-                    + " With `threaded='True'` an incomplete final batch is flushed once the poll "
-                    + "loop goes idle; without threading the total number of structures computed at "
-                    + "each step must be a multiple of `batch_size` or the calculation will hang forever."
+                    "The largest number of structures evaluated in a single call. The structures "
+                    + "requested by all the systems (e.g. the replicas of a replica-exchange run) "
+                    + "are evaluated together, in batches of this size, and the last incomplete "
+                    + "batch once all the systems wait for forces."
                 ),
             },
         ),
@@ -444,7 +440,6 @@ class InputFFDirect(InputForceField):
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
             pes=self.pes.fetch(),
             pes_path=self.pes_path.fetch(),
             batch_size=self.batch_size.fetch(),
@@ -481,16 +476,6 @@ class InputFFMPI(InputForceField):
         ),
     }
     attribs.update(InputForceField.attribs)
-    # the polling mechanism requires threaded execution
-    attribs["threaded"] = (
-        InputValue,
-        {
-            "dtype": bool,
-            "default": True,
-            "help": "Whether the forcefield should use a thread loop to evaluate. "
-            "Must be True for FFMPI.",
-        },
-    )
 
     default_help = """Forcefield that communicates with co-launched driver ranks over MPI.
     i-PI runs as rank 0 of MPI_COMM_WORLD and each driver it talks to is the root of a
@@ -514,7 +499,6 @@ class InputFFMPI(InputForceField):
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
-            threaded=self.threaded.fetch(),
             mode=self.mode.fetch(),
             batch_size=self.batch_size.fetch(),
         )
@@ -594,7 +578,6 @@ class InputFFdmd(InputForceField):
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
         )
 
 
@@ -656,7 +639,6 @@ class InputFFDebye(InputForceField):
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
         )
 
 
@@ -739,7 +721,6 @@ unless you include a <metad> tag, that triggers the log update. """
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
             compute_work=self.compute_work.fetch(),
             plumed_dat=self.plumed_dat.fetch(),
             plumed_step=self.plumed_step.fetch(),
@@ -861,7 +842,6 @@ class InputFFYaff(InputForceField):
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
         )
 
 
@@ -898,7 +878,6 @@ class InputFFsGDML(InputForceField):
             latency=self.latency.fetch(),
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
         )
 
 
@@ -1176,6 +1155,7 @@ input file.
     def fetch(self):
         """Fetches all of the FF objects"""
 
+        self.warn_deprecated()
         return FFRotations(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
@@ -1183,7 +1163,6 @@ input file.
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
-            threaded=self.threaded.fetch(),
             prng=self.prng.fetch(),
             ffsocket=self.ffsocket.fetch(),
             ffdirect=self.ffdirect.fetch(),
@@ -1303,10 +1282,7 @@ class InputFFCavPhSocket(InputFFSocket):
            A ForceSocket object with the correct socket parameters.
         """
 
-        if self.threaded.fetch() == False:
-            raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
-
-        # just use threaded throughout
+        self.warn_deprecated()
         return FFCavPhSocket(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
@@ -1314,7 +1290,6 @@ class InputFFCavPhSocket(InputFFSocket):
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
-            threaded=self.threaded.fetch(),
             interface=InterfaceSocket(
                 address=self.address.fetch(),
                 port=self.port.fetch(),

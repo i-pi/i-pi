@@ -8,13 +8,13 @@ Could probably be generalized to something more general.
 
 
 import pickle
-import threading
 import numpy as np
 from ipi.utils.array_backend import xp, to_numpy
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
 from ipi.engine.cell import Cell
+from ipi.utils import scheduler
 from ipi.utils.units import Constants
 from ipi.utils.messages import info, warning, verbosity
 
@@ -313,10 +313,12 @@ class AlKMC(Motion):
                 omaker,
             )
         self.feval = np.ones(self.neval, int)
-        self._threadlock = threading.Lock()
 
-    # threaded geometry optimization
-    def geop_thread(self, ieval, nstr, nevent):
+    def geop_task(self, ieval, nstr, nevent):
+        """Optimizes the structure of the state `nstr` with the evaluator
+        `ieval`, caches its energy and stores it in `nevent`. Several run as
+        concurrent tasks, which switch while they wait for forces."""
+
         self.optimizer[ieval].reset()
         ipot = float(self.dforces[ieval].pot)
 
@@ -328,44 +330,30 @@ class AlKMC(Motion):
         newpot = float(self.dforces[ieval].pot)
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
-        with self._threadlock:
-            self.ecache[nstr] = newpot
-            self.qcache[nstr] = newq
-            if self.ncache == self.max_cache_len:
-                self.ecache.popitem(last=False)
-                self.qcache.popitem(last=False)
-            else:
-                self.ncache += 1
-            nevent[2] = self.ecache[nstr]
-            nevent[3] = self.qcache[nstr]
-            self.struct_count += 1
+        self.ecache[nstr] = newpot
+        self.qcache[nstr] = newq
+        if self.ncache == self.max_cache_len:
+            self.ecache.popitem(last=False)
+            self.qcache.popitem(last=False)
+        else:
+            self.ncache += 1
+        nevent[2] = self.ecache[nstr]
+        nevent[3] = self.qcache[nstr]
+        self.struct_count += 1
+        self.feval[ieval] = 1
 
-        with self._threadlock:
-            self.feval[ieval] = 1
+        info(f"Finished {nstr}", verbosity.debug)
+        info(
+            f"Energy, initial - TS - final: {ipot} {nevent[-1]} {newpot}",
+            verbosity.debug,
+        )
 
-        with self._threadlock:
-            info(f"Finished {nstr}", verbosity.debug)
-            info(
-                f"Energy, initial - TS - final: {ipot} {nevent[-1]} {newpot}",
-                verbosity.debug,
-            )
+    def find_eval(self):
+        """Takes the first free evaluator, waiting for one if all are busy."""
 
-    def find_eval(self, ethreads):
-        # finds first free evaluator
-        while (
-            self.feval.sum() == 0
-        ):  # if all evaluators are busy, wait for one to get free
-            for st in ethreads:
-                st.join(1e-2)
-                if st is None or not st.is_alive():
-                    break
-        with self._threadlock:
-            # finds free evaluator
-            for e in range(self.neval):
-                if self.feval[e] == 1:
-                    ieval = e
-                    self.feval[ieval] = 0
-                    break
+        scheduler.wait(lambda: self.feval.sum() > 0)
+        ieval = int(np.argmax(self.feval))
+        self.feval[ieval] = 0
         return ieval
 
     def unique_idx(self, state):
@@ -438,7 +426,7 @@ class AlKMC(Motion):
                 self.sites[self.unique_idx(self.state)].flatten()
             )
             rv = [0, 0, 0, 0, 0]
-            self.geop_thread(0, ostr, rv)
+            self.geop_task(0, ostr, rv)
             # self.beads.q[0,:] = self.dbeads[0].q[0,:] # also updates current position
             # self.forces.transfer_forces(self.dforces[0]) # forces have already been computed here...
 
@@ -446,7 +434,7 @@ class AlKMC(Motion):
 
         # enumerates possible reactive events (vacancy swaps)
         levents = []
-        ethreads = [None] * self.neval
+        tasks = []
         # loops over the vacancy
         for ivac in range(self.natoms, self.natoms + self.nvac):
             svac = self.idx[ivac]  # lattice site associated with this vacancy
@@ -481,7 +469,7 @@ class AlKMC(Motion):
                     ]  # gets index of atom associated with the neighboring site
                     nidx[ivac], nidx[ineigh] = self.idx[ineigh], self.idx[ivac]
 
-                    ieval = self.find_eval(ethreads)
+                    ieval = self.find_eval()
                     # launches evaluator
                     self.dbeads[ieval].q_[0, :] = xp.asarray(
                         self.sites[self.unique_idx(nstate)].flatten()
@@ -490,19 +478,11 @@ class AlKMC(Motion):
                     nevent = [svac, sneigh, 0.0, 0.0, 0.0]
 
                     # runs a geometry optimization
-                    # self.geop_thread(ieval=ieval, nstr=nstr, nevent=nevent)
-                    st = threading.Thread(
-                        target=self.geop_thread,
-                        name=str(ieval),
-                        kwargs={
-                            "ieval": ieval,
-                            "nstr": nstr,
-                            "nevent": nevent,
-                        },
+                    tasks.append(
+                        scheduler.spawn(
+                            self.geop_task, ieval=ieval, nstr=nstr, nevent=nevent
+                        )
                     )
-                    st.daemon = True
-                    st.start()
-                    ethreads[ieval] = st
                 else:
                     info(
                         f"Found state {nstr}, retrieving cached energy "
@@ -515,9 +495,7 @@ class AlKMC(Motion):
                 nevent[-1] = self.state[sneigh]
                 levents.append(nevent)
         # wait for all evaluators to finish
-        for st in ethreads:
-            while st is not None and st.is_alive():
-                st.join(2)
+        scheduler.join(tasks)
 
         info(
             f"Computed {len(levents)} possible reactions. "

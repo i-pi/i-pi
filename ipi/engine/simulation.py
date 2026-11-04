@@ -14,7 +14,9 @@ import tracemalloc
 import os
 import time
 from copy import deepcopy
+from functools import partial
 
+from ipi.utils import scheduler
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
@@ -25,8 +27,6 @@ from ipi.engine.jit import compile_steps
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 import threading
-
-from concurrent.futures import ThreadPoolExecutor
 
 __all__ = ["Simulation"]
 
@@ -327,27 +327,8 @@ class Simulation:
         """Runs the simulation.
 
         Does all the simulation steps, and outputs data to the appropriate files
-        when necessary. Also deals with starting and cleaning up the threads used
-        in the communication between the driver and the PIMD code.
+        when necessary.
         """
-
-        # the thread pool lives for the duration of one run: workers are joined
-        # before returning, so that any thread-local state of external libraries
-        # (e.g. torch) is torn down while the interpreter is fully alive.
-        # threads that are cleaned up during interpreter shutdown can abort
-        # the process
-        if self.threading:
-            self.executor = ThreadPoolExecutor(
-                max_workers=max(len(self.syslist), len(self.outputs))
-            )
-        try:
-            self._run_loop(write_outputs)
-        finally:
-            if self.threading:
-                self.executor.shutdown(wait=True)
-
-    def _run_loop(self, write_outputs=True):
-        """Implements the main loop of `run`."""
 
         # the soft exit procedures are held back while writing outputs
         with softexit.lock:
@@ -448,40 +429,50 @@ class Simulation:
 
         A soft exit requested by one of them does not stop the others, so
         the outputs of the step are complete apart from the one that asked.
+        With `threading`, the outputs of each system are written in a task of
+        their own, so that the forces they need are computed together with
+        those of the other systems. The checkpoints, which read all the
+        systems, are written afterwards.
         """
 
-        if self.threading:
-            # must use multi-threading to avoid blocking in multi-system runs with WTE
-            writes = [
-                self.executor.submit(o.write).result for o in self.outputs if o.active()
+        def write(outputs):
+            for o in outputs:
+                try:
+                    o.write()
+                except SystemExit:
+                    if not softexit.triggered:
+                        raise
+
+        if self.threading and len(self.syslist) > 1:
+            system_outputs = [
+                [o for o in self.outputs if getattr(o, "system", None) is s]
+                for s in self.syslist
             ]
+            scheduler.run([partial(write, outputs) for outputs in system_outputs])
+            write([o for o in self.outputs if getattr(o, "system", None) is None])
         else:
-            writes = [o.write for o in self.outputs]
-        for write in writes:
+            write(self.outputs)
+
+    def run_step(self, step):
+        """Makes a step of all the systems, and then of the motion that
+        couples them. With `threading`, each system makes its step in a task,
+        and the tasks run in turn while the others wait for forces, unless the
+        steps are compiled (`--jit`): the systems then make their steps one
+        after the other."""
+
+        if len(self.syslist) > 1 and self.threading and not jit_enabled():
             try:
-                write()
+                scheduler.run([partial(s.motion.step, step=step) for s in self.syslist])
             except SystemExit:
                 if not softexit.triggered:
                     raise
-
-    def run_step(self, step):
-        if len(self.syslist) > 0 and self.threading:
-            stepthreads = []
-            # steps through all the systems
+            if softexit.triggered:
+                return
             for s in self.syslist:
-                # creates separate threads for the different systems
-                st = self.executor.submit(s.motion.step, step=step)
-                stepthreads.append((st, s.motion))
-
-            for st, motion in stepthreads:
-                if softexit.triggered:
-                    return
-                st.result()
-                if motion.finished:
+                if s.motion.finished:
                     self.finished = True
-                    self.exit_status = motion.exit_status or "success"
-                    self.exit_message = motion.exit_message
-
+                    self.exit_status = s.motion.exit_status or "success"
+                    self.exit_message = s.motion.exit_message
             if self.finished:
                 return
         else:

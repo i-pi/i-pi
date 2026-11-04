@@ -13,7 +13,14 @@ the 32-water box or of the 32-atom nickel box (`--structure`), rather than
 hydrogen atoms at random positions, and the sizes are given as supercells.
 For direct forcefields, the time taken by the driver alone on the same
 structures is also reported.
-The timed loop calls `Simulation.run_step` directly, so outputs and
+With `--forcefield socket` the forces come from `--clients` instances of the
+Fortran driver (`--driver`), connected through a unix socket, which return
+zero forces after waiting `--delay` seconds.
+With `--systems N`, the simulation has N replicas of the system at different
+temperatures, stepped in turn or, with `--threading`, interleaved while they
+wait for forces, and exchanged every `--remd-stride` steps (never if zero).
+The timed loop calls `Simulation.run_step` directly for a single system
+without `--threading`, and `Simulation.run` otherwise, so outputs and
 checkpointing are excluded. Every (case, size) combination runs in a
 separate subprocess.
 
@@ -24,6 +31,9 @@ Usage:
     python benchmark.py --forcefield metatomic --model pet-mad-xs-v1.6.0.pt \\
         --model-device cuda --structure water -c nve,pimd4_nvt -s 1,2,3
     python benchmark.py --compare reference.json new.json
+    python benchmark.py -c nvt_langevin -n 100 --systems 8 --threading
+    python benchmark.py -c pimd_nvt -n 100 --forcefield socket --clients 8 \
+        --delay 0.01 --driver ../../bin/i-pi-driver
 
 The `ipi` package is imported from the source tree containing this script, or
 from `--ipi-root` if given, which allows benchmarking different source trees
@@ -34,6 +44,7 @@ import argparse
 import json
 import os
 import platform
+import shutil
 import statistics
 import subprocess
 import sys
@@ -77,10 +88,11 @@ NATOMS = [100, 316, 1000, 3162, 10000]
 SUPERCELLS = ["1", "2x1x1", "2x2x1", "2", "3", "4", "5"]
 
 # forcefield definition and force component for each forcefield mode, with
-# placeholders for the model, its device and the batch size
+# placeholders for the model, its device, the batch size and the address
 FORCEFIELDS = {
     "dummy": (
-        "<ffdirect name='ff'><pes>dummy</pes></ffdirect>",
+        "<ffdirect name='ff'><pes>dummy</pes><batch_size>{batch_size}</batch_size>"
+        "</ffdirect>",
         "<force forcefield='ff'/>",
     ),
     "none": (
@@ -91,7 +103,12 @@ FORCEFIELDS = {
     "metatomic": (
         "<ffdirect name='ff' pbc='false'><pes>metatomic</pes>"
         "<parameters>{{template:init.xyz,model:{model},device:{model_device}}}"
-        "</parameters><batch_size>{nbeads}</batch_size></ffdirect>",
+        "</parameters><batch_size>{model_batch}</batch_size></ffdirect>",
+        "<force forcefield='ff'/>",
+    ),
+    "socket": (
+        "<ffsocket name='ff' mode='unix' pbc='false'><address>{address}</address>"
+        "</ffsocket>",
         "<force forcefield='ff'/>",
     ),
 }
@@ -111,7 +128,7 @@ def parse_supercell(spec):
     return tuple(reps * 3) if len(reps) == 1 else tuple(reps)
 
 
-def write_input(args, seed=12345):
+def write_input(args, seed=12345, address=""):
     """Writes `init.xyz` in the current folder, and returns the XML input and
     the number of atoms."""
 
@@ -143,22 +160,27 @@ def write_input(args, seed=12345):
     pressure = "<pressure units='bar'>1</pressure>" if "barostat" in setup else ""
     ffxml, forcexml = FORCEFIELDS[args.forcefield]
     ffxml = ffxml.format(
-        model=args.model, model_device=args.model_device, nbeads=setup["nbeads"]
+        model=args.model,
+        model_device=args.model_device,
+        # the model evaluates at least all the beads of a system at once
+        model_batch=max(args.batch_size, setup["nbeads"]),
+        batch_size=args.batch_size,
+        address=address,
     )
-    xml = f"""
-<simulation verbosity='quiet' threading='false' safe_stride='100000000'>
-  {ffxml}
-  <total_steps>100000000</total_steps>
-  <output prefix='benchmark'/>
-  <prng><seed>{seed}</seed></prng>
-  <system>
+    systems = ""
+    for i in range(args.systems):
+        # a ladder of temperatures, as in replica exchange
+        temperature = 300 * 1.05**i
+        prefix = f" prefix='r{i}'" if args.systems > 1 else ""
+        systems += f"""
+  <system{prefix}>
     <initialize nbeads='{setup["nbeads"]}'>
       {initfile}
-      <velocities mode='thermal' units='kelvin'>300</velocities>
+      <velocities mode='thermal' units='kelvin'>{temperature}</velocities>
     </initialize>
     <forces>{forcexml}</forces>
     <ensemble>
-      <temperature units='kelvin'>300</temperature>{pressure}
+      <temperature units='kelvin'>{temperature}</temperature>{pressure}
     </ensemble>
     <motion mode='dynamics'>
       <dynamics mode='{setup["mode"]}'>
@@ -167,7 +189,21 @@ def write_input(args, seed=12345):
         {setup.get("barostat", "")}
       </dynamics>
     </motion>
-  </system>
+  </system>"""
+    smotion = ""
+    if args.systems > 1 and args.remd_stride > 0:
+        smotion = (
+            f"<smotion mode='remd'><remd><stride>{args.remd_stride}</stride>"
+            "</remd></smotion>"
+        )
+    threading = "true" if args.threading else "false"
+    xml = f"""
+<simulation verbosity='quiet' threading='{threading}' safe_stride='100000000'>
+  {ffxml}
+  <total_steps>100000000</total_steps>
+  <output prefix='benchmark'/>
+  <prng><seed>{seed}</seed></prng>{systems}
+  {smotion}
 </simulation>
 """
     return xml, natoms
@@ -228,15 +264,30 @@ def run_worker(args):
 
         torch.set_num_threads(args.threads)
 
+    from ipi.engine.simulation import Simulation
     from ipi.scripting import InteractiveSimulation
 
     os.chdir(tempfile.mkdtemp(prefix="ipi-benchmark-"))
-    xml, natoms = write_input(args)
+    address = f"ipibench_{os.getpid()}"
+    xml, natoms = write_input(args, address=address)
 
     tinit = time.perf_counter()
     sim = InteractiveSimulation(xml)
     tinit = time.perf_counter() - tinit
 
+    # the clients connect to the socket opened by the simulation
+    clients = []
+    if args.forcefield == "socket":
+        command = [args.driver, "-u", "-a", address, "-m", "gas", "-o", str(args.delay)]
+        clients = [
+            subprocess.Popen(
+                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            for _ in range(args.clients)
+        ]
+
+    # several systems, or systems in tasks or threads, need the whole loop
+    stepwise = args.systems == 1 and not args.threading
     step = 0
 
     def advance(nsteps):
@@ -244,9 +295,14 @@ def run_worker(args):
         nonlocal step
         synchronize()
         t = time.perf_counter()
-        for _ in range(nsteps):
-            sim.run_step(step)
-            step += 1
+        if stepwise:
+            for _ in range(nsteps):
+                sim.run_step(step)
+                step += 1
+        else:
+            sim.tsteps = sim.step + nsteps
+            Simulation.run(sim, write_outputs=False)
+            sim.step += 1
         synchronize()
         return time.perf_counter() - t
 
@@ -264,12 +320,19 @@ def run_worker(args):
 
     timings = [advance(nblock) / nblock * 1e3 for _ in range(args.repeats)]
     driver_timings = time_driver(sim, nblock, args.repeats, synchronize)
+    sim.stop()
+    for client in clients:
+        try:
+            client.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            client.kill()
 
     result = dict(
         case=args.case,
         size=args.size,
         natoms=natoms,
         nbeads=CASES[args.case]["nbeads"],
+        systems=args.systems,
         steps_per_block=nblock,
         ms_per_step=timings,
         median=statistics.median(timings),
@@ -316,6 +379,12 @@ def metadata(args):
         device=args.device,
         jit=args.jit,
         threads=args.threads,
+        systems=args.systems,
+        threading=args.threading,
+        remd_stride=args.remd_stride,
+        batch_size=args.batch_size,
+        clients=args.clients if args.forcefield == "socket" else None,
+        delay=args.delay if args.forcefield == "socket" else None,
         hostname=platform.node(),
         python=platform.python_version(),
         numpy=np.__version__,
@@ -367,6 +436,13 @@ def run_all(args):
                 cmd += ["--model", str(args.model), "--model-device", args.model_device]
                 cmd += ["--warmup", str(args.warmup), "--repeats", str(args.repeats)]
                 cmd += ["--min-time", str(args.min_time)]
+                cmd += ["--systems", str(args.systems)]
+                cmd += ["--remd-stride", str(args.remd_stride)]
+                cmd += ["--batch-size", str(args.batch_size)]
+                cmd += ["--clients", str(args.clients), "--delay", str(args.delay)]
+                cmd += ["--driver", args.driver]
+                if args.threading:
+                    cmd += ["--threading"]
                 if args.jit:
                     cmd += ["--jit"]
                 if args.threads is not None:
@@ -466,7 +542,43 @@ def main():
         choices=list(FORCEFIELDS),
         default="dummy",
         help="'dummy' evaluates zero forces, 'none' skips force evaluation, "
-        "'metatomic' evaluates --model",
+        "'metatomic' evaluates --model, 'socket' gets zero forces from --clients "
+        "instances of --driver",
+    )
+    parser.add_argument(
+        "--systems", type=int, default=1, help="number of replicas of the system"
+    )
+    parser.add_argument(
+        "--threading",
+        action="store_true",
+        help="interleaves the steps of the systems (threading='true')",
+    )
+    parser.add_argument(
+        "--remd-stride",
+        type=int,
+        default=0,
+        help="steps between replica exchanges (none if 0)",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1,
+        help="batch size of the dummy forcefield, and of the metatomic one if "
+        "larger than the number of beads",
+    )
+    parser.add_argument(
+        "--clients", type=int, default=1, help="number of socket clients"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="time (s) each socket client takes per evaluation",
+    )
+    parser.add_argument(
+        "--driver",
+        default=shutil.which("i-pi-driver") or "i-pi-driver",
+        help="the Fortran driver used as socket client",
     )
     parser.add_argument(
         "--structure",
@@ -533,6 +645,9 @@ def main():
                 parser.error("metatomic needs --model and a periodic --structure")
             # the workers run in temporary folders
             args.model = os.path.abspath(args.model)
+        if os.sep in args.driver:
+            # the workers run in temporary folders
+            args.driver = os.path.abspath(args.driver)
         sizes = args.natoms if args.structure == "random" else args.supercells
         args.sizes = sizes.split(",")
         run_all(args)

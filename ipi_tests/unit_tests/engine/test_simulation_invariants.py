@@ -168,7 +168,6 @@ def test_read_only_initialization_starts_no_services(tmp_path, monkeypatch, sour
     assert sim.chk is None
     assert sim.sockets_prefix == "/tmp/initialization-test-"
     assert not list(tmp_path.iterdir())
-    assert all(field._thread is None for field in sim.fflist.values())
     np.testing.assert_array_equal(sim.syslist[0].beads.q, 2)
     # Forces are bound to the modified coordinates even in read-only mode.
     assert sim.syslist[0].forces.pot == pytest.approx(6.0)

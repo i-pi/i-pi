@@ -365,7 +365,8 @@ def run_driver_mpi(
 
     import mpi4py
 
-    mpi4py.rc.thread_level = "multiple"
+    # the driver makes its MPI calls one at a time
+    mpi4py.rc.thread_level = "serialized"
     from mpi4py import MPI
 
     world = MPI.COMM_WORLD if comm is None else comm

@@ -4,7 +4,7 @@
     <address>si2x2</address>
     <latency>1e-3</latency>
   </ffsocket>
-  <ffdmd name='timeperiod' pbc='True' threaded='False'>
+  <ffdmd name='timeperiod' pbc='True'>
     <dmd_coupling mode='file'>coupling.dat</dmd_coupling>
     <dmd_freq units='inversecm'>560</dmd_freq>
     <dmd_dt units='femtosecond'>0.25</dmd_dt>

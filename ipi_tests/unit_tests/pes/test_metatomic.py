@@ -218,7 +218,6 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
             name="pet",
             pes="metatomic",
             pars={"template": template, "model": upet_model},
-            threaded=False,
             batch_size=18,
         ),
         grid_mode="lebedev",
@@ -230,6 +229,7 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
     atoms = Atoms(len(pos))
     atoms.q_[:] = pos.flatten()
     request = ff.queue(atoms, Cell(cell))
+    ff.ff.poll()
     ff.poll()
     assert request["status"] == "Done"
     energy, force, virial, extras = request["result"]
