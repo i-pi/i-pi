@@ -1361,6 +1361,15 @@ class InputFFDielectric(InputForceField):
 
     fields = copy(InputForceField.fields)
     attribs = copy(InputForceField.attribs)
+    attribs["where"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "options": ["server", "client"],
+            "default": "server",
+            "help": "Where the electric-field coupling is applied. Client mode is reserved for a later implementation.",
+        },
+    )
 
     fields["dipole"] = (
         _dipole_cls,
@@ -1392,6 +1401,7 @@ class InputFFDielectric(InputForceField):
     def store(self, ff: FFDielectric):
         """Store all the sub-forcefields"""
         super().store(ff)
+        self.where.store(ff.where)
 
         self.extra = []
         for field in ff.electric_fields:
@@ -1461,6 +1471,7 @@ class InputFFDielectric(InputForceField):
 
         return FFDielectric(
             name=self.name.fetch(),
+            where=self.where.fetch(),
             dipole=self.dipole.fetch(),
             bec=self.bec.fetch(),
             piezo=self.piezo.fetch(),

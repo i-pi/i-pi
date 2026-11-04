@@ -2574,9 +2574,16 @@ class FFDielectric(ForceField):
         piezo: dict,
         electric_fields: list[VectorField],
         forcefield: ForceField,
+        where: str = "server",
     ):
         super().__init__()
+        if where != "server":
+            raise ValueError(
+                "FFDielectric currently supports only where='server'; "
+                "client mode is not implemented yet."
+            )
         self.name = name
+        self.where = where
         self.dipole = ArrayFromDict(
             **dipole
         )  # how to read the dipole from the client code
