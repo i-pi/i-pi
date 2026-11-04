@@ -310,10 +310,10 @@ you can try.
    i-PI stores the internal state of the simulation at each step. 
    Particularly for complicated setups, the overhead can be substantial. 
    You can reduce the frequency by which the internal state is stored using
-   the `safe_stride` attribute in the `<simulation>` tag. Note that doing
-   so increases the risk that the RESTART file saved upon soft exit will be
-   inconsistent with the sate of the outputs, so that restarting a simulaiton
-   will leave broken or discontinuous output files. 
+   the `safe_stride` attribute in the `<simulation>` tag. A soft exit in
+   the middle of a step then goes back by up to `safe_stride` steps: the
+   RESTART file and the outputs both return to the last stored state, and
+   the restarted simulation repeats those steps.
 -  *profile i-PI*: if you still think i-PI is being unreasonably slow,
    you can contact the developers - your setup might have revealed some 
    kind of bottleneck. It will help us if you can also generate a profiler

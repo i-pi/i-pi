@@ -126,9 +126,10 @@ class InputSimulation(Input):
             {
                 "dtype": int,
                 "default": 1,
-                "help": """Consistent simulation states will be saved every this number of steps. 
-Saving state entails a small overhead, so you may want to set this to the smallest output
-frequency in your simulation to make i-PI faster. Use at your own risk!
+                "help": """Consistent simulation states will be saved every this number of steps.
+Saving the state entails a small overhead, so you may want to save it less often when the steps are
+fast. A soft exit in the middle of a step goes back to the last saved state, outputs included, so
+that up to this number of steps are repeated on restart.
 """,
             },
         ),

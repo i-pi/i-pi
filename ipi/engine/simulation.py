@@ -50,11 +50,6 @@ class Simulation:
         outputs: A list of output objects that should be printed during the run
         paratemp: A helper object for parallel tempering simulations
         chk: A checkpoint object which is kept up-to-date in case of emergency exit
-        rollback: If set to true, the state of the simulation at the start
-            of the step will be output to a restart file rather than
-            the current state of the simulation. This is because we cannot
-            restart from half way through a step, only from the beginning of a
-            step, so this is necessary for the trajectory to be continuous.
         read_only: If set to true, it creates the simulation object but doesn't  initialize/open the sockets
 
     Depend objects:
@@ -217,7 +212,6 @@ class Simulation:
         self.smotion = smotion
 
         self.chk = None
-        self.rollback = True
         self.finished = False
         self.exit_status = "success"
         self.exit_message = " @ SIMULATION: Exiting cleanly."
@@ -303,6 +297,8 @@ class Simulation:
         softexit.register_function(self.softexit)
         softexit.register_emergency(self.chk.write, store=False)
         softexit.start(self.ttime)
+        # until a run ends, an exit goes back to the state stored by chk.bind
+        softexit.rollback = True
 
         # starts tracemalloc to debug memory leaks
         if verbosity.debug:
@@ -317,7 +313,7 @@ class Simulation:
 
         if self.step < self.tsteps:
             self.step += 1
-        if not self.rollback:
+        if not softexit.rollback:
             info(
                 " @simulation.softexit: Saving the latest status at the end of the step"
             )
@@ -332,17 +328,21 @@ class Simulation:
         when necessary.
         """
 
-        # the soft exit procedures are held back while writing outputs
-        with softexit.hold():
+        # an exit goes back to the last stored state until the run ends
+        softexit.rollback = True
+        try:
             # prints inital configuration -- only if we are not restarting
             if self.step == 0 and write_outputs and not softexit.triggered:
                 self.step = -1
                 self.write_outputs()
                 self.step = 0
+        except SystemExit:
+            # raised by a soft exit made while waiting for forces
+            if not softexit.triggered:
+                raise
 
-            # saves the state to go back to if a step gets interrupted by a (soft) exit
-            self.chk.store()
-            self.rollback = True
+        # saves the state to go back to if a step gets interrupted by a (soft) exit
+        self.store()
 
         steptime = 0.0
         simtime = time.time()
@@ -361,32 +361,28 @@ class Simulation:
             # exit requests without screwing the trajectory
 
             steptime = -time.time()
-            # makes the exit requested meanwhile, e.g. while writing outputs
+            # makes the exit requested meanwhile
             softexit.check()
             if softexit.triggered or self.finished:
                 break
 
             try:
                 self.run_step(self.step)
-            except SystemExit:
-                # a soft exit made while waiting for forces ends the step
-                if not softexit.triggered:
-                    raise
-
-            # the soft exit procedures are held back until all the outputs for
-            # this step are written, and the matching state is saved
-            with softexit.hold():
                 if softexit.triggered or self.finished:
                     # Don't write if we are about to exit.
                     break
-
                 if write_outputs:
                     self.write_outputs()
+            except SystemExit:
+                # raised by a soft exit made while waiting for forces, which
+                # goes back to the stored state, outputs included
+                if not softexit.triggered:
+                    raise
+                break
 
-                # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
-                if (self.step + 1) % self.safe_stride == 0:
-                    self.chk.store()
-                    self.chk.status.step.store(self.step + 1)
+            # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
+            if (self.step + 1) % self.safe_stride == 0:
+                self.store(self.step + 1)
 
             steptime += time.time()
             ttot += steptime
@@ -431,14 +427,28 @@ class Simulation:
                 break
 
         # if the run was not interrupted, the current state is the one to restart from
-        self.rollback = softexit.triggered
+        softexit.rollback = softexit.triggered
+
+    def store(self, step=None):
+        """Stores the state that a soft exit goes back to if it interrupts
+        the next steps, at which the outputs start recording their positions
+        again, to be truncated with it.
+
+        Args:
+           step: The step to restart from, if not the current one.
+        """
+
+        self.chk.store()
+        if step is not None:
+            self.chk.status.step.store(step)
+        softexit.stored()
 
     def write_outputs(self):
         """Writes all the outputs that are active at this step.
 
-        A soft exit requested by one of them does not stop the others, so
-        the outputs of the step are complete apart from the one that asked.
-        With `threading`, the outputs of each system are written in a task of
+        A soft exit made while they are written (e.g. while an estimator
+        waits for forces) truncates them to the last stored state. With
+        `threading`, the outputs of each system are written in a task of
         their own, so that the forces they need are computed together with
         those of the other systems. The checkpoints, which read all the
         systems, are written afterwards.
@@ -446,11 +456,7 @@ class Simulation:
 
         def write(outputs):
             for o in outputs:
-                try:
-                    o.write()
-                except SystemExit:
-                    if not softexit.triggered:
-                        raise
+                o.write()
 
         if self.threading and len(self.syslist) > 1:
             system_outputs = [
