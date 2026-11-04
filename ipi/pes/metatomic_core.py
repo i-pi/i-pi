@@ -310,6 +310,10 @@ class MetatomicCoreDriver(Dummy_driver):
             gradient = block.gradient("strain")
             parent = block.samples.column("system")[gradient.samples.column("sample")]
             np.add.at(virials, parent, -np.asarray(gradient.values)[..., 0])
+            # models that are not exactly rotationally equivariant (e.g. PET) give a
+            # slightly non-symmetric virial: keep its symmetric part, as the
+            # metatomic driver does
+            virials = (virials + virials.swapaxes(1, 2)) * 0.5
 
         results = [
             (
