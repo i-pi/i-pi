@@ -19,7 +19,7 @@
     <!-- PES+dipole -->
     <!-- MACE runs in-process; no socket client is needed. -->
     <ffdirect name='mace'>
-      <pes>extmace</pes>
+      <pes>mace</pes>
       <parameters>{
         template:start.extxyz,
         model:MACE-POLAR-1-M.model,

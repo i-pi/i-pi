@@ -16,7 +16,7 @@
     <bec    units="e"      key="BEC" />
     <piezo  units="e/ang2" key="piezoelectric" />
     <ffdirect name='mace'>
-      <pes>extmace</pes>
+      <pes>mace</pes>
       <parameters>{
         template:start.extxyz,
         model:MACE-POLAR-1-M.model,

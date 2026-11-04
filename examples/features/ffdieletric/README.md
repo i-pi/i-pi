@@ -82,8 +82,14 @@ The default keys, shapes, axes, and units are:
 | `piezoelectric` | `(3, 3, 3)` or `(3, 6)` | dipole `i`, strain `j`, strain `k` | `e/ang2` |
 | `epsilon_infinity` | `(3, 3)` or `(6,)` | dielectric Cartesian axes | dimensionless |
 
-If a MACE model does not return `epsilon_infinity`, `extmace` can send a
-constant default from its `mace_kwargs` JSON file:
+The server-side examples in this branch use the base `mace` driver. With
+`compute_BEC: true` in `mace_kwargs.json`, that driver computes both the Born
+effective charges and the proper piezoelectric tensor by automatic
+differentiation. Client-side field coupling and `extmace` belong to a later
+branch.
+
+If a MACE model does not return `epsilon_infinity`, a later fixed-D extension
+can send a constant default from its `mace_kwargs` JSON file:
 
 ```json
 {"instructions": {"epsilon_infinity": [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]}}
