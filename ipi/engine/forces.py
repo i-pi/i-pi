@@ -222,6 +222,7 @@ class ForceBead:
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
+        request = self.ff.post_process(request)
         result = request["result"]
 
         # reduce the reservation count (and wait for all calls to return)
@@ -851,6 +852,10 @@ class Forces:
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
             dcompute(newbeads.q_, make_rpc(newrpc, beads), [beads.q_])
+            newbeads._q._func = make_rpc(newrpc, beads)
+            newbeads.bind(beads.motion)
+            # makes newbeads.q depend from beads.q
+            beads._q.add_dependant(newbeads._q)
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)

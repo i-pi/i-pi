@@ -1,0 +1,29 @@
+{
+  "model_type": "PolarMACE",
+  "default_dtype": "float64",
+  "instructions": {
+    "_comments": {
+      "compute_BEC": "Computes Born effective charges and the proper piezoelectric tensor needed by i-PI.",
+      "epsilon_infinity": "Constant, dimensionless clamped-ion dielectric tensor returned to i-PI when the model does not provide it."
+    },
+    "compute_BEC": true,
+    "epsilon_infinity": [[1.8, 0.0, 0.0], [0.0, 1.8, 0.0], [0.0, 0.0, 1.8]],
+    "ignore": [
+      "displacement",
+      "charges",
+      "density_coefficients",
+      "spin_charge_density",
+      "spin_density",
+      "spins",
+      "electrostatic_energy",
+      "electron_energy",
+      "polarizability",
+      "polarizability_sh",
+      "charges_history",
+      "fermi_level",
+      "external_field",
+      "total_charge",
+      "BECx", "BECy", "BECz", "node_energy"
+    ]
+  }
+}

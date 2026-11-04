@@ -1,0 +1,31 @@
+{
+    "model_type": "PolarMACE",
+    "default_dtype": "float64",
+    "instructions": {
+        "_comments": {
+            "model_type": "Selects the PolarMACE calculator architecture used by this checkpoint.",
+            "default_dtype": "Evaluates the model in float64.",
+            "instructions": "Contains options interpreted by the i-PI MACE wrapper rather than by the MACE model constructor. Field selection is supplied at run time by FFDielectric, so no ensemble key is needed here.",
+            "compute_BEC": "Disables response derivatives because MACE applies the electric field directly in this example.",
+            "ignore": "Skips copying unused optional model outputs from the device to CPU; required field-dependent energy, force, stress, and dipole data remain available."
+        },
+        "compute_BEC" : false,
+        "ignore": [
+            "displacement",
+            "charges",
+            "density_coefficients",
+            "spin_charge_density",
+            "spin_density",
+            "spins",
+            "electrostatic_energy",
+            "electron_energy",
+            "polarizability",
+            "polarizability_sh",
+            "charges_history",
+            "fermi_level",
+            "external_field",
+            "total_charge",
+            "BECx", "BECy", "BECz", "node_energy"
+        ]
+    }
+}

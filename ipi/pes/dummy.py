@@ -21,11 +21,13 @@ class Dummy_driver(object):
     # call, as they may be overwritten (e.g. when replaying CUDA graphs).
     backend_arrays = False
 
-    def __init__(self, verbose=False, *args, **kwargs):
+    def __init__(self, verbose=False, requires_extra=False, *args, **kwargs):
         """Initialized dummy drivers"""
         self.verbose = verbose
         self.args = args
         self.kwargs = kwargs
+        self.requires_extra = requires_extra
+        self.extra = None
 
         self.check_parameters()
 
@@ -62,7 +64,6 @@ class Dummy_driver(object):
 
         return self.compute(cell, pos)
 
-
 class Zero_driver(Dummy_driver):
     """The "dummy" PES: zero energy, forces and virial, computed with the same
     kind of arrays as the positions, i.e. also for the arrays of the i-PI array
@@ -78,3 +79,11 @@ class Zero_driver(Dummy_driver):
         """Evaluate a single structure, with a zero energy of the same kind as pos"""
         pot, force, vir, extras = super().compute_structure(cell, pos)
         return force.sum(), force, vir, extras
+    def store_extra(self, extra: str):
+        """Convert the JSON formatted string 'extra' into a dict and store it into self.extra."""
+        # ToDo: improve error handling
+        try:
+            self.extra = json.loads(extra)
+        except Exception as e:
+            warning(f"Error while parsing extra data.\n{e}", verbosity.high)
+            self.extra = {}
