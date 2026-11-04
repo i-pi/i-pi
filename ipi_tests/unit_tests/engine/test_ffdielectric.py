@@ -92,9 +92,7 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
     properties = Properties()
     properties.simul = SimpleNamespace(fflist={"dielectric": dielectric})
     properties._threadlock = threading.Lock()
-    np.testing.assert_allclose(
-        properties["electric_field(dielectric)"][0], field
-    )
+    np.testing.assert_allclose(properties["electric_field(dielectric)"][0], field)
     np.testing.assert_allclose(
         properties["electric_displacement(dielectric)"][0],
         [2.0 + np.pi, 0.0, 0.0],

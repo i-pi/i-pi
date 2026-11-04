@@ -197,9 +197,7 @@ class Dynamics(Motion):
 
         from ipi.engine.forcefields import FFDielectric
 
-        active_forcefields = [
-            bforce.ff[component.ffield] for component in bforce.fcomp
-        ]
+        active_forcefields = [bforce.ff[component.ffield] for component in bforce.fcomp]
         has_dielectric = any(
             isinstance(forcefield, FFDielectric) for forcefield in active_forcefields
         )
