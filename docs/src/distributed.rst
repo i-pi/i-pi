@@ -204,7 +204,7 @@ i-PI does all this in a single thread, and never waits for one client: it
 waits for the replies of all the clients together, and sends a new
 structure to each client as soon as it returns its results. In simulations
 of several systems (e.g. replica exchange), the steps of the systems are
-interleaved (unless ``threading="false"``): a system runs until it needs
+interleaved (unless ``interleave="false"``): a system runs until it needs
 forces, and the others run while it waits for them. The clients thus compute
 the forces of all the systems in parallel, and in-process potentials
 (:ref:`ffdirect`) evaluate the structures of all the systems together, in

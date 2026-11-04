@@ -15,7 +15,7 @@ NSYSTEMS = 3
 NSTEPS = 4
 
 
-def systems_xml(threading, motion, batch_size=1, nbeads=2, outputs=""):
+def systems_xml(interleave, motion, batch_size=1, nbeads=2, outputs=""):
     """A simulation with NSYSTEMS two-atom systems, at different positions,
     sharing a harmonic forcefield."""
 
@@ -34,7 +34,7 @@ def systems_xml(threading, motion, batch_size=1, nbeads=2, outputs=""):
             <m shape="(2)">[2, 3]</m><names shape="(2)">[H, O]</names>
           </beads><cell shape="(3,3)">[20,0,0,0,20,0,0,0,20]</cell>
         </system>""")
-    return f"""<simulation verbosity="quiet" threading="{threading}" floatformat="%24.16e">
+    return f"""<simulation verbosity="quiet" interleave="{interleave}" floatformat="%24.16e">
       <output prefix="sim">{outputs}</output>
       <total_steps>{NSTEPS}</total_steps><prng><seed>317</seed></prng>
       <ffdirect name="harmonic"><pes>harmonic</pes><parameters>{{k1: 0.5}}</parameters>

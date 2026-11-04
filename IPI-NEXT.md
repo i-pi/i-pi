@@ -10,14 +10,14 @@ work left. Update them with every change that affects results, performance or th
 
 i-PI no longer uses threads to wait for forces or to step several systems: a cooperative scheduler built on
 greenlets runs everything in one thread.
-- **Tasks and waits.** The steps of the systems (with `threading='true'`, the default, and more than one
+- **Tasks and waits.** The steps of the systems (with `interleave='true'`, the default, and more than one
   system) and the outputs of each system run as tasks, which switch to each other only while they wait for
   forces (`ForceBead.get_all` -> `scheduler.wait`).
   - A waiting task first polls the forcefields itself, which sends its requests to the drivers, or evaluates
     them in process. Only if that is not enough does it let the others run.
   - Once all the tasks wait, the loop in the root greenlet evaluates the incomplete batches of `ffdirect`. It
     then waits for the replies of all the sockets in one `select.poll`, polling MPI every `latency` seconds.
-  - A run with one system, or with `threading='false'`, computes the forces where they are requested, without
+  - A run with one system, or with `interleave='false'`, computes the forces where they are requested, without
     switches.
   - Tasks run on reused worker greenlets: starting a greenlet costs ~7 µs, ten times a switch.
   - The scheduler has no notion of steps: systems can make any number of requests (e.g. AtomSwap, estimators of
@@ -37,7 +37,10 @@ greenlets runs everything in one thread.
 - **Inputs.**
   - The `threaded` attribute of the forcefields, and the `max_workers` and `consolidate_messages` options of
     `ffsocket`, are accepted, ignored, and warned about when set. `ffmpi` no longer requires `threaded`.
-  - The help of `threading` describes the interleaving. It is deterministic with in-process forcefields, but
+  - The `threading` attribute of the simulation is renamed `interleave`, as it does not involve threads.
+    `threading` is accepted as a deprecated alias, used (with a warning) if `interleave` is not given, and
+    RESTART files are written with `interleave`. The examples and the tests use the new name.
+  - The help of `interleave` describes the interleaving. It is deterministic with in-process forcefields, but
     differs from stepping in turn when the systems draw random numbers, as they share the generator.
 - **Socket interface** (`ipi/interfaces/sockets.py`, rewritten). One non-blocking dispatcher (`InterfaceSocket.poll`):
   - it accepts the clients and asks for their status;
@@ -76,8 +79,8 @@ greenlets runs everything in one thread.
     during the outputs, is removed.
   - The sockets and the MPI interfaces have no locks, and `exit_on_disconnect` starts no thread. i-PI and the
     Python driver initialize MPI with `MPI_THREAD_SERIALIZED` rather than `MPI_THREAD_MULTIPLE`.
-  - Without `threading`, a soft exit made while waiting for forces no longer raises `SystemExit` out of
-    `Simulation.run`: the step ends and the run returns, as with `threading`.
+  - Without `interleave`, a soft exit made while waiting for forces no longer raises `SystemExit` out of
+    `Simulation.run`: the step ends and the run returns, as with `interleave`.
   - A watchdog thread ends a main thread that hangs without checking, e.g. in an in-process force evaluation,
     where Python does not even run its signal handlers. It receives the signals through `signal.set_wakeup_fd`,
     and checks the EXIT file and the wall-clock time itself. With `hard_exit` (bin/i-pi), once an exit has been
@@ -722,9 +725,9 @@ bugs pass, and are no longer marked.
   the replay ~20-30 µs of Python, the simulation loop ~10 µs (including a checkpoint every 100 steps).
 
 ### Multiple systems and replica exchange
-- With `threading='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
+- With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
   at the force waits, in one thread (see the first section). Benchmarks with `ipi_tests/profiling/benchmark.py`
-  (`--systems`, `--threading`, `--forcefield socket --clients --delay`) on the workstation (12 cores, `powersave`
+  (`--systems`, `--interleave`, `--forcefield socket --clients --delay`) on the workstation (12 cores, `powersave`
   governor), old = OS threads (d6361f16), new = tasks, ms/step:
   - Classical NVT, dummy `ffdirect`, 100 atoms, 4 / 8 / 16 replicas:
     - in turn: 0.77 / 1.45 / 3.06 old, 0.72 / 1.57 / 3.07 new (noise of ~5%);
@@ -777,7 +780,15 @@ bugs pass, and are no longer marked.
     compiled steps do not change.
   - `unsupported` accepts `ReplicaExchange`, unless the replicas have a barostat (temperature and pressure
     are host values in the barostats) or different weights of the forces (host values in the sums).
-  - Under `--jit` the systems are stepped one after the other, whatever `threading`.
+  - Under `--jit`, with `interleave`, the steps of several systems whose forces are all computed in the step
+    (direct forcefields on the arrays of the backend) are compiled together (`jit._Together`): their
+    integrator steps run as tasks while they are recorded or traced, so that a batched forcefield evaluates
+    the structures of all the systems in one call, and the replays keep these batches. The first system
+    stepped at each step makes the steps of all. Otherwise the steps are compiled per system, and the systems
+    are stepped one after the other. Compiled and eager runs are bit-identical (CUDA graphs and JAX, dummy
+    driver, batches of 4 replicas, exchanges at every step); timings with q-TIP4P/F on kuma are pending.
+  - `Simulation.jit` records whether the steps of a simulation are compiled, when it is bound: `run_step` used
+    the global flag, so an eager simulation stepped its systems in turn once another one compiled its steps.
   - Tests in `test_jit.py`: compiled REMD with exchanges at every step matches eager steps (JAX, CUDA; NVT,
     PIMD), and the stale objects are refreshed only with exchanges.
   - H100 (kuma job 4781610), single systems, 100 / 1000 atoms, before -> after:

@@ -15,10 +15,17 @@ is a single CUDA graph.
 
 Only the dynamics that are known to work in this way are replayed (see
 `unsupported`), and a `JitError` stops the simulation if a host value read by
-a graph changes. The systems of a simulation are stepped in turn, and replica
-exchange is supported as long as the parameters that it exchanges reach the
-steps as arrays: the temperature of the thermostats and of the normal modes,
-but not that of the barostats, their pressure, or the weights of the forces.
+a graph changes. Replica exchange is supported as long as the parameters that
+it exchanges reach the steps as arrays: the temperature of the thermostats and
+of the normal modes, but not that of the barostats, their pressure, or the
+weights of the forces.
+
+With `interleave`, the steps of several systems whose forces are all computed
+in the step are compiled together (see `_Together`): their integrator steps
+run as tasks while they are recorded, so that a direct forcefield evaluates
+the requests of all the systems in the same batches, which the compiled step
+keeps. Otherwise the steps of each system are compiled on their own, and the
+systems are stepped in turn.
 
 With JAX, the whole step is compiled, including the requests to direct
 forcefields whose driver works on the arrays of the backend and can be traced
@@ -34,13 +41,14 @@ from functools import partial
 
 import numpy as np
 
+from ipi.utils import scheduler
 from ipi.utils.array_backend import backend
 from ipi.utils.cudagraphs import GraphReplay
 from ipi.utils.jaxjit import JaxReplay
 from ipi.utils.jit import JitError
 from ipi.utils.messages import verbosity, warning
 
-__all__ = ["compile_steps"]
+__all__ = ["compile_steps", "compiled_step"]
 
 
 def unsupported(simulation, system):
@@ -101,18 +109,84 @@ def unsupported(simulation, system):
 
 def compile_steps(simulation):
     """Replays the steps of the systems of `simulation` as CUDA graphs, or
-    compiles them with JAX, for the systems that support it."""
+    compiles them with JAX, for the systems that support it: together, if
+    they are several, stepped as tasks (`interleave`), and all their forces are
+    computed in the step."""
 
+    systems = []
     for system in simulation.syslist:
         reason = unsupported(simulation, system)
         if reason is None:
-            step = JaxStep if backend() == "jax" else GraphStep
-            system.motion.integrator.step = step(system)
+            systems.append(system)
         else:
             warning(
                 f"The steps are not recorded and replayed: {reason} is not supported",
                 verbosity.low,
             )
+    step = JaxStep if backend() == "jax" else GraphStep
+    if (
+        len(systems) > 1
+        and len(systems) == len(simulation.syslist)
+        and simulation.interleave
+        and all(_driver_in_step(c.ff) for s in systems for c in s.forces.mforces)
+    ):
+        together = _Together(step(systems), len(systems))
+        for index, system in enumerate(systems):
+            system.motion.integrator.step = partial(together.step, index)
+    else:
+        for system in systems:
+            system.motion.integrator.step = step([system])
+
+
+def compiled_step(system):
+    """Returns the compiled step (a GraphStep or a JaxStep) that makes the
+    step of `system`, and possibly those of other systems, or None."""
+
+    step = getattr(getattr(system.motion, "integrator", None), "step", None)
+    together = getattr(getattr(step, "func", None), "__self__", None)
+    if isinstance(together, _Together):
+        return together.replay
+    return step if isinstance(step, (GraphStep, JaxStep)) else None
+
+
+def _integrators(systems):
+    """Returns the function that makes the integrator steps of `systems`: those
+    of several systems run as tasks, which switch while they wait for forces,
+    so that the requests of all of them are evaluated together."""
+
+    steps = [system.motion.integrator.step for system in systems]
+    if len(steps) == 1:
+        return steps[0]
+
+    def step(step=None):
+        scheduler.run([partial(f, step) for f in steps])
+
+    return step
+
+
+class _Together:
+    """The integrator steps of several systems, compiled together. The first of
+    them that is called at a step of the simulation makes the steps of all the
+    systems, and the others then return, as their step has been made.
+
+    Attributes:
+        replay: The compiled step of all the systems.
+        calls: The number of calls of the step of each system.
+        done: The number of steps made by the compiled step.
+    """
+
+    def __init__(self, replay, nsystems):
+        self.replay = replay
+        self.calls = [0] * nsystems
+        self.done = 0
+
+    def step(self, index, step=None):
+        """The integrator step of the system `index`."""
+
+        self.calls[index] += 1
+        if self.calls[index] > self.done:
+            self.done += 1
+            self.replay(step)
 
 
 def _driver_in_step(ff):
@@ -126,13 +200,15 @@ def _driver_in_step(ff):
 
 
 class GraphStep(GraphReplay):
-    """The step of the integrator of a system, which runs eagerly for the first
-    steps, is recorded as CUDA graphs at the next one, and is replayed for all
-    the following steps."""
+    """The step of the integrators of some systems, which runs eagerly for the
+    first steps, is recorded as CUDA graphs at the next one, and is replayed
+    for all the following steps. The systems share the random number
+    generator of the simulation."""
 
-    def __init__(self, system):
-        super().__init__(system.motion.integrator.step, system.prng.torch_generator)
-        self.prng = system.prng
+    def __init__(self, systems):
+        super().__init__(_integrators(systems), systems[0].prng.torch_generator)
+        self.prng = systems[0].prng
+        self.together = len(systems) > 1
 
     def __call__(self, step=None):
         if (
@@ -151,6 +227,12 @@ class GraphStep(GraphReplay):
         component = bead.component
         computed = (component.f_, component.pots_, component.virs_)
         if any(dep.tainted() for dep in computed) and not _driver_in_step(bead.ff):
+            if self.together:
+                # the other systems would run, unrecorded, while it waits
+                raise JitError(
+                    f"The forces of the forcefield '{bead.ff.name}' cannot be "
+                    "computed eagerly in the steps of several systems"
+                )
             self.interrupt(partial(_compute, component))
 
 
@@ -163,12 +245,13 @@ def _compute(component):
 
 
 class JaxStep(JaxReplay):
-    """The step of the integrator of a system, which runs eagerly for the first
-    steps, is compiled with jax.jit at the next one, and the compiled step runs
-    at all the following steps."""
+    """The step of the integrators of some systems, which runs eagerly for the
+    first steps, is compiled with jax.jit at the next one, and the compiled
+    step runs at all the following steps. The systems share the random number
+    generator of the simulation."""
 
-    def __init__(self, system):
-        super().__init__(system.motion.integrator.step, system.prng)
+    def __init__(self, systems):
+        super().__init__(_integrators(systems), systems[0].prng)
 
     def split(self, bead):
         """The forces on `bead` are computed in the compiled step only if the

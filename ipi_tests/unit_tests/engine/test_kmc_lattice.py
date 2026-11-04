@@ -6,7 +6,7 @@ import pytest
 from ipi.engine.motion.al6xxx_kmc import AlKMC
 
 # a 4x4x4 FCC lattice (a0 = 7.6 bohr) with one vacancy, and zero forces
-KMC_INPUT = """<simulation verbosity="quiet" threading="False">
+KMC_INPUT = """<simulation verbosity="quiet" interleave="False">
   <total_steps>10</total_steps><prng><seed>7</seed></prng>
   <ffdirect name="ff"><pes>dummy</pes></ffdirect>
   <system>

@@ -1,4 +1,4 @@
-<simulation threading='False' verbosity='low'>
+<simulation interleave='False' verbosity='low'>
 
   <ffsocket name='driver' mode='unix' pbc='false'>
     <address>localhost</address>
