@@ -330,9 +330,12 @@ class MetatomicDriver(Dummy_driver):
 
         system = mta.System(self._types[device_idx], positions, cell, pbc)
 
-        # Compute neighbor lists using vesin
-        for calculator in self._nl_calculators[device_idx]:
-            calculator.add_neighbor_list(system)
+        # vesin computes on the current CUDA device, which must be the one that
+        # holds the system (the threads of the executor start on device 0); the
+        # index -1 of the systems on the CPU leaves the current device as it is
+        with torch.cuda.device(positions.device.index if positions.is_cuda else -1):
+            for calculator in self._nl_calculators[device_idx]:
+                calculator.add_neighbor_list(system)
 
         return system, strain
 
