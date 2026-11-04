@@ -148,7 +148,9 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 30
+# time after which a regression test is considered hung: the runs under coverage,
+# which follows the switches of the greenlets, are about 1.5 times slower
+TIMEOUT = 60
 
 fortran_driver_models = [
     "dummy",
