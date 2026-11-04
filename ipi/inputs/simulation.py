@@ -104,12 +104,20 @@ class InputSimulation(Input):
                 "help": "The level of output on stdout.",
             },
         ),
+        "interleave": (
+            InputAttribute,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Whether the steps (and the outputs) of multiple systems are interleaved: each system runs until it waits for forces, and the others run meanwhile, so that their forces are computed in parallel by the clients, or together by in-process forcefields, also in the steps compiled with --jit. All this happens in a single thread. The systems share the random number generator, so with socket or MPI forcefields, whose results arrive in an unpredictable order, the runs are not reproducible. Otherwise, the systems make their steps one after the other. It has no effect with a single system.",
+            },
+        ),
         "threading": (
             InputAttribute,
             {
                 "dtype": bool,
                 "default": True,
-                "help": "Whether the steps (and the outputs) of multiple systems are interleaved: each system runs until it waits for forces, and the others run meanwhile, so that their forces are computed in parallel by the clients, or together by in-process forcefields. All this happens in a single thread. The systems share the random number generator, so with socket or MPI forcefields, whose results arrive in an unpredictable order, the runs are not reproducible. With --jit, the systems are stepped one after the other.",
+                "help": "Deprecated name of `interleave`, used if `interleave` is not given.",
             },
         ),
         "mode": (
@@ -223,7 +231,7 @@ that up to this number of steps are repeated on restart.
         self.total_steps.store(simul.tsteps)
         self.total_time.store(simul.ttime)
         self.smotion.store(simul.smotion)
-        self.threading.store(simul.threading)
+        self.interleave.store(simul.interleave)
         self.floatformat.store(ipi_global_settings["floatformat"])
 
         # this we pick from the messages class. kind of a "global" but it seems to
@@ -378,12 +386,27 @@ that up to this number of steps are repeated on restart.
             step=self.step.fetch(),
             tsteps=self.total_steps.fetch(),
             ttime=self.total_time.fetch(),
-            threads=self.threading.fetch(),
+            interleave=self.fetch_interleave(),
             safe_stride=self.safe_stride.fetch(),
             sockets_prefix=self.sockets_prefix.fetch(),
         )
 
         return rsim
+
+    def fetch_interleave(self):
+        """Returns whether the systems are interleaved, also from the
+        deprecated `threading`."""
+
+        if not self.threading._explicit:
+            return self.interleave.fetch()
+        warning(
+            "The attribute 'threading' of the simulation is deprecated: "
+            "it is now called 'interleave'.",
+            verbosity.low,
+        )
+        if self.interleave._explicit:
+            return self.interleave.fetch()
+        return self.threading.fetch()
 
     def fetch_checkpoint_state(self):
         """Fetches the state needed to initialize from a checkpoint.
