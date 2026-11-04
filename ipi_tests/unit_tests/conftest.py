@@ -35,18 +35,6 @@ def numpy_draws(monkeypatch):
         monkeypatch.setattr(Random, name, method)
 
 
-def _stop_monitors():
-    """Stops the soft-exit monitors and resets the soft exit."""
-
-    # stops the monitors before reset replaces the shared loop controls
-    for thread, loop_control in softexit.tlist:
-        if loop_control is not None:
-            loop_control[0] = False
-    for thread, _ in softexit.tlist:
-        thread.join()
-    softexit.reset()
-
-
 @pytest.fixture
 def simulation(tmp_path, monkeypatch, select_backend):
     """Creates simulations in a temporary folder, as context managers that stop
@@ -58,8 +46,6 @@ def simulation(tmp_path, monkeypatch, select_backend):
 
     select_backend(test_tools.ipi_backend, test_tools.ipi_device)
     monkeypatch.chdir(tmp_path)
-    # The soft-exit monitor polls at this interval; joining it otherwise takes ~1 s.
-    monkeypatch.setattr("ipi.utils.softexit.SOFTEXITLATENCY", 0.01)
     softexit.reset()
     active = []
 
@@ -75,9 +61,9 @@ def simulation(tmp_path, monkeypatch, select_backend):
                 sim.stop()
                 active.remove(sim)
             if not active:
-                _stop_monitors()
+                softexit.reset()
 
     try:
         yield create
     finally:
-        _stop_monitors()
+        softexit.reset()

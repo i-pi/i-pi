@@ -63,13 +63,25 @@ greenlets runs everything in one thread.
     atoms of the first, and failed in the poll thread for smaller ones).
 
   The regression tests `SHM/plain` and `SHM/batched` check the shared-memory interface.
-- **Soft exit.** `softexit.py` is unchanged, with its monitor thread. A closed socket or MPI interface marks
+- **Soft exit, made by the main thread.** Kill signals, the EXIT file, the wall-clock limit and
+  `exit_on_disconnect` only request the exit (`softexit.request`). The main thread makes it at its next
+  `softexit.check`: between the steps, and whenever it waits for forces, which the scheduler does at least every
+  0.1 s while it waits for drivers. Making the exit stops the forcefields: a closed socket or MPI interface marks
   its pending requests as stopped (`Exit`), which ends the waits.
-  - The waits end when the requests are done or stopped, not as soon as a soft exit is triggered: in-process
-    forces are still computed while the soft exit is held back by the outputs.
-  - The interfaces have a lock (sockets) or share the MPI lock, as a soft exit closes them from its thread.
-  - i-PI and the Python driver initialize MPI with `MPI_THREAD_SERIALIZED` rather than `MPI_THREAD_MULTIPLE`:
-    the lock keeps the calls of the main thread and of the soft exit from overlapping.
+  - `softexit.lock` is replaced by `softexit.hold()`: a request made while the outputs of a step are written
+    waits for the end of the step. If a client hangs then, a second signal ends the run, as before.
+  - The sockets and the MPI interfaces have no locks, and `exit_on_disconnect` starts no thread. i-PI and the
+    Python driver initialize MPI with `MPI_THREAD_SERIALIZED` rather than `MPI_THREAD_MULTIPLE`.
+  - Without `threading`, a soft exit made while waiting for forces no longer raises `SystemExit` out of
+    `Simulation.run`: the step ends and the run returns, as with `threading`.
+  - A watchdog thread ends a main thread that hangs without checking, e.g. in an in-process force evaluation,
+    where Python does not even run its signal handlers. It receives the signals through `signal.set_wakeup_fd`,
+    and checks the EXIT file and the wall-clock time itself. With `hard_exit` (bin/i-pi), once an exit has been
+    pending for 10 s (`GRACE`) without a check, it writes the stored checkpoint and exits with status 1. It
+    shares nothing with the forcefields, and gives up on the checkpoint after another 10 s, as copying it from
+    the device can be stuck with the main thread.
+  - Forked children (e.g. drivers started with multiprocessing) restore the original signal handlers, so that
+    SIGTERM ends them, and their signals do not reach the watchdog of i-PI.
 - **Removed locks.** The `RLock` of the depend objects and `System._propertylock` are gone: tasks own disjoint
   depend graphs, and switch only at force waits. A depend `set` went from 0.58 to 0.19 µs, `set`+refresh of a
   dependant from 2.15 to 1.70 µs, `__setitem__` from 0.73 to 0.37 µs.
@@ -412,7 +424,18 @@ bugs pass, and are no longer marked.
 
 ## Status and work left
 
+### Soft exit during the outputs
+- A soft exit requested while the outputs of a step are written waits for all of them, including the force
+  evaluations of their estimators, which can be long, or never end if a client hangs (also on main). Planned:
+  make the exit at the next wait instead, rolling the outputs back with the state. Each output records its file
+  position at its first write after each `chk.store()`, and an exit truncates the outputs written since then and
+  writes the stored RESTART, so that the restart writes every row once. This also fixes the outputs written
+  ahead of a RESTART rolled back by more than one step (`safe_stride` > 1).
+
 ### Pre-existing bugs found and not fixed (need a decision)
+- Instanton: a restart from a RESTART written before the first step (a soft exit during step 0) converges one
+  step later than the run it continues (`INSTANTON/070K_D`: step 15 instead of 14), also with a7b69dfb.
+  `test_restart.py` passes because the EXIT file it creates is noticed at the end of step 0.
 - Instanton: the spring term for non-uniform discretizations is not implemented (`SpringMapper` ignores the
   discretization; a disabled draft of it was removed), while the physical potential is weighted by the
   discretization coefficients.
@@ -806,8 +829,10 @@ bugs pass, and are no longer marked.
   loaded; their references were regenerated (identical outputs on main and next). The `plumed.yml` workflow
   installs PLUMED from conda-forge and runs them with numpy and torch, together with the PLUMED unit tests.
 - `test_softexit.py::test_signal_during_outputs_completes_the_step` failed now and then with "release unlocked
-  lock": the test reset the soft exit while the monitoring thread was running its cleanup, and the reset
-  replaced the lock it held. `softexit.reset` waits for a cleanup in progress. New unit test.
+  lock": the test reset the soft exit while the monitoring thread was running its cleanup. The cleanup now
+  runs in the main thread. `test_softexit_sockets.py` ends runs whose socket client hangs with SIGTERM (once
+  during a step, twice during the outputs), and `test_softexit.py` checks the watchdog with a main thread that
+  does not receive the signal.
 - The scheduler is tested on its own (`utils/test_scheduler.py`). Simulation-level tests in
   `engine/test_multiple_systems.py` check that:
   - interleaved systems, with outputs that compute forces (isotope estimators), give the same outputs as
