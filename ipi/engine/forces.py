@@ -847,6 +847,10 @@ class Forces:
                 epsilon=fc.epsilon,
             )
             newbeads = Beads(beads.natoms, newb)
+            # Force components use their own (possibly contracted) bead path,
+            # but their atom proxies still need the system motion object for
+            # forcefields whose request depends on simulation time.
+            newbeads.bind(beads.motion)
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
 
             # the beads positions for this force components are obtained
