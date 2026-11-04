@@ -330,6 +330,10 @@ class MetatomicDriver(Dummy_driver):
 
         system = mta.System(self._types[device_idx], positions, cell, pbc)
 
+        # Do nl calculations on the correct device, which helps avoid the illegal memory
+        # access error when using multiple GPUs
+        if torch.cuda.is_available() and "cuda" in str(device):
+            torch.cuda.set_device(device)
         # Compute neighbor lists using vesin
         for calculator in self._nl_calculators[device_idx]:
             calculator.add_neighbor_list(system)
