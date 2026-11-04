@@ -12,6 +12,7 @@ appropriate conserved energy quantity for the ensemble of choice.
 
 import numpy as np
 
+from ipi.utils.softexit import softexit
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.array_backend import xp
@@ -194,6 +195,18 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
+        if self.enstype == "nvt-cc":
+            from ipi.engine.forcefields import FFDielectric
+
+            active_forcefields = (
+                bforce.ff[component.ffield] for component in bforce.fcomp
+            )
+            if any(isinstance(ff, FFDielectric) for ff in active_forcefields):
+                raise ValueError(
+                    "NVTCCIntegrator is not compatible with FFDielectric: "
+                    "the centroid coordinate is constrained."
+                )
+
         self.integrator.bind(self)
 
         self.ensemble.add_econs(self.thermostat.ethermo_)
@@ -248,6 +261,14 @@ class Dynamics(Motion):
 
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
+
+        if np.abs(self.ensemble.time - self.integrator.actual_time) > self.dt / 100.0:
+            softexit.trigger(
+                status="bad", message=" @ SIMULATION: Error in the actual time update."
+            )
+        self.integrator.actual_time = (
+            self.ensemble.time
+        )  # overwrite to avoid accumulating numerical noise
 
 
 dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
@@ -399,6 +420,7 @@ class DummyIntegrator:
 
         # check stress tensor
         self._stresscheck = True
+        self._actual_time = depend_value(name="actual_time", value=self.ensemble.time)
 
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
@@ -411,6 +433,10 @@ class DummyIntegrator:
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
         pass
+
+    def update_actual_time(self, qdt: float):
+        """Update the actual time of the simulation using the positions qdt"""
+        self.actual_time += qdt
 
     def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
@@ -470,6 +496,7 @@ dproperties(
         "half_inv_mtot",
         "centroid_com_weights",
         "centroid_half_inv_mtot",
+        "actual_time",
     ],
 )
 
@@ -518,6 +545,7 @@ class NVEIntegrator(DummyIntegrator):
             self.beads.q_ += self.beads.p * self.qdt_on_m
         else:
             self.nm.qnm_[0, :] += self.nm.pnm[0, :] * self.qdt_on_m
+        self.update_actual_time(self.qdt)
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -672,7 +700,9 @@ class NVTCCIntegrator(NVTIntegrator):
         # The centroid is constrained, so qcstep is skipped, but the internal
         # ring-polymer modes still need the two half-step free propagations.
         self.nm.free_qstep()
+        self.update_actual_time(self.qdt)
         self.nm.free_qstep()
+        self.update_actual_time(self.qdt)
 
         self.pstep()
         self.nm.pnm_[0, :] = 0.0
@@ -720,6 +750,7 @@ class NPTIntegrator(NVTIntegrator):
         """Velocity Verlet centroid position propagator."""
 
         self.barostat.qcstep()
+        self.update_actual_time(self.qdt)
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
@@ -862,6 +893,7 @@ class SCNPTIntegrator(SCIntegrator):
         """Velocity Verlet centroid position propagator."""
 
         self.barostat.qcstep()
+        self.update_actual_time(self.qdt)
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
