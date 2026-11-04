@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import socket
 import argparse
 import numpy as np
@@ -140,9 +141,17 @@ def run_driver(
                         .tobytes()
                         .decode("utf-8")
                     )
-                    handle = shared_memory.SharedMemory(name=name)
                     # only attaching: let i-PI own the segment lifetime
-                    resource_tracker.unregister(handle._name, "shared_memory")
+                    try:
+                        handle = shared_memory.SharedMemory(name=name, track=False)
+                    except TypeError:
+                        # before Python 3.13, attaching registers the segment, which
+                        # is then unlinked when this process exits. If i-PI runs in
+                        # this process (segment names start with its pid) the
+                        # registration is i-PI's own, and must be kept.
+                        handle = shared_memory.SharedMemory(name=name)
+                        if not name.startswith(f"ipi_shm_{os.getpid()}_"):
+                            resource_tracker.unregister(handle._name, "shared_memory")
                     shm_handles[kind] = handle
                 shm_views["pos"] = np.ndarray(
                     (batch_n, nat, 3), np.float64, buffer=shm_handles["pos"].buf

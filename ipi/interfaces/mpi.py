@@ -18,7 +18,6 @@ import threading
 import numpy as np
 
 from ipi.utils.messages import info, verbosity
-from ipi.utils.depend import dstrip
 from ipi.interfaces.utils import parse_extra
 
 # MPI message tags for the ffmpi protocol (must match the driver side, see
@@ -314,7 +313,7 @@ class InterfaceMPI:
                 off = i * (18 + 3 * nat)
                 body[off : off + 9] = np.asarray(h).reshape(-1)
                 body[off + 9 : off + 18] = np.asarray(ih).reshape(-1)
-                body[off + 18 : off + 18 + 3 * nat] = dstrip(req["pos"]).reshape(-1)
+                body[off + 18 : off + 18 + 3 * nat] = req["pos"].reshape(-1)
                 req["status"] = "Running"
                 req["t_dispatched"] = time.time()
 

@@ -25,6 +25,23 @@ __DRIVER_CLASS__ = "MetatomicDriver"
 from time import time
 
 
+def _output_device(pos):
+    """The device of the results: that of the positions if they are a torch
+    tensor, or None if the results should be numpy arrays."""
+
+    return pos.device if isinstance(pos, torch.Tensor) else None
+
+
+def _to_output(tensor, shape, device):
+    """Detached float64 copy of a model output, on `device`, or as a numpy
+    array if `device` is None."""
+
+    tensor = tensor.detach().reshape(shape)
+    if device is None:
+        return tensor.to(device="cpu", dtype=torch.float64).numpy()
+    return tensor.to(device=device, dtype=torch.float64)
+
+
 class MetatomicDriver(Dummy_driver):
     """
     Driver for ``metatomic`` MLIPs.
@@ -63,7 +80,13 @@ class MetatomicDriver(Dummy_driver):
         :param uncertainty_threshold: float, optional, whether the model should
             estimate uncertainty and warn whenever it exceeds a selected threshold
             (in eV/atom)
+
+    Positions and cells can be numpy arrays, or torch tensors (e.g. on a GPU),
+    in which case energies, forces and virials are float64 torch tensors on the
+    same device.
     """
+
+    backend_arrays = True
 
     def __init__(
         self,
@@ -219,7 +242,11 @@ class MetatomicDriver(Dummy_driver):
     def _load_template(self):
         """Loads the atomic types from the template file."""
         atoms = ase_io.read(self.template)
-        self._types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
+        # one copy for each device
+        self._types = [
+            torch.from_numpy(atoms.numbers).to(dtype=torch.int32, device=device)
+            for device in self.devices
+        ]
 
     def _register_model_outputs(self):
         """Registers the required outputs for the model evaluation."""
@@ -280,27 +307,28 @@ class MetatomicDriver(Dummy_driver):
         )
 
     def _prepare_system(self, cell, pos, device_idx=0):
-        """Prepares a metatomic System object from cell and positions."""
+        """Prepares a metatomic System object from cell and positions, given as
+        numpy arrays or torch tensors."""
         device = self.devices[device_idx]
 
-        # Convert units to Angstrom
-        positions = unit_to_user("length", "angstrom", pos)
-        cell = unit_to_user("length", "angstrom", cell.T)
-
-        positions = torch.from_numpy(positions).to(dtype=self._dtype)
-        cell = torch.from_numpy(cell).to(dtype=self._dtype)
+        # Convert units to Angstrom, on the model device and with the model dtype
+        positions = unit_to_user(
+            "length", "angstrom", torch.as_tensor(pos, device=device)
+        ).to(dtype=self._dtype)
+        cell = unit_to_user(
+            "length", "angstrom", torch.as_tensor(cell, device=device).T
+        ).to(dtype=self._dtype)
         pbc = torch.norm(cell, dim=1) != 0.0
         strain = None
 
         if not self.non_conservative:
             # Enable gradients for virial calculation
             positions.requires_grad_(True)
-            strain = torch.eye(3, requires_grad=True, dtype=self._dtype)
+            strain = torch.eye(3, requires_grad=True, dtype=self._dtype, device=device)
             positions = positions @ strain
             cell = cell @ strain
 
-        system = mta.System(self._types, positions, cell, pbc)
-        system = system.to(device)
+        system = mta.System(self._types[device_idx], positions, cell, pbc)
 
         # Compute neighbor lists using vesin
         for calculator in self._nl_calculators[device_idx]:
@@ -308,8 +336,11 @@ class MetatomicDriver(Dummy_driver):
 
         return system, strain
 
-    def _process_standard_outputs(self, outputs, systems, strains, device):
-        """Extracts and computes energy, forces, and virials."""
+    def _process_standard_outputs(
+        self, outputs, systems, strains, device, out_device=None
+    ):
+        """Extracts and computes energy, forces, and virials, as torch tensors on
+        `out_device`, or as numpy arrays if `out_device` is None."""
         num_systems = len(systems)
         energy_tensor = outputs[f"energy{self.energy_suffix}"].block().values
 
@@ -359,26 +390,17 @@ class MetatomicDriver(Dummy_driver):
         energies = unit_to_internal(
             "energy",
             "electronvolt",
-            energy_tensor.detach()
-            .to(device="cpu", dtype=torch.float64)
-            .numpy()
-            .reshape(num_systems, 1),
+            _to_output(energy_tensor, (num_systems, 1), out_device),
         )
         forces = unit_to_internal(
             "force",
             "ev/ang",
-            forces_tensor.detach()
-            .reshape(num_systems, -1, 3)
-            .to(device="cpu", dtype=torch.float64)
-            .numpy(),
+            _to_output(forces_tensor, (num_systems, -1, 3), out_device),
         )
         virials = unit_to_internal(
             "energy",
             "electronvolt",
-            virials_tensor.detach()
-            .reshape(num_systems, 3, 3)
-            .to(device="cpu", dtype=torch.float64)
-            .numpy(),
+            _to_output(virials_tensor, (num_systems, 3, 3), out_device),
         )
         # Symmetrize virial
         virials = (virials + virials.swapaxes(1, 2)) * 0.5
@@ -524,8 +546,10 @@ class MetatomicDriver(Dummy_driver):
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
-    def _process_outputs(self, outputs, systems, strains, model=None):
-        """Processes raw model outputs into i-PI compatible formats."""
+    def _process_outputs(self, outputs, systems, strains, model=None, out_device=None):
+        """Processes raw model outputs into i-PI compatible formats: energy,
+        forces and virials are torch tensors on `out_device`, or numpy arrays
+        if `out_device` is None."""
         if model is None:
             model = self.model
 
@@ -534,7 +558,7 @@ class MetatomicDriver(Dummy_driver):
 
         # 1. Standard Energy, Force, Virial
         energies, forces, virials = self._process_standard_outputs(
-            outputs, systems, strains, device
+            outputs, systems, strains, device, out_device
         )
 
         extras_dicts = [{} for _ in range(num_systems)]
@@ -570,7 +594,9 @@ class MetatomicDriver(Dummy_driver):
             check_consistency=self.check_consistency,
         )
 
-        return self._process_outputs(outputs, [system], [strain])[0]
+        return self._process_outputs(
+            outputs, [system], [strain], out_device=_output_device(pos)
+        )[0]
 
     def _compute_chunk(self, device_idx, cell_chunk, pos_chunk):
         """Helper to compute a batch chunk on a specific device."""
@@ -597,7 +623,13 @@ class MetatomicDriver(Dummy_driver):
         )
 
         # Process outputs
-        return self._process_outputs(outputs, sys_batch, strain_batch, model=model)
+        return self._process_outputs(
+            outputs,
+            sys_batch,
+            strain_batch,
+            model=model,
+            out_device=_output_device(pos_chunk[0]),
+        )
 
     def compute(self, cell, pos):
         """Calls the model evaluation, taking care of both serial and batched execution.

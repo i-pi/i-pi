@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - next
 
 concurrency:
   group: mace-examples-${{ github.ref }}

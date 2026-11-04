@@ -249,6 +249,80 @@ running any dynamics. Note that until this has happened the code is
 essentially idle, the only action that it performs is to periodically
 poll for incoming connections.
 
+.. _array-backends:
+
+Array backends and GPUs
+^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, i-PI stores positions, momenta, forces and all the other arrays
+of the simulation as numpy arrays. They can instead be stored as
+`PyTorch <https://pytorch.org>`_ tensors, on the CPU or on a GPU, by
+selecting the array backend when launching i-PI:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda input_file.xml
+
+``--backend`` is either ``numpy`` (the default) or ``torch``, and ``--device``
+is a device name understood by PyTorch, e.g. ``cpu``, ``cuda`` or ``cuda:1``
+(the numpy backend only supports ``cpu``). PyTorch is an optional dependency,
+that can be installed together with i-PI as ``pip install ipi[torch]``.
+
+The backend is chosen at run time and is not part of the input: the same
+input and checkpoint files can be used with either backend, and the
+simulation results are the same up to rounding errors. The only exception
+is the stream of random numbers: with the torch backend, the Gaussian noise
+used by the thermostats and to draw the initial velocities is generated
+directly on the device by a PyTorch generator, so the trajectories differ
+from those obtained with numpy. The state of this generator is stored in the
+checkpoint files, so restarts are reproducible on the same device; restarting
+on a different device, or from a checkpoint written with the numpy backend,
+re-initializes it from the seed (with a warning).
+
+Forcefields exchange numpy arrays with the client codes (and with most of the
+Python potentials of :ref:`ffdirect`), so with a GPU backend the positions and
+the forces are copied between host and device at each force evaluation. The
+potentials that work with the arrays of the backend, such as ``metatomic``,
+avoid these copies. The torch backend therefore pays off for large systems,
+when the cost of the integrator (normal-mode transformations, thermostats,
+barostats) becomes significant. For small systems the overhead of launching
+many small operations on the GPU (or of PyTorch on the CPU) makes the numpy
+backend faster.
+
+This overhead is reduced by ``--jit``, with which i-PI records the
+operations of an MD step as CUDA graphs after the first few steps, and then
+replays them, running the integrator several times faster:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda --jit input_file.xml
+
+The forces are still computed as usual, between the replays of the parts of
+the step that precede and follow each force evaluation, so any forcefield can
+be used. For direct forcefields whose potential works with the arrays of the
+backend, such as ``metatomic``, only the potential is evaluated between the
+replays, while the requests and the collection of the results are part of the
+graphs. The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
+integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
+PILE-G thermostats and the isotropic, flexible and anisotropic barostats, while the
+other simulations run as usual. The parameters that are fixed in the recorded
+graphs, such as the time step, or the temperature and the pressure with a
+barostat, cannot change while the steps are replayed: i-PI stops with an error
+if they do.
+
+``--backend jax`` (experimental) stores the arrays as
+`JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
+runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
+instantons, bosonic exchange, open paths or the GLE thermostats, and it is
+much slower than numpy, as JAX executes the operations one at a time. With
+``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
+steps, for the same dynamics that are replayed as CUDA graphs with torch, if
+the forces are computed by a direct forcefield whose potential works with JAX
+arrays (e.g. ``dummy``): the whole step, including the force evaluation, is
+then compiled. Otherwise, the steps run as usual. As with torch, the
+parameters that are fixed in the compiled step, such as the time step,
+cannot change.
+
 .. _runningclients:
 
 Running the client code

@@ -20,6 +20,8 @@ from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_wri
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
+from ipi.utils.array_backend import jit
+from ipi.engine.jit import replay_steps
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 import threading
@@ -209,7 +211,7 @@ class Simulation:
 
         self.outtemplate = outputs
 
-        self._step = depend_value(name="step", value=step)
+        self.step_ = depend_value(name="step", value=step)
         self.tsteps = tsteps
         self.ttime = ttime
         self.smotion = smotion
@@ -246,6 +248,9 @@ class Simulation:
             # binds important computation engines
             s.bind(self)
 
+        if jit():
+            replay_steps(self)
+
         if read_only:  # returns before we open the sockets
             return
 
@@ -272,7 +277,7 @@ class Simulation:
             ):  # checkpoints are output per simulation
                 dco.bind(self)
                 dpipe(
-                    dco._step, o._step
+                    dco.step_, o.step_
                 )  # makes sure that the checkpoint step is updated also in the template
                 self.outputs.append(dco)
             else:  # properties and trajectories are output per system

@@ -27,8 +27,7 @@ def test_fcc_neighbors_and_vacancy_exchange_preserve_species():
         assert len(set(neighbors)) == 12 and i not in neighbors
         for j in neighbors:
             assert i in kmc.neigh[j]
-            displacement = (kmc.sites[i] - kmc.sites[j]).copy()
-            kmc.dcell.array_pbc(displacement)
+            displacement = kmc.dcell.array_pbc(kmc.sites[i] - kmc.sites[j])
             assert np.isclose(np.dot(displacement, displacement), 8.0)
     labels = np.array(list("SSMM" + "A" * 59 + "V"))
     indices = kmc.unique_idx(labels)

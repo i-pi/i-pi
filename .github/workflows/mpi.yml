@@ -2,7 +2,7 @@ name: MPI transport tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
   pull_request:
     # Check all PR
 

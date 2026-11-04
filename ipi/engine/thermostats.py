@@ -12,6 +12,8 @@ run PI+GLE dynamics, reducing the number of path integral beads required.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp, xp_size, to_numpy
+from ipi.utils.jit import compiled
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import matrix_exp, stab_cholesky, root_herm
@@ -67,9 +69,9 @@ class Thermostat:
               initialised from a checkpoint file.
         """
 
-        self._temp = depend_value(name="temp", value=temp)
-        self._dt = depend_value(name="dt", value=dt)
-        self._ethermo = depend_value(name="ethermo", value=ethermo)
+        self.temp_ = depend_value(name="temp", value=temp)
+        self.dt_ = depend_value(name="dt", value=dt)
+        self.ethermo_ = depend_value(name="ethermo", value=ethermo)
 
     def bind(
         self,
@@ -116,31 +118,31 @@ class Thermostat:
             self.prng = prng
 
         if beads is not None:
-            self._p = beads.p.flatten()
-            self._m = beads.m3.flatten()
+            self.p_ = beads.p_.flatten()
+            self.m_ = beads.m3_.flatten()
         elif atoms is not None:
-            self._p = atoms._p
-            self._m = atoms._m3
+            self.p_ = atoms.p_
+            self.m_ = atoms.m3_
         elif pm is not None:
-            self._p = pm[
-                0
-            ].flatten()  # MR this should allow to simply pass the cell momenta in the anisotropic barostat
-            self._m = pm[1].flatten()
+            # the momenta keep their shape, e.g. one row per normal mode for the
+            # PILE thermostats
+            self.p_ = pm[0]
+            self.m_ = pm[1]
         else:
             raise TypeError(
                 "Thermostat.bind expects either Beads, Atoms, NormalModes, or a (p,m) tuple to bind to"
             )
 
         if fixdof is None:
-            self.ndof = len(self.p)
+            self.ndof = xp_size(self.p)
         else:
-            self.ndof = float(len(self.p) - fixdof)
+            self.ndof = float(xp_size(self.p) - fixdof)
 
-        self._sm = depend_array(
+        self.sm_ = depend_array(
             name="sm",
-            value=np.zeros(len(self._m)),
+            value=np.zeros(tuple(self.m.shape)),
             func=self.get_sm,
-            dependencies=[self._m],
+            dependencies=[self.m_],
         )
 
     def get_sm(self):
@@ -151,7 +153,7 @@ class Thermostat:
            each degree of freedom.
         """
 
-        return np.sqrt(self.m)
+        return xp.sqrt(self.m)
 
     def step(self):
         """Dummy thermostat step."""
@@ -162,30 +164,60 @@ class Thermostat:
 dproperties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt"])
 
 
+@compiled
+def _langevin_step(p, t_on_sm, T2, S, noise, sm):
+    """Returns the momenta after a Langevin step, and the energy given to the
+    thermostat. The momenta can have several rows (e.g. normal modes), with
+    T2 and S columns with one value per row."""
+
+    # goes in a single step to mass scaled coordinates and applies damping
+    p = p * t_on_sm
+
+    # must correct for the "pre-damping", with the T of each row
+    if p.ndim == 1:
+        deltah = (p @ p) / T2
+    else:
+        deltah = ((p[:, None, :] @ p[:, :, None])[:, :, 0] / T2).sum()
+
+    p = p + S * noise  # random part (in ms coordinates)
+    flat = p if p.ndim == 1 else p.reshape(-1)
+    deltah = deltah - flat @ flat  # new energy
+
+    return p * sm, deltah * 0.5  # back to physical momentum
+
+
 class ThermoLangevin(Thermostat):
     """Represents a langevin thermostat.
 
     Depend objects:
        tau: Thermostat damping time scale. Larger values give a less strongly
-          coupled thermostat.
+          coupled thermostat. A scalar, or a column with one value per row of
+          the momenta (e.g. per normal mode).
        T: Coefficient of the diffusive contribution of the thermostat, i.e. the
           drift back towards equilibrium. Depends on tau and the time step.
        S: Coefficient of the stochastic contribution of the thermostat, i.e.
-          the uncorrelated Gaussian noise. Depends on T and the temperature.
+          the uncorrelated Gaussian noise. Depends on T and the temperature
+          (which can also have one value per row of the momenta).
     """
 
     def get_T(self):
-        """Calculates the coefficient of the overall drift of the velocities."""
+        """Calculates the coefficient of the overall drift of the velocities, as
+        an array of the backend."""
 
-        return np.exp(-self.dt / self.tau)
+        return xp.asarray(np.exp(-self.dt / self.tau))
+
+    def get_T2(self):
+        """Calculates the square of T."""
+
+        return self.T**2
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
+        return xp.sqrt(Constants.kb * self.temp * (1 - self.T2))
 
     def get_T_on_sm(self):
         """Calculates the combined mass scaling and thermostat damping."""
-        return self.T / dstrip(self.sm)
+        return self.T / self.sm
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -201,12 +233,13 @@ class ThermoLangevin(Thermostat):
 
         super(ThermoLangevin, self).__init__(temp, dt, ethermo)
 
-        self._tau = depend_value(value=tau, name="tau")
-        self._T = depend_value(
-            name="T", func=self.get_T, dependencies=[self._tau, self._dt]
+        self.tau_ = depend_value(value=tau, name="tau")
+        self.T_ = depend_value(
+            name="T", func=self.get_T, dependencies=[self.tau_, self.dt_]
         )
-        self._S = depend_value(
-            name="S", func=self.get_S, dependencies=[self._temp, self._T]
+        self.T2_ = depend_value(name="T2", func=self.get_T2, dependencies=[self.T_])
+        self.S_ = depend_value(
+            name="S", func=self.get_S, dependencies=[self.temp_, self.T2_]
         )
 
     def bind(
@@ -223,8 +256,8 @@ class ThermoLangevin(Thermostat):
 
         super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof, fixcom)
 
-        self._T_on_sm = depend_value(
-            name="T_on_sm", func=self.get_T_on_sm, dependencies=[self._T, self._sm]
+        self.T_on_sm_ = depend_value(
+            name="T_on_sm", func=self.get_T_on_sm, dependencies=[self.T_, self.sm_]
         )
 
     def step(self):
@@ -238,28 +271,22 @@ class ThermoLangevin(Thermostat):
         # the change in kinetic energy is computed to accumulate the work made
         # by the thermostat
 
-        # goes in a single step to mass scaled coordinates and applies damping
-        p = dstrip(self.p) * dstrip(self.T_on_sm)
-
-        deltah = noddot(p, p) / (self.T**2)  # must correct for the "pre-damping"
-        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
-        deltah -= noddot(p, p)  # new energy
-
-        self.p[:] = p * dstrip(
-            self.sm
-        )  # back to physical momentum and updates actual p
-        self.ethermo += deltah * 0.5
+        p = self.p
+        noise = self.prng.gvec(p.shape)
+        p, deltah = _langevin_step(p, self.T_on_sm, self.T2, self.S, noise, self.sm)
+        self.p_[:] = p
+        self.ethermo += deltah
 
 
-dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
+dproperties(ThermoLangevin, ["tau", "T", "T2", "S", "T_on_sm"])
 
 
 class ThermoPILE_L(Thermostat):
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
-       _thermos: The list of the different thermostats for all the ring polymer
-          normal modes.
+       _thermos: The thermostats of the ring polymer normal modes: a Langevin
+          thermostat acting on all of them (but the centroid for PILE_G).
        nm: A normal modes object to attach the thermostat to.
        prng: Random number generator used in the stochastic integration
           algorithms.
@@ -294,11 +321,11 @@ class ThermoPILE_L(Thermostat):
         """
 
         super(ThermoPILE_L, self).__init__(temp, dt, ethermo)
-        self._tau = depend_value(value=tau, name="tau")
-        self._pilescale = depend_value(value=scale, name="pilescale")
-        self._pilect = depend_value(value=pilect, name="pilect")
-        self._npilect = depend_value(
-            func=self.get_npilect, name="npilect", dependencies=[self._pilect]
+        self.tau_ = depend_value(value=tau, name="tau")
+        self.pilescale_ = depend_value(value=scale, name="pilescale")
+        self.pilect_ = depend_value(value=pilect, name="pilect")
+        self.npilect_ = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[self.pilect_]
         )
 
     def bind(
@@ -350,69 +377,43 @@ class ThermoPILE_L(Thermostat):
             self.prng = prng
 
         prev_ethermo = self.ethermo
-
-        # creates a set of thermostats to be applied to individual normal modes
-        self._thermos = [ThermoLangevin(temp=1, dt=1, tau=1) for b in range(nm.nbeads)]
-        # optionally does not bind the centroid, so we can re-use all of this
-        # in the PILE_G case
-        if not bindcentroid:
-            self._thermos[0] = None
-
         self.nm = nm
 
-        self._tauk = depend_array(
+        self.tauk_ = depend_array(
             name="tauk",
             value=np.zeros(nm.nbeads - 1, float),
             func=self.get_tauk,
-            dependencies=[self._pilescale, nm._dynomegak],
+            dependencies=[self.pilescale_, nm.dynomegak_],
+            host=True,
         )
 
-        # must pipe all the dependencies in such a way that values for the nm thermostats
-        # are automatically updated based on the "main" thermostat
-        def make_taugetter(k):
-            return lambda: self.tauk[k - 1]
-
-        it = 0
-        for t in self._thermos:
-            if t is None:
-                it += 1
-                continue
-            if it > 0:
-                fixdof = None  # only the centroid thermostat may have constraints
-
-            # bind thermostat t to the it-th bead
-
-            t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
-            if it == 0:
-                # the following lines pipe a different temperature to the centroid, if requested
-                if self.pilect > 0.0:
-                    dpipe(self._npilect, t._temp)
-                else:
-                    dpipe(self._temp, t._temp)
-            else:
-                # pipes temp
-                dpipe(self._temp, t._temp)
-            # pipes dt
-            dpipe(self._dt, t._dt)
-
-            # for tau it is slightly more complex
-            if it == 0:
-                dpipe(self._tau, t._tau)
-            else:
-                # Here we manually connect _thermos[i].tau to tauk[i].
-                # Simple and clear.
-                t._tau.add_dependency(self._tauk)
-                t._tau._func = make_taugetter(it)
-            self._ethermo.add_dependency(t._ethermo)
-            it += 1
+        # a single Langevin thermostat acts on all the normal modes, with one
+        # time scale and temperature per mode. The centroid is optionally left
+        # out, so that the PILE_G thermostat can bind its own
+        first = 0 if bindcentroid else 1
+        self._thermos = []
+        if nm.nbeads > first:
+            t = ThermoLangevin()
+            t.bind(pm=(nm.pnm_[first:], nm.dynm3_[first:]), prng=self.prng)
+            dpipe(self.dt_, t.dt_)
+            dcompute(t.tau_, lambda: self.get_taus()[first:], [self.tau_, self.tauk_])
+            dcompute(
+                t.temp_,
+                lambda: self.get_temps()[first:],
+                [self.temp_, self.npilect_],
+            )
+            self._thermos.append(t)
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
-        # one has to split
-        # any previously-stored value between the sub-thermostats
+        # any previously-stored value is split between them
         if bindcentroid:
             for t in self._thermos:
-                t.ethermo = prev_ethermo / nm.nbeads
-            self._ethermo._func = self.get_ethermo
+                t.ethermo = prev_ethermo / len(self._thermos)
+            dcompute(
+                self.ethermo_,
+                self.get_ethermo,
+                [t.ethermo_ for t in self._thermos],
+            )
             # if we are not binding the centroid just yet, this bit of the piping
             # is delegated to the function which is actually calling this
 
@@ -425,12 +426,23 @@ class ThermoPILE_L(Thermostat):
         """
 
         # Also include an optional scaling factor to reduce the intensity of NM thermostats
-        return np.array(
-            [
-                1.0 / (2 * self.pilescale * self.nm.dynomegak[k])
-                for k in range(1, len(self._thermos))
-            ]
-        )
+        dynomegak = to_numpy(self.nm.dynomegak)
+        return 1.0 / (2 * self.pilescale * dynomegak[1:])
+
+    def get_taus(self):
+        """Returns the damping time scales of all the normal modes, as a column:
+        tau for the centroid, tauk for the others."""
+
+        return np.concatenate([[self.tau], self.tauk])[:, np.newaxis]
+
+    def get_temps(self):
+        """Returns the temperatures of all the normal modes, as a column of the
+        array backend: npilect for the centroid if it is set, temp otherwise."""
+
+        temps = np.full((self.nm.nbeads, 1), self.temp)
+        if self.pilect > 0.0:
+            temps[0] = self.npilect
+        return xp.asarray(temps)
 
     def get_ethermo(self):
         """Computes the total energy transferred to the heat bath for all the
@@ -457,6 +469,23 @@ class ThermoPILE_L(Thermostat):
 dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])
 
 
+@compiled
+def _svr_step(p, m, K_target, et, r1, rg):
+    """Returns the scaling of the momenta in a stochastic velocity rescaling
+    step, and the energy given to the thermostat, given the random numbers r1
+    (normal) and rg (chi-squared with one degree of freedom fewer than p)."""
+
+    K = (p @ (p / m)) * 0.5
+    # with zero kinetic energy (p = 0) any finite scaling leaves p unchanged
+    ratio = K_target / (K + (K == 0))
+    r1, rg = r1[0], rg[0]
+    alpha2 = (
+        et + ratio * (1 - et) * (r1**2 + rg) + 2.0 * r1 * (ratio * et * (1 - et)) ** 0.5
+    )
+    flip = r1 + (2 * K / K_target * et / (1 - et)) ** 0.5 < 0
+    return alpha2**0.5 * (1 - 2 * flip), K * (1 - alpha2)
+
+
 class ThermoSVR(Thermostat):
     """Represents a stochastic velocity rescaling thermostat.
 
@@ -470,13 +499,15 @@ class ThermoSVR(Thermostat):
     """
 
     def get_et(self):
-        """Calculates the damping term in the propagator."""
+        """Calculates the damping term in the propagator, as a scalar of the
+        array backend (a numpy scalar, faster than a 0-d array, with numpy)."""
 
-        return np.exp(-self.dt / self.tau)
+        return xp.asarray(np.exp(-self.dt / self.tau))[()]
 
     def get_K(self):
-        """Calculates the average kinetic energy per degree of freedom."""
-        return Constants.kb * self.temp * 0.5
+        """Calculates the average kinetic energy per degree of freedom, as a
+        scalar of the array backend."""
+        return xp.asarray(Constants.kb * self.temp * 0.5)[()]
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoSVR.
@@ -491,11 +522,11 @@ class ThermoSVR(Thermostat):
 
         super(ThermoSVR, self).__init__(temp, dt, ethermo)
 
-        self._tau = depend_value(value=tau, name="tau")
-        self._et = depend_value(
-            name="et", func=self.get_et, dependencies=[self._tau, self._dt]
+        self.tau_ = depend_value(value=tau, name="tau")
+        self.et_ = depend_value(
+            name="et", func=self.get_et, dependencies=[self.tau_, self.dt_]
         )
-        self._K = depend_value(name="K", func=self.get_K, dependencies=[self._temp])
+        self.K_ = depend_value(name="K", func=self.get_K, dependencies=[self.temp_])
 
     def step(self):
         """Updates the bound momentum vector with a stochastic velocity rescaling
@@ -503,30 +534,19 @@ class ThermoSVR(Thermostat):
         Journal of Chemical Physics 126, 014101 (2007)
         """
 
-        K = np.dot(dstrip(self.p), dstrip(self.p) / dstrip(self.m)) * 0.5
-
-        # rescaling is un-defined if the KE is zero
-        if K == 0.0:
-            return
-
         # gets the stochastic term (basically a Gamma distribution for the kinetic energy)
-        r1 = self.prng.g
+        r1 = self.prng.gvec(1)
         if (self.ndof - 1) % 2 == 0:
-            rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
+            rg = 2.0 * self.prng.gammavec((self.ndof - 1) / 2, 1)
         else:
-            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g**2
+            rg = (
+                2.0 * self.prng.gammavec((self.ndof - 2) / 2, 1)
+                + self.prng.gvec(1) ** 2
+            )
 
-        alpha2 = (
-            self.et
-            + self.K / K * (1 - self.et) * (r1**2 + rg)
-            + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
-        )
-        alpha = np.sqrt(alpha2)
-        if (r1 + np.sqrt(2 * K / self.K * self.et / (1 - self.et))) < 0:
-            alpha *= -1
-
-        self.ethermo += K * (1 - alpha2)
-        self.p *= alpha
+        alpha, deltah = _svr_step(self.p, self.m, self.K, self.et, r1, rg)
+        self.ethermo += deltah
+        self.p_ *= alpha
 
 
 dproperties(ThermoSVR, ["tau", "et", "K"])
@@ -555,10 +575,10 @@ class ThermoPILE_G(ThermoPILE_L):
         """
 
         super(ThermoPILE_G, self).__init__(temp, dt, tau, ethermo)
-        self._pilescale = depend_value(value=scale, name="pilescale")
-        self._pilect = depend_value(value=pilect, name="pilect")
-        self._npilect = depend_value(
-            func=self.get_npilect, name="npilect", dependencies=[self._pilect]
+        self.pilescale_ = depend_value(value=scale, name="pilescale")
+        self.pilect_ = depend_value(value=pilect, name="pilect")
+        self.npilect_ = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[self.pilect_]
         )
 
     def bind(
@@ -599,7 +619,7 @@ class ThermoPILE_G(ThermoPILE_L):
         )
 
         # centroid thermostat
-        self._thermos[0] = ThermoSVR(temp=1, dt=1, tau=1)
+        t = ThermoSVR(temp=1, dt=1, tau=1)
 
         # the centroid sees one bead's worth of fixed-atom DOFs, plus the
         # COM constraint (which lives entirely on the centroid mode).
@@ -610,22 +630,22 @@ class ThermoPILE_G(ThermoPILE_L):
         ncom = 3 if fixcom else 0
         fixdof0 = (fixdof - ncom) // nm.nbeads + ncom
 
-        t = self._thermos[0]
-        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
+        t.bind(pm=(nm.pnm_[0, :], nm.dynm3_[0, :]), prng=self.prng, fixdof=fixdof0)
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
-            dpipe(self._npilect, t._temp)
+            dpipe(self.npilect_, t.temp_)
         else:
-            dpipe(self._temp, t._temp)
+            dpipe(self.temp_, t.temp_)
 
-        dpipe(self._dt, t._dt)
-        dpipe(self._tau, t._tau)
-        self._ethermo.add_dependency(t._ethermo)
+        dpipe(self.dt_, t.dt_)
+        dpipe(self.tau_, t.tau_)
+        # the centroid thermostat comes first, as for the order of the random draws
+        self._thermos.insert(0, t)
 
         # splits any previous ethermo between the thermostats, and finishes to bind ethermo to the sum function
         for t in self._thermos:
-            t.ethermo = prev_ethermo / nm.nbeads
-        self._ethermo._func = self.get_ethermo
+            t.ethermo = prev_ethermo / len(self._thermos)
+        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
 
 
 class ThermoGLE(Thermostat):
@@ -670,7 +690,7 @@ class ThermoGLE(Thermostat):
     def get_S(self):
         """Calculates the matrix for the coloured noise."""
 
-        SST = Constants.kb * (self.C - np.dot(self.T, np.dot(self.C, self.T.T)))
+        SST = Constants.kb * (self.C - self.T @ self.C @ self.T.T)
         # Uses a symetric decomposition rather than Cholesky, since it is more stable
         return root_herm(SST)
         # return stab_cholesky(SST)
@@ -678,8 +698,7 @@ class ThermoGLE(Thermostat):
     def get_C(self):
         """Calculates C from temp (if C is not set explicitly)"""
 
-        rC = np.identity(self.ns + 1, float) * self.temp
-        return rC[:]
+        return xp.eye(self.ns + 1) * self.temp
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, ethermo=0.0):
         """Initialises ThermoGLE.
@@ -700,24 +719,23 @@ class ThermoGLE(Thermostat):
         super(ThermoGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = np.identity(1, float)
-        self._A = depend_value(value=A.copy(), name="A")
+            A = xp.eye(1)
+        self.A_ = depend_value(value=xp.asarray(A, copy=True), name="A")
 
         self.ns = len(self.A) - 1
 
         # now, this is tricky. if C is taken from temp, then we want it to be updated
         # as a depend of temp. Otherwise, we want it to be an independent beast.
         if C is None:
-            C = np.identity(self.ns + 1, float) * self.temp
-            self._C = depend_value(name="C", func=self.get_C, dependencies=[self._temp])
+            self.C_ = depend_value(name="C", func=self.get_C, dependencies=[self.temp_])
         else:
-            self._C = depend_value(value=C.copy(), name="C")
+            self.C_ = depend_value(value=xp.asarray(C, copy=True), name="C")
 
-        self._T = depend_value(
-            name="T", func=self.get_T, dependencies=[self._A, self._dt]
+        self.T_ = depend_value(
+            name="T", func=self.get_T, dependencies=[self.A_, self.dt_]
         )
-        self._S = depend_value(
-            name="S", func=self.get_S, dependencies=[self._C, self._T]
+        self.S_ = depend_value(
+            name="S", func=self.get_S, dependencies=[self.C_, self.T_]
         )
 
         self.s = np.zeros(0)
@@ -763,13 +781,14 @@ class ThermoGLE(Thermostat):
         )
 
         # allocates, initializes or restarts an array of s's
-        if self.s.shape != (self.ns + 1, len(self._m)):
+        self.s = xp.asarray(self.s)
+        if self.s.shape != (self.ns + 1, len(self.m)):
             if len(self.s) > 0:
                 warning(
                     "Mismatch in GLE s array size on restart, will reinitialise to free particle.",
                     verbosity.low,
                 )
-            self.s = np.zeros((self.ns + 1, len(self._m)))
+            self.s = xp.zeros((self.ns + 1, len(self.m)))
 
             # Initializes the s vector in the free-particle limit
             info(
@@ -777,7 +796,7 @@ class ThermoGLE(Thermostat):
                 verbosity.low,
             )
             SC = stab_cholesky(self.C * Constants.kb)
-            self.s[:] = np.dot(SC, self.prng.gvec(self.s.shape))
+            self.s[:] = SC @ self.prng.gvec(self.s.shape)
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -786,11 +805,9 @@ class ThermoGLE(Thermostat):
 
         self.s[0, :] = self.p / self.sm
 
-        self.ethermo += np.dot(self.s[0], self.s[0]) * 0.5
-        self.s[:] = np.dot(self.T, self.s) + np.dot(
-            self.S, self.prng.gvec(self.s.shape)
-        )
-        self.ethermo -= np.dot(self.s[0], self.s[0]) * 0.5
+        self.ethermo += (self.s[0] @ self.s[0]) * 0.5
+        self.s[:] = self.T @ self.s + self.S @ self.prng.gvec(self.s.shape)
+        self.ethermo -= (self.s[0] @ self.s[0]) * 0.5
 
         self.p = self.s[0] * self.sm
 
@@ -824,10 +841,10 @@ class ThermoNMGLE(Thermostat):
     def get_C(self):
         """Calculates C from temp (if C is not set explicitely)."""
 
-        rv = np.ndarray((self.nb, self.ns + 1, self.ns + 1), float)
+        rv = xp.zeros((self.nb, self.ns + 1, self.ns + 1))
         for b in range(0, self.nb):
-            rv[b] = np.identity(self.ns + 1, float) * self.temp
-        return rv[:]
+            rv[b] = xp.eye(self.ns + 1) * self.temp
+        return rv
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, ethermo=0.0):
         """Initialises ThermoGLE.
@@ -848,8 +865,8 @@ class ThermoNMGLE(Thermostat):
         super(ThermoNMGLE, self).__init__(temp, dt, ethermo)
 
         if A is None:
-            A = np.identity(1, float)
-        self._A = depend_value(value=A.copy(), name="A")
+            A = xp.eye(1)
+        self.A_ = depend_value(value=xp.asarray(A, copy=True), name="A")
 
         self.nb = len(self.A)
         self.ns = len(self.A[0]) - 1
@@ -858,9 +875,9 @@ class ThermoNMGLE(Thermostat):
         # updated as a depend of temp.
         # Otherwise, we want it to be an independent beast.
         if C is None:
-            self._C = depend_value(name="C", func=self.get_C, dependencies=[self._temp])
+            self.C_ = depend_value(name="C", func=self.get_C, dependencies=[self.temp_])
         else:
-            self._C = depend_value(value=C.copy(), name="C")
+            self.C_ = depend_value(value=xp.asarray(C, copy=True), name="C")
 
     def bind(
         self,
@@ -919,13 +936,14 @@ class ThermoNMGLE(Thermostat):
             )
 
         # allocates, initializes or restarts an array of s's
+        self.s = xp.asarray(self.s)
         if self.s.shape != (self.nb, self.ns + 1, nm.natoms * 3):
             if len(self.s) > 0:
                 warning(
                     "Mismatch in GLE s array size on restart, will reinitialise to free particle.",
                     verbosity.low,
                 )
-            self.s = np.zeros((self.nb, self.ns + 1, nm.natoms * 3))
+            self.s = xp.zeros((self.nb, self.ns + 1, nm.natoms * 3))
 
             # Initializes the s vector in the free-particle limit
             info(
@@ -934,7 +952,7 @@ class ThermoNMGLE(Thermostat):
             )
             for b in range(self.nb):
                 SC = stab_cholesky(self.C[b] * Constants.kb)
-                self.s[b] = np.dot(SC, self.prng.gvec(self.s[b].shape))
+                self.s[b] = SC @ self.prng.gvec(self.s[b].shape)
         else:
             info("GLE additional DOFs initialised from input.", verbosity.medium)
 
@@ -947,29 +965,20 @@ class ThermoNMGLE(Thermostat):
 
         # must pipe all the dependencies in such a way that values for the nm
         # thermostats are automatically updated based on the "main" thermostat
-        def make_Agetter(k):
-            return lambda: self.A[k]
-
-        def make_Cgetter(k):
-            return lambda: self.C[k]
-
         it = 0
         for t in self._thermos:
             t.s = self.s[it]  # gets the s's as a slice of self.s
             t.bind(
-                pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng
+                pm=(nm.pnm_[it, :], nm.dynm3_[it, :]), prng=self.prng
             )  # bind thermostat t to the it-th normal mode
 
             # pipes temp and dt
-            dpipe(self._temp, t._temp)
-            dpipe(self._dt, t._dt)
+            dpipe(self.temp_, t.temp_)
+            dpipe(self.dt_, t.dt_)
 
             # here we pipe the A and C of individual NM to the "main" arrays
-            t._A.add_dependency(self._A)
-            t._A._func = make_Agetter(it)
-            t._C.add_dependency(self._C)
-            t._C._func = make_Cgetter(it)
-            self._ethermo.add_dependency(t._ethermo)
+            dpipe(self.A_, t.A_, item=it)
+            dpipe(self.C_, t.C_, item=it)
             it += 1
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
@@ -978,7 +987,7 @@ class ThermoNMGLE(Thermostat):
         for t in self._thermos:
             t.ethermo = prev_ethermo / self.nb
 
-        self._ethermo._func = self.get_ethermo
+        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self._thermos])
 
     def step(self):
         """Updates the thermostat in NM representation by looping over the
@@ -999,7 +1008,7 @@ class ThermoNMGLE(Thermostat):
         return et
 
 
-dproperties(ThermoNMGLE, ["A", "C", "T", "S"])
+dproperties(ThermoNMGLE, ["A", "C"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
@@ -1016,7 +1025,7 @@ class ThermoNMGLEG(ThermoNMGLE):
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, tau=1.0, ethermo=0.0):
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
-        self._tau = depend_value(value=tau, name="tau")
+        self.tau_ = depend_value(value=tau, name="tau")
 
     def bind(
         self,
@@ -1051,15 +1060,15 @@ class ThermoNMGLEG(ThermoNMGLE):
         t = ThermoSVR(self.temp, self.dt, self.tau)
 
         t.bind(
-            pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng
+            pm=(nm.pnm_[0, :], nm.dynm3_[0, :]), prng=self.prng
         )  # bind global thermostat to centroid
 
         # pipes temp and dt
-        dpipe(self._temp, t._temp)
-        dpipe(self._dt, t._dt)
-        dpipe(self._tau, t._tau)
+        dpipe(self.temp_, t.temp_)
+        dpipe(self.dt_, t.dt_)
+        dpipe(self.tau_, t.tau_)
 
-        self._ethermo.add_dependency(t._ethermo)
+        ddeps(self.ethermo_, [t.ethermo_])
         self._thermos.append(t)
 
 
@@ -1146,39 +1155,39 @@ class ThermoCL(Thermostat):
         super(ThermoCL, self).__init__(temp, dt, ethermo)
 
         self.idstep = False
-        self._tau = depend_value(value=tau, name="tau")
-        self._intau = depend_value(value=intau, name="intau")
-        self._idtau = depend_value(value=idtau, name="idtau")
-        self._apat = depend_value(value=apat, name="apat")
-        self._lgT = depend_value(
-            name="lgT", func=self.get_lgT, dependencies=[self._tau, self._dt]
+        self.tau_ = depend_value(value=tau, name="tau")
+        self.intau_ = depend_value(value=intau, name="intau")
+        self.idtau_ = depend_value(value=idtau, name="idtau")
+        self.apat_ = depend_value(value=apat, name="apat")
+        self.lgT_ = depend_value(
+            name="lgT", func=self.get_lgT, dependencies=[self.tau_, self.dt_]
         )
-        self._inT = depend_value(
-            name="inT", func=self.get_inT, dependencies=[self._intau, self._dt]
+        self.inT_ = depend_value(
+            name="inT", func=self.get_inT, dependencies=[self.intau_, self.dt_]
         )
-        self._idT = depend_value(
-            name="idT", func=self.get_idT, dependencies=[self._idtau, self._dt]
+        self.idT_ = depend_value(
+            name="idT", func=self.get_idT, dependencies=[self.idtau_, self.dt_]
         )
-        self._T = depend_value(
-            name="T", func=self.get_T, dependencies=[self._lgT, self._inT]
+        self.T_ = depend_value(
+            name="T", func=self.get_T, dependencies=[self.lgT_, self.inT_]
         )
-        self._S = depend_value(
-            name="S", func=self.get_S, dependencies=[self._temp, self._lgT, self._idT]
+        self.S_ = depend_value(
+            name="S", func=self.get_S, dependencies=[self.temp_, self.lgT_, self.idT_]
         )
 
     def step(self):
         """Updates the bound momentum vector with a langevin thermostat."""
 
         et = self.ethermo
-        p = dstrip(self.p).copy()
-        sm = dstrip(self.sm)
+        p = xp.asarray(self.p, copy=True)
+        sm = self.sm
 
         p /= sm
 
-        et += np.dot(p, p) * 0.5
+        et += (p @ p) * 0.5
         p *= self.T
         p += self.S * self.prng.gvec(len(p))
-        et -= np.dot(p, p) * 0.5
+        et -= (p @ p) * 0.5
 
         p *= sm
 
@@ -1186,7 +1195,7 @@ class ThermoCL(Thermostat):
         self.ethermo = et
 
         if self.apat > 0 and self.idstep and ((self.intau != 0) ^ (self.idtau != 0)):
-            ekin = np.dot(dstrip(self.p), dstrip(self.p) / dstrip(self.m)) * 0.5
+            ekin = float(self.p @ (self.p / self.m)) * 0.5
             mytemp = ekin / Constants.kb / self.ndof * 2
 
             if self.intau != 0:
@@ -1232,7 +1241,7 @@ class ThermoFFL(ThermoLangevin):
 
         super(ThermoFFL, self).__init__(temp=temp, dt=dt, tau=tau, ethermo=ethermo)
 
-        self._flip = depend_value(value=flip, name="flip")
+        self.flip_ = depend_value(value=flip, name="flip")
 
         allowed_flips = ["soft", "hard", "rescale", "none"]
         if not (self.flip in allowed_flips):
@@ -1248,16 +1257,16 @@ class ThermoFFL(ThermoLangevin):
         """Updates the bound momentum vector with a fast-forward langevin thermostat."""
 
         et = self.ethermo
-        p = dstrip(self.p).copy()
-        sm = dstrip(self.sm)
+        p = xp.asarray(self.p, copy=True)
+        sm = self.sm
 
         p /= sm
 
         # Store momentum before langevin step
-        p_old = list(p)
+        p_old = xp.asarray(p, copy=True)
 
         # Accumulate conserved quantity
-        et += np.dot(p, p) * 0.5
+        et += (p @ p) * 0.5
 
         # Do standard langevin thermostatting
         p *= self.T
@@ -1266,26 +1275,25 @@ class ThermoFFL(ThermoLangevin):
         # Check whether to flip momenta back
         if self.flip == "soft":
             # Soft flip
-            p_old = np.reshape(p_old, (-1, 3))
-            p_new = np.reshape(p, (-1, 3))
-            dotpr = hfunc(
-                np.sum(np.multiply(p_old, p_new), axis=1)
-                / np.sum(np.multiply(p_old, p_old), axis=1)
-            )
-            p += np.reshape(np.multiply(dotpr, p_old.T).T, len(p))
+            p_old = xp.reshape(p_old, (-1, 3))
+            p_new = xp.reshape(p, (-1, 3))
+            dotpr = hfunc(xp.sum(p_old * p_new, axis=1) / xp.sum(p_old * p_old, axis=1))
+            p += xp.reshape(dotpr[:, None] * p_old, (-1,))
         elif self.flip == "hard":
             # Hard flip
-            p = np.multiply(p, np.sign(np.multiply(p, p_old)))
+            p = p * xp.sign(p * p_old)
         elif self.flip == "rescale":
             # Rescale flip
-            p_old = np.reshape(p_old, (-1, 3))
-            p_new = np.reshape(p, (-1, 3))
-            scalfac = np.linalg.norm(p_new, axis=1) / np.linalg.norm(p_old, axis=1)
-            p = np.reshape(np.multiply(scalfac, p_old.T).T, len(p))
+            p_old = xp.reshape(p_old, (-1, 3))
+            p_new = xp.reshape(p, (-1, 3))
+            scalfac = xp.linalg.vector_norm(p_new, axis=1) / xp.linalg.vector_norm(
+                p_old, axis=1
+            )
+            p = xp.reshape(scalfac[:, None] * p_old, (-1,))
         # Otherwise we have chosen 'none', and we just don't do anything here
 
         # Accumulate conserved quantity
-        et -= np.dot(p, p) * 0.5
+        et -= (p @ p) * 0.5
 
         p *= sm
 
@@ -1309,12 +1317,12 @@ class MultiThermo(Thermostat):
         """
 
         self.tlist = thermolist
-        self._temp = depend_value(name="temp", value=temp)
-        self._dt = depend_value(name="dt", value=dt)
-        self._ethermo = depend_value(name="ethermo", value=ethermo)
+        self.temp_ = depend_value(name="temp", value=temp)
+        self.dt_ = depend_value(name="dt", value=dt)
+        self.ethermo_ = depend_value(name="ethermo", value=ethermo)
         for t in self.tlist:
-            dpipe(self._dt, t._dt)
-            dpipe(self._temp, t._temp)
+            dpipe(self.dt_, t.dt_)
+            dpipe(self.temp_, t.temp_)
 
     def get_ethermo(self):
         et = 0.0
@@ -1337,9 +1345,7 @@ class MultiThermo(Thermostat):
         # just binds all the sub-thermostats
         for t in self.tlist:
             t.bind(beads=beads, atoms=atoms, pm=pm, nm=nm, prng=prng, fixdof=fixdof)
-            self._ethermo.add_dependency(t._ethermo)
-
-        self._ethermo._func = self.get_ethermo
+        dcompute(self.ethermo_, self.get_ethermo, [t.ethermo_ for t in self.tlist])
 
     def step(self):
         """Steps through all sub-thermostats."""
@@ -1350,4 +1356,4 @@ class MultiThermo(Thermostat):
 
 
 def hfunc(x):
-    return (np.sign(x) - 1.0) * x
+    return (xp.sign(x) - 1.0) * x

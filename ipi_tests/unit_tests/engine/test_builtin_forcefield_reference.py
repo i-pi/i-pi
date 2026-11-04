@@ -91,10 +91,10 @@ def test_committee_force_differentiates_combined_energy(baseline):
     )
     cell = Cell(np.eye(3) * 10)
     atoms = Atoms(1)
-    atoms.m[:] = 1
+    atoms.m_[:] = 1
 
     def compute(q):
-        atoms.q[:] = q
+        atoms.q_[:] = q
         request = ff.queue(atoms, cell)
         for member in members:
             member.poll()
@@ -227,7 +227,7 @@ def test_committee_saves_uncertain_structures(tmp_path):
     ff.bind(OutputMaker())
     try:
         atoms = Atoms(1)
-        atoms.q[:] = [1, 0, 0]
+        atoms.q_[:] = [1, 0, 0]
         request = ff.queue(atoms, Cell(np.eye(3) * 10))
         ff.poll()
         ff.active_file.force_flush()

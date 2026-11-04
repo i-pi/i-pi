@@ -10,10 +10,10 @@ Could probably be generalized to something more general.
 import pickle
 import threading
 import numpy as np
+from ipi.utils.array_backend import xp, to_numpy
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
-from ipi.utils.depend import dstrip, depend_value
 from ipi.engine.cell import Cell
 from ipi.utils.units import Constants
 import ipi.utils.io as io
@@ -129,7 +129,7 @@ class AlKMC(Motion):
         cell[2] = [0.0, 0.0, 0.5773502691896258]
         self.scell = self.a0 * cell
         self.dcell = Cell()
-        self.dcell.h = self.scell * self.ncell
+        self.dcell.h = xp.asarray(self.scell * self.ncell)
 
         print("LATTICE PARAM ", self.a0)
         # this is the list of lattice sites, in 3D coordinates
@@ -152,8 +152,10 @@ class AlKMC(Motion):
             rij = self.sites.copy().flatten()
             for j in range(self.nsites):
                 rij[3 * j : 3 * j + 3] -= self.sites[i]
-            self.dcell.array_pbc(rij)
-            rij.shape = (self.nsites, 3)
+            rij = xp.asarray(rij)
+            rij = self.dcell.array_pbc(rij)
+            rij = to_numpy(rij)
+            rij = rij.reshape(self.nsites, 3)
             for j in range(i):
                 if np.dot(rij[j], rij[j]) < a02:  # found nearest neighbor
                     self.neigh[i, nneigh[i]] = j
@@ -164,9 +166,8 @@ class AlKMC(Motion):
         self.idx = idx
 
         # the KMC step is variable and so it cannot be stored as proper timing
-        self._dt = depend_value(name="dt", value=0.0)
-        self.fixatoms_dof = np.asarray([])
-        self.fixcom = True
+        # (the base class sets dt to zero)
+        super(AlKMC, self).__init__(fixcom=True)
         self.optimizer = [None] * self.neval
         # geop should not trigger exit if there is early convergence, but just carry on.
         # we hard-code this option to avoid early-termination that would be hard to debug for a user
@@ -280,9 +281,8 @@ class AlKMC(Motion):
                 )
 
         if not f_restart:
-            self.beads.q[0, :] = self.sites[
-                self.idx
-            ].flatten()  # also sets global q so we can use it further down
+            # also sets global q so we can use it further down
+            self.beads.q_[0, :] = xp.asarray(self.sites[self.idx].flatten())
 
         self.dbeads = [None] * self.neval
         self.dforces = [None] * self.neval
@@ -291,13 +291,13 @@ class AlKMC(Motion):
         self.dbias = [None] * self.neval
         for i in range(self.neval):
             self.dbeads[i] = beads.clone()
-            self.dforces[i] = bforce.copy(self.dbeads[i], self.dcell)
+            self.dforces[i] = bforce.clone(self.dbeads[i], self.dcell)
             self.dnm[i] = nm.copy()
             self.dens[i] = ens.copy()
             self.dnm[i].bind(
                 self.dens[i], self, beads=self.dbeads[i], forces=self.dforces[i]
             )
-            self.dbias[i] = ens.bias.copy(self.dbeads[i], self.dcell)
+            self.dbias[i] = ens.bias.clone(self.dbeads[i], self.dcell)
             self.dens[i].bind(
                 self.dbeads[i],
                 self.dnm[i],
@@ -326,7 +326,7 @@ class AlKMC(Motion):
         for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.optimizer[ieval].step(i)
-        newq = dstrip(self.dbeads[ieval].q[0]).copy()
+        newq = xp.asarray(self.dbeads[ieval].q[0], copy=True)
         newpot = self.dforces[ieval].pot
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
@@ -360,18 +360,15 @@ class AlKMC(Motion):
         # computes TS energy by linearly interpolating initial & final state
         # interpolates between two structures considering PBCs
         qstart = self.qcache[ostr]
-        qend = self.qcache[nstr].copy()
         # finds atom matching assuming initial and final states differ only by a vacancy swap and are based on unique_idx lists
         midx = self.unique_idx_match(list(ostr), list(nstr))[0 : self.natoms]
-        qend.shape = (self.natoms, 3)
-        qend[:] = qend[midx]
-        qend.shape = 3 * self.natoms
+        qend = self.qcache[nstr].reshape(self.natoms, 3)[midx].reshape(3 * self.natoms)
 
         qts = qend - qstart
-        self.dcell.array_pbc(qts)  # use pbc!
+        qts = self.dcell.array_pbc(qts)  # use pbc!
         qts *= 0.5
         qts += qstart
-        self.dbeads[ieval].q[0, :] = qts
+        self.dbeads[ieval].q_[0, :] = qts
 
         tspot = self.dforces[ieval].pot
         io.print_file(
@@ -399,7 +396,7 @@ class AlKMC(Motion):
             units="angstrom",
             cell_units="angstrom",
         )
-        self.dbeads[ieval].q[0] = qend
+        self.dbeads[ieval].q_[0] = qend
         io.print_file(
             "xyz",
             self.dbeads[ieval][0],
@@ -507,7 +504,9 @@ class AlKMC(Motion):
         )  # this is a unique id string that charactrizes the current state
         self.tscache[ostr] = {}
         if ostr not in self.ecache:
-            self.dbeads[0].q[0, :] = self.sites[self.unique_idx(self.state)].flatten()
+            self.dbeads[0].q_[0, :] = xp.asarray(
+                self.sites[self.unique_idx(self.state)].flatten()
+            )
             rv = [0, 0, 0, 0, 0]
             self.geop_thread(0, ostr, rv)
             # self.beads.q[0,:] = self.dbeads[0].q[0,:] # also updates current position
@@ -554,9 +553,9 @@ class AlKMC(Motion):
 
                     ieval = self.find_eval(ethreads)
                     # launches evaluator
-                    self.dbeads[ieval].q[0, :] = self.sites[
-                        self.unique_idx(nstate)
-                    ].flatten()
+                    self.dbeads[ieval].q_[0, :] = xp.asarray(
+                        self.sites[self.unique_idx(nstate)].flatten()
+                    )
 
                     nevent = [svac, sneigh, 0.0, 0.0, 0.0]
 
@@ -623,7 +622,9 @@ class AlKMC(Motion):
                 0.5 * (ecurr + levents[i][2]) + self.barriers[levents[i][-1]]
             )  # naive heuristic for the ts energy
             print("Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2])
-            rates[i] = self.prefactors[levents[i][-1]] * np.exp(-(ets - ecurr) / kT)
+            rates[i] = self.prefactors[levents[i][-1]] * np.exp(
+                -float(ets - ecurr) / kT
+            )
             cdf += rates[i]
             crates[i] = cdf
 
@@ -662,9 +663,9 @@ class AlKMC(Motion):
         ruidx[uidx] = list(range(self.nsites))
 
         self.sites[self.unique_idx(self.state)]
-        oldq = dstrip(self.beads.q[0]).copy()
+        oldq = xp.asarray(self.beads.q[0], copy=True)
 
-        newq = np.zeros(self.nsites * 3, float)
+        newq = xp.zeros(self.nsites * 3)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
@@ -674,5 +675,5 @@ class AlKMC(Motion):
             iuid = ruidx[self.idx[i]]
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]
         newq -= oldq
-        self.cell.array_pbc(newq)
-        self.beads.q[0] += newq
+        newq = self.cell.array_pbc(newq)
+        self.beads.q_[0] += newq

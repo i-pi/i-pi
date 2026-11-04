@@ -14,13 +14,11 @@ Syntax:
    posforce2kinetic.py prefix temperature[K]
 """
 
-
 import numpy as np
 import sys
 import glob
 from ipi.utils.io import read_file
 from ipi.engine.beads import Beads
-from ipi.utils.depend import dstrip
 from ipi.utils.units import unit_to_internal, Constants
 from ipi.utils.messages import verbosity
 
@@ -92,9 +90,9 @@ def main(prefix, temp):
             break
 
         # calculate kinetic energies
-        q = dstrip(beads.q)
-        f = dstrip(forces.q)
-        qc = dstrip(beads.qc)
+        q = beads.q
+        f = forces.q
+        qc = beads.qc
         kcv[:] = 0
         for j in range(nbeads):
             for i in range(natoms):

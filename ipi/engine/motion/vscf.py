@@ -25,11 +25,11 @@ import os
 from math import factorial
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import *
 
 # from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity, info, warning
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 
 # from ipi.utils.io import print_file
 # from ipi.engine.atoms import Atoms
@@ -142,11 +142,17 @@ class NormalModeMover(Motion):
                 "Calculation not possible for number of beads greater than one."
             )
 
-        self.ism = 1 / np.sqrt(dstrip(self.beads.m3[-1]))
-        self.m = dstrip(self.beads.m)
+        self.ism = 1 / xp.sqrt(self.beads.m3[-1])
+        self.m = self.beads.m
         self.calc.bind(self)
 
-        self.dbeads = self.beads.clone(nbeads=self.nparallel)
+        # the configurations are evaluated one at a time
+        if self.nparallel > 1:
+            warning(
+                "VSCF evaluates one configuration at a time: nparallel is ignored",
+                verbosity.low,
+            )
+        self.dbeads = self.beads.clone()
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
@@ -182,26 +188,26 @@ class IMF(DummyCalculator):
 
         super(IMF, self).bind(imm)
 
+        nq = xp_size(self.imm.beads.q)
+
         # Initialises a 3*number of atoms X 3*number of atoms dynamic matrix.
-        if self.imm.dynmatrix.size != (self.imm.beads.q.size * self.imm.beads.q.size):
-            if self.imm.dynmatrix.size == 0:
-                self.imm.dynmatrix = np.zeros(
-                    (self.imm.beads.q.size, self.imm.beads.q.size), float
-                )
+        if xp_size(self.imm.dynmatrix) != (nq * nq):
+            if xp_size(self.imm.dynmatrix) == 0:
+                self.imm.dynmatrix = xp.zeros((nq, nq))
             else:
                 raise ValueError(
                     "Force constant matrix size does not match system size"
                 )
         else:
-            self.imm.dynmatrix = self.imm.dynmatrix.reshape(
-                ((self.imm.beads.q.size, self.imm.beads.q.size))
-            )
+            self.imm.dynmatrix = xp.asarray(self.imm.dynmatrix).reshape((nq, nq))
 
         # Applies ASR
         self.imm.dynmatrix = apply_asr(self.imm.asr, self.imm.dynmatrix, self.imm.beads)
 
         # Calculates normal mode directions.
-        self.imm.w2, self.imm.U = np.linalg.eigh(self.imm.dynmatrix)
+        self.imm.w2, self.imm.U = xp.linalg.eigh(self.imm.dynmatrix)
+        # keeps the eigenvalues on the host, as they enter scalar code and scipy calls
+        self.imm.w2 = to_numpy(self.imm.w2)
         # Sets
         self.imm.w2[np.abs(self.imm.w2) < 1e-15] = 0.0
         self.imm.nz = sum(np.abs(self.imm.w2) < 1e-15)
@@ -211,9 +217,8 @@ class IMF(DummyCalculator):
         self.imm.w = self.imm.w2 * 0
         self.imm.w[self.imm.nz :] = np.sqrt(self.imm.w2[self.imm.nz :])
 
-        self.imm.V = self.imm.U.copy()
-        for i in range(len(self.imm.V)):
-            self.imm.V[:, i] *= self.imm.ism
+        # scales each row by ism
+        self.imm.V = self.imm.U * self.imm.ism[:, None]
 
         # Harm ZP RMS displacement along normal mode
         # Not temperature dependent so that sampled potentials can easily be
@@ -372,6 +377,8 @@ class IMF(DummyCalculator):
         if os.path.exists(self.v_indep_filename):
             # Loads the displacemnts, the potential energy and the forces.
             qlist, vlist, flist = np.loadtxt(self.v_indep_filename).T
+            # potential energy at the minimum, which the stored energies refer to
+            self.v0 = float(self.imm.forces.pots[0]) / self.nprim
 
             # Fits cubic splines to data.
             info(" @NM: Fitting cubic splines.", verbosity.medium)
@@ -388,7 +395,6 @@ class IMF(DummyCalculator):
 
             while True:
                 nnbasis = max(1, self.nbasis - 5) + 5 * bs_iter
-                nnbasis = self.nbasis + 5 * bs_iter
 
                 psigrid = np.zeros((nnbasis, self.nint))
                 # Calculates the wavefunctions on the grid.
@@ -428,11 +434,8 @@ class IMF(DummyCalculator):
             # Adds to the list of "sampled configuration" the one that
             # corresponds to the minimum.
             q0 = 0.0
-            v0 = dstrip(self.imm.forces.pots).copy()[0] / self.nprim
-            f0 = (
-                np.dot(dstrip(self.imm.forces.f).copy()[0], np.real(self.imm.V.T[step]))
-                / self.nprim
-            )
+            v0 = float(self.imm.forces.pots[0]) / self.nprim
+            f0 = float(self.imm.forces.f[0] @ xp.real(self.imm.V.T[step])) / self.nprim
 
             self.v0 = v0  # TODO CHECK IF NECESSARY
 
@@ -457,7 +460,7 @@ class IMF(DummyCalculator):
 
                 # Calculates the displacement in Cartesian coordinates.
                 nmd = ffnmrms * self.imm.nmrms[step]
-                dev = np.real(self.imm.V.T[step]) * nmd * np.sqrt(self.nprim)
+                dev = xp.real(self.imm.V.T[step]) * nmd * np.sqrt(self.nprim)
 
                 # After the first iteration doubles the displacement to avoid
                 # calculation of the potential at configurations already v_indep_listited
@@ -478,13 +481,12 @@ class IMF(DummyCalculator):
                     # Stores the "anharmonic" component of the potential
                     # and the force.
                     dv = (
-                        dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
+                        float(self.imm.dforces.pots[0]) / self.nprim
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
+                    df = float(
+                        self.imm.dforces.f[0] @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
@@ -519,13 +521,12 @@ class IMF(DummyCalculator):
                     # Stores the "anharmonic" component of the potential
                     # and the force.
                     dv = (
-                        dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
+                        float(self.imm.dforces.pots[0]) / self.nprim
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
+                    df = float(
+                        self.imm.dforces.f[0] @ xp.real(self.imm.V.T[step])
                     ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
@@ -871,7 +872,7 @@ class VSCF(IMF):
                     self.imm.output_maker.prefix + "." + self.v_offset_filename
                 )
             else:
-                self.v0 = dstrip(self.imm.forces.pots).copy()[0] / self.nprim
+                self.v0 = float(self.imm.forces.pots[0]) / self.nprim
                 outfile = self.imm.output_maker.get_output(self.v_offset_filename)
                 np.savetxt(outfile, [self.v0])
                 outfile.close_stream()
@@ -1103,10 +1104,10 @@ class VSCF(IMF):
                 # Calculates the potential energy at the displaced positions.
                 k = 0
                 didjv = []
-                unit_displacement_nmi = np.real(self.imm.V.T[self.inm]) * np.sqrt(
+                unit_displacement_nmi = xp.real(self.imm.V.T[self.inm]) * np.sqrt(
                     self.nprim
                 )
-                unit_displacement_nmj = np.real(self.imm.V.T[self.jnm]) * np.sqrt(
+                unit_displacement_nmj = xp.real(self.imm.V.T[self.jnm]) * np.sqrt(
                     self.nprim
                 )
                 info(
@@ -1124,12 +1125,12 @@ class VSCF(IMF):
                             self.v_coupled[k] = self.v_indep_list[self.inm_index][i]
                         else:
                             self.imm.dbeads.q = (
-                                dstrip(self.imm.beads.q)
+                                self.imm.beads.q
                                 + displacements_nmi[i] * unit_displacement_nmi
                                 + displacements_nmj[j] * unit_displacement_nmj
                             )
                             self.v_coupled[k] = (
-                                dstrip(self.imm.dforces.pots)[0] / self.nprim
+                                float(self.imm.dforces.pots[0]) / self.nprim
                             )
                         didjv.append(
                             [
@@ -1422,7 +1423,7 @@ class VSCF(IMF):
         nmd = self.fnmrms * self.imm.nmrms[self.inm]
 
         # Determines the displacement vector in Cartesian space.
-        dev = np.real(self.imm.V.T[self.inm]) * nmd * np.sqrt(self.nprim)
+        dev = xp.real(self.imm.V.T[self.inm]) * nmd * np.sqrt(self.nprim)
 
         # Adds the minimum configuration to the list of sampled potential.
         v_indeps = [self.v0]
@@ -1431,16 +1432,16 @@ class VSCF(IMF):
         counter = -1
         while True:
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
-            v = dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
+            v = float(self.imm.dforces.pots[0]) / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
                 # Adds two extra points required later for solid spline fitting at edges.
-                self.imm.dbeads.q -= dev
-                v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
-                self.imm.dbeads.q -= dev
-                v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
+                self.imm.dbeads.q_ -= dev
+                v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
+                self.imm.dbeads.q_ -= dev
+                v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
                 break
 
             counter -= 1
@@ -1453,16 +1454,16 @@ class VSCF(IMF):
         counter = 1
         while True:
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
-            v = dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
+            v = float(self.imm.dforces.pots[0]) / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
                 # add two extra points required later for solid spline fitting at edges
-                self.imm.dbeads.q += dev
-                v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
-                self.imm.dbeads.q += dev
-                v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
+                self.imm.dbeads.q_ += dev
+                v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
+                self.imm.dbeads.q_ += dev
+                v_indeps.append(float(self.imm.dforces.pots[0]) / self.nprim)
                 break
 
             counter += 1

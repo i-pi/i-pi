@@ -23,15 +23,23 @@ def get_ipi_path():
     return path
 
 
-def install_driver(force_install=False):
+def install_driver(force_install=False, path=None):
     """
     This utility function fetches the FORTRAN driver folder from the ipi repo and installs it.
     Requires a system with git, gfortran and make.
+
+    Args:
+        force_install: Compiles and installs the driver even if `i-pi-driver` is
+            already available.
+        path: The file the driver is installed to. By default, `i-pi-driver` in a
+            writable script folder that is on PATH, or else in the current folder.
     """
 
     ipi_path = get_ipi_path()
     ipi_driver_path = None if force_install else shutil.which("i-pi-driver")
-    if ipi_driver_path is None:
+    if path is not None:
+        ipi_driver_path = str(path)
+    elif ipi_driver_path is None:
         import sysconfig
 
         # get potential installation locations for the driver
@@ -77,7 +85,7 @@ def install_driver(force_install=False):
                     "remote",
                     "add",
                     "origin",
-                    "https://github.com/lab-cosmo/i-pi.git",
+                    "https://github.com/i-pi/i-pi.git",
                 ],
                 cwd=temp_dir,
             )
