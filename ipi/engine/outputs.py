@@ -105,7 +105,15 @@ class OutputMaker:
 
 
 class BaseOutput(object):
-    """Base class for outputs. Deals with flushing upon close and little more"""
+    """Base class for outputs. Deals with flushing upon close, and with the
+    soft exits that go back to the last stored state.
+
+    Attributes:
+       marks: The file name and the position of each stream at its first
+          write since the state was last stored, or None for streams that
+          are not files.
+       nstored: The value of `softexit.nstored` when `marks` were recorded.
+    """
 
     def __init__(self, filename="out", stride=1):
         """Initializes the class"""
@@ -113,12 +121,51 @@ class BaseOutput(object):
         self.stride = stride
         self.filename = filename
         self.out = None
+        self.marks = {}
+        self.nstored = -1
 
     def softexit(self):
         """Emergency call when i-pi must exit quickly"""
 
+        if softexit.rollback:
+            self.rollback()
         self.close_stream()
         self.out = None  # anything written later is discarded
+
+    def mark(self, stream):
+        """Records the position of `stream` at its first write since the
+        state was last stored: a soft exit that goes back to that state
+        truncates the file there."""
+
+        if self.nstored != softexit.nstored:
+            self.nstored = softexit.nstored
+            self.marks = {}
+        if stream not in self.marks:
+            try:
+                self.marks[stream] = (os.path.abspath(stream.name), stream.tell())
+            except (AttributeError, OSError):
+                # e.g. a pipe, which cannot be truncated
+                self.marks[stream] = None
+
+    def rollback(self, flush=True):
+        """Removes what was written since the state was last stored. A file
+        that was empty then is removed. Without `flush`, only the data that
+        has reached the files is removed (e.g. by the watchdog of the soft
+        exit, which must not use the streams)."""
+
+        if self.nstored != softexit.nstored:
+            return
+        for stream, mark in self.marks.items():
+            if mark is None:
+                continue
+            name, position = mark
+            if flush and not stream.closed:
+                stream.flush()
+            if position == 0:
+                os.remove(name)
+            elif os.path.getsize(name) > position:
+                os.truncate(name, position)
+        self.marks = {}
 
     def close_stream(self):
         """Closes the output stream"""
@@ -139,6 +186,7 @@ class BaseOutput(object):
         self.system = system
         self.open_stream(mode)
         softexit.register_function(self.softexit)
+        softexit.register_emergency(self.rollback, flush=False)
 
     def force_flush(self):
         """Tries hard to flush the output stream"""
@@ -158,6 +206,7 @@ class BaseOutput(object):
         """Writes data to file"""
 
         if self.out is not None:
+            self.mark(self.out)
             return self.out.write(data)
 
     def active(self):
@@ -274,6 +323,7 @@ class PropertyOutput(BaseOutput):
 
         if not self.active():
             return
+        self.mark(self.out)
         self.out.write("  ")
         for what in self.outlist:
             try:
@@ -538,6 +588,7 @@ class TrajectoryOutput(BaseOutput):
               after each write to file or not.
         """
 
+        self.mark(stream)
         key = getkey(what)
         if key in ["extras", "extras_component_raw", "extras_bias"]:
             if key == "extras_component_raw":

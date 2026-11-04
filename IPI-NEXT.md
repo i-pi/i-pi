@@ -68,8 +68,12 @@ greenlets runs everything in one thread.
   `softexit.check`: between the steps, and whenever it waits for forces, which the scheduler does at least every
   0.1 s while it waits for drivers. Making the exit stops the forcefields: a closed socket or MPI interface marks
   its pending requests as stopped (`Exit`), which ends the waits.
-  - `softexit.lock` is replaced by `softexit.hold()`: a request made while the outputs of a step are written
-    waits for the end of the step. If a client hangs then, a second signal ends the run, as before.
+  - Outputs are rolled back with the state: each output records the position of its files at its first write
+    after each store of the state (`Simulation.store`, which calls `softexit.stored`), and an exit that writes
+    the stored state truncates them there (a file that was empty is removed). So a soft exit is made at the next
+    wait also while the outputs are written, e.g. by estimators that need forces, rather than after all of them,
+    and a restart writes every row once, also with `safe_stride` > 1. `softexit.lock`, which held the exit back
+    during the outputs, is removed.
   - The sockets and the MPI interfaces have no locks, and `exit_on_disconnect` starts no thread. i-PI and the
     Python driver initialize MPI with `MPI_THREAD_SERIALIZED` rather than `MPI_THREAD_MULTIPLE`.
   - Without `threading`, a soft exit made while waiting for forces no longer raises `SystemExit` out of
@@ -77,8 +81,8 @@ greenlets runs everything in one thread.
   - A watchdog thread ends a main thread that hangs without checking, e.g. in an in-process force evaluation,
     where Python does not even run its signal handlers. It receives the signals through `signal.set_wakeup_fd`,
     and checks the EXIT file and the wall-clock time itself. With `hard_exit` (bin/i-pi), once an exit has been
-    pending for 10 s (`GRACE`) without a check, it writes the stored checkpoint and exits with status 1. It
-    shares nothing with the forcefields, and gives up on the checkpoint after another 10 s, as copying it from
+    pending for 10 s (`GRACE`) without a check, it writes the stored checkpoint, truncates the files of the
+    outputs as far as they reached the disk, and exits with status 1. It shares nothing with the forcefields, and gives up on the checkpoint after another 10 s, as copying it from
     the device can be stuck with the main thread.
   - Forked children (e.g. drivers started with multiprocessing) restore the original signal handlers, so that
     SIGTERM ends them, and their signals do not reach the watchdog of i-PI.
@@ -423,14 +427,6 @@ The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `
 bugs pass, and are no longer marked.
 
 ## Status and work left
-
-### Soft exit during the outputs
-- A soft exit requested while the outputs of a step are written waits for all of them, including the force
-  evaluations of their estimators, which can be long, or never end if a client hangs (also on main). Planned:
-  make the exit at the next wait instead, rolling the outputs back with the state. Each output records its file
-  position at its first write after each `chk.store()`, and an exit truncates the outputs written since then and
-  writes the stored RESTART, so that the restart writes every row once. This also fixes the outputs written
-  ahead of a RESTART rolled back by more than one step (`safe_stride` > 1).
 
 ### Pre-existing bugs found and not fixed (need a decision)
 - Instanton: a restart from a RESTART written before the first step (a soft exit during step 0) converges one
@@ -830,9 +826,9 @@ bugs pass, and are no longer marked.
   installs PLUMED from conda-forge and runs them with numpy and torch, together with the PLUMED unit tests.
 - `test_softexit.py::test_signal_during_outputs_completes_the_step` failed now and then with "release unlocked
   lock": the test reset the soft exit while the monitoring thread was running its cleanup. The cleanup now
-  runs in the main thread. `test_softexit_sockets.py` ends runs whose socket client hangs with SIGTERM (once
-  during a step, twice during the outputs), and `test_softexit.py` checks the watchdog with a main thread that
-  does not receive the signal.
+  runs in the main thread. `test_softexit_sockets.py` ends runs whose socket client hangs with SIGTERM, during a
+  step and during the outputs, and `test_softexit.py` checks the rollback of the outputs, and the watchdog
+  with a main thread that does not receive the signal.
 - The scheduler is tested on its own (`utils/test_scheduler.py`). Simulation-level tests in
   `engine/test_multiple_systems.py` check that:
   - interleaved systems, with outputs that compute forces (isotope estimators), give the same outputs as
