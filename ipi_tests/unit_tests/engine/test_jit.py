@@ -6,9 +6,18 @@ fixed in the compiled steps."""
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+import numpy as np
 import pytest
 
-from ipi_tests.unit_tests.engine.inputs import ISOTROPIC, NO_FORCES, write_input
+import ipi.utils.array_backend as ab
+from ipi_tests.unit_tests.engine.inputs import (
+    DUMMY,
+    ISOTROPIC,
+    NO_FORCES,
+    PROPERTIES,
+    TOLERANCE,
+    write_input,
+)
 
 try:
     import torch
@@ -99,38 +108,132 @@ def test_unsupported_steps(case, change, reason, simulation):
             assert not compiled(sim)
 
 
-def two_systems(xml, threading, smotion=""):
-    """Duplicates the system of an input, with an optional motion of the systems."""
+# exchanges of the replicas tried at every step
+REMD = "<smotion mode='remd'><remd><stride>1</stride></remd></smotion>"
+
+
+def replicas(xml, temperatures, smotion=REMD, threading="true"):
+    """Replicates the system of an input at the given temperatures, with an
+    optional motion of the systems."""
 
     start, end = xml.index("<system>"), xml.index("</system>") + len("</system>")
     system = xml[start:end]
-    systems = system.replace("<system>", "<system prefix='a'>") + system.replace(
-        "<system>", "<system prefix='b'>"
+    systems = "".join(
+        system.replace("<system>", f"<system prefix='r{i}'>").replace(
+            "<temperature units='kelvin'>300</temperature>",
+            f"<temperature units='kelvin'>{temperature}</temperature>",
+        )
+        for i, temperature in enumerate(temperatures)
     )
     xml = xml[:start] + systems + smotion + xml[end:]
     return xml.replace("threading='false'", f"threading='{threading}'")
 
 
 @pytest.mark.parametrize(
-    "threading,smotion,reason",
+    "case,smotion,change,reason",
     [
-        ("true", "", "stepping systems in threads"),
+        ("nvt_langevin", "", None, None),
+        ("pimd_nvt", REMD, None, None),
         (
-            "false",
-            "<smotion mode='remd'><remd><stride>4</stride></remd></smotion>",
+            "nvt_langevin",
+            "<smotion mode='multi'>" + REMD + "</smotion>",
+            None,
             "a motion of multiple systems",
+        ),
+        ("npt_isotropic", REMD, None, "replica exchange with a barostat"),
+        (
+            "nvt_langevin",
+            REMD,
+            (
+                "<temperature units='kelvin'>310</temperature>",
+                "<temperature "
+                "units='kelvin'>310</temperature><hamiltonian_weights>[0.5]"
+                "</hamiltonian_weights>",
+            ),
+            "replica exchange of the weights of the forces",
         ),
     ],
 )
-def test_unsupported_multiple_systems(threading, smotion, reason, simulation):
-    """Systems stepped in threads, or with a motion of the systems, are not
-    compiled"""
+def test_supported_multiple_systems(case, smotion, change, reason, simulation):
+    """The steps of several systems, which are stepped in turn, are compiled,
+    also with replica exchange, unless it exchanges parameters that are fixed
+    in the compiled steps"""
 
     from ipi.engine.jit import unsupported
 
-    xml = two_systems(write_input("nvt_langevin", NO_FORCES), threading, smotion)
+    xml = replicas(write_input(case, NO_FORCES), [300, 310], smotion)
+    if change is not None:
+        xml = xml.replace(*change)
     with simulation(xml) as sim:
         assert unsupported(sim, sim.syslist[0]) == reason
+
+
+@pytest.mark.parametrize("options", JIT)
+@pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt"])
+def test_replica_exchange_is_compiled(case, options, simulation, device_random):
+    """The steps of replicas whose temperatures are exchanged at every step,
+    also before the steps are compiled, are compiled, and follow the eager ones"""
+
+    pytest.importorskip(options["backend"])
+    xml = replicas(write_input(case, DUMMY), [300, 330, 360, 400])
+    eager_options = {k: v for k, v in options.items() if k != "jit"}
+    with simulation(xml, **eager_options) as eager, simulation(xml, **options) as sim:
+        temperatures = set()
+        for step in range(10):
+            eager.run_step(step)
+            sim.run_step(step)
+            temperatures.add(float(sim.syslist[0].ensemble.temp))
+        assert all(compiled_system(s) for s in sim.syslist)
+        assert list(sim.smotion.repindex) == list(eager.smotion.repindex)
+        # the replica has been exchanged
+        assert len(temperatures) > 1
+        for name in PROPERTIES:
+            np.testing.assert_allclose(
+                sim.properties(name), eager.properties(name), **TOLERANCE
+            )
+        for a, b in zip(eager.syslist, sim.syslist):
+            for x, y in [(a.beads.q, b.beads.q), (a.beads.p, b.beads.p)]:
+                np.testing.assert_allclose(ab.to_numpy(y), ab.to_numpy(x), **TOLERANCE)
+
+
+@pytest.mark.parametrize("options", JIT)
+@pytest.mark.parametrize("remd", [False, True])
+def test_stale_objects_are_refreshed_only_with_exchanges(
+    remd, options, simulation, device_random, monkeypatch
+):
+    """Before the eager steps and the compilation, the objects that the steps
+    read are brought up to date if they are stale, which happens only when
+    something else modifies the parameters of the steps, e.g. the exchanges
+    of the replicas: the compiled steps of other simulations do not change"""
+
+    from ipi.utils.jit import Replay
+
+    pytest.importorskip(options["backend"])
+    stale = []
+    refresh = Replay.refresh
+
+    def counting_refresh(self):
+        stale.append(sum(dep.tainted() for dep in self.computed.values()))
+        refresh(self)
+
+    monkeypatch.setattr(Replay, "refresh", counting_refresh)
+    smotion = REMD if remd else ""
+    xml = replicas(write_input("pimd_nvt", DUMMY), [300, 330], smotion)
+    with simulation(xml, **options) as sim:
+        for step in range(8):
+            sim.run_step(step)
+        assert all(compiled_system(s) for s in sim.syslist)
+    assert stale
+    assert any(stale) == remd
+
+
+def compiled_system(system):
+    """Whether the steps of a system are compiled."""
+
+    from ipi.engine.jit import GraphStep, JaxStep
+
+    step = getattr(getattr(system.motion, "integrator", None), "step", None)
+    return isinstance(step, (GraphStep, JaxStep)) and step.compiled is not None
 
 
 @pytest.mark.parametrize("options", JIT)

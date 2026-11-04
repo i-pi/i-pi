@@ -721,9 +721,8 @@ Now that we have a valid input file, we can run the first part of the tutorial  
 This will start the i-PI simulation, creating the server socket and
 initializing the simulation data. This should at this point print out a
 header message to standard output, followed by a few information
-messages that end with “starting the polling thread main loop”, which
-signifies that the server socket has been opened and is waiting for
-connections from client codes.
+messages, one of which says that the server socket has been created: it
+is then waiting for connections from client codes.
 
 At this point, the driver code is run in a new terminal from the
 “drivers” directory using the command:

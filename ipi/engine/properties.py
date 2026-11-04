@@ -995,9 +995,6 @@ class Properties:
         self.dcell = system.cell.clone()
         self.dforces = system.forces.clone(self.dbeads, self.dcell)
         self.fqref = None
-        self._threadlock = (
-            system._propertylock
-        )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
 
@@ -1031,8 +1028,7 @@ class Properties:
         # pkey["func"](*arglist,**kwarglist) gives the value of the property
         # in atomic units. use unit_to_user() to convert the value in the user
         # specified units.
-        with self._threadlock:
-            value = pkey["func"](*arglist, **kwarglist)
+        value = pkey["func"](*arglist, **kwarglist)
         if "dimension" in pkey:
             dimension = pkey["dimension"]
         else:
@@ -3052,7 +3048,6 @@ class Trajectories:
         self.dbeads = system.beads.clone()
         self.dcell = system.cell.clone()
         self.dforces = self.system.forces.clone(self.dbeads, self.dcell)
-        self._threadlock = system._propertylock
 
         if system.beads.nbeads >= 2:
             self.scdbeads = system.beads.clone(system.beads.nbeads // 2)
@@ -3242,8 +3237,7 @@ class Trajectories:
         # in atomic units. unit_to_user() returns the value in the user
         # specified units.
 
-        with self._threadlock:
-            value = pkey["func"](*arglist, **kwarglist)
+        value = pkey["func"](*arglist, **kwarglist)
         if "dimension" in pkey:
             dimension = pkey["dimension"]
         else:

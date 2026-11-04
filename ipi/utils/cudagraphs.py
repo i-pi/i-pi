@@ -42,7 +42,7 @@ import threading
 import warnings
 
 from ipi.utils import depend
-from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _changed, _Recorder
+from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _changed, _Recorder, observe
 from ipi.utils.messages import info, verbosity
 
 __all__ = ["GraphReplay"]
@@ -83,12 +83,12 @@ class GraphReplay(Replay):
     def warm(self, *args):
         """Calls the function eagerly, also to initialize the libraries on the
         stream used by the recording, and in this thread (e.g. cuBLAS handles
-        are created per thread)."""
+        are created per thread), and notes the computed objects it reads."""
 
         default = self.torch.cuda.current_stream()
         self.stream.wait_stream(default)
         with self.torch.cuda.stream(self.stream):
-            self.func(*args)
+            self.note(observe(self.func, *args))
         default.wait_stream(self.stream)
         self.ncalls += 1
         self.local.warm = True
