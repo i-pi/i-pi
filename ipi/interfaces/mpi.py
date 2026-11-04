@@ -13,7 +13,6 @@ the ``<ffmpi>`` forcefields and partitions the driver ranks among them by name.
 
 import sys
 import time
-import threading
 
 import numpy as np
 
@@ -40,9 +39,7 @@ class MPIWorldManager:
     their own sub-communicators), and the handshake that discovers every driver
     group root together with the forcefield name it was launched for. Each
     interface then claims the roots tagged with its own name. The MPI calls are
-    made by the main thread, except when a soft exit closes the interfaces from
-    its own thread: a shared lock serialises them, so MPI_THREAD_SERIALIZED is
-    enough.
+    all made by the main thread, so MPI_THREAD_SERIALIZED is enough.
     """
 
     def __init__(self):
@@ -50,7 +47,6 @@ class MPIWorldManager:
         self._setup_done = False
         self.roots_by_name = {}  # forcefield name -> sorted list of root ranks
         self.registered_names = set()
-        self.mpi_lock = threading.Lock()
 
     def register(self, name):
         """Records a forcefield name before the handshake (idempotent)."""
@@ -159,11 +155,8 @@ class InterfaceMPI:
         self._initialized = False
         self._closed = False
         # register the name now, before any open()/handshake, so the manager
-        # knows the full set of forcefields when it partitions the drivers; the
-        # shared MPI lock is also taken from the manager (usable before open())
-        mgr = get_mpi_world_manager()
-        mgr.register(self.name)
-        self._mpi_lock = mgr.mpi_lock
+        # knows the full set of forcefields when it partitions the drivers
+        get_mpi_world_manager().register(self.name)
 
     def open(self):
         """Joins the shared MPI world and claims this forcefield's driver ranks."""
@@ -174,8 +167,7 @@ class InterfaceMPI:
             info("ffmpi requires a functioning mpi4py installation")
             raise
 
-        # MPI calls happen on the main thread, and on the thread of a soft
-        # exit when closing, serialised by the shared lock
+        # the MPI calls are all made by the main thread
         mpi4py.rc.thread_level = "serialized"
         from mpi4py import MPI
 
@@ -183,7 +175,6 @@ class InterfaceMPI:
         try:
             mgr.setup(MPI)  # one collective split + handshake, shared by all FFMPI
             self.comm = mgr.comm
-            self._mpi_lock = mgr.mpi_lock
             self.driver_ranks = mgr.roots_for(self.name)
             if not self.driver_ranks:
                 raise ValueError(
@@ -217,21 +208,17 @@ class InterfaceMPI:
 
         from mpi4py import MPI
 
-        # the shared lock serialises MPI with a soft exit closing the interfaces
-        with self._mpi_lock:
-            if self._closed:
-                # the requests cannot be computed once the interface is closed
-                pending = [
-                    r for r in self.requests if r["status"] in ("Queued", "Running")
-                ]
-                for r in pending:
-                    r["status"] = "Exit"
-                return bool(pending)
-            if not self._initialized:
-                self._send_init(MPI)
-                self._initialized = True
-            collected = self._collect(MPI)
-            dispatched = self._dispatch(MPI)
+        if self._closed:
+            # the requests cannot be computed once the interface is closed
+            pending = [r for r in self.requests if r["status"] in ("Queued", "Running")]
+            for r in pending:
+                r["status"] = "Exit"
+            return bool(pending)
+        if not self._initialized:
+            self._send_init(MPI)
+            self._initialized = True
+        collected = self._collect(MPI)
+        dispatched = self._dispatch(MPI)
         return collected or dispatched
 
     def _send_init(self, MPI):
@@ -346,11 +333,8 @@ class InterfaceMPI:
         from mpi4py import MPI
 
         buf = np.zeros(1, dtype=np.int32)
-        # a soft exit closes the interfaces from its own thread, so the EXIT
-        # sends are serialised with the polls through the shared MPI lock
-        with self._mpi_lock:
-            if self._closed:
-                return
-            self._closed = True
-            for r in self.driver_ranks:
-                self.comm.Send([buf, MPI.INT], dest=r, tag=MPI_TAG_EXIT)
+        if self._closed:
+            return
+        self._closed = True
+        for r in self.driver_ranks:
+            self.comm.Send([buf, MPI.INT], dest=r, tag=MPI_TAG_EXIT)
