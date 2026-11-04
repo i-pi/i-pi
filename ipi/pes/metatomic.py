@@ -3,6 +3,7 @@ Interface with metatomic ML models (https://docs.metatensor.org/metatomic/), tha
 used to perform calculations with arbitrary machine learning potentials.
 """
 
+import contextlib
 import json
 import warnings
 import concurrent.futures
@@ -330,15 +331,15 @@ class MetatomicDriver(Dummy_driver):
 
         system = mta.System(self._types[device_idx], positions, cell, pbc)
 
-        # Do nl calculations on the correct device, which helps avoid the illegal memory
-        # access error when using multiple GPUs
-        if torch.cuda.is_available() and "cuda" in str(device):
-            if torch.device(device).index is None:
-                device += ":0"
-            torch.cuda.set_device(device)
-        # Compute neighbor lists using vesin
-        for calculator in self._nl_calculators[device_idx]:
-            calculator.add_neighbor_list(system)
+        # vesin computes on the current CUDA device, which must be the one that
+        # holds the system (the threads of the executor start on device 0)
+        if positions.is_cuda:
+            guard = torch.cuda.device(positions.device)
+        else:
+            guard = contextlib.nullcontext()
+        with guard:
+            for calculator in self._nl_calculators[device_idx]:
+                calculator.add_neighbor_list(system)
 
         return system, strain
 
