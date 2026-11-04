@@ -2667,7 +2667,10 @@ class FFDielectric(ForceField):
         """Evaluates each field once per simulation time, also for many beads."""
         with self._field_cache_lock:
             if self._field_cache_time != actual_time:
-                self._field_cache = (self._sum_vector_fields(self.electric_fields, actual_time), None)
+                self._field_cache = (
+                    self._sum_vector_fields(self.electric_fields, actual_time),
+                    None,
+                )
                 self._field_cache_time = actual_time
             return self._field_cache[0].copy(), None
 

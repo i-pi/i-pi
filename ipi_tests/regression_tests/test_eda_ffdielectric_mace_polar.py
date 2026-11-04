@@ -16,7 +16,8 @@ pytest.importorskip("mace")
 
 REPO_ROOT = Path(__file__).parents[2]
 MODEL_CANDIDATES = (
-    REPO_ROOT / "examples/features/ffdieletric/mace-polar+E-server/MACE-POLAR-1-M.model",
+    REPO_ROOT
+    / "examples/features/ffdieletric/mace-polar+E-server/MACE-POLAR-1-M.model",
     REPO_ROOT / "examples/clients/mace/polar/MACE-POLAR-1-M.model",
 )
 SOURCE_EXAMPLE = REPO_ROOT / "examples/features/ffdieletric/mace-polar+E-server"
@@ -170,7 +171,10 @@ def _run_case(tmp_path, implementation, ensemble, model):
             [a.positions for a in read(case / "simulation.positions_0.xyz", index=":")]
         )
         velocities = np.asarray(
-            [a.get_velocities() for a in read(case / "simulation.velocities_0.xyz", index=":")]
+            [
+                a.get_velocities()
+                for a in read(case / "simulation.velocities_0.xyz", index=":")
+            ]
         )
         return positions, velocities
     finally:
@@ -183,7 +187,9 @@ def _run_case(tmp_path, implementation, ensemble, model):
 
 
 @pytest.mark.parametrize("ensemble", ["nve", "nvt"])
-def test_eda_and_ffdielectric_match_mace_polar_dynamics(tmp_path, mace_polar_model, ensemble):
+def test_eda_and_ffdielectric_match_mace_polar_dynamics(
+    tmp_path, mace_polar_model, ensemble
+):
     """The legacy EDA and new wrapper produce identical trajectories."""
 
     eda = _run_case(tmp_path, "eda", ensemble, mace_polar_model)
