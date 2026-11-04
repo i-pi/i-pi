@@ -205,11 +205,12 @@ def hang(address, nreplies):
         )
 
 
-@pytest.mark.parametrize("held", [False, True], ids=["step", "outputs"])
-def test_exit_while_a_client_hangs(tmp_path, monkeypatch, held):
-    """SIGTERM ends a run whose client hangs, writing RESTART and telling the
-    client to exit. A client that hangs while the outputs hold the exit back
-    (here, the initial ones) needs a second SIGTERM."""
+@pytest.mark.parametrize("outputs", [False, True], ids=["step", "outputs"])
+def test_exit_while_a_client_hangs(tmp_path, monkeypatch, outputs):
+    """SIGTERM ends a run whose client hangs, also while the outputs are
+    written (here, the initial ones), writing RESTART, removing the part of
+    the outputs written since the state was stored, and telling the client
+    to exit."""
 
     monkeypatch.chdir(tmp_path)
     address = "softexit_" + uuid.uuid4().hex
@@ -220,13 +221,9 @@ def test_exit_while_a_client_hangs(tmp_path, monkeypatch, held):
         try:
             server = start_ipi(tmp_path, "input.xml", "false", log)
             # the initial outputs need the forces of the first request
-            peer = hang(address, nreplies=0 if held else 1)
+            peer = hang(address, nreplies=0 if outputs else 1)
             time.sleep(0.2)
             server.send_signal(signal.SIGTERM)
-            if held:
-                time.sleep(1.0)
-                assert server.poll() is None, logfile.read_text()
-                server.send_signal(signal.SIGTERM)
             server.wait(timeout=10)
             assert server.returncode == 0, logfile.read_text()
             assert message("exit") in peer.recv(4096)
@@ -239,6 +236,9 @@ def test_exit_while_a_client_hangs(tmp_path, monkeypatch, held):
     assert (tmp_path / "origin").read_text() == "MainThread"
     with open(tmp_path / "RESTART") as restart:
         assert Simulation.load_from_xml(restart, read_only=True).step == 0
+    # only the row of the initial outputs, if they were complete
+    rows = [line for line in open(tmp_path / "sim.out") if not line.startswith("#")]
+    assert len(rows) == (0 if outputs else 1)
 
 
 if __name__ == "__main__":

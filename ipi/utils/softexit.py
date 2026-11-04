@@ -6,9 +6,11 @@ named EXIT, when the wall-clock time runs out, or by the code (`request`). A
 request only records a message: the main thread makes the exit at its next
 `check`, which it calls between the steps and whenever it waits for forces.
 Making the exit runs the cleanup functions, which write RESTART, close the
-outputs and stop the forcefields, so that the waits for forces end. The
-outputs of a step hold the exit back until they are all written (`hold`). A
-second signal interrupts the main thread at once.
+outputs and stop the forcefields, so that the waits for forces end. During a
+run, RESTART holds the state that was last stored (`rollback`), and the
+outputs written since then are truncated (`stored` starts a new record of
+their positions), so that a restart writes each of them once. A second
+signal interrupts the main thread at once.
 
 A watchdog thread deals with a main thread that does not reach `check`, e.g.
 because an in-process force evaluation hangs in native code, where Python
@@ -25,7 +27,6 @@ process. It does so only with `hard_exit`, i.e. when i-PI runs as a program.
 
 
 import atexit
-import contextlib
 import os
 import select
 import signal
@@ -55,8 +56,11 @@ class Softexit(object):
           does not respond. They must not use what the main thread may be
           using, e.g. they write a checkpoint stored beforehand.
        requested: The message of a pending request, or None.
-       triggered: Whether the exit has started (its cleanup may be held back).
+       triggered: Whether the exit has started.
        exiting: True while the cleanup functions run.
+       rollback: Whether the exit goes back to the state that was last
+          stored, also truncating the outputs written since then.
+       nstored: The number of times the state has been stored.
        hard_exit: If True, the process is ended with os._exit() once the
           cleanup is complete, skipping the finalization of the interpreter.
        timeout: The wall-clock time at which to exit, if positive.
@@ -72,8 +76,9 @@ class Softexit(object):
         self.exiting = False
         self.hard_exit = False
         self.timeout = -1.0
+        self.rollback = False
+        self.nstored = 0
         self._started = False
-        self._held = 0
         self._signalled = False
         self._kill = {}
         # the last check of the main thread, and the next one of the files
@@ -101,9 +106,9 @@ class Softexit(object):
             self.requested = message
 
     def check(self):
-        """Makes the exit that has been requested, unless the outputs hold it
-        back. Called by the main thread between the steps and whenever it
-        waits for forces, which also tells the watchdog that it responds."""
+        """Makes the exit that has been requested. Called by the main thread
+        between the steps and whenever it waits for forces, which also tells
+        the watchdog that it responds."""
 
         now = time.monotonic()
         self._beat = now
@@ -112,24 +117,14 @@ class Softexit(object):
             message = self._expired()
             if message is not None:
                 self.request(message)
-        if self._held or self.exiting:
-            return
-        if self.requested is not None:
+        if self.requested is not None and not self.exiting:
             self.cleanup(message=self.requested)
-        elif self.triggered and self.flist:
-            # a cleanup that the outputs held back
-            self.cleanup()
 
-    @contextlib.contextmanager
-    def hold(self):
-        """Holds the exit back while the block runs, e.g. while the outputs
-        of a step are written, so that they are all written."""
+    def stored(self):
+        """Records that the state to go back to has been stored: the outputs
+        record their positions again, at their next write."""
 
-        self._held += 1
-        try:
-            yield
-        finally:
-            self._held -= 1
+        self.nstored += 1
 
     def trigger(self, *, status="restartable", message=""):
         """Halts the simulation.
@@ -147,11 +142,7 @@ class Softexit(object):
         self.kill()
 
     def cleanup(self, *, status="restartable", message=""):
-        """Runs the cleanup functions without exiting the process.
-
-        The functions are called only once. While the outputs hold the exit
-        back, they are left pending, and run at the next call or check.
-        """
+        """Runs the cleanup functions, once, without exiting the process."""
 
         # reports the reason of a pending request
         message = message or self.requested or ""
@@ -176,7 +167,7 @@ class Softexit(object):
             )
         self.requested = None
 
-        if self._held or self.exiting:
+        if self.exiting:
             return
         # waits, if the watchdog is ending the process
         with self._lock:
