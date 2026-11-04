@@ -1350,6 +1350,7 @@ class InputFFDielectric(InputForceField):
 
     dynamic = {
         "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
+        "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
         "electric_field": (
             _electric_field_cls,
             {
