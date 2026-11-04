@@ -371,9 +371,8 @@ def test_setup_requires_driver_ranks():
 
 def test_interface_registers_name(monkeypatch):
     monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
-    iface = InterfaceMPI(name="ffX", batch_size=2)
+    InterfaceMPI(name="ffX", batch_size=2)
     assert "ffX" in get_mpi_world_manager().registered_names
-    assert iface._mpi_lock is get_mpi_world_manager().mpi_lock
 
 
 class _ExitComm:

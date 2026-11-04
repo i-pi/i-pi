@@ -343,20 +343,16 @@ def test_send_to_vanished_client_fails(connection):
     assert driver.job is None
 
 
-def test_exit_on_disconnect_requests_soft_exit(connection, monkeypatch):
+def test_exit_on_disconnect_requests_soft_exit(connection):
     driver, peer = connection
-    messages = []
-    called = threading.Event()
-
-    def record_exit(**kwargs):
-        messages.append(kwargs["message"])
-        called.set()
-
-    monkeypatch.setattr(sockets.softexit, "trigger", record_exit)
-    driver.exit_on_disconnect = True
-    driver.disconnect()
-    assert called.wait(2)
-    assert messages == ["Client shutdown."]
+    sockets.softexit.reset()
+    try:
+        driver.exit_on_disconnect = True
+        driver.disconnect()
+        assert sockets.softexit.requested == "Client shutdown."
+        assert not sockets.softexit.triggered
+    finally:
+        sockets.softexit.reset()
     assert peer.recv(12) == MESSAGE["exit"]
     assert driver.status == Status.Disconnected
     assert driver.fileno() == -1

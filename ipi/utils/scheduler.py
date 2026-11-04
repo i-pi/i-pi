@@ -21,7 +21,9 @@ thread started:
   computes its forces where it requests them, without switching.
 
 The loop has no notion of steps or of systems: tasks can make any number of
-requests, and each one only waits for its own.
+requests, and each one only waits for its own. Waits also make the soft
+exits that have been requested (`ipi.utils.softexit`), which stop the
+forcefields, and so end the waits.
 
 A forcefield is polled while it has `requests`, from the moment it queues
 one (`watch`). It takes part through three members:
@@ -47,10 +49,12 @@ from collections import deque
 
 from greenlet import getcurrent, greenlet
 
+from ipi.utils.softexit import softexit
+
 __all__ = ["Task", "spawn", "join", "run", "wait", "watch", "unwatch"]
 
 # longest wait for a reply before polling again, so that the time-outs of
-# the drivers and the requests stopped by a soft exit are noticed
+# the drivers and the requests for a soft exit are noticed
 MAXWAIT = 0.1
 
 
@@ -210,6 +214,8 @@ class Scheduler:
         # a wait inside a poll would run the loop that is polling
         if self.polling:
             raise RuntimeError("Forces requested while polling the forcefields")
+        # makes a requested soft exit, which stops the forcefields
+        softexit.check()
         current = getcurrent()
         if isinstance(current, Worker):
             # another task may make the condition false again before this
@@ -246,9 +252,11 @@ class Scheduler:
                 # runs a task until it waits again or ends
                 self._resume(self.ready.popleft())
                 stuck = False
-            # every task waits: evaluates the incomplete batches, or else
-            # sleeps until a driver replies
-            elif self._poll(idle=True) or self._block():
+                continue
+            # every task waits: makes a requested soft exit, evaluates the
+            # incomplete batches, or else sleeps until a driver replies
+            softexit.check()
+            if self._poll(idle=True) or self._block():
                 stuck = False
             elif stuck:
                 names = [getattr(f, "name", type(f).__name__) for f in self.watched]
@@ -258,7 +266,7 @@ class Scheduler:
                 )
             else:
                 # checks again, in case something changed since the last poll
-                # (e.g. a soft exit that stopped a forcefield in its thread)
+                # (e.g. a soft exit that stopped the forcefields)
                 stuck = True
 
     def _wake(self):
@@ -379,9 +387,6 @@ def watch(forcefield):
 
 
 def unwatch(forcefield):
-    """Stops polling `forcefield`. Does nothing in a thread without a
-    scheduler (e.g. that of a soft exit)."""
+    """Stops polling `forcefield`."""
 
-    scheduler = getattr(_local, "scheduler", None)
-    if scheduler is not None:
-        scheduler.unwatch(forcefield)
+    _scheduler().unwatch(forcefield)

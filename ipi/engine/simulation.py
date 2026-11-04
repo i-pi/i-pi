@@ -298,8 +298,10 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
-        # registers the softexit routine
+        # registers the softexit routine, and the checkpoint that the
+        # watchdog writes if the main thread hangs
         softexit.register_function(self.softexit)
+        softexit.register_emergency(self.chk.write, store=False)
         softexit.start(self.ttime)
 
         # starts tracemalloc to debug memory leaks
@@ -331,7 +333,7 @@ class Simulation:
         """
 
         # the soft exit procedures are held back while writing outputs
-        with softexit.lock:
+        with softexit.hold():
             # prints inital configuration -- only if we are not restarting
             if self.step == 0 and write_outputs and not softexit.triggered:
                 self.step = -1
@@ -359,14 +361,21 @@ class Simulation:
             # exit requests without screwing the trajectory
 
             steptime = -time.time()
+            # makes the exit requested meanwhile, e.g. while writing outputs
+            softexit.check()
             if softexit.triggered or self.finished:
                 break
 
-            self.run_step(self.step)
+            try:
+                self.run_step(self.step)
+            except SystemExit:
+                # a soft exit made while waiting for forces ends the step
+                if not softexit.triggered:
+                    raise
 
             # the soft exit procedures are held back until all the outputs for
             # this step are written, and the matching state is saved
-            with softexit.lock:
+            with softexit.hold():
                 if softexit.triggered or self.finished:
                     # Don't write if we are about to exit.
                     break
@@ -461,11 +470,7 @@ class Simulation:
         after the other."""
 
         if len(self.syslist) > 1 and self.threading and not jit_enabled():
-            try:
-                scheduler.run([partial(s.motion.step, step=step) for s in self.syslist])
-            except SystemExit:
-                if not softexit.triggered:
-                    raise
+            scheduler.run([partial(s.motion.step, step=step) for s in self.syslist])
             if softexit.triggered:
                 return
             for s in self.syslist:
