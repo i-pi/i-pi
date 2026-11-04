@@ -1,4 +1,4 @@
-<simulation verbosity='low' threading='False'>
+<simulation verbosity='low' interleave='False'>
   <output prefix='simulation'>
     <properties stride='20' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_md{electronvolt}, kinetic_cv{electronvolt}, potential{electronvolt} ] </properties>
     <trajectory filename='vel' stride='20' bead='1' flush='200'> velocities </trajectory>

@@ -43,10 +43,9 @@ def recording():
 def graph_step(sim):
     """The object replaying the steps of the first system, if any."""
 
-    from ipi.engine.jit import GraphStep
+    from ipi.engine.jit import compiled_step
 
-    step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return step if isinstance(step, GraphStep) else None
+    return compiled_step(sim.syslist[0])
 
 
 @pytest.fixture
@@ -189,7 +188,8 @@ def test_forces_converted_in_part_before_the_recording(simulation, device_random
 def test_recording_in_a_new_thread(simulation, device_random):
     """A step is recorded in a thread that has run eager steps, as some
     libraries (e.g. cuBLAS) initialize per-thread state that cannot be
-    recorded: steps run in threads (threading='true') then still replay"""
+    recorded: steps run in other threads (e.g. a script running i-PI in a
+    thread) then still replay"""
 
     from concurrent.futures import ThreadPoolExecutor
 
