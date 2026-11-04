@@ -11,8 +11,8 @@ import os
 import signal
 import subprocess
 import sys
-import threading
 import time
+import warnings
 
 import numpy as np
 import pytest
@@ -64,7 +64,7 @@ def simulation_xml(threading_mode):
 
 @pytest.fixture
 def workdir(tmp_path, monkeypatch):
-    """Runs in a scratch directory, with a responsive soft-exit monitor."""
+    """Runs in a scratch directory, checking often for the EXIT file."""
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(softexit_module, "SOFTEXITLATENCY", 0.01)
@@ -73,23 +73,17 @@ def workdir(tmp_path, monkeypatch):
     softexit.reset()
 
 
-def exit_from_another_thread():
-    """Requests a soft exit as the monitoring thread would."""
+def request_exit():
+    """Requests a soft exit, as the EXIT file or the watchdog would."""
 
-    thread = threading.Thread(target=softexit.cleanup)
-    thread.start()
-    thread.join(timeout=10)
-    assert not thread.is_alive()
+    softexit.request(" @SOFTEXIT: test")
 
 
 def exit_from_signal():
-    """Delivers a kill signal to the main thread and waits for the request."""
+    """Delivers a kill signal to the main thread, which records the request."""
 
     signal.raise_signal(signal.SIGTERM)
-    deadline = time.time() + 10
-    while not softexit.triggered and time.time() < deadline:
-        time.sleep(0.001)
-    assert softexit.triggered
+    assert softexit.requested is not None
 
 
 def once_at_exit_step(simulation, action):
@@ -198,7 +192,7 @@ def test_exit_during_step_rolls_back(workdir, threading_mode):
     inject_before(
         simulation.syslist[0].motion,
         "step",
-        once_at_exit_step(simulation, exit_from_another_thread),
+        once_at_exit_step(simulation, request_exit),
     )
     finish(simulation)
 
@@ -214,7 +208,7 @@ def test_exit_between_outputs_completes_the_step(workdir, threading_mode):
     inject_after(
         simulation.outputs[0],
         "write",
-        once_at_exit_step(simulation, exit_from_another_thread),
+        once_at_exit_step(simulation, request_exit),
     )
     finish(simulation)
 
@@ -229,7 +223,7 @@ def test_exit_during_write_completes_the_row(workdir, threading_mode):
     simulation = Simulation.load_from_xml(io.StringIO(simulation_xml(threading_mode)))
     properties = simulation.outputs[0]
     properties.out = StreamProxy(
-        properties.out, once_at_exit_step(simulation, exit_from_another_thread)
+        properties.out, once_at_exit_step(simulation, request_exit)
     )
     finish(simulation)
 
@@ -266,47 +260,42 @@ def test_signal_during_outputs_completes_the_step(workdir):
     assert_continuous()
 
 
-def test_pending_exit_runs_callbacks_once(workdir):
-    """A request made while the lock is held is served later, a single time."""
+@pytest.mark.parametrize("make_request", [request_exit, softexit.cleanup])
+def test_held_exit_runs_callbacks_once(workdir, make_request):
+    """A request, or a cleanup, made while the exit is held back is made at
+    the next check, a single time."""
 
     calls = []
     softexit.register_function(lambda: calls.append(True))
 
-    with softexit.lock:
-        exit_from_another_thread()
-        assert softexit.triggered
+    with softexit.hold():
+        make_request()
+        softexit.check()
         assert calls == []
 
-    softexit.cleanup()
+    softexit.check()
+    softexit.check()
     softexit.cleanup()
     assert calls == [True]
 
 
-def test_reset_waits_for_a_cleanup_in_progress(workdir):
-    """A reset during a cleanup in another thread (e.g. the monitoring thread,
-    after a signal) waits for it, instead of replacing the lock it holds."""
+def test_forked_child_is_detached(workdir):
+    """The signals of a forked child (e.g. a driver) end it, and do not reach
+    the watchdog of the parent through the pipe they share."""
 
-    running, release, errors = threading.Event(), threading.Event(), []
-    softexit.register_function(lambda: (running.set(), release.wait(10)))
-
-    def cleanup():
-        try:
-            softexit.cleanup()
-        except RuntimeError as err:
-            errors.append(err)
-
-    cleaner = threading.Thread(target=cleanup)
-    cleaner.start()
-    assert running.wait(10)
-    resetter = threading.Thread(target=softexit.reset)
-    resetter.start()
-    resetter.join(timeout=0.1)
-    assert resetter.is_alive()
-    release.set()
-    for thread in (cleaner, resetter):
-        thread.join(timeout=10)
-        assert not thread.is_alive()
-    assert errors == []
+    softexit.start()
+    with warnings.catch_warnings():
+        # forking a process with threads
+        warnings.simplefilter("ignore", DeprecationWarning)
+        pid = os.fork()
+    if pid == 0:
+        os.kill(os.getpid(), signal.SIGTERM)
+        os._exit(3)
+    _, status = os.waitpid(pid, 0)
+    assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGTERM
+    # the watchdog reads its pipe every SOFTEXITLATENCY
+    time.sleep(0.2)
+    assert softexit.requested is None
 
 
 def test_second_signal_forces_the_exit(workdir):
@@ -341,7 +330,8 @@ def run_script(script):
         [os.path.dirname(os.path.dirname(ipi.__file__)), env.get("PYTHONPATH", "")]
     )
     header = """
-import atexit, threading, time
+import atexit, os, signal, time
+import ipi.utils.softexit as softexit_module
 from ipi.utils.softexit import softexit
 
 def slow():
@@ -355,17 +345,13 @@ atexit.register(lambda: open("finalized", "w").close())
 
 
 @pytest.mark.parametrize("hard_exit", [False, True])
-def test_process_waits_for_cleanup(workdir, hard_exit):
-    """The interpreter does not terminate in the middle of a soft exit."""
+def test_pending_request_is_made_at_exit(workdir, hard_exit):
+    """A request that the main thread did not get to is made when the
+    interpreter terminates."""
 
     process = run_script(f"""
 softexit.hard_exit = {hard_exit}
-threading.Thread(target=softexit.trigger, daemon=True).start()
-deadline = time.time() + 10
-while not softexit.exiting and time.time() < deadline:
-    time.sleep(0.001)
-# the end of bin/i-pi
-softexit.trigger()
+softexit.request("test")
 """)
 
     assert process.returncode == 0
@@ -385,22 +371,58 @@ softexit.trigger()
     assert not os.path.exists("finalized")
 
 
-def test_hard_exit_from_another_thread_stops_the_run(workdir):
-    """The main thread does not carry on after another thread cleaned up."""
+WATCHDOG = """
+softexit_module.GRACE = 0.5
+softexit_module.SOFTEXITLATENCY = 0.05
+softexit.hard_exit = True
+softexit.register_emergency(lambda: open("emergency", "w").close())
+softexit.start()
+"""
+
+
+@pytest.mark.parametrize(
+    "exit_request", ["os.kill(os.getpid(), signal.SIGTERM)", 'open("EXIT", "w")']
+)
+def test_watchdog_ends_a_hung_process(workdir, exit_request):
+    """A main thread that hangs in native code, where it runs neither the
+    signal handlers nor the checks, is ended by the watchdog."""
 
     start = time.time()
-    process = run_script("""
-softexit.hard_exit = True
-threading.Thread(target=softexit.trigger, daemon=True).start()
-# a step that would take a long time to notice the exit
+    process = run_script(f"""{WATCHDOG}
+# the signal reaches the watchdog thread, as when the main thread is stuck
+signal.pthread_sigmask(signal.SIG_BLOCK, [signal.SIGTERM])
+{exit_request}
 time.sleep(30)
 open("carried_on", "w").close()
 """)
 
-    assert process.returncode == 0
-    assert os.path.exists("done")
+    assert process.returncode == 1
+    assert os.path.exists("emergency")
+    assert not os.path.exists("done")
     assert not os.path.exists("carried_on")
     assert time.time() - start < 20
+
+
+def test_watchdog_leaves_a_responsive_process(workdir):
+    """An exit held back by the outputs for longer than GRACE is not cut
+    short while the main thread checks, nor while it cleans up."""
+
+    process = run_script(f"""{WATCHDOG}
+softexit_module.GRACE = 0.2
+softexit.request("test")
+with softexit.hold():
+    for _ in range(100):
+        softexit.check()
+        time.sleep(0.01)
+open("held", "w").close()
+softexit.check()
+softexit.kill()
+""")
+
+    assert process.returncode == 0
+    assert os.path.exists("held")
+    assert os.path.exists("done")
+    assert not os.path.exists("emergency")
 
 
 def test_status_and_message_are_keywords():

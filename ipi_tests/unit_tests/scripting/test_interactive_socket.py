@@ -27,16 +27,14 @@ _RUN_TIMEOUT = 60.0
 
 
 def _abort(sim, thread, message):
-    """Releases the i-PI threads stuck waiting for forces, then fails.
+    """Stops the run stuck waiting for forces, then fails.
 
-    Force requests only give up once softexit is triggered; cleanup() does
-    that without calling sys.exit(). Otherwise the thread pool workers,
-    which are joined at interpreter exit, would keep pytest from exiting.
-    The simulation fixture stops the simulation and resets softexit once
-    the stuck threads have noticed the trigger.
+    The run thread makes the requested soft exit at its next check, which
+    stops the force requests. The simulation fixture stops the simulation
+    and resets softexit afterwards.
     """
 
-    softexit.cleanup(status="bad", message=message)
+    softexit.request(message)
     thread.join(timeout=10.0)
     pytest.fail(message)
 

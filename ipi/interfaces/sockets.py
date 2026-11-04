@@ -38,7 +38,6 @@ import os
 import socket
 import select
 import time
-import threading
 
 import numpy as np
 
@@ -358,13 +357,8 @@ class Driver(DriverSocket):
             return
         self.status = Status.Disconnected
         if self.exit_on_disconnect:
-            # the soft exit stops the forcefields, which waits for the poll
-            # that is running here: it runs in a thread of its own
-            thread = threading.Thread(
-                target=softexit.trigger, kwargs={"message": "Client shutdown."}
-            )
-            thread.daemon = True
-            thread.start()
+            # made once the poll that is running here is over
+            softexit.request("Client shutdown.")
         try:
             self.send_msg("exit")
             self.shutdown(socket.SHUT_RDWR)
@@ -506,8 +500,6 @@ class InterfaceSocket(object):
        clients: The connected clients.
        client_timeout: The time-out of the sockets of the clients, which is
           doubled when a client takes longer to receive the positions.
-       lock: Held while the clients are polled, so that the interface can be
-          closed from the thread of a soft exit.
     """
 
     def __init__(
@@ -536,7 +528,6 @@ class InterfaceSocket(object):
         self.server = None
         self.clients = []
         self.client_timeout = TIMEOUT
-        self.lock = threading.Lock()
 
     def open(self):
         """Creates the listening socket."""
@@ -600,33 +591,32 @@ class InterfaceSocket(object):
             " @interfacesocket.close: Shutting down the driver interface.",
             verbosity.low,
         )
-        with self.lock:
-            # the clients that answer a status request are not interrupted
-            # while they write the reply (which would kill them with SIGPIPE)
-            answering = {c.fileno(): c for c in self.clients if c.expect == "status"}
-            poller = select.poll()
-            for c in answering.values():
-                poller.register(c, select.POLLIN)
-            deadline = time.time() + self.client_timeout
-            while answering and time.time() < deadline:
-                for fd, _ in poller.poll((deadline - time.time()) * 1e3):
-                    poller.unregister(fd)
-                    try:
-                        answering.pop(fd).read_status()
-                    except (Disconnected, OSError):
-                        pass
-            for c in self.clients:
-                c.disconnect()
-            self.clients = []
-            if self.server is None:
-                return
-            self.server.close()
-            self.server = None
-            if self.mode in ("unix", "shm"):
+        # the clients that answer a status request are not interrupted
+        # while they write the reply (which would kill them with SIGPIPE)
+        answering = {c.fileno(): c for c in self.clients if c.expect == "status"}
+        poller = select.poll()
+        for c in answering.values():
+            poller.register(c, select.POLLIN)
+        deadline = time.time() + self.client_timeout
+        while answering and time.time() < deadline:
+            for fd, _ in poller.poll((deadline - time.time()) * 1e3):
+                poller.unregister(fd)
                 try:
-                    os.unlink(self.sockets_prefix + self.address)
-                except OSError:
+                    answering.pop(fd).read_status()
+                except (Disconnected, OSError):
                     pass
+        for c in self.clients:
+            c.disconnect()
+        self.clients = []
+        if self.server is None:
+            return
+        self.server.close()
+        self.server = None
+        if self.mode in ("unix", "shm"):
+            try:
+                os.unlink(self.sockets_prefix + self.address)
+            except OSError:
+                pass
 
     def fds(self):
         """Returns the sockets that `poll` acts on once they can be read: the
@@ -645,15 +635,14 @@ class InterfaceSocket(object):
         arrived, drops the clients that are late, and sends the queued
         requests to the free clients."""
 
-        with self.lock:
-            # closed by a soft exit: the requests will never be computed
-            if self.server is None:
-                return self._stop_requests()
-            progress = self._receive()
-            self._check_timeouts()
-            progress = self._dispatch() or progress
-            # forgets the clients dropped in this round
-            self.clients = [c for c in self.clients if c.status != Status.Disconnected]
+        # closed by a soft exit: the requests will never be computed
+        if self.server is None:
+            return self._stop_requests()
+        progress = self._receive()
+        self._check_timeouts()
+        progress = self._dispatch() or progress
+        # forgets the clients dropped in this round
+        self.clients = [c for c in self.clients if c.status != Status.Disconnected]
         return progress
 
     def _stop_requests(self):
