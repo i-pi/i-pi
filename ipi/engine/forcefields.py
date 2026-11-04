@@ -2655,7 +2655,7 @@ class FFDielectric(ForceField):
             return None
         total = np.zeros(3)
         for field in fields:
-            value = np.asarray(dstrip(field.get(actual_time)), dtype=float)
+            value = np.asarray(field.get(actual_time), dtype=float)
             if value.shape != (3,):
                 raise ValueError(
                     f"A vector field must have shape (3,), got {value.shape}."
