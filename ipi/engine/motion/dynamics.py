@@ -420,7 +420,7 @@ class DummyIntegrator:
 
         # check stress tensor
         self._stresscheck = True
-        self._actual_time = depend_value(name="actual_time", value=self.ensemble.time)
+        self.actual_time_ = depend_value(name="actual_time", value=self.ensemble.time)
 
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
