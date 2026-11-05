@@ -7,7 +7,9 @@ bash "${assets_dir}/download_mace_polar.sh"
 i-pi input.xml > log.i-pi 2>&1 &
 ipi_pid=$!
 sleep 1
-i-pi-py_driver -u -a mace-polar-static-extra -m extmace -o "template=${assets_dir}/start.extxyz,model=${assets_dir}/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=${assets_dir}/mace_kwargs.json" > log.driver 2>&1 &
+i-pi-py_driver -u -a mace-polar-static-extra -m extmace -o "template=${assets_dir}/start.extxyz,model=${assets_dir}/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=${assets_dir}/mace_kwargs.json,requires_extra=true" > log.driver 2>&1 &
 driver_pid=$!
+timeout 180s tail --pid="${ipi_pid}" -f /dev/null
 wait "${ipi_pid}"
+timeout 30s tail --pid="${driver_pid}" -f /dev/null
 wait "${driver_pid}"
