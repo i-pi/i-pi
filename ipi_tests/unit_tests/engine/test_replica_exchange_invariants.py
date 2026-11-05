@@ -122,6 +122,43 @@ def test_exchanges_rescale_the_cell_momenta(simulation, accept, bulk_modulus):
                 assert float(b.p[0]) == pytest.approx(p)
 
 
+@pytest.mark.parametrize("rescale", [False, True])
+def test_accepted_exchanges_rescale_the_gle_momenta(simulation, rescale):
+    """An accepted exchange keeps s^2 / kB T for the auxiliary momenta of a GLE
+    thermostat, which are mass-scaled with variance kB T."""
+    temperatures = [0.2, 0.4]
+    root = ET.fromstring(harmonic_input(thermostat="langevin"))
+    dynamics = root.find("system/motion/dynamics")
+    dynamics.remove(dynamics.find("thermostat"))
+    gle = ET.SubElement(dynamics, "thermostat", mode="gle")
+    ET.SubElement(gle, "A", shape="(2,2)").text = "[0.2, 1, -1, 0.2]"
+    second = copy.deepcopy(root.find("system"))
+    for system_input, temperature in zip([root.find("system"), second], temperatures):
+        temperature_input = system_input.find("ensemble/temperature")
+        temperature_input.attrib.clear()
+        temperature_input.text = str(temperature)
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        thermostats = [s.motion.thermostat for s in sim.syslist]
+        reduced = [
+            to_numpy(t.s)[1:] / np.sqrt(T) for t, T in zip(thermostats, temperatures)
+        ]
+        # First draw selects the exchange attempt; second accepts it.
+        attempts = iter([0.0, 0.0])
+
+        class Draws:
+            @property
+            def u(self):
+                return next(attempts)
+
+        remd = ReplicaExchange(krescale=rescale)
+        remd.bind(sim.syslist, Draws(), sim.output_maker)
+        remd.step(0)
+        np.testing.assert_array_equal(remd.repindex, [1, 0])
+        for t, T, s in zip(thermostats, temperatures[::-1], reduced):
+            np.testing.assert_allclose(to_numpy(t.s)[1:] / np.sqrt(T), s)
+
+
 def test_hamiltonian_weights_are_exchanged(simulation):
     """Exchanging the ensembles exchanges the scaling of the forces in the bias."""
     weights = [0.5, 1.0]

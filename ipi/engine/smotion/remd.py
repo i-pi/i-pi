@@ -181,9 +181,9 @@ class ReplicaExchange(Smotion):
                         verbosity.high,
                     )
 
-                    # if we have GLE thermostats, we also have to exchange rescale the s!!!
-                    gle_scale(sl[i], (tj / ti))
-                    gle_scale(sl[j], (ti / tj))
+                    # the momenta of GLE thermostats are mass-scaled, with variance kB T
+                    gle_scale(sl[i], np.sqrt(tj / ti))
+                    gle_scale(sl[j], np.sqrt(ti / tj))
 
                     t_eval -= time.time()
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
