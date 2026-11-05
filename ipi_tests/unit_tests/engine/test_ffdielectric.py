@@ -10,10 +10,13 @@ from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
 from ipi.engine.properties import Properties
 from ipi.inputs.forcefields import InputFFDielectric
 from ipi.utils.io.inputs.io_xml import xml_parse_string
+from ipi.utils.inputvalue import ArrayFromDict, InputValueFromDict
+from ipi.utils.units import unit_to_internal
 
 
 def _server_dielectric(**kwargs):
     """Create the smallest server-side dielectric wrapper for unit tests."""
+    electric_fields = kwargs.pop("electric_fields", [])
     return FFDielectric(
         name="dielectric",
         dipole={"family": "electric-dipole", "units": "atomic_unit", "key": "dipole"},
@@ -23,7 +26,7 @@ def _server_dielectric(**kwargs):
             "units": "atomic_unit",
             "key": "piezoelectric",
         },
-        electric_fields=[],
+        electric_fields=electric_fields,
         forcefield=ForceField(),
         **kwargs,
     )
@@ -75,6 +78,25 @@ def test_input_ffdielectric_parses_server_e_configuration():
     assert dielectric.forcefield.pes == "dummy"
 
 
+def test_response_extractors_round_trip_units_and_defaults():
+    extractor_type = InputValueFromDict.specialize("electric-dipole", "eang", "dipole")
+    extractor = extractor_type()
+    extractor.store({"family": "electric-dipole", "units": "eang", "key": "dipole"})
+    extractor._explicit = True
+    assert extractor.fetch() == {
+        "family": "electric-dipole",
+        "units": "eang",
+        "key": "dipole",
+    }
+
+    array = ArrayFromDict("electric-field", "V/ang", "field")
+    np.testing.assert_allclose(
+        array.get({"field": [1.0, 0.0, 0.0]}),
+        [unit_to_internal("electric-field", "V/ang", 1.0), 0.0, 0.0],
+    )
+    assert repr(array).startswith("ArrayFromDict(")
+
+
 def test_dielectric_applies_fixed_e_energy_force_and_virial():
     """Fixed E uses the driver dipole, BEC, and proper piezoelectric tensor."""
     dielectric = _server_dielectric()
@@ -118,6 +140,54 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
         properties["electric_displacement(dielectric)"][0],
         [2.0 + np.pi, 0.0, 0.0],
     )
+
+
+def test_dielectric_property_rejects_invalid_forcefield_names():
+    properties = Properties()
+    properties.simul = SimpleNamespace(fflist={})
+    properties._threadlock = threading.Lock()
+    with pytest.raises(ValueError, match="Specify the FFDielectric"):
+        properties.get_dielectric_electric_field()
+    with pytest.raises(ValueError, match="No forcefield named"):
+        properties.get_dielectric_electric_field("missing")
+
+    properties.simul.fflist["plain"] = ForceField()
+    with pytest.raises(ValueError, match="not an FFDielectric"):
+        properties.get_dielectric_electric_field("plain")
+
+
+def test_dielectric_field_evaluation_is_cached_and_sums_fields():
+    class Field:
+        def __init__(self, value):
+            self.value = np.asarray(value)
+            self.calls = 0
+
+        def get(self, time):
+            self.calls += 1
+            return self.value + time
+
+    first = Field([1.0, 0.0, 0.0])
+    second = Field([0.0, 2.0, 0.0])
+    dielectric = _server_dielectric(electric_fields=[first, second])
+    np.testing.assert_allclose(dielectric._evaluate_fields(0.5)[0], [2.0, 3.0, 1.0])
+    dielectric._evaluate_fields(0.5)
+    assert first.calls == second.calls == 1
+    np.testing.assert_allclose(dielectric._evaluate_fields(1.0)[0], [3.0, 4.0, 2.0])
+    assert first.calls == second.calls == 2
+    dielectric._field_cache = (np.array([1.0, 2.0, 3.0]), None)
+    np.testing.assert_allclose(dielectric.get_electric_field(), [1.0, 2.0, 3.0])
+
+
+def test_dielectric_field_configuration_errors():
+    dielectric = _server_dielectric()
+    with pytest.raises(ValueError, match="has no electric field"):
+        dielectric.get_electric_field()
+    with pytest.raises(ValueError, match="requires an electric_field"):
+        dielectric.apply_ensemble({"result": None})
+    with pytest.raises(NotImplementedError):
+        dielectric.update()
+    with pytest.raises(NotImplementedError):
+        dielectric.poll()
 
 
 def test_dielectric_expands_voigt_piezoelectric_tensor():

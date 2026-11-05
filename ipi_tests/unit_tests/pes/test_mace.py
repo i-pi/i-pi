@@ -9,7 +9,12 @@ from ase.io import read
 torch = pytest.importorskip("torch")
 pytest.importorskip("mace")
 
-from ipi.pes._mace import BatchedMACE, proper_dipole
+from ipi.pes._mace import (
+    BatchedMACE,
+    _normalize_dipole_shape,
+    compute_dielectric_gradients,
+    proper_dipole,
+)
 from ipi.pes.tools import ModelResults
 from mace.calculators import MACECalculator
 
@@ -98,3 +103,25 @@ def test_proper_dipole_is_symmetric_strain_corrected():
     strain[0, 1, 0] = 0.4
     corrected = proper_dipole(torch.as_tensor(dipole), torch.as_tensor(strain)).numpy()
     np.testing.assert_allclose(corrected[0], [0.4, 1.7, 3.0])
+
+
+def test_dielectric_gradient_helper_differentiates_each_dipole_component():
+    positions = torch.randn(2, 3, requires_grad=True)
+    strain = torch.randn(1, 3, 3, requires_grad=True)
+    dielectric = torch.stack(
+        (positions.sum() + strain.sum(), positions.square().sum() + strain.sum())
+    ).reshape(1, 2)
+    gradients = compute_dielectric_gradients(dielectric, [positions, strain])
+    assert gradients[0].shape == (2, 2, 3)
+    assert gradients[1].shape == (2, 1, 3, 3)
+    np.testing.assert_allclose(gradients[0][0], 1.0)
+
+
+def test_dielectric_response_shape_validation():
+    strain = torch.zeros(1, 3, 3)
+    normalized = _normalize_dipole_shape(torch.ones(1, 1, 3), strain)
+    assert normalized.shape == (1, 3)
+    with pytest.raises(ValueError, match="displacement"):
+        _normalize_dipole_shape(torch.ones(1, 3), torch.zeros(1, 2, 2))
+    with pytest.raises(ValueError, match="incompatible"):
+        _normalize_dipole_shape(torch.ones(2, 4), strain)
