@@ -611,6 +611,76 @@ def test_bulk_modulus_and_reference_volume_are_rejected_where_unused():
             input_baro.fetch()
 
 
+@pytest.mark.parametrize(
+    "hfix,expected",
+    [
+        ([], [3, 1, -1]),
+        (["offdiagonal"], [1, 1, 1]),
+        (["offdiagonal", "xx", "yy"], [0, 0, 1]),
+        (["xz", "yz"], [2, 0, 1]),
+        (["yy", "yz"], [3, 0, 0]),
+        (["zz"], [3, 1, 0]),
+    ],
+)
+def test_measure_term_of_the_cell(hfix, expected):
+    """L_kk is one plus the free elements of row k minus those of column k, for
+    the free diagonal elements (zero for the fixed ones)."""
+
+    barostat = BaroMTK(hfix=hfix)
+    np.testing.assert_array_equal(np.diag(to_numpy(barostat.L)), expected)
+
+
+def test_fixing_xz_alone_is_rejected():
+    with pytest.raises(ValueError, match="xz requires fixing xy or yz"):
+        BaroMTK(hfix=["xz"])
+
+
+CELL_METRIC = """import numpy as np
+from ipi.pes.dummy import Dummy_driver
+
+__DRIVER_CLASS__ = "CellMetric"
+
+class CellMetric(Dummy_driver):
+    def compute_structure(self, cell, pos):
+        dg = cell.T @ cell - 100.0 * np.eye(3)
+        return 0.005 * np.sum(dg**2), np.zeros_like(pos), -0.02 * cell @ dg @ cell.T, ""
+"""
+
+
+def test_conserved_quantity_with_fixed_cell_elements(simulation, tmp_path):
+    """Without thermostats, the conserved quantity of a flexible cell with the
+    off-diagonal elements fixed is conserved: its measure term follows hfix.
+    One free particle in a cell with U = (k/2) |h^T h - a0^2 I|^2."""
+
+    (tmp_path / "cell_metric.py").write_text(CELL_METRIC)
+    xml = f"""<simulation verbosity="quiet">
+      <total_steps>1000</total_steps>
+      <ffdirect name="metric"><pes>custom</pes><parameters>{{}}</parameters>
+        <pes_path>{tmp_path / "cell_metric.py"}</pes_path></ffdirect>
+      <system><forces><force forcefield="metric"/></forces>
+        <ensemble><temperature>1.0</temperature><pressure>0.0</pressure></ensemble>
+        <motion mode="dynamics"><fixcom>False</fixcom>
+          <dynamics mode="npt"><timestep>0.05</timestep>
+            <barostat mode="flexible"><tau>20</tau><hfix>[offdiagonal]</hfix>
+              <p shape="(3,3)">[4, 0, 0, 0, -6, 0, 0, 0, 2]</p></barostat>
+          </dynamics></motion>
+        <beads natoms="1" nbeads="1"><q shape="(1,3)">[1, 2, 3]</q>
+          <p shape="(1,3)">[0.5, -0.3, 0.2]</p><m shape="(1)">[1.0]</m>
+          <names shape="(1)">[H]</names></beads>
+        <cell shape="(3,3)">[10, 0, 0, 0, 10, 0, 0, 0, 10]</cell>
+      </system></simulation>"""
+
+    with simulation(xml) as sim:
+        system = sim.syslist[0]
+        econs, diagonal = [], []
+        for _ in range(200):
+            sim.run(steps=1, write_outputs=False)
+            econs.append(float(system.ensemble.econs))
+            diagonal.append(np.log(np.diag(to_numpy(system.cell.h))))
+    assert np.ptp(diagonal, axis=0).min() > 0.01
+    assert np.ptp(econs) < 1e-3
+
+
 def test_cell_propagators_match_power_series():
     """exp(+-v dt) and dt sinh(v dt)/(v dt) are correct both for cell velocities
     with zero diagonal (nilpotent) and with non-zero diagonal"""

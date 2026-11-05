@@ -871,6 +871,17 @@ class BaroFlexibleCell(Barostat):
     constants instead of 3 B: C11 - C12 for a tetragonal and C44 for a shear
     deformation of a cubic crystal.
 
+    The cell moves as dh/dt = v h, with v = p / m upper triangular and zero in
+    the elements fixed by `hfix`, so the dynamics conserves the measure of the
+    cells that is invariant under these transformations applied from the left.
+    The force kB T L on the diagonal of p turns it into V times the measure
+    invariant under the transformations applied from the right, i.e. under a
+    change of the vectors that describe the same lattice, which for the full
+    cell is the ensemble of Martyna, Tobias, Klein (1994). L_kk is one plus the
+    number of free elements in row k minus that in column k, e.g. (3, 1, -1)
+    for the full cell and (1, 1, 1) for a diagonal one. The free elements must
+    form a group, so xz cannot be fixed while xy and yz change.
+
     Depend objects:
        p: The momentum matrix associated with the cell degrees of freedom.
        p6: The independent elements of p: xx, yy, zz, xy, xz, yz.
@@ -932,12 +943,18 @@ class BaroFlexibleCell(Barostat):
             hfix = []
         self.hfix = hfix
         hmask = mask_from_fix(hfix)
+        free = np.triu(hmask)
+        if free[0, 1] and free[1, 2] and not free[0, 2]:
+            raise ValueError(
+                "Fixing the cell element xz requires fixing xy or yz too, as xz "
+                "changes when both xy and yz do."
+            )
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         self.hmask_ = depend_array(name="hmask", value=hmask)
-        # number of ones in the UT part of the mask
+        # the measure term of the free diagonal elements (see the class)
         self.L = xp.asarray(
-            np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
+            np.diag((free.sum(axis=1) - free.sum(axis=0) + 1) * np.diag(free))
         )
 
     def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
@@ -1018,7 +1035,7 @@ class BaroFlexibleCell(Barostat):
     def get_cell_jacobian(self):
         """Calculates the energy term that accounts for the size of the box."""
 
-        cj = sum((3 - i) * xp.log(self.cell.h[i, i]) for i in range(3))
+        cj = sum(self.L[i, i] * xp.log(self.cell.h[i, i]) for i in range(3))
         return -1.0 * Constants.kb * self.temp * cj
 
     def get_ebaro(self):
