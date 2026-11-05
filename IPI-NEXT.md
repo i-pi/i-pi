@@ -476,6 +476,11 @@ bugs pass, and are no longer marked.
   beads: it multiplied them by T_j / T_i, which assumes a mass proportional to T and does not hold with a
   `bulk_modulus`. The sampling was exact (the acceptance includes the kinetic energy of the cell), but the
   exchanges were accepted less often.
+- `h0` is rejected by the barostats other than `anisotropic`, which ignored it, as `v0` and `bulk_modulus` are
+  where unused; it is removed from the inputs that gave it to `isotropic` (22 examples and tests, with unchanged
+  outputs). The `inverse-pressure` unit, only used by `compressibility`, is removed. In the classical MD examples,
+  `NST_ensemble_MTKK_ice` (an NPT run with the flexible barostat) is renamed `NPT_ensemble_MTTK_ice`, the README
+  describes the folders that exist, and `NPT_ensemble_SCR_water` runs liquid water with stochastic cell rescaling.
 
 ## Status and work left
 
