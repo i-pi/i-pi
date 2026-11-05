@@ -485,7 +485,7 @@ def test_scr_pressure_force_volume_derivative(reference_system, coupling):
     # 114107 (2020), Eq. 7: F_lambda=2 sqrt(V)*(Pint-Pext+kBT/(2V)).
     s, r = reference_system(count=1)
     s.forces.ff["harmonic"].driver = VolumePolynomial(r.a, r.b, coupling)
-    barostat = BaroSCR(dt=0.02, temp=0.4, tau=2.0, pext=0.001, compressibility=0.3)
+    barostat = BaroSCR(dt=0.02, temp=0.4, tau=2.0, pext=0.001, bulk_modulus=3.0)
     barostat.bind(s.beads, s.nm, s.cell, s.forces, prng=Random(seed=17))
     virial = cell_strain_virial(
         lambda q, h: volume_polynomial(q, h, r.a, r.b, coupling)[0], r.q, r.h
