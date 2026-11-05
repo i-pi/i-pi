@@ -539,6 +539,10 @@ class Driver(DriverSocket):
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
+        if self.status & Status.NeedExtra:
+            self.sendextra(r.get("extra", ""))
+            self.get_status()
+
         if not (self.status & Status.Ready):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
