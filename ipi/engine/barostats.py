@@ -864,12 +864,21 @@ class BaroFlexibleCell(Barostat):
     the cell (`get_pot`, which depends on `pot_dependencies`) and the external
     stress (`external_stress`).
 
+    The mass of each element of the cell momentum is V B tau^2, a third of the
+    mass of the isotropic piston (as in Martyna, Tobias, Klein, 1994), so that
+    a uniform dilation of the cell oscillates as the volume of `BaroBZP`. The
+    other modes oscillate with frequencies set by the corresponding elastic
+    constants instead of 3 B: C11 - C12 for a tetragonal and C44 for a shear
+    deformation of a cubic crystal.
+
     Depend objects:
        p: The momentum matrix associated with the cell degrees of freedom.
        p6: The independent elements of p: xx, yy, zz, xy, xz, yz.
        m: The mass associated with the cell degree of freedom.
        m6: The masses of the elements of p6.
        hmask: The mask of the elements of the cell that can change.
+       bulk_modulus: The estimate of the bulk modulus, -1 for an ideal gas.
+       v0: The reference volume that sets the mass with a given bulk modulus.
     """
 
     def __init__(
@@ -882,6 +891,8 @@ class BaroFlexibleCell(Barostat):
         vol_constraint=None,
         p=None,
         hfix=None,
+        bulk_modulus=None,
+        v0=None,
     ):
         """Initializes the barostat (see `Barostat`).
 
@@ -889,9 +900,19 @@ class BaroFlexibleCell(Barostat):
            p: Optional initial cell momentum. Defaults to 0.
            hfix: Optional list of the elements of the cell that are kept fixed
               (see `mask_from_fix`).
+           bulk_modulus: Optional estimate of the bulk modulus, which sets the
+              mass of the cell. Defaults to that of an ideal gas.
+           v0: Optional reference volume for the mass of the cell. Defaults to
+              `reference_volume()` at bind.
         """
 
         super().__init__(dt, temp, tau, ebaro, thermostat, vol_constraint)
+
+        self.bulk_modulus_ = depend_value(
+            name="bulk_modulus",
+            value=-1.0 if bulk_modulus is None else bulk_modulus,
+        )
+        self.v0_ = depend_value(name="v0", value=-1.0 if v0 is None else v0)
 
         # non-zero elements of the cell momentum are only
         # pxx pyy pzz pxy pxz pyz, but we want to access it either as a
@@ -924,18 +945,13 @@ class BaroFlexibleCell(Barostat):
 
         super().bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
-        # obtain the thermostat mass from the given time constant (1/3 of what used for the corresponding NPT case)
-        # note that the barostat temperature is nbeads times the physical T
-
+        if self.v0 <= 0.0:
+            self.v0 = self.reference_volume()
         self.m_ = depend_array(
             name="m",
             value=xp.zeros(1),
-            func=(
-                lambda: xp.asarray(
-                    [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
-                )
-            ),
-            dependencies=[self.tau_, self.temp_],
+            func=self.get_m,
+            dependencies=[self.tau_, self.temp_, self.bulk_modulus_, self.v0_],
         )
 
         self.m6_ = depend_array(
@@ -977,6 +993,21 @@ class BaroFlexibleCell(Barostat):
                 self.thermostat.ethermo_,
             ],
         )
+
+    def reference_volume(self):
+        """Returns the default reference volume for the mass, that of the cell."""
+
+        return float(self.cell.V)
+
+    def get_m(self):
+        """Calculates the mass of the elements of the cell momentum, V B tau^2,
+        with V B = N kB T for an ideal gas (see the class and `BaroBZP.get_m`)."""
+
+        if self.bulk_modulus > 0.0:
+            vb = self.beads.nbeads * self.v0 * self.bulk_modulus
+        else:
+            vb = self.beads.natoms * Constants.kb * self.temp
+        return xp.asarray([self.tau**2 * vb])
 
     def get_3x3to6(self):
         return self.select6 @ self.p.reshape(9)
@@ -1056,7 +1087,7 @@ class BaroFlexibleCell(Barostat):
         self.cell.h = expq @ self.cell.h
 
 
-dproperties(BaroFlexibleCell, ["p", "m", "p6", "hmask", "m6"])
+dproperties(BaroFlexibleCell, ["p", "m", "p6", "hmask", "m6", "bulk_modulus", "v0"])
 
 
 class BaroRGB(BaroFlexibleCell):
@@ -1095,6 +1126,7 @@ class BaroRGB(BaroFlexibleCell):
         h0=None,
         p=None,
         hfix=None,
+        bulk_modulus=None,
     ):
         """Initializes RGB barostat.
 
@@ -1111,9 +1143,13 @@ class BaroRGB(BaroFlexibleCell):
         h0: Optional reference cell for the strain. Defaults to a unit cell.
         p: Optional initial cell momentum. Defaults to 0.
         hfix: Optional list of the elements of the cell that are kept fixed.
+        bulk_modulus: Optional estimate of the bulk modulus, which sets the mass
+        of the cell with the volume of the reference cell.
         """
 
-        super().__init__(dt, temp, tau, ebaro, thermostat, p=p, hfix=hfix)
+        super().__init__(
+            dt, temp, tau, ebaro, thermostat, p=p, hfix=hfix, bulk_modulus=bulk_modulus
+        )
 
         if h0 is not None:
             self.h0 = h0
@@ -1124,6 +1160,11 @@ class BaroRGB(BaroFlexibleCell):
             self.stressext = stressext
         else:
             self.stressext_[:] = -1.0
+
+    def reference_volume(self):
+        """Returns the reference volume for the mass, that of the reference cell."""
+
+        return float(self.h0.V)
 
     def pot_dependencies(self):
         """Returns the depend objects that the elastic energy depends on."""
@@ -1182,6 +1223,8 @@ class BaroMTK(BaroFlexibleCell):
         pext=None,
         p=None,
         hfix=None,
+        bulk_modulus=None,
+        v0=None,
     ):
         """Initializes MTK barostat.
 
@@ -1198,9 +1241,24 @@ class BaroMTK(BaroFlexibleCell):
         pext: Optional float giving the external pressure.
         p: Optional initial cell momentum. Defaults to 0.
         hfix: Optional list of the elements of the cell that are kept fixed.
+        bulk_modulus: Optional estimate of the bulk modulus, which sets the mass
+        of the cell.
+        v0: Optional reference volume for the mass of the cell. Defaults to the
+        volume of the cell at bind.
         """
 
-        super().__init__(dt, temp, tau, ebaro, thermostat, vol_constraint, p, hfix)
+        super().__init__(
+            dt,
+            temp,
+            tau,
+            ebaro,
+            thermostat,
+            vol_constraint,
+            p,
+            hfix,
+            bulk_modulus,
+            v0,
+        )
 
         if pext is not None:
             self.pext = pext

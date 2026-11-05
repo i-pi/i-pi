@@ -438,9 +438,14 @@ bugs pass, and are no longer marked.
   period of the volume oscillations is then about 2 pi tau / sqrt(3) for any material and temperature. With the
   default mass, as in Bussi, Zykova-Timan, Parrinello (2009), it is 2 pi tau / sqrt(3 B / (rho kB T)) (about
   1.6 tau for water and 0.2 tau for copper at 300 K), and scales as sqrt(T). Without `bulk_modulus` nothing
-  changes; the other barostats reject it. `v0` (a volume, like `h0` of the anisotropic barostat) defaults to the
-  volume of the cell at the first bind, and is written in restarts with `bulk_modulus`, so that they continue the
-  trajectory; it is rejected without a bulk modulus.
+  changes. `v0` (a volume, like `h0` of the anisotropic barostat) defaults to the volume of the cell at the first
+  bind, and is written in restarts with `bulk_modulus`, so that they continue the trajectory; it is rejected
+  without a bulk modulus.
+- `flexible` and `anisotropic` take it as well: each element of the cell momentum has the mass P V B tau^2 instead
+  of N kB (P T) tau^2 (a third of the isotropic mass, as in Martyna, Tobias, Klein 1994), with V = `v0` for
+  `flexible` and the volume of `h0` for `anisotropic`. A uniform dilation then oscillates as the isotropic volume;
+  tetragonal and shear deformations with frequencies set by C11 - C12 and C44 instead of 3 B (periods of 10.7 and
+  8.5 tau for copper, against 3.6 tau for the dilation). Only `dummy` rejects `bulk_modulus`.
 
 ## Status and work left
 
