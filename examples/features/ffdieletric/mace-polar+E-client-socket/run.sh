@@ -3,7 +3,7 @@ set -euo pipefail
 example_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "${example_dir}"
 assets_dir="../mace-polar+E-client"
-"${assets_dir}/download_mace_polar.sh"
+bash "${assets_dir}/download_mace_polar.sh"
 i-pi input.xml > log.i-pi 2>&1 &
 ipi_pid=$!
 sleep 1
