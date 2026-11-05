@@ -1043,6 +1043,28 @@ class BaroFlexibleCell(Barostat):
 
         return self.thermostat.ethermo + self.kin + self.pot + self.cell_jacobian
 
+    def kstress_mts(self, level):
+        """Calculates the kinetic stress tensor associated with the forces at a
+        MTS level, with all the elements that the cell velocity v exchanges with
+        the beads as q_c -> exp(v dt) q_c and p_c -> exp(-v dt) p_c: the sum of
+        -f (q - q_c)^T over the beads and atoms and, at the inner-most level,
+        nbeads p_c p_c^T / m over the atoms.
+        """
+
+        fall = self.mts_force(level)
+        if level == 0 and self.bias is not None:
+            fall = fall + self.bias.f
+
+        beads = self.beads
+        qqc = (beads.q - beads.qc).reshape(-1, 3)
+        kst = -(fall.reshape(-1, 3).T @ qqc)
+
+        if level == self.nmtslevels - 1:
+            pc = beads.pc.reshape(-1, 3)
+            kst = kst + (beads.nbeads * pc.T / beads.m) @ pc
+
+        return kst
+
     def pstep(self, level=0):
         """Propagates the momenta for half a time step."""
 
@@ -1051,11 +1073,11 @@ class BaroFlexibleCell(Barostat):
         dt3 = dt**3 / 3.0
 
         stress = self.stress_mts(level)
-        self.p_ += dt * (self.cell.V * xp.triu(stress))
+        dp = dt * (self.cell.V * xp.triu(stress))
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if level == self.nmtslevels - 1:
-            self.p_ += dt * (
+            dp = dp + dt * (
                 self.cell.V * xp.triu(-self.beads.nbeads * self.external_stress())
                 + Constants.kb * self.temp * self.L
             )
@@ -1069,13 +1091,20 @@ class BaroFlexibleCell(Barostat):
             )
             fcTonm = (fc / self.beads.m3[0].reshape(self.beads.natoms, 3)).T
 
-            self.p_ += (
-                xp.triu(dt2 * (fcTonm @ pc) + dt3 * (fcTonm @ fc)) * self.beads.nbeads
+            # the kinetic stress integrated over the kick p -> p + f t
+            fp = fcTonm @ pc
+            dp = dp + (
+                xp.triu(dt2 * 0.5 * (fp + fp.T) + dt3 * (fcTonm @ fc))
+                * self.beads.nbeads
             )
 
-        # applies the mask of the fixed cell elements and the volume constraint,
-        # and accumulates the change of kinetic energy in the energy of the
-        # thermostat, so that the conserved quantity is unchanged
+        # the fixed cell elements receive no momentum from the stress
+        self.p_ += dp * self.hmask
+
+        # applies the mask of the fixed cell elements to the momentum from the
+        # thermostat, and the volume constraint, and accumulates the change of
+        # kinetic energy in the energy of the thermostat, so that the conserved
+        # quantity is unchanged
         if len(self.hfix) > 0 or self.vol_constraint is True:
             self.thermostat.ethermo += self.kin
             self.p_ *= self.hmask

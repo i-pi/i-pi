@@ -457,6 +457,15 @@ bugs pass, and are no longer marked.
   which includes the factor V of the fixed centre of mass that i-PI also drops in the isotropic barostat. The
   conserved quantity used (3, 2, 1) whatever `hfix`, so it was not conserved with fixed elements (e.g.
   `offdiagonal`); it now uses L. Fixing xz while xy and yz are free raises an error, as xz changes anyway.
+- The stress that drives the momentum of the flexible and anisotropic cells (`BaroFlexibleCell.kstress_mts`) lacked
+  the off-diagonal kinetic stress sum_i p_i p_i^T / m_i, and had the transpose of the centroid-virial term, while
+  the cell velocity v moves the centroids as q -> exp(v dt) q and p -> exp(-v dt) p. With free off-diagonal elements
+  the conserved quantity drifted, by an amount independent of dt (also with one bead); the integral of the kinetic
+  stress over the force kick is now symmetric too. The fixed elements of the cell no longer receive momentum from
+  the stress: it was added and then removed by the mask, with its kinetic energy booked in the energy of the
+  thermostat, a drift of the conserved quantity of O(dt) (+7.8 over 100 steps in `gas-npzt-PV`, whose
+  references now hold the conserved quantity of the new runs; every other output is unchanged). The isotropic
+  barostats, which use the trace of the stress, and the outputs are unchanged.
 
 ## Status and work left
 
