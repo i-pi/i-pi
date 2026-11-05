@@ -446,6 +446,17 @@ bugs pass, and are no longer marked.
   `flexible` and the volume of `h0` for `anisotropic`. A uniform dilation then oscillates as the isotropic volume;
   tetragonal and shear deformations with frequencies set by C11 - C12 and C44 instead of 3 B (periods of 10.7 and
   8.5 tau for copper, against 3.6 tau for the dilation). Only `dummy` rejects `bulk_modulus`.
+- The measure term kB T L of the flexible and anisotropic barostats (`BaroFlexibleCell.L`) had L_kk equal to the
+  number of free elements in row k of the cell, (3, 2, 1) for the full cell. As the cell moves as dh/dt = v h,
+  this sampled a uniform measure in the free elements of h, which is not invariant under a change of the vectors
+  that describe the lattice: with a cell energy symmetric in a, b and c (a toy model with 5% strain fluctuations)
+  <|a|> < <|b|> < <|c|> by 0.25%, an O(1/N) effect. L_kk is now one plus the free elements of row k minus those of
+  column k, which samples V times the right-invariant measure of the cell transformations: (3, 1, -1) for the full
+  cell, the ensemble of Martyna, Tobias, Klein (1994); unchanged for diagonal cells and for NPzT. Checked against
+  exact Monte Carlo for the full cell and for two mixed masks. Raiteri, Gale, Bussi (2011) use 2 kB T (3, 2, 1),
+  which includes the factor V of the fixed centre of mass that i-PI also drops in the isotropic barostat. The
+  conserved quantity used (3, 2, 1) whatever `hfix`, so it was not conserved with fixed elements (e.g.
+  `offdiagonal`); it now uses L. Fixing xz while xy and yz are free raises an error, as xz changes anyway.
 
 ## Status and work left
 
