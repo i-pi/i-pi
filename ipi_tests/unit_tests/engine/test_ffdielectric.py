@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
+from ipi.engine.forcefields import FFDielectric, FFDirect, ForceField, ForceRequest
+from ipi.engine.motion.driven_dynamics import PythonVectorField
 from ipi.engine.properties import Properties
 from ipi.inputs.forcefields import InputFFDielectric
 from ipi.utils.io.inputs.io_xml import xml_parse_string
@@ -17,6 +18,7 @@ from ipi.utils.units import unit_to_internal
 def _server_dielectric(**kwargs):
     """Create the smallest server-side dielectric wrapper for unit tests."""
     electric_fields = kwargs.pop("electric_fields", [])
+    forcefield = kwargs.pop("forcefield", ForceField())
     return FFDielectric(
         name="dielectric",
         dipole={"family": "electric-dipole", "units": "atomic_unit", "key": "dipole"},
@@ -27,7 +29,7 @@ def _server_dielectric(**kwargs):
             "key": "piezoelectric",
         },
         electric_fields=electric_fields,
-        forcefield=ForceField(),
+        forcefield=forcefield,
         **kwargs,
     )
 
@@ -78,6 +80,26 @@ def test_input_ffdielectric_parses_server_e_configuration():
     assert dielectric.forcefield.pes == "dummy"
 
 
+def test_input_ffdielectric_store_round_trip():
+    field = PythonVectorField(
+        file="",
+        name="static",
+        family="electric-field",
+        units="atomic_unit",
+        parameters={"amplitude": [0.0, 0.0, 1.0]},
+    )
+    dielectric = _server_dielectric(
+        electric_fields=[field], forcefield=FFDirect(pes="dummy")
+    )
+    input_ff = InputFFDielectric()
+    input_ff.store(dielectric)
+    restored = input_ff.fetch()
+    assert restored.name == dielectric.name
+    assert restored.where == "server"
+    assert restored.forcefield.pes == "dummy"
+    assert restored.electric_fields[0].name == "static"
+
+
 def test_response_extractors_round_trip_units_and_defaults():
     extractor_type = InputValueFromDict.specialize("electric-dipole", "eang", "dipole")
     extractor = extractor_type()
@@ -93,6 +115,10 @@ def test_response_extractors_round_trip_units_and_defaults():
     np.testing.assert_allclose(
         array.get({"field": [1.0, 0.0, 0.0]}),
         [unit_to_internal("electric-field", "V/ang", 1.0), 0.0, 0.0],
+    )
+    np.testing.assert_allclose(
+        array.get({}, default=[0.0, 1.0, 0.0]),
+        unit_to_internal("electric-field", "V/ang", np.array([0.0, 1.0, 0.0])),
     )
     assert repr(array).startswith("ArrayFromDict(")
 
