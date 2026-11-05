@@ -125,7 +125,7 @@ class InputBaro(Input):
             {
                 "default": input_default(factory=np.zeros, args=(0, str)),
                 "dtype": str,
-                "help": "A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz). 'offdiagonal' is an alias for xy, xz, yz.",
+                "help": "A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz), whose velocity is set to zero. 'offdiagonal' is an alias for xy, xz, yz. xz can only be fixed together with xy or yz, as otherwise it changes when both of them do.",
             },
         ),
         "vol_constraint": (
