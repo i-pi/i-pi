@@ -924,21 +924,31 @@ with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as 
 Note that in a *NPT* simulation, we have two thermostats, one applied to the nuclear degrees of freedom and one 
 applied to the volume degrees of freedom.
 
+The mass of the piston is :math:`3 N k_B T \tau^2`, as in the original barostat.
+The period of the volume oscillations is then about :math:`2\pi\tau/\sqrt{3}`
+for an ideal gas, but shorter by :math:`\sqrt{B/\rho k_B T}` for a material of
+bulk modulus :math:`B` and atomic density :math:`\rho`: about :math:`1.6\tau`
+for water and :math:`0.2\tau` for a metal at room temperature, and shorter at
+lower temperatures. Giving an estimate of the bulk modulus, e.g.
+``<bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>`` for water, sets the
+mass to :math:`3 V B \tau^2` instead, so that the period is about
+:math:`3.6\tau` for any material and temperature.
+
 For classical simulations of liquids, the Bernetti--Bussi stochastic
 cell-rescaling barostat :cite:`bern-buss20jcp` is available as an alternative.
-It requires an estimate of the isothermal compressibility but does not use a
+It requires an estimate of the isothermal bulk modulus but does not use a
 separate cell thermostat:
 
 .. code-block:: xml
 
    <barostat mode='stochastic-rescaling'>
       <tau units='femtosecond'> 1000 </tau>
-      <compressibility units='bar^-1'> 4.5e-5 </compressibility>
+      <bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>
    </barostat>
 
 The implementation uses the standard NPT Trotter integrator with instantaneous
 kinetic pressure. It currently supports classical, one-bead simulations. The
-compressibility controls the relaxation rate and must be supplied for the
+bulk modulus controls the relaxation rate and must be supplied for the
 material and thermodynamic state being simulated.
 
 Initialization from RESTART
