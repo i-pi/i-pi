@@ -50,8 +50,9 @@ class InputDynamics(InputDictionary):
                 "default": "nve",
                 "help": """The ensemble that will be sampled during the simulation.
                 nve: constant-energy-volume; nvt: constant-temperature-volume;
-                npt: constant-temperature-pressure(isotropic); nst: constant-temperature-stress(anisotropic);
-                sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT;
+                npt: constant-temperature-pressure, with the 'isotropic', 'flexible' or 'stochastic-rescaling' barostat;
+                nst: constant-temperature-stress, with the 'anisotropic' barostat;
+                sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT, with the 'sc-isotropic' barostat;
                 nvt-cc: constrained-centroid NVT;
                  """,
                 "options": [

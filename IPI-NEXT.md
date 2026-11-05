@@ -483,6 +483,10 @@ bugs pass, and are no longer marked.
   outputs). The `inverse-pressure` unit, only used by `compressibility`, is removed. In the classical MD examples,
   `NST_ensemble_MTKK_ice` (an NPT run with the flexible barostat) is renamed `NPT_ensemble_MTTK_ice`, the README
   describes the folders that exist, and `NPT_ensemble_SCR_water` runs liquid water with stochastic cell rescaling.
+- The barostats' `bind` no longer takes `fixdof`, nor `Barostat` an `nmts` argument: neither was used (`fixdof` set
+  an unused `mdof`). The help of the barostat inputs gives the masses once (`bulk_modulus`) and the periods once
+  (`tau`), the momentum `p` its shape for each mode, the ensemble `stress` its sign, and the dynamics modes the
+  barostats they take.
 
 ## Status and work left
 
