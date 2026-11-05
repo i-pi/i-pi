@@ -2605,6 +2605,7 @@ class FFDielectric(ForceField):
         self._field_cache_lock = threading.Lock()
         self._field_cache_time = None
         self._field_cache = (None, None)
+        self._electric_field_request_cache = None
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2658,7 +2659,7 @@ class FFDielectric(ForceField):
     def get_electric_displacement(self):
         """Return ``E + 4 pi mu / Omega`` from the latest fixed-E request."""
         with self._field_cache_lock:
-            request = getattr(self, "_electric_field_request_cache", None)
+            request = self._electric_field_request_cache
             if request is None:
                 raise RuntimeError(
                     "The electric displacement for FFDielectric "
@@ -2740,7 +2741,7 @@ class FFDielectric(ForceField):
         driver must return an ``applied_fields`` feedback dictionary in its
         extras. Missing diagnostic data does not stop client-side dynamics.
         """
-        if "electric_field" not in request and "Dfield" not in request:
+        if "electric_field" not in request:
             return False
 
         extras = request["result"][3]
@@ -2757,8 +2758,6 @@ class FFDielectric(ForceField):
             )
 
         missing_diagnostics = [self.dipole.key]
-        if "Dfield" in request:
-            missing_diagnostics.append(self.epsilon_infinity.key)
         missing_diagnostics = [key for key in missing_diagnostics if key not in extras]
         if missing_diagnostics:
             warning(
@@ -2806,9 +2805,8 @@ class FFDielectric(ForceField):
         """
         Apply fields whose equations of motion are implemented in i-PI.
 
-        Electric displacement is already carried by the request so that a
-        future fixed-D implementation can be added here without changing the
-        input or driver protocol.
+        Electric displacement is derived from the applied electric field and
+        the returned dipole when it is requested as an output property.
         """
         if "electric_field" not in request:
             raise ValueError("FFDielectric requires an electric_field request value")
@@ -2895,118 +2893,6 @@ class FFDielectric(ForceField):
             )
         return tensor
 
-    @staticmethod
-    def _coerce_epsilon_infinity(epsilon_infinity: np.ndarray) -> np.ndarray:
-        """Return a symmetric dielectric tensor from Cartesian or Voigt data."""
-        epsilon_infinity = np.asarray(epsilon_infinity)
-        if epsilon_infinity.shape == (6,):
-            tensor = np.array(
-                [
-                    [
-                        epsilon_infinity[0],
-                        epsilon_infinity[5],
-                        epsilon_infinity[4],
-                    ],
-                    [
-                        epsilon_infinity[5],
-                        epsilon_infinity[1],
-                        epsilon_infinity[3],
-                    ],
-                    [
-                        epsilon_infinity[4],
-                        epsilon_infinity[3],
-                        epsilon_infinity[2],
-                    ],
-                ]
-            )
-        elif epsilon_infinity.shape == (3, 3):
-            tensor = epsilon_infinity
-        else:
-            raise ValueError(
-                "The epsilon_infinity tensor must have shape (3, 3) or six "
-                "Voigt components in order (xx, yy, zz, yz, xz, xy), got "
-                f"{epsilon_infinity.shape}."
-            )
-
-        if not np.allclose(tensor, tensor.T):
-            nonsymmetric_norm = np.linalg.norm(tensor - tensor.T)
-            raise ValueError(
-                "The epsilon_infinity tensor must be symmetric; the norm of "
-                "its nonsymmetric part is "
-                f"{nonsymmetric_norm:.6e}."
-            )
-        return tensor
-
-    def fixed_D(self, request: dict):
-        """Apply the constant-Cartesian-electric-displacement ensemble.
-
-        The driver supplies zero-field energy, forces, stress, dipole, Born
-        effective charges, proper piezoelectric tensor, and the clamped-ion
-        dielectric tensor. The latter is assumed to be constant with respect
-        to nuclear positions and strain.
-        """
-        u, f, v, x = request["result"]
-
-        dipole = self.dipole.get(x)
-        natoms = np.asarray(f).reshape((-1, 3)).shape[0]
-        Z = self.bec.get(x).reshape((natoms, 3, 3))
-        e = self._coerce_piezoelectric_tensor(self.piezo.get(x, np.zeros((3, 3, 3))))
-        epsilon_infinity = self._coerce_epsilon_infinity(self.epsilon_infinity.get(x))
-        cell = request["cell"][0]
-        volume = np.linalg.det(cell)
-        displacement_mismatch = self._displacement_field(request, dipole)
-        self._cache_displacement_field(request, dipole)
-        try:
-            electric_field = np.linalg.solve(epsilon_infinity, displacement_mismatch)
-        except np.linalg.LinAlgError as error:
-            raise ValueError(
-                "The epsilon_infinity tensor must be nonsingular for the "
-                "constant-D ensemble."
-            ) from error
-
-        u += volume * displacement_mismatch @ electric_field / (8.0 * np.pi)
-        f += np.einsum("ijk,j->ik", Z, electric_field).flatten()
-
-        ve = volume * np.einsum("ijk,i->jk", e, electric_field)
-        if not np.allclose(ve, ve.T):
-            nonsymmetric_norm = np.linalg.norm(ve - ve.T)
-            raise ValueError(
-                "The electric-displacement-induced virial is not symmetric: "
-                "the norm of its nonsymmetric part is "
-                f"{nonsymmetric_norm:.6e}."
-            )
-        v += ve
-
-        return u, f, v, x
-
-    def _displacement_field(self, request: dict, dipole=None) -> np.ndarray:
-        """Return the fixed-D field quantity ``D - 4 pi mu / Omega``."""
-        Dfield = np.asarray(request["Dfield"])
-        if Dfield.shape != (3,):
-            raise ValueError(f"'Dfield' must have shape (3,), got {Dfield.shape}.")
-
-        if dipole is None:
-            dipole = self.dipole.get(request["result"][3])
-        cell = request["cell"][0]
-        volume = np.linalg.det(cell)
-        return Dfield - 4.0 * np.pi * dipole / volume
-
-    def _cache_displacement_field(self, request: dict, dipole=None) -> None:
-        """Save the fixed-D field quantity for the ``electric_field`` property."""
-        extras = request["result"][3]
-        applied_fields = extras.get("applied_fields", {})
-        displacement_field = (
-            applied_fields.get("electric_field")
-            if isinstance(applied_fields, dict)
-            else None
-        )
-        if displacement_field is None:
-            displacement_field = self._displacement_field(request, dipole)
-        else:
-            displacement_field = np.asarray(displacement_field)
-        with self._field_cache_lock:
-            self._displacement_field_cache = displacement_field.copy()
-
     def _electric_displacement_from_field(self, request: dict) -> np.ndarray:
         """Return the displacement ``E + 4 pi mu / Omega``."""
         extras = request["result"][3]
@@ -3041,17 +2927,11 @@ class FFDielectric(ForceField):
         volume = np.linalg.det(request["cell"][0])
         polarization = 4.0 * np.pi * dipole / volume
 
-        if "electric_field" in request:
-            electric_field = np.asarray(request["electric_field"])
-            displacement_field = electric_field + polarization
-            effective_electric_field = electric_field
-        else:
-            displacement_field = np.asarray(request["Dfield"])
-            electric_field = displacement_field - polarization
-            epsilon_infinity = self._coerce_epsilon_infinity(
-                self.epsilon_infinity.get(extras)
-            )
-            effective_electric_field = np.linalg.solve(epsilon_infinity, electric_field)
+        if "electric_field" not in request:
+            raise ValueError("FFDielectric client feedback requires electric_field")
+        electric_field = np.asarray(request["electric_field"])
+        displacement_field = electric_field + polarization
+        effective_electric_field = electric_field
 
         return {
             "electric_field": electric_field,

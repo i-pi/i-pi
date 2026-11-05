@@ -6,8 +6,6 @@ This directory contains MACE-POLAR water examples:
 |---|---|---|
 | `mace-polar+E-server` | static | i-PI, using response tensors from MACE |
 | `mace-polar+E-client` | static | MACE, after receiving `electric_field` from i-PI |
-| `mace-polar+D-server` | static electric displacement | i-PI, using response tensors and ε∞ from MACE/default JSON |
-| `mace-polar+D-client` | static electric displacement | MACE, after receiving `Dfield` from i-PI |
 | `mace-polar+E-resonant-server` | resonant plane wave | i-PI, using response tensors from MACE |
 | `mace-polar+E-resonant-client` | resonant plane wave | MACE, after receiving `electric_field` from i-PI |
 | `mace-polar+E-ramp-server` | periodic triangular ramp | i-PI, using response tensors from MACE |
@@ -20,8 +18,7 @@ examples reuse the corresponding client example's model assets and launch
 `i-pi-py_driver`; its `requires_extra=true` parameter makes it advertise the
 opt-in `NEEDEXTRA` capability.
 
-All example fields and field-related properties use `V/ang`. The constant-D
-examples use an amplitude of `0.01 V/ang`.
+All example fields and field-related properties use `V/ang`.
 
 FFDielectric requires unwrapped atomic coordinates and rejects a wrapped force
 field configured with `pbc='True'`. The simulation cell and periodic boundary
@@ -46,17 +43,14 @@ field. All vectors are in atomic units:
 }
 ```
 
-Here electric_field is D - 4 pi mu / Omega for fixed D and the applied E for
-fixed E. displacement_field is D for fixed D and E + 4 pi mu / Omega for
-fixed E. effective_electric_field is the field used in the force:
-epsilon_infinity^-1 @ electric_field for fixed D and E for fixed E. Fixed-D
-clients should also return epsilon_infinity. When the dipole, and (for fixed
-D) epsilon_infinity, are available, i-PI recalculates and validates all three
-vectors and stops with an error if they are incomplete or inconsistent. If
-these diagnostic values are absent, client-side dynamics continues but i-PI
-prints a warning requesting them for validation; the mandatory
-`applied_fields` dictionary may then contain only the field the client
-received.
+Here `electric_field` is the field received from i-PI,
+`displacement_field` is `electric_field + 4 pi mu / Omega`, and
+`effective_electric_field` is the field used in the force. When the dipole is
+available, i-PI recalculates and validates all three vectors and stops with an
+error if they are incomplete or inconsistent. If the diagnostic dipole is
+absent, client-side dynamics continues but i-PI prints a warning requesting it
+for validation; the mandatory `applied_fields` dictionary may then contain
+only the field the client received.
 
 ## Response tensors
 
@@ -80,23 +74,12 @@ The default keys, shapes, axes, and units are:
 | `dipole` | `(3,)` | dipole component `i` | `eang` |
 | `BEC` | `(natoms, 3, 3)` | atom `a`, dipole `i`, displacement `j` | `e` |
 | `piezoelectric` | `(3, 3, 3)` or `(3, 6)` | dipole `i`, strain `j`, strain `k` | `e/ang2` |
-| `epsilon_infinity` | `(3, 3)` or `(6,)` | dielectric Cartesian axes | dimensionless |
 
 The server-side examples in this branch use the base `mace` driver. With
 `compute_BEC: true` in `mace_kwargs.json`, that driver computes both the Born
 effective charges and the proper piezoelectric tensor by automatic
 differentiation. Client-side field coupling and `extmace` belong to a later
 branch.
-
-If a MACE model does not return `epsilon_infinity`, a later fixed-D extension
-can send a constant default from its `mace_kwargs` JSON file:
-
-```json
-{"instructions": {"epsilon_infinity": [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]}}
-```
-
-The constant-D example uses a Cartesian `Dfield`; it therefore does not add the
-Maxwell stress associated with Stengel's fixed reduced displacement.
 
 Equivalently,
 
@@ -133,15 +116,9 @@ The default extractors may be written explicitly as
 <dipole units="eang"   key="dipole" />
 <bec    units="e"      key="BEC" />
 <piezo  units="e/ang2" key="piezoelectric" />
-<epsilon_infinity key="epsilon_infinity" />
 ```
 
 These lines can be omitted when the driver uses the default keys and units.
-
-For a fixed-displacement calculation, the `electric_field(ffdielectric_name)`
-property reports the unscreened field quantity `D - 4 pi mu / Omega`, in the
-requested electric-field units. The field entering the Born-charge force is
-obtained afterwards as `epsilon_infinity^-1 @ electric_field`.
 
 Conversely, with a fixed electric field,
 `electric_displacement(ffdielectric_name)` reports
