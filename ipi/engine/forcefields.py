@@ -2601,7 +2601,6 @@ class FFDielectric(ForceField):
         self._field_cache_lock = threading.Lock()
         self._field_cache_time = None
         self._field_cache = (None, None)
-        self._electric_field_request_cache = None
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2651,17 +2650,6 @@ class FFDielectric(ForceField):
     def get_electric_field(self):
         """Return the configured electric field."""
         return self._get_cached_vector_field(0, "electric field", self.electric_fields)
-
-    def get_electric_displacement(self):
-        """Return ``E + 4 pi mu / Omega`` from the latest fixed-E request."""
-        with self._field_cache_lock:
-            request = self._electric_field_request_cache
-            if request is None:
-                raise RuntimeError(
-                    "The electric displacement for FFDielectric "
-                    f"'{self.name}' has not been evaluated yet."
-                )
-            return self._electric_displacement_from_field(request).copy()
 
     @staticmethod
     def _sum_vector_fields(fields, actual_time):
@@ -2733,8 +2721,7 @@ class FFDielectric(ForceField):
         """
         Apply fields whose equations of motion are implemented in i-PI.
 
-        Electric displacement is derived from the applied electric field and
-        the returned dipole when it is requested as an output property.
+        The electric field is applied to the energy, forces, and virial.
         """
         if "electric_field" not in request:
             raise ValueError("FFDielectric requires an electric_field request value")
@@ -2781,8 +2768,6 @@ class FFDielectric(ForceField):
             )
         v += ve
 
-        self._cache_electric_field_request(request)
-
         return u, f, v, x
 
     @staticmethod
@@ -2820,30 +2805,3 @@ class FFDielectric(ForceField):
                 f"{nonsymmetric_norm:.6e}."
             )
         return tensor
-
-    def _electric_displacement_from_field(self, request: dict) -> np.ndarray:
-        """Return the displacement ``E + 4 pi mu / Omega``."""
-        extras = request["result"][3]
-        applied_fields = extras.get("applied_fields", {})
-        electric_displacement = (
-            applied_fields.get("displacement_field")
-            if isinstance(applied_fields, dict)
-            else None
-        )
-        if electric_displacement is not None:
-            return np.asarray(electric_displacement)
-
-        electric_field = np.asarray(request["electric_field"])
-        if electric_field.shape != (3,):
-            raise ValueError(
-                "'electric_field' must have shape (3,), got " f"{electric_field.shape}."
-            )
-
-        dipole = self.dipole.get(extras)
-        volume = np.linalg.det(request["cell"][0])
-        return electric_field + 4.0 * np.pi * dipole / volume
-
-    def _cache_electric_field_request(self, request: dict) -> None:
-        """Remember a fixed-E result for the electric-displacement property."""
-        with self._field_cache_lock:
-            self._electric_field_request_cache = request

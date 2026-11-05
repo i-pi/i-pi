@@ -36,21 +36,12 @@ field. All vectors are in atomic units:
 {
   "dipole": [0.0, 0.0, 0.0],
   "applied_fields": {
-    "electric_field": [0.0, 0.0, 0.0],
-    "displacement_field": [0.0, 0.0, 0.0],
-    "effective_electric_field": [0.0, 0.0, 0.0]
+    "electric_field": [0.0, 0.0, 0.0]
   }
 }
 ```
 
-Here `electric_field` is the field received from i-PI,
-`displacement_field` is `electric_field + 4 pi mu / Omega`, and
-`effective_electric_field` is the field used in the force. When the dipole is
-available, i-PI recalculates and validates all three vectors and stops with an
-error if they are incomplete or inconsistent. If the diagnostic dipole is
-absent, client-side dynamics continues but i-PI prints a warning requesting it
-for validation; the mandatory `applied_fields` dictionary may then contain
-only the field the client received.
+Here `electric_field` is the field received from i-PI and used by the client.
 
 ## Response tensors
 
@@ -120,9 +111,6 @@ The default extractors may be written explicitly as
 
 These lines can be omitted when the driver uses the default keys and units.
 
-Conversely, with a fixed electric field,
-`electric_displacement(ffdielectric_name)` reports
-`E + 4 pi mu / Omega`.
 
 ## Comparison with driven dynamics
 
