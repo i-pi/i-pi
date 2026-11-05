@@ -32,8 +32,8 @@ class InputBaro(Input):
     Fields:
        thermostat: A thermostat object giving the cell thermostat.
        tau: The time constant associated with the dynamics of the piston.
-       compressibility: The isothermal compressibility used by stochastic
-          cell rescaling.
+       bulk_modulus: An estimate of the bulk modulus, for stochastic cell
+          rescaling and the mass of the isotropic pistons.
        ebaro: The accumulated stochastic cell-rescaling effective-energy
           correction.
        p: The conjugate momentum to the volume degree of freedom.
@@ -45,7 +45,7 @@ class InputBaro(Input):
             {
                 "dtype": str,
                 "default": "dummy",
-                "help": """The type of barostat. 'isotropic' implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889] that isotropically scales the volume while sampling the isothermal isobaric ensemble. The implementation details are given in [doi:10.1016/j.cpc.2013.10.027]. This barostat is suitable for simulating liquids. 'stochastic-rescaling' implements the Bernetti-Bussi stochastic cell-rescaling barostat [doi:10.1063/5.0020514] for classical dynamics. It requires an estimate of the isothermal compressibility and uses the reversible Trotter scheme with instantaneous kinetic pressure. 'sc-isotropic' implements the Bussi-Zykova-Parrinello barostat for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297] and should only be used with the Suzuki-Chin NPT ensemble. 'flexible' implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat which incorporates full cell fluctuations while sampling the isothermal isobaric ensemble [doi:10.1063/1.478193]. This is suitable for anisotropic systems such as molecular solids. 'anisotropic' implements the Raiteri-Gale-Bussi barostat which enables cell fluctuations at constant external stress [10.1088/0953-8984/23/33/334213]. It is suitable for simulating solids at given external (non-diagonal) stresses and requires specifying a reference cell for estimating strain. Note that this ensemble is valid only within the elastic limit of small strains. For diagonal stresses (or external pressures) the 'flexible' and the 'anisotropic' modes should give very similar results. 'dummy' barostat does not do anything.""",
+                "help": """The type of barostat. 'isotropic' implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889] that isotropically scales the volume while sampling the isothermal isobaric ensemble. The implementation details are given in [doi:10.1016/j.cpc.2013.10.027]. This barostat is suitable for simulating liquids. 'stochastic-rescaling' implements the Bernetti-Bussi stochastic cell-rescaling barostat [doi:10.1063/5.0020514] for classical dynamics. It requires an estimate of the bulk modulus and uses the reversible Trotter scheme with instantaneous kinetic pressure. 'sc-isotropic' implements the Bussi-Zykova-Parrinello barostat for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297] and should only be used with the Suzuki-Chin NPT ensemble. 'flexible' implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat which incorporates full cell fluctuations while sampling the isothermal isobaric ensemble [doi:10.1063/1.478193]. This is suitable for anisotropic systems such as molecular solids. 'anisotropic' implements the Raiteri-Gale-Bussi barostat which enables cell fluctuations at constant external stress [10.1088/0953-8984/23/33/334213]. It is suitable for simulating solids at given external (non-diagonal) stresses and requires specifying a reference cell for estimating strain. Note that this ensemble is valid only within the elastic limit of small strains. For diagonal stresses (or external pressures) the 'flexible' and the 'anisotropic' modes should give very similar results. 'dummy' barostat does not do anything.""",
                 "options": [
                     "dummy",
                     "isotropic",
@@ -71,16 +71,16 @@ class InputBaro(Input):
                 "default": 1.0,
                 "dtype": float,
                 "dimension": "time",
-                "help": "The time constant associated with the dynamics of the piston.",
+                "help": "The time constant associated with the dynamics of the piston. For 'stochastic-rescaling' it is the relaxation time of the volume. For 'isotropic' and 'sc-isotropic' the mass of the piston is 3 N kB T tau^2, and the period of the volume oscillations is about 2 pi tau / sqrt(3) for an ideal gas, and shorter by sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho: about 1.6 tau for water and 0.2 tau for copper at 300 K. Giving bulk_modulus makes it about 3.6 tau for any material and temperature.",
             },
         ),
-        "compressibility": (
+        "bulk_modulus": (
             InputValue,
             {
                 "default": -1.0,
                 "dtype": float,
-                "dimension": "inverse-pressure",
-                "help": "The isothermal compressibility used by stochastic cell rescaling. This estimate controls the size of volume fluctuations and must be specified explicitly for the 'stochastic-rescaling' mode.",
+                "dimension": "pressure",
+                "help": "An estimate of the isothermal bulk modulus of the system. It must be given for the 'stochastic-rescaling' mode, where it sets the size of the volume moves. For 'isotropic' and 'sc-isotropic' it sets the mass of the piston to 3 V B tau^2, with V the initial volume, so that tau sets the period of the volume oscillations for any material and temperature; if it is not given, the mass is 3 N kB T tau^2, the value for an ideal gas. Only the dynamics depend on it, not the ensemble that is sampled.",
             },
         ),
         "ebaro": (
@@ -143,14 +143,18 @@ class InputBaro(Input):
         self.tau.store(baro.tau)
         if type(baro) is BaroSCR:
             self.mode.store("stochastic-rescaling")
-            self.compressibility.store(baro.compressibility)
+            self.bulk_modulus.store(baro.bulk_modulus)
             self.ebaro.store(baro.ebaro)
         elif type(baro) is BaroBZP:
             self.mode.store("isotropic")
             self.p.store(baro.p)
+            if baro.bulk_modulus > 0.0:
+                self.bulk_modulus.store(baro.bulk_modulus)
         elif type(baro) is BaroSCBZP:
             self.mode.store("sc-isotropic")
             self.p.store(baro.p)
+            if baro.bulk_modulus > 0.0:
+                self.bulk_modulus.store(baro.bulk_modulus)
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
@@ -189,6 +193,16 @@ class InputBaro(Input):
             raise ValueError(
                 "Diagonal cell entries cannot be fixed while constraining the volume."
             )
+        if self.bulk_modulus._explicit and self.mode.fetch() not in (
+            "stochastic-rescaling",
+            "isotropic",
+            "sc-isotropic",
+        ):
+            raise ValueError(
+                "The bulk modulus is not used by the "
+                + self.mode.fetch()
+                + " barostat."
+            )
         if self.mode.fetch() == "stochastic-rescaling":
             if len(self.hfix.fetch()) > 0:
                 raise ValueError(
@@ -201,15 +215,15 @@ class InputBaro(Input):
                     "cell thermostat. Remove the thermostat nested inside the "
                     "barostat tag."
                 )
-            if not self.compressibility._explicit:
+            if not self.bulk_modulus._explicit:
                 raise ValueError(
-                    "The compressibility must be specified explicitly for the "
+                    "The bulk modulus must be specified explicitly for the "
                     "'stochastic-rescaling' barostat."
                 )
-            compressibility = self.compressibility.fetch()
-            if compressibility <= 0.0:
+            bulk_modulus = self.bulk_modulus.fetch()
+            if bulk_modulus <= 0.0:
                 raise ValueError(
-                    "The stochastic cell-rescaling compressibility must be positive."
+                    "The stochastic cell-rescaling bulk modulus must be positive."
                 )
             if self.tau.fetch() <= 0.0:
                 raise ValueError(
@@ -218,7 +232,7 @@ class InputBaro(Input):
             baro = BaroSCR(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
-                compressibility=compressibility,
+                bulk_modulus=bulk_modulus,
                 ebaro=self.ebaro.fetch(),
             )
         elif self.mode.fetch() == "isotropic":
@@ -226,7 +240,11 @@ class InputBaro(Input):
                 raise ValueError(
                     "Cannot fix individual cell components with an 'isotropic' barostat"
                 )
-            baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroBZP(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                bulk_modulus=self.bulk_modulus.fetch(),
+            )
             if self.p._explicit:
                 baro.p = xp.asarray(self.p.fetch())
         elif self.mode.fetch() == "sc-isotropic":
@@ -234,7 +252,11 @@ class InputBaro(Input):
                 raise ValueError(
                     "Cannot fix individual cell components with an 'sc-isotropic' barostat"
                 )
-            baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroSCBZP(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                bulk_modulus=self.bulk_modulus.fetch(),
+            )
             if self.p._explicit:
                 baro.p = xp.asarray(self.p.fetch())
         elif self.mode.fetch() == "flexible":

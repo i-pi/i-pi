@@ -12,13 +12,13 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from ipi.engine.barostats import BaroSCR, cell_propagators
+from ipi.engine.barostats import BaroBZP, BaroSCR, cell_propagators
 from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
 from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import depend_array, depend_value, dproperties
-from ipi.utils.units import unit_to_internal
+from ipi.utils.units import Constants, unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import pressure_input
 
 
@@ -82,7 +82,7 @@ def scr_simulation_xml():
         <timestep units="femtosecond">0.5</timestep>
         <barostat mode="stochastic-rescaling">
           <tau units="femtosecond">1000</tau>
-          <compressibility units="bar^-1">4.5e-5</compressibility>
+          <bulk_modulus units="gigapascal">2.2</bulk_modulus>
         </barostat>
         <thermostat mode="langevin">
           <tau units="femtosecond">100</tau>
@@ -132,7 +132,7 @@ def scr_two_particle_xml(external_pressure, pair_potential=None):
         ("system/ensemble/pressure", str(external_pressure)),
         ("system/motion/dynamics/timestep", "0.2"),
         ("system/motion/dynamics/barostat/tau", "4.0"),
-        ("system/motion/dynamics/barostat/compressibility", "0.3"),
+        ("system/motion/dynamics/barostat/bulk_modulus", "3.0"),
     ]:
         element = root.find(xpath)
         element.attrib.clear()
@@ -230,10 +230,10 @@ def test_scr_pressure_force_for_harmonic_pair(
 def test_scr_input_roundtrip_preserves_restart_state():
     """SCR parameters and accumulated work survive checkpoint storage."""
 
-    compressibility = unit_to_internal("inverse-pressure", "bar^-1", 4.5e-5)
+    bulk_modulus = unit_to_internal("pressure", "gigapascal", 2.2)
     original = BaroSCR(
         tau=100.0,
-        compressibility=compressibility,
+        bulk_modulus=bulk_modulus,
         ebaro=3.25,
     )
 
@@ -243,7 +243,7 @@ def test_scr_input_roundtrip_preserves_restart_state():
 
     assert type(restored) is BaroSCR
     assert restored.tau == pytest.approx(original.tau)
-    assert restored.compressibility == pytest.approx(original.compressibility)
+    assert restored.bulk_modulus == pytest.approx(original.bulk_modulus)
     assert restored.ebaro == pytest.approx(original.ebaro)
 
 
@@ -266,8 +266,8 @@ def test_scr_restart_matches_continuous_trajectory(restart_states):
     )
 
 
-def test_scr_requires_explicit_positive_compressibility():
-    """SCR cannot silently guess a material compressibility."""
+def test_scr_requires_explicit_positive_bulk_modulus():
+    """SCR cannot silently guess a material bulk modulus."""
 
     input_baro = InputBaro()
     input_baro._explicit = True
@@ -277,8 +277,8 @@ def test_scr_requires_explicit_positive_compressibility():
     with pytest.raises(ValueError, match="must be specified explicitly"):
         input_baro.fetch()
 
-    input_baro.compressibility.store(-1.0)
-    with pytest.raises(ValueError, match="compressibility must be positive"):
+    input_baro.bulk_modulus.store(-1.0)
+    with pytest.raises(ValueError, match="bulk modulus must be positive"):
         input_baro.fetch()
 
 
@@ -289,7 +289,7 @@ def test_scr_rejects_a_separate_cell_thermostat():
     input_baro._explicit = True
     input_baro.mode.store("stochastic-rescaling")
     input_baro.tau.store(100.0)
-    input_baro.compressibility.store(1.0)
+    input_baro.bulk_modulus.store(1.0)
     input_baro.thermostat.store(ThermoLangevin(tau=10.0))
 
     with pytest.raises(ValueError, match="does not use a separate cell thermostat"):
@@ -323,7 +323,7 @@ def test_scr_trotter_map_and_effective_energy():
     duration = 0.2
     kbt = 2.0  # Atomic units use kB = 1.
     relaxation_time = 4.0
-    compressibility = 0.3
+    bulk_modulus = 3.0
     external_pressure = 0.7
     initial_ebaro = 1.25
     gaussian_draw = 0.4
@@ -331,7 +331,7 @@ def test_scr_trotter_map_and_effective_energy():
         dt=duration,
         temp=kbt,
         tau=relaxation_time,
-        compressibility=compressibility,
+        bulk_modulus=bulk_modulus,
         pext=external_pressure,
         ebaro=initial_ebaro,
     )
@@ -352,7 +352,7 @@ def test_scr_trotter_map_and_effective_energy():
     barostat.get_lambda_force = lambda: next(forces)
 
     coupling_dt = 2.0 * barostat.qdt
-    diffusion = barostat.temp * barostat.compressibility / (4.0 * barostat.tau)
+    diffusion = barostat.temp / (4.0 * barostat.tau * barostat.bulk_modulus)
     delta_lambda = (
         diffusion * old_force * coupling_dt / barostat.temp
         + np.sqrt(2.0 * diffusion * coupling_dt) * barostat.prng.g
@@ -377,8 +377,8 @@ def test_scr_trotter_map_and_effective_energy():
     # Calculate Gaussian transition densities from S7, without expanding their
     # ratio into the force sums and force squares used by finalize(). All
     # reference inputs below are prescribed, including the initial volume 8.
-    variance = kbt * compressibility * duration / (2.0 * relaxation_time)
-    drift_per_force = compressibility * duration / (4.0 * relaxation_time)
+    variance = kbt * duration / (2.0 * relaxation_time * bulk_modulus)
+    drift_per_force = duration / (4.0 * relaxation_time * bulk_modulus)
     start_lambda = np.sqrt(8.0)
     forward_mean = start_lambda + drift_per_force * old_force
     end_lambda = forward_mean + np.sqrt(variance) * gaussian_draw
@@ -426,7 +426,7 @@ def test_scr_rejects_nonpositive_proposed_volume():
         dt=1.0,
         temp=1.0,
         tau=1.0,
-        compressibility=1.0,
+        bulk_modulus=1.0,
         pext=0.0,
     )
     barostat.cell = OrthorhombicCell([1.0, 1.0, 1.0])
@@ -444,7 +444,7 @@ def test_dynamics_uses_standard_npt_integrator_for_scr():
     dynamics = Dynamics(
         timestep=0.5,
         mode="npt",
-        barostat=BaroSCR(tau=100.0, compressibility=1.0),
+        barostat=BaroSCR(tau=100.0, bulk_modulus=1.0),
     )
     assert type(dynamics.integrator) is NPTIntegrator
 
@@ -486,6 +486,53 @@ def test_flexible_barostat_volume_constraint(simulation):
         initial = float(sim.syslist[0].cell.V)
         sim.run(steps=8, write_outputs=False)
         assert float(sim.syslist[0].cell.V) == pytest.approx(initial, rel=1e-12)
+
+
+def test_bzp_mass_from_bulk_modulus(simulation):
+    """The piston mass is 3 N kB (P T) tau^2, or 3 P V B tau^2 with a bulk modulus:
+    the same for that of an ideal gas, N kB T / V, but independent of T."""
+
+    root = ET.fromstring(pressure_input("isotropic", nbeads=2))
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        system = sim.syslist[0]
+        barostat = system.motion.barostat
+        kbt = Constants.kb * float(system.ensemble.temp)
+        mass = 3 * system.beads.natoms * 2 * kbt * barostat.tau**2
+        assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
+        ideal_gas = system.beads.natoms * kbt / float(system.cell.V)
+        system.ensemble.temp = 4 * system.ensemble.temp
+        assert float(barostat.m[0]) == pytest.approx(4 * mass, rel=1e-12)
+
+    baro = root.find("system/motion/dynamics/barostat")
+    ET.SubElement(baro, "bulk_modulus").text = repr(ideal_gas)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        system = sim.syslist[0]
+        barostat = system.motion.barostat
+        assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
+        system.ensemble.temp = 4 * system.ensemble.temp
+        assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
+
+
+def test_bulk_modulus_input():
+    """The bulk modulus of the isotropic barostats is stored only when given, and
+    the barostats that do not use it reject it."""
+
+    stored = InputBaro()
+    stored.store(BaroBZP(tau=100.0))
+    assert not stored.bulk_modulus._explicit
+    stored = InputBaro()
+    stored.store(BaroBZP(tau=100.0, bulk_modulus=0.5))
+    restored = stored.fetch()
+    assert type(restored) is BaroBZP
+    assert restored.bulk_modulus == pytest.approx(0.5)
+
+    for mode in ("flexible", "anisotropic", "dummy"):
+        input_baro = InputBaro()
+        input_baro._explicit = True
+        input_baro.mode.store(mode)
+        input_baro.bulk_modulus.store(1.0)
+        with pytest.raises(ValueError, match="bulk modulus is not used"):
+            input_baro.fetch()
 
 
 def test_cell_propagators_match_power_series():
