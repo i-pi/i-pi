@@ -119,7 +119,7 @@ class InputThermoBase(Input):
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "The covariance matrix for GLE thermostats.",
+                "help": "The covariance matrix for GLE thermostats. If it is not given, it is the identity times the temperature of the ensemble, which gives canonical sampling. A C that is not diagonal (as in quantum thermostats, e.g. PIGLET) breaks equipartition, and makes methods that assume the classical Boltzmann distribution, such as metadynamics, atom swaps and replica exchange, biased.",
                 "dimension": "temperature",
             },
         ),
