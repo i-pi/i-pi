@@ -64,7 +64,7 @@ def compiled(sim):
             (
                 ISOTROPIC,
                 "<barostat mode='stochastic-rescaling'><tau units='femtosecond'>200"
-                "</tau><compressibility units='bar^-1'>4.5e-5</compressibility>"
+                "</tau><bulk_modulus units='gigapascal'>2.2</bulk_modulus>"
                 "</barostat>",
             ),
             "the barostat 'BaroSCR'",

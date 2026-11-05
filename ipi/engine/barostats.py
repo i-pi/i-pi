@@ -324,7 +324,7 @@ class BaroSCR(Barostat):
         ebaro=None,
         thermostat=None,
         pext=None,
-        compressibility=None,
+        bulk_modulus=None,
     ):
         """Initializes the stochastic cell-rescaling barostat.
 
@@ -336,14 +336,14 @@ class BaroSCR(Barostat):
             thermostat: Must be the dummy thermostat. Kept for input
                 compatibility with other barostats.
             pext: Optional external pressure.
-            compressibility: Estimate of the isothermal compressibility.
+            bulk_modulus: Estimate of the isothermal bulk modulus.
         """
 
         super(BaroSCR, self).__init__(dt, temp, tau, ebaro, thermostat)
 
-        self.compressibility_ = depend_value(
-            name="compressibility",
-            value=-1.0 if compressibility is None else compressibility,
+        self.bulk_modulus_ = depend_value(
+            name="bulk_modulus",
+            value=-1.0 if bulk_modulus is None else bulk_modulus,
         )
         self.prng = None
         self._scr_state = None
@@ -360,9 +360,9 @@ class BaroSCR(Barostat):
             raise ValueError(
                 "The stochastic cell-rescaling relaxation time must be positive."
             )
-        if self.compressibility <= 0.0:
+        if self.bulk_modulus <= 0.0:
             raise ValueError(
-                "The stochastic cell-rescaling compressibility must be positive."
+                "The stochastic cell-rescaling bulk modulus must be positive."
             )
         if self.beads.nbeads != 1:
             raise ValueError(
@@ -436,7 +436,7 @@ class BaroSCR(Barostat):
         lam = np.sqrt(volume)
         coupling_dt = 2.0 * self.qdt
         kbt = Constants.kb * self.temp
-        diffusion = kbt * self.compressibility / (4.0 * self.tau)
+        diffusion = kbt / (4.0 * self.tau * self.bulk_modulus)
         delta_lambda = (
             diffusion * lambda_force * coupling_dt / kbt
             + np.sqrt(2.0 * diffusion * coupling_dt) * self.prng.g
@@ -447,7 +447,7 @@ class BaroSCR(Barostat):
             raise ValueError(
                 "Stochastic cell rescaling proposed a non-positive or non-finite "
                 "sqrt(volume). Increase tau, reduce stride or the MD time step, "
-                "and check the compressibility."
+                "and check the bulk modulus."
             )
 
         delta_log_lambda = np.log1p(delta_lambda / lam)
@@ -528,7 +528,7 @@ class BaroSCR(Barostat):
         self._scr_state = None
 
 
-dproperties(BaroSCR, ["compressibility"])
+dproperties(BaroSCR, ["bulk_modulus"])
 
 
 class BaroBZP(Barostat):
@@ -548,9 +548,16 @@ class BaroBZP(Barostat):
     Generates dynamics with a stochastic barostat. Implementation details:
     Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
+    The mass of the piston is 3 V B tau^2, with the bulk modulus B = N kB T / V
+    of an ideal gas unless an estimate of B is given, and V the volume at bind.
+    The period of the volume oscillations is then about 2 pi tau / sqrt(3) for
+    any material and temperature. With the ideal-gas mass it is shorter by
+    sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho.
+
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
        m: The mass associated with the volume degree of freedom.
+       bulk_modulus: The estimate of the bulk modulus, -1 for an ideal gas.
     """
 
     def __init__(
@@ -562,6 +569,7 @@ class BaroBZP(Barostat):
         thermostat=None,
         pext=None,
         p=None,
+        bulk_modulus=None,
     ):
         """Initializes BZP barostat.
 
@@ -576,10 +584,16 @@ class BaroBZP(Barostat):
               in the barostat initially. Used on restart.
            thermostat: The thermostat connected to the barostat degree of freedom.
            p: Optional initial volume conjugate momentum. Defaults to 0.
+           bulk_modulus: Optional estimate of the bulk modulus, which sets the
+              mass of the piston. Defaults to that of an ideal gas.
         """
 
         super(BaroBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
 
+        self.bulk_modulus_ = depend_value(
+            name="bulk_modulus",
+            value=-1.0 if bulk_modulus is None else bulk_modulus,
+        )
         self.p_ = depend_array(name="p", value=xp.zeros(1))
 
         if p is not None:
@@ -612,17 +626,13 @@ class BaroBZP(Barostat):
 
         super(BaroBZP, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
-        # obtain the thermostat mass from the given time constant
-        # note that the barostat temperature is nbeads times the physical T
+        # the volume that sets the mass of the piston with a given bulk modulus
+        self.v0 = float(self.cell.V)
         self.m_ = depend_array(
             name="m",
             value=xp.zeros(1),
-            func=(
-                lambda: xp.asarray(
-                    [self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp]
-                )
-            ),
-            dependencies=[self.tau_, self.temp_],
+            func=self.get_m,
+            dependencies=[self.tau_, self.temp_, self.bulk_modulus_],
         )
 
         # binds the thermostat to the piston degrees of freedom
@@ -657,6 +667,17 @@ class BaroBZP(Barostat):
                 self.thermostat.ethermo_,
             ],
         )
+
+    def get_m(self):
+        """Calculates the mass of the piston, 3 V B tau^2 (see the class)."""
+
+        # the force on the piston is a sum over the beads, so V B carries a
+        # factor nbeads, as does the temperature of the barostat
+        if self.bulk_modulus > 0.0:
+            vb = self.beads.nbeads * self.v0 * self.bulk_modulus
+        else:
+            vb = self.beads.natoms * Constants.kb * self.temp
+        return xp.asarray([3.0 * self.tau**2 * vb])
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
@@ -719,7 +740,7 @@ class BaroBZP(Barostat):
         self.cell.h_ *= expq
 
 
-dproperties(BaroBZP, ["p", "m"])
+dproperties(BaroBZP, ["p", "m", "bulk_modulus"])
 
 
 class BaroSCBZP(BaroBZP):
