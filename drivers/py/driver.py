@@ -79,6 +79,8 @@ def run_driver(
 
     f_init = False
     f_data = False
+    f_extra = False
+    requires_extra = getattr(driver, "requires_extra", False)
 
     # batched evaluation: batch_n>1 is announced by i-PI in the INIT string
     batch_n = 1
@@ -106,8 +108,11 @@ def run_driver(
             # responds to a status request
             if not f_init:
                 sock.sendall(Message("NEEDINIT"))
+            elif requires_extra and not f_extra:
+                sock.sendall(Message("NEEDEXTRA"))
             elif f_data:
                 sock.sendall(Message("HAVEDATA"))
+                f_extra = False
             else:
                 sock.sendall(Message("READY"))
         elif header == Message("INIT"):
@@ -211,6 +216,13 @@ def run_driver(
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
+        elif header == Message("EXTRADATA"):
+            if not requires_extra:
+                raise ValueError("The driver does not support EXTRADATA.")
+            nchar = recv_data(sock, np.int32())
+            extra = recv_data(sock, np.empty(nchar, dtype="S1"))
+            driver.store_extra(bytearray(extra).decode("utf-8"))
+            f_extra = True
         elif header == Message("GETFORCE") and shm:
             # write the batch_n results into shared memory BEFORE the FORCEREADY
             # ack, so i-PI never reads a stale buffer; only the per-structure
