@@ -603,7 +603,7 @@ def test_bulk_modulus_input(barostat):
         assert restored.v0 == pytest.approx(10.0)
 
 
-def test_bulk_modulus_and_reference_volume_are_rejected_where_unused():
+def test_bulk_modulus_and_reference_volume_and_cell_are_rejected_where_unused():
     input_baro = InputBaro()
     input_baro._explicit = True
     input_baro.mode.store("dummy")
@@ -624,6 +624,14 @@ def test_bulk_modulus_and_reference_volume_are_rejected_where_unused():
             input_baro.bulk_modulus.store(bulk_modulus)
         input_baro.v0.store(10.0)
         with pytest.raises(ValueError, match="v0 is only used"):
+            input_baro.fetch()
+
+    for mode in ("dummy", "isotropic", "flexible"):
+        input_baro = InputBaro()
+        input_baro._explicit = True
+        input_baro.mode.store(mode)
+        input_baro.h0.store(Cell(np.eye(3) * 10.0))
+        with pytest.raises(ValueError, match="h0 is only used"):
             input_baro.fetch()
 
 

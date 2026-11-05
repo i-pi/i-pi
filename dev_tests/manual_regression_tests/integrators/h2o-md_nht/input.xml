@@ -29,7 +29,6 @@ ENDREGTEST -->
         <timestep units='femtosecond'> 0.5 </timestep>
         <barostat mode='isotropic'>
           <tau units='femtosecond'> 200</tau>
-          <h0> [ 35.233, 0, 0, 0, 35.233, 0, 0, 0, 35.233 ] </h0>
         </barostat>
       </dynamics>
     </motion>

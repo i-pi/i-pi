@@ -1,0 +1,42 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}, volume{angstrom3} ] </properties>
+    <trajectory filename='pos' stride='20' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>100</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='driver-qtip4pf' mode='unix' pbc='false'>
+      <address>h2o-npt-scr</address>
+      <offset>-2.2017482</offset> <!-- removes constant value from energy -->
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> water_216.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver-qtip4pf'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <!-- stochastic cell rescaling: a first-order barostat with no piston, so no cell thermostat.
+             tau sets the relaxation time of the volume, given an estimate of the bulk modulus -->
+        <barostat mode='stochastic-rescaling'>
+          <tau units='femtosecond'> 500 </tau>
+          <bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>
+        </barostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+      <pressure units='bar'> 1 </pressure>
+    </ensemble>
+  </system>
+</simulation>
