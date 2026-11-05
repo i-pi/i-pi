@@ -1367,7 +1367,7 @@ class InputFFDielectric(InputForceField):
             "dtype": str,
             "options": ["server", "client"],
             "default": "server",
-            "help": "Where the electric-field coupling is applied. Client mode is reserved for a later implementation.",
+            "help": "Where the electric-field coupling is applied: in i-PI (server) or in the client driver.",
         },
     )
 
