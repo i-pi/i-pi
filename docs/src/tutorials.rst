@@ -114,7 +114,7 @@ designed to specify a single bit of data, and has the following syntax:
 
 .. code-block::
 
-   <initialize nbeads=’4’> ... </initialize>
+   <initialize nbeads='4'> ... </initialize>
 
 Note that an attribute forms part of the opening tag, and that the value
 being assigned to it is held within quotation marks. In this case, we
@@ -253,17 +253,17 @@ using the :ref:`cell` tag in three different ways:
 
 .. code-block::
 
-   <cell mode=’manual’ units=’angstrom’> [17.847, 0, 0, 0, 17.847, 0, 0,
+   <cell mode='manual' units='angstrom'> [17.847, 0, 0, 0, 17.847, 0, 0,
    0, 17.847] </cell>
 
 .. code-block::
 
-   <cell mode=’abcABC’ units=’angstrom’> [17.847, 17.847, 17.847, 90,
+   <cell mode='abcABC' units='angstrom'> [17.847, 17.847, 17.847, 90,
    90, 90] </cell>
 
 .. code-block::
 
-   <cell mode=’abc’ units=’angstrom’> [17.847, 17.847, 17.847] </cell>
+   <cell mode='abc' units='angstrom'> [17.847, 17.847, 17.847] </cell>
 
 If the xyz already contains the cell parameters, i-PI will use those
 which are read the last in the config file (if the “cell” tag follows
@@ -337,8 +337,8 @@ specify the temperature using the appropriate tag:
 
   <system>
     ...
-    <motion mode=’dynamics’>
-      <dynamics mode=’nvt’> ... </dynamics>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'> ... </dynamics>
     </motion>
   </system>
 
@@ -354,9 +354,9 @@ femtosecond, giving:
 
   <system>
     ...
-    <dynamics mode=’nvt’>
+    <dynamics mode='nvt'>
          ...
-         <timestep units=’femtosecond’> 1 </timestep>
+         <timestep units='femtosecond'> 1 </timestep>
     </dynamics>
   </system>
 
@@ -400,7 +400,7 @@ The temperature must be specified within the :ref:`ensemble`:
    <system>
        ...
        <ensemble>
-           <temperature units=’kelvin’> 300 </temperature>
+           <temperature units='kelvin'> 300 </temperature>
        </ensemble>
        ...
    </system>
@@ -531,7 +531,7 @@ the “verbosity” attribute of :ref:`simulation`:
 
 .. code-block::
 
-   <simulation verbosity=’high’> ... </simulation>
+   <simulation verbosity='high'> ... </simulation>
 
 By default the verbosity is set to “low”, which only outputs important
 warning messages and information, and some statistical information every
@@ -865,8 +865,9 @@ the ensemble:
 Then, we must also specify the constant pressure algorithm, using the
 tag :ref:`barostat` within the dynamics environment. Do not forget to change the mode
 attribute of the dynamics from “nvt” to “npt”.
-This example uses a stochastic barostat to apply pressure
-to an isotropic system, which can be specified with the option “isotropic”.
+This example uses the barostat of Bussi, Zykova-Timan and Parrinello
+:cite:`buss+09jcp` (option “isotropic”), which changes the volume of the cell
+but not its shape.
 See the documentation of the :ref:`barostat` object and the examples to see how to apply
 an anisotropic stress, or to allow for cell shape fluctuations.
 
@@ -883,11 +884,11 @@ freedom, and we will take its time scale to be 250 femtoseconds:
      <ensemble> 
         <pressure> 0 </pressure> 
      </ensemble> 
-     <motion mode=’dynamics’>
-        <dynamics mode=’npt’> 
-            <barostat mode=’isotropic’>
-                 <thermostat mode=’langevin’> 
-                    <tau units=’femtosecond’> 250 </tau>
+     <motion mode='dynamics'>
+        <dynamics mode='npt'> 
+            <barostat mode='isotropic'>
+                 <thermostat mode='langevin'> 
+                    <tau units='femtosecond'> 250 </tau>
                  </thermostat> 
              </barostat> 
              ... 
@@ -906,11 +907,11 @@ also, giving:
      <ensemble> 
         <pressure> 0 </pressure> 
      </ensemble> 
-     <motion mode=’dynamics’>
-        <dynamics mode=’npt’> 
-            <barostat mode=’isotropic’>
-                 <thermostat mode=’langevin’> 
-                    <tau units=’femtosecond’> 250 </tau>
+     <motion mode='dynamics'>
+        <dynamics mode='npt'> 
+            <barostat mode='isotropic'>
+                 <thermostat mode='langevin'> 
+                    <tau units='femtosecond'> 250 </tau>
                  </thermostat> 
                  <tau units='femtosecond'> 250 </tau>
              </barostat> 
@@ -1023,7 +1024,7 @@ to “unix”:
 
 .. code-block::
 
-   <ffsocket mode=’unix’ name="driver"> ... </ffsocket>
+   <ffsocket mode='unix' name="driver"> ... </ffsocket>
 
 We then specify that the client code should connect to a unix socket
 using the -u flag:

@@ -1,14 +1,8 @@
-"""Classes that deal with constant pressure simulations.
+"""Classes that deal with constant pressure and constant stress simulations.
 
-Contains the algorithms which propagate the position and momenta steps in the
-constant pressure ensemble. Holds the properties directly related to
-these ensembles, such as the internal and external pressure and stress.
-
-Note that this file also contains a 'BaroMHT' class, that follows more closely the
-Martyna, Hughes, Tuckerman implementation of a PIMD barostat. However it is so
-close to the BZP implementation that we disabled it for the sake of simplicity.
-The original reference is:
-G. Martyna, A. Hughes and M. Tuckerman, J. Chem. Phys., 110, 3275.
+Contains the algorithms which propagate the positions, the momenta and the cell
+in the constant pressure and constant stress ensembles, and the properties
+directly related to them, such as the internal and external pressure and stress.
 """
 
 # This file is part of i-PI.
@@ -34,13 +28,14 @@ def mask_from_fix(fix):
     """Builds a mask for the cell velocities based on a list of strings
     that indicates the entries that should be held fixed"""
 
+    # the lower-triangular elements are mapped to the upper-triangular ones,
+    # the only ones that change
     m2f = dict(
         xx=(0, 0),
         xy=(0, 1),
         xz=(0, 2),
         yx=(0, 1),
         yy=(1, 1),
-        # NB: we re-map to the upper-triangular section, which is the only meaningful one
         yz=(1, 2),
         zx=(0, 2),
         zy=(1, 2),
@@ -49,7 +44,6 @@ def mask_from_fix(fix):
     )
 
     hmask = np.ones(shape=(3, 3))
-    # hmask[(1,0)] = 0; hmask[(2,0)] = 0; hmask[(2,1)] = 0
     for f in fix:
         if type(m2f[f]) is list:
             for i in m2f[f]:
@@ -90,9 +84,9 @@ class Barostat:
        cell: A cell object giving the system box.
        forces: A forces object giving the virial and the forces acting on
           each bead.
+       bias: A forces object giving the bias.
        nm: An object to do the normal mode transformation.
        thermostat: A thermostat coupled to the barostat degrees of freedom.
-       mdof: The number of atomic degrees of freedom
        vol_constraint: A boolean flag indicating whether the volume is constrained
 
     Depend objects:
@@ -104,8 +98,8 @@ class Barostat:
        stressext: The external stress
        ebaro: The conserved quantity associated with the barostat.
        pot: The potential energy associated with the barostat.
-       kstress: The system kinetic stress tensor.
-       press: The system pressure.
+       kin: The kinetic energy of the barostat.
+       cell_jacobian: The energy term that accounts for the measure of the cell.
     """
 
     def __init__(
@@ -116,13 +110,8 @@ class Barostat:
         ebaro=None,
         thermostat=None,
         vol_constraint=None,
-        nmts=None,
     ):
         """Initialises base barostat class.
-
-        Note that the external stress and the external pressure are synchronized.
-        This makes most sense going from the stress to the pressure, but if you
-        must go in the other direction the stress is assumed to be isotropic.
 
         Args:
            dt: Optional float giving the time step for the algorithms. Defaults
@@ -133,6 +122,7 @@ class Barostat:
            ebaro: Optional float giving the conserved quantity already stored
               in the barostat initially. Used on restart.
            thermostat: The thermostat connected to the barostat degree of freedom.
+           vol_constraint: Optional boolean, True if the volume is constrained.
         """
 
         self.dt_ = depend_value(name="dt")
@@ -173,7 +163,7 @@ class Barostat:
         self.pext_ = depend_value(name="pext", value=-1.0)
         self.stressext_ = depend_array(name="stressext", value=-np.ones((3, 3), float))
 
-    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, nmts=1):
         """Binds beads, cell and forces to the barostat.
 
         This takes a beads object, a cell object and a forcefield object and
@@ -187,8 +177,9 @@ class Barostat:
            cell: The cell object from which the system box is taken.
            forces: The forcefield object from which the force and virial are
               taken.
+           bias: The forces object of the bias.
            prng: The parent PRNG to bind the thermostat to
-           fixdof: The number of blocked degrees of freedom.
+           nmts: The number of levels of multiple time stepping.
         """
 
         self.beads = beads
@@ -202,11 +193,6 @@ class Barostat:
         self.kin_ = depend_value(name="kin", value=0.0)
 
         self.cell_jacobian_ = depend_value(name="cell_jacobian", value=0.0)
-
-        if fixdof is None:
-            self.mdof = float(self.beads.natoms) * 3.0
-        else:
-            self.mdof = float(self.beads.natoms) * 3.0 - float(fixdof)
 
         # creates and connects timesteps for the different parts of the propagator
         self.nmtslevels = nmts
@@ -355,10 +341,10 @@ class BaroSCR(Barostat):
         if pext is not None:
             self.pext = pext
 
-    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, nmts=1):
         """Binds the physical system and random-number generator."""
 
-        super(BaroSCR, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
+        super(BaroSCR, self).bind(beads, nm, cell, forces, bias, prng, nmts)
 
         if self.tau <= 0.0:
             raise ValueError(
@@ -538,19 +524,14 @@ dproperties(BaroSCR, ["bulk_modulus"])
 class BaroBZP(Barostat):
     """Bussi-Zykova-Parrinello barostat class.
 
-    Mode "isotropic" implements the Bussi-Zykova-Parrinello barostat.
+    Mode "isotropic" implements the Bussi-Zykova-Parrinello barostat, which
+    scales the cell isotropically, changing its volume but not its shape, while
+    sampling the isothermal-isobaric ensemble.
 
-    Isotropically scales the unit cell volume while sampling the
-    isothermal isobaric ensemble.
-
-    Bussi, Zykova-Timan, Parinello, J. Chem. Phys. 130, 074101 (2009)
+    Bussi, Zykova-Timan, Parrinello, J. Chem. Phys. 130, 074101 (2009)
         [doi:10.1063/1.3073889]
-
-    Just extends the standard class adding finite-dt propagators for the
-    barostat velocities, positions, piston.
-
-    Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
+    Implementation details: Ceriotti, More, Manolopoulos, Comp. Phys. Comm.
+        185, 1019 (2014) [doi:10.1016/j.cpc.2013.10.027]
 
     The mass of the piston is 3 V B tau^2, with the bulk modulus B = N kB T / V
     of an ideal gas unless an estimate of B is given, and V the reference
@@ -581,15 +562,8 @@ class BaroBZP(Barostat):
         """Initializes BZP barostat.
 
         Args:
-           dt: Optional float giving the time step for the algorithms. Defaults
-              to the simulation dt.
-           temp: Optional float giving the temperature for the thermostat.
-              Defaults to the simulation temp.
+           dt, temp, tau, ebaro, thermostat: See `Barostat`.
            pext: Optional float giving the external pressure.
-           tau: Optional float giving the time scale associated with the barostat.
-           ebaro: Optional float giving the conserved quantity already stored
-              in the barostat initially. Used on restart.
-           thermostat: The thermostat connected to the barostat degree of freedom.
            p: Optional initial volume conjugate momentum. Defaults to 0.
            bulk_modulus: Optional estimate of the bulk modulus, which sets the
               mass of the piston. Defaults to that of an ideal gas.
@@ -613,28 +587,11 @@ class BaroBZP(Barostat):
 
         if pext is not None:
             self.pext = pext
-        else:
-            self.pext = -1.0
 
-    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
-        """Binds beads, cell and forces to the barostat.
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, nmts=1):
+        """Binds beads, cell and forces to the barostat (see `Barostat.bind`)."""
 
-        This takes a beads object, a cell object and a forcefield object and
-        makes them members of the barostat. It also then creates the objects that
-        will hold the data needed in the barostat algorithms and the dependency
-        network.
-
-        Args:
-           beads: The beads object from which the bead positions are taken.
-           nm: The normal modes propagator object
-           cell: The cell object from which the system box is taken.
-           forces: The forcefield object from which the force and virial are
-              taken.
-           prng: The parent PRNG to bind the thermostat to
-           fixdof: The number of blocked degrees of freedom.
-        """
-
-        super(BaroBZP, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
+        super(BaroBZP, self).bind(beads, nm, cell, forces, bias, prng, nmts)
 
         if self.v0 <= 0.0:
             self.v0 = float(self.cell.V)
@@ -690,9 +647,9 @@ class BaroBZP(Barostat):
         return xp.asarray([3.0 * self.tau**2 * vb])
 
     def get_pot(self):
-        """Calculates the elastic strain energy of the cell."""
+        """Calculates the P V term of the enthalpy, for the nbeads replicas of
+        the cell."""
 
-        # NOTE: since there are nbeads replicas of the unit cell, the enthalpy contains a nbeads factor
         return self.cell.V * self.pext * self.beads.nbeads
 
     def get_cell_jacobian(self):
@@ -756,38 +713,26 @@ dproperties(BaroBZP, ["p", "m", "bulk_modulus", "v0"])
 class BaroSCBZP(BaroBZP):
     """The Suzuki Chin Bussi-Zykova-Parrinello barostat class.
 
-    Mode "sc-isotropic" implements the Bussi-Zykova-Parrinello
-    barostat for Suzuki-Chin path integral molecular dynamics.
-
-    Isotropically scales the unit cell volume while sampling the
-    isothermal isobaric ensemble.
-
-    This barostat is suitable for simulating liquids.
+    Mode "sc-isotropic" implements the Bussi-Zykova-Parrinello barostat (see
+    `BaroBZP`) for Suzuki-Chin path integral molecular dynamics, with the
+    'scnpt' dynamics.
 
     Kapil et al., J. Chem. Theory Comput. 15, 5 (2019)
         [10.1021/acs.jctc.8b01297]
-
-    Just extends the standard class adding finite-dt propagators for the
-    barostat velocities, positions, piston.
-
-    Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     The forces and virials of each MTS level carry the +-1/3 Suzuki-Chin
     corrections, and the momentum is also propagated with the high-order
     part of the stress (`pscstep`).
 
-    Depend objects:
-       p: The momentum associated with the volume degree of freedom.
-       m: The mass associated with the volume degree of freedom.
+    Depend objects (besides those of `BaroBZP`):
        kstress_sc: The high-order part of the kinetic stress.
        stress_sc: The high-order part of the stress.
     """
 
-    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, nmts=1):
         """Binds beads, cell and forces to the barostat (see `BaroBZP.bind`)."""
 
-        super().bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
+        super().bind(beads, nm, cell, forces, bias, prng, nmts)
 
         # Stress depend objects for Suzuki-Chin PIMD
         self.kstress_sc_ = depend_value(
@@ -869,7 +814,8 @@ class BaroFlexibleCell(Barostat):
     stress (`external_stress`).
 
     The mass of each element of the cell momentum is V B tau^2, a third of the
-    mass of the isotropic piston (as in Martyna, Tobias, Klein, 1994), so that
+    mass of the isotropic piston (as in Martyna, Tobias, Klein, J. Chem. Phys.
+    101, 4177 (1994) [doi:10.1063/1.467468]), so that
     a uniform dilation of the cell oscillates as the volume of `BaroBZP`. The
     other modes oscillate with frequencies set by the corresponding elastic
     constants instead of 3 B: C11 - C12 for a tetragonal and C44 for a shear
@@ -961,10 +907,10 @@ class BaroFlexibleCell(Barostat):
             np.diag((free.sum(axis=1) - free.sum(axis=0) + 1) * np.diag(free))
         )
 
-    def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
+    def bind(self, beads, nm, cell, forces, bias=None, prng=None, nmts=1):
         """Binds beads, cell and forces to the barostat (see `Barostat.bind`)."""
 
-        super().bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
+        super().bind(beads, nm, cell, forces, bias, prng, nmts)
 
         if self.v0 <= 0.0:
             self.v0 = self.reference_volume()
@@ -1140,26 +1086,16 @@ dproperties(BaroFlexibleCell, ["p", "m", "p6", "hmask", "m6", "bulk_modulus", "v
 class BaroRGB(BaroFlexibleCell):
     """Raiteri-Gale-Bussi constant stress barostat class.
 
-    Mode "anisotropic" implements the Raiteri-Gale-Bussi barostat which enables
-    cell fluctuations (lengths and angles) at constant external stress.
-
-    It is suitable for simulating solids at given external (non-diagonal) stresses
-    and requires specifying a reference cell for estimating strain.
-
-     For diagonal stresses (or external pressures) the "flexible" and the
-     "anisotropic" modes should give very similar results.
-
-    Note that this ensemble is valid only within the elastic limit of small strains.
+    Mode "anisotropic" implements the Raiteri-Gale-Bussi barostat, which
+    changes the lengths and angles of the cell at a constant external stress,
+    for solids under (non-diagonal) stresses. The elastic energy is that of the
+    strain of the cell relative to a reference cell h0, so the ensemble is valid
+    within the elastic limit of small strains. For diagonal stresses (or
+    external pressures) and small strains, the "flexible" and "anisotropic"
+    modes give very similar results.
 
     Raiteri, Gale, Bussi, J. Phys. Condens. Matter, 23, 334213 (2011)
         [doi:10.1088/0953-8984/23/33/334213]
-
-    Just extends the standard class adding finite-dt propagators for the barostat
-    velocities, positions, piston.
-
-    Depend objects:
-    p: The momentum matrix associated with the cell degrees of freedom.
-    m: The mass associated with the cell degree of freedom.
     """
 
     def __init__(
@@ -1178,20 +1114,12 @@ class BaroRGB(BaroFlexibleCell):
         """Initializes RGB barostat.
 
         Args:
-        dt: Optional float giving the time step for the algorithms. Defaults
-        to the simulation dt.
-        temp: Optional float giving the temperature for the thermostat.
-        Defaults to the simulation temp.
-        stressext: Optional float giving the external pressure.
-        tau: Optional float giving the time scale associated with the barostat.
-        ebaro: Optional float giving the conserved quantity already stored
-        in the barostat initially. Used on restart.
-        thermostat: The thermostat connected to the barostat degree of freedom.
-        h0: Optional reference cell for the strain. Defaults to a unit cell.
-        p: Optional initial cell momentum. Defaults to 0.
-        hfix: Optional list of the elements of the cell that are kept fixed.
-        bulk_modulus: Optional estimate of the bulk modulus, which sets the mass
-        of the cell with the volume of the reference cell.
+           dt, temp, tau, ebaro, thermostat: See `Barostat`.
+           stressext: Optional 3x3 external stress.
+           h0: The reference cell for the strain, which must be set before bind.
+           p, hfix: See `BaroFlexibleCell`.
+           bulk_modulus: Optional estimate of the bulk modulus, which sets the
+              mass of the cell with the volume of the reference cell.
         """
 
         super().__init__(
@@ -1205,8 +1133,6 @@ class BaroRGB(BaroFlexibleCell):
 
         if stressext is not None:
             self.stressext = stressext
-        else:
-            self.stressext_[:] = -1.0
 
     def reference_volume(self):
         """Returns the reference volume for the mass, that of the reference cell."""
@@ -1219,9 +1145,10 @@ class BaroRGB(BaroFlexibleCell):
         return [self.cell.h_, self.h0.h_, self.h0.V_, self.h0.ih_, self.stressext_]
 
     def get_pot(self):
-        """Calculates the elastic strain energy of the cell."""
+        """Calculates the elastic energy V0 Tr(stress eps) of the Lagrangian
+        strain eps relative to the reference cell, for the nbeads replicas of
+        the cell."""
 
-        # NOTE: since there are nbeads replicas of the unit cell, the enthalpy contains a nbeads factor
         eps = self.cell.h @ self.h0.ih
         eps = eps.T @ eps
         eps = 0.5 * (eps - xp.eye(3))
@@ -1237,26 +1164,18 @@ class BaroRGB(BaroFlexibleCell):
 
 
 class BaroMTK(BaroFlexibleCell):
-    """Martyna-Tobias-Klein flexible cell, constant pressure barostat class.
+    """Martyna-Tuckerman-Tobias-Klein flexible cell, constant pressure barostat
+    class.
 
-    Mode "flexible" implements the path integral version of Martyna-Tuckerman-Tobias-Klein
-    barostat, which incorporates full cell fluctuations (lengths and angles) while
-    sampling the isothermal isobaric ensemble.
+    Mode "flexible" implements the path integral version of the
+    Martyna-Tuckerman-Tobias-Klein barostat, which changes the lengths and
+    angles of the cell while sampling the isothermal-isobaric ensemble, for
+    anisotropic systems such as molecular solids. With `vol_constraint` the
+    volume is constant, sampling the (N, V, sigma_a = 0, T) ensemble of Rogge
+    et al., J. Chem. Theory Comput. 11, 5583 (2015) [doi:10.1021/acs.jctc.5b00748].
 
-    This is suitable for anisotropic systems such as molecular solids.
-
-    For diagonal stresses (or external pressures) the "flexible" and the
-    "anisotropic" modes should give very similar results.
-
-    Martyna and Hughes, J. Chem. Phys 110, 3275 (1999)
+    Martyna, Hughes, Tuckerman, J. Chem. Phys. 110, 3275 (1999)
         [doi:10.1063/1.478193]
-
-    Just extends the standard class adding finite-dt propagators for the barostat
-    velocities, positions, piston.
-
-    Depend objects:
-    p: The momentum matrix associated with the cell degrees of freedom.
-    m: The mass associated with the cell degree of freedom.
     """
 
     def __init__(
@@ -1276,22 +1195,9 @@ class BaroMTK(BaroFlexibleCell):
         """Initializes MTK barostat.
 
         Args:
-        dt: Optional float giving the time step for the algorithms. Defaults
-        to the simulation dt.
-        temp: Optional float giving the temperature for the thermostat.
-        Defaults to the simulation temp.
-        tau: Optional float giving the time scale associated with the barostat.
-        ebaro: Optional float giving the conserved quantity already stored
-        in the barostat initially. Used on restart.
-        thermostat: The thermostat connected to the barostat degree of freedom.
-        vol_constraint: Optional boolean specifying whether or not the volume is constrained.
-        pext: Optional float giving the external pressure.
-        p: Optional initial cell momentum. Defaults to 0.
-        hfix: Optional list of the elements of the cell that are kept fixed.
-        bulk_modulus: Optional estimate of the bulk modulus, which sets the mass
-        of the cell.
-        v0: Optional reference volume for the mass of the cell. Defaults to the
-        volume of the cell at bind.
+           dt, temp, tau, ebaro, thermostat, vol_constraint: See `Barostat`.
+           pext: Optional float giving the external pressure.
+           p, hfix, bulk_modulus, v0: See `BaroFlexibleCell`.
         """
 
         super().__init__(
@@ -1309,8 +1215,6 @@ class BaroMTK(BaroFlexibleCell):
 
         if pext is not None:
             self.pext = pext
-        else:
-            self.pext = -1.0
 
     def pot_dependencies(self):
         """Returns the depend objects that the elastic energy depends on."""
@@ -1318,7 +1222,8 @@ class BaroMTK(BaroFlexibleCell):
         return [self.cell.h_, self.pext_]
 
     def get_pot(self):
-        """Calculates the elastic strain energy of the cell."""
+        """Calculates the P V term of the enthalpy, for the nbeads replicas of
+        the cell."""
 
         return self.cell.V * self.pext * self.beads.nbeads
 

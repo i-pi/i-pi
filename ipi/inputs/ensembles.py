@@ -52,7 +52,7 @@ class InputEnsemble(Input):
             {
                 "dtype": float,
                 "default": np.nan,  # hard-coded to signal unset pressure
-                "help": "The external pressure.",
+                "help": "The external pressure, used by the 'npt' and 'scnpt' dynamics.",
                 "dimension": "pressure",
             },
         ),
@@ -62,7 +62,7 @@ class InputEnsemble(Input):
                 "dtype": float,
                 "default": np.nan
                 * np.identity(3, float),  # hard-coded to signal unset stress
-                "help": "The external stress.",
+                "help": "The external stress, with the sign of a pressure: positive diagonal elements compress the cell. Used by the 'nst' dynamics.",
                 "dimension": "pressure",
             },
         ),
