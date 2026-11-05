@@ -31,3 +31,4 @@ features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
 features/metadynamics/wte_metadynamics_zundel
 features/metadynamics/opes_metadynamics_zundel
+features/ffdieletric/mace-polar+E-client-socket # requires MACE and socket driver; covered by the MACE workflow
