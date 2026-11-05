@@ -489,6 +489,22 @@ def test_flexible_barostat_volume_constraint(simulation):
         assert float(sim.syslist[0].cell.V) == pytest.approx(initial, rel=1e-12)
 
 
+@pytest.mark.parametrize(
+    "dynamics,barostat,match",
+    [
+        ("npt", "anisotropic", "use it with the 'nst' dynamics"),
+        ("scnpt", "isotropic", "requires the 'sc-isotropic' barostat"),
+        ("npt", "sc-isotropic", "requires the 'sc-isotropic' barostat"),
+    ],
+)
+def test_dynamics_rejects_unsuitable_barostats(simulation, dynamics, barostat, match):
+    root = ET.fromstring(pressure_input(barostat, nbeads=2))
+    root.find("system/motion/dynamics").set("mode", dynamics)
+    with pytest.raises(ValueError, match=match):
+        with simulation(ET.tostring(root, encoding="unicode")):
+            pass
+
+
 def test_bzp_mass_from_bulk_modulus(simulation):
     """The piston mass is 3 N kB (P T) tau^2, or 3 P V B tau^2 with a bulk modulus:
     the same for that of an ideal gas, N kB T / V, but independent of T."""
@@ -693,15 +709,30 @@ def test_conserved_quantity_with_fixed_cell_elements(simulation, tmp_path):
     assert np.ptp(econs) < 1e-3
 
 
+SHEAR = '<p shape="(3,3)">[2, 10, 10, 0, -3, 10, 0, 0, 1]</p>'
+BIAS = '<bias><force forcefield="metric"/></bias>'
+
+
 @pytest.mark.parametrize(
-    "hfix,nbeads", [("[]", 2), ("[offdiagonal, xx, yy]", 1)], ids=["full", "npzt"]
+    "mode,options,bias,nbeads",
+    [
+        ("flexible", SHEAR, "", 2),
+        ("flexible", "<hfix>[offdiagonal, xx, yy]</hfix>" + SHEAR, "", 1),
+        ("flexible", "<vol_constraint>True</vol_constraint>" + SHEAR, "", 1),
+        ("flexible", SHEAR, BIAS, 1),
+        ("isotropic", "<p>[3]</p>", BIAS, 1),
+    ],
+    ids=["full", "npzt", "volume", "bias", "isotropic-bias"],
 )
-def test_conserved_quantity_converges_as_dt_squared(simulation, tmp_path, hfix, nbeads):
-    """Without thermostats, the error on the conserved quantity of a flexible
-    cell decreases as dt^2: the barostat feels the off-diagonal kinetic stress
-    and centroid virial that a shear cell velocity exchanges with the beads,
-    and the fixed elements of the cell receive no momentum. Three bonded atoms
-    in a cell with U = (k/2) |h^T h - a0^2 I|^2."""
+def test_conserved_quantity_converges_as_dt_squared(
+    simulation, tmp_path, mode, options, bias, nbeads
+):
+    """Without thermostats, the error on the conserved quantity decreases as
+    dt^2: the barostat feels the off-diagonal kinetic stress and centroid virial
+    that a shear cell velocity exchanges with the beads, the fixed elements of
+    the cell and the constrained volume receive no momentum, and the kinetic
+    stress is integrated over the kick of the bias too. Three bonded atoms in a
+    cell with U = (k/2) |h^T h - a0^2 I|^2."""
 
     (tmp_path / "cell_metric.py").write_text(CELL_METRIC)
     rng = np.random.default_rng(3)
@@ -716,11 +747,11 @@ def test_conserved_quantity_converges_as_dt_squared(simulation, tmp_path, hfix, 
           <ffdirect name="metric"><pes>custom</pes><parameters>{{}}</parameters>
             <pes_path>{tmp_path / "cell_metric.py"}</pes_path></ffdirect>
           <system><forces><force forcefield="metric"/></forces>
-            <ensemble><temperature>1.0</temperature><pressure>0.0</pressure></ensemble>
+            <ensemble><temperature>1.0</temperature><pressure>0.0</pressure>
+              {bias}</ensemble>
             <motion mode="dynamics"><fixcom>False</fixcom>
               <dynamics mode="npt"><timestep>{dt}</timestep>
-                <barostat mode="flexible"><tau>10</tau><hfix>{hfix}</hfix>
-                  <p shape="(3,3)">[2, 10, 10, 0, -3, 10, 0, 0, 1]</p></barostat>
+                <barostat mode="{mode}"><tau>10</tau>{options}</barostat>
               </dynamics></motion>
             <beads natoms="3" nbeads="{nbeads}">
               <q shape="({nbeads},9)">{q.ravel().tolist()}</q>
@@ -738,7 +769,7 @@ def test_conserved_quantity_converges_as_dt_squared(simulation, tmp_path, hfix, 
 
     coarse, fine = spread(0.04), spread(0.02)
     assert fine < 5e-3
-    assert coarse / fine > 3.0
+    assert coarse / fine > 3.5
 
 
 def test_cell_propagators_match_power_series():
