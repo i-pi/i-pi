@@ -468,6 +468,16 @@ bugs pass, and are no longer marked.
   thermostat, a drift of the conserved quantity of O(dt) (+7.8 over 100 steps in `gas-npzt-PV`, whose
   references now hold the conserved quantity of the new runs; every other output is unchanged). The isotropic
   barostats, which use the trace of the stress, and the outputs are unchanged.
+- The same holds for the volume constraint (`vol_constraint`): the trace of the stress is removed from the momentum
+  given to the cell, instead of being added and then removed with its kinetic energy booked in the thermostat,
+  which made the conserved quantity drift by O(dt). With a bias, the kinetic stress is integrated over the kick of
+  the bias too (`Barostat.kick_force`), which it missed with a single time step (also an O(dt) drift).
+- `npt` with the `anisotropic` barostat (which ran with a NaN cell), `scnpt` without the `sc-isotropic` barostat
+  (an AttributeError) and `sc-isotropic` without `scnpt` (Suzuki-Chin forces in the barostat only) raise an error.
+- Replica exchange rescales the cell momenta so that p / sqrt(m kB T) is unchanged, as it does the momenta of the
+  beads: it multiplied them by T_j / T_i, which assumes a mass proportional to T and does not hold with a
+  `bulk_modulus`. The sampling was exact (the acceptance includes the kinetic energy of the cell), but the
+  exchanges were accepted less often.
 
 ## Status and work left
 

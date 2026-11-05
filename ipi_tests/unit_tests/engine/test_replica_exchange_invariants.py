@@ -8,7 +8,7 @@ import pytest
 from ipi.engine.ensembles import ensemble_swap
 from ipi.engine.smotion.remd import ReplicaExchange, motion_scale
 from ipi.utils.array_backend import to_numpy
-from ipi_tests.unit_tests.engine.inputs import harmonic_input
+from ipi_tests.unit_tests.engine.inputs import harmonic_input, pressure_input
 
 
 @pytest.mark.parametrize("accept", [False, True])
@@ -79,6 +79,47 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
             for i, s in enumerate(systems):
                 assert float(s.ensemble.temp) == temperatures[i]
                 np.testing.assert_allclose(to_numpy(s.beads.p), momenta[i])
+
+
+@pytest.mark.parametrize("accept", [False, True])
+@pytest.mark.parametrize("bulk_modulus", [None, "1e-4"])
+def test_exchanges_rescale_the_cell_momenta(simulation, accept, bulk_modulus):
+    """An accepted exchange keeps the kinetic energy of the cell over kB T, also
+    when its mass does not depend on T (with a bulk modulus); a rejected one
+    restores the momentum of the cell."""
+    temperatures = [0.2, 0.4]
+    root = ET.fromstring(pressure_input("isotropic"))
+    barostat = root.find("system/motion/dynamics/barostat")
+    ET.SubElement(barostat, "p").text = "[0.5]"
+    if bulk_modulus is not None:
+        ET.SubElement(barostat, "bulk_modulus").text = bulk_modulus
+    second = copy.deepcopy(root.find("system"))
+    for system_input, temperature in zip([root.find("system"), second], temperatures):
+        temperature_input = system_input.find("ensemble/temperature")
+        temperature_input.attrib.clear()
+        temperature_input.text = str(temperature)
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        barostats = [s.motion.barostat for s in sim.syslist]
+        momenta = [float(b.p[0]) for b in barostats]
+        reduced = [float(b.kin / b.temp) for b in barostats]
+        # First draw selects the exchange attempt; second accepts or rejects it.
+        attempts = iter([0.0, 0.0 if accept else np.inf])
+
+        class Draws:
+            @property
+            def u(self):
+                return next(attempts)
+
+        remd = ReplicaExchange(krescale=True)
+        remd.bind(sim.syslist, Draws(), sim.output_maker)
+        remd.step(0)
+        np.testing.assert_array_equal(remd.repindex, [1, 0] if accept else [0, 1])
+        for b, p, k in zip(barostats, momenta, reduced):
+            if accept:
+                assert float(b.kin / b.temp) == pytest.approx(k)
+            else:
+                assert float(b.p[0]) == pytest.approx(p)
 
 
 def test_hamiltonian_weights_are_exchanged(simulation):
