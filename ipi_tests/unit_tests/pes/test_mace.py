@@ -105,6 +105,7 @@ def test_proper_dipole_is_symmetric_strain_corrected():
     np.testing.assert_allclose(corrected[0], [0.4, 1.7, 3.0])
 
 
+# Codecov: covers component-wise dielectric autograd gradients.
 def test_dielectric_gradient_helper_differentiates_each_dipole_component():
     positions = torch.randn(2, 3, requires_grad=True)
     strain = torch.randn(1, 3, 3, requires_grad=True)
@@ -117,6 +118,7 @@ def test_dielectric_gradient_helper_differentiates_each_dipole_component():
     np.testing.assert_allclose(gradients[0][0], 1.0)
 
 
+# Codecov: covers dielectric dipole/displacement shape validation.
 def test_dielectric_response_shape_validation():
     strain = torch.zeros(1, 3, 3)
     normalized = _normalize_dipole_shape(torch.ones(1, 1, 3), strain)

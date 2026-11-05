@@ -2562,10 +2562,6 @@ class FFCavPhSocket(FFSocket):
 
 
 class FFDielectric(ForceField):
-    _CLIENT_FIELD_FEEDBACK_KEYS = frozenset(
-        {"electric_field", "displacement_field", "effective_electric_field"}
-    )
-
     def __init__(
         self,
         name: str,
@@ -2733,74 +2729,6 @@ class FFDielectric(ForceField):
 
         return self.apply_ensemble(r)
 
-    def _validate_client_field_application(self, request: dict) -> bool:
-        """Require a client to confirm every field sent for this request.
-
-        A client-side field affects the potential energy surface. Silently
-        ignoring it would therefore produce an incorrect trajectory, so the
-        driver must return an ``applied_fields`` feedback dictionary in its
-        extras. Missing diagnostic data does not stop client-side dynamics.
-        """
-        if "electric_field" not in request:
-            return False
-
-        extras = request["result"][3]
-        if not isinstance(extras, dict):
-            raise ValueError(
-                "The client-side FFDielectric driver must return an "
-                "'applied_fields' dictionary in its extras dictionary."
-            )
-        applied = extras.get("applied_fields")
-        if not isinstance(applied, dict):
-            raise ValueError(
-                "The client-side FFDielectric driver must return an "
-                "'applied_fields' dictionary in its extras dictionary."
-            )
-
-        missing_diagnostics = [self.dipole.key]
-        missing_diagnostics = [key for key in missing_diagnostics if key not in extras]
-        if missing_diagnostics:
-            warning(
-                "The client-side FFDielectric driver did not return "
-                f"{', '.join(repr(key) for key in missing_diagnostics)}. "
-                "Please provide this value so that i-PI can verify that the "
-                "client applied the requested electrical boundary condition "
-                "correctly.",
-                verbosity.low,
-            )
-            return False
-
-        missing = self._CLIENT_FIELD_FEEDBACK_KEYS.difference(applied)
-        if missing:
-            raise ValueError(
-                "The client-side FFDielectric driver did not return: "
-                f"{', '.join(sorted(missing))}."
-            )
-
-        for key in self._CLIENT_FIELD_FEEDBACK_KEYS:
-            try:
-                value = np.asarray(applied[key], dtype=float)
-            except (TypeError, ValueError) as error:
-                raise ValueError(
-                    "The client-side FFDielectric driver returned a nonnumeric "
-                    f"'{key}' field."
-                ) from error
-            if value.shape != (3,):
-                raise ValueError(
-                    "The client-side FFDielectric driver must return a three-"
-                    f"component '{key}' field, got {value.shape}."
-                )
-
-        expected_fields = self._expected_client_field_feedback(request)
-        for key, expected_value in expected_fields.items():
-            returned_value = np.asarray(applied[key], dtype=float)
-            if not np.allclose(returned_value, expected_value, rtol=1e-10, atol=1e-12):
-                raise ValueError(
-                    "The client-side FFDielectric driver returned an inconsistent "
-                    f"'{key}' field."
-                )
-        return True
-
     def apply_ensemble(self, request: dict) -> dict:
         """
         Apply fields whose equations of motion are implemented in i-PI.
@@ -2919,22 +2847,3 @@ class FFDielectric(ForceField):
         """Remember a fixed-E result for the electric-displacement property."""
         with self._field_cache_lock:
             self._electric_field_request_cache = request
-
-    def _expected_client_field_feedback(self, request: dict) -> dict:
-        """Calculate the i-PI field feedback expected for a client request."""
-        extras = request["result"][3]
-        dipole = self.dipole.get(extras)
-        volume = np.linalg.det(request["cell"][0])
-        polarization = 4.0 * np.pi * dipole / volume
-
-        if "electric_field" not in request:
-            raise ValueError("FFDielectric client feedback requires electric_field")
-        electric_field = np.asarray(request["electric_field"])
-        displacement_field = electric_field + polarization
-        effective_electric_field = electric_field
-
-        return {
-            "electric_field": electric_field,
-            "displacement_field": displacement_field,
-            "effective_electric_field": effective_electric_field,
-        }

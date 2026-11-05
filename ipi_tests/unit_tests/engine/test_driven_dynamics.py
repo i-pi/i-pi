@@ -93,6 +93,7 @@ def test_invalid_client_charges_are_rejected(data, match):
         _ = bec.bec
 
 
+# Codecov: covers the flattened BEC response reshaping path.
 def test_flattened_client_charges_are_reshaped():
     flattened = [np.zeros((2, 9))] * 2
     bec, _ = response_objects({"BEC": flattened})
@@ -101,6 +102,7 @@ def test_flattened_client_charges_are_reshaped():
     np.testing.assert_allclose(result, 0.0)
 
 
+# Codecov: covers the DrivenDynamics deprecation forwarding path.
 def test_driven_dynamics_step_warns_about_deprecation(monkeypatch):
     called = []
 

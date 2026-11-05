@@ -61,6 +61,7 @@ def test_dielectric_rejects_wrapped_forcefield():
         )
 
 
+# Codecov: covers InputFFDielectric XML parsing and server-E fetching.
 def test_input_ffdielectric_parses_server_e_configuration():
     xml = """
     <ffdielectric name="mu+E" where="server">
@@ -80,6 +81,7 @@ def test_input_ffdielectric_parses_server_e_configuration():
     assert dielectric.forcefield.pes == "dummy"
 
 
+# Codecov: covers serializing and restoring the wrapped forcefield.
 def test_input_ffdielectric_store_round_trip():
     field = PythonVectorField(
         file="",
@@ -100,6 +102,7 @@ def test_input_ffdielectric_store_round_trip():
     assert restored.electric_fields[0].name == "static"
 
 
+# Codecov: covers InputValueFromDict and ArrayFromDict unit conversion/defaults.
 def test_response_extractors_round_trip_units_and_defaults():
     extractor_type = InputValueFromDict.specialize("electric-dipole", "eang", "dipole")
     extractor = extractor_type()
@@ -168,6 +171,7 @@ def test_dielectric_applies_fixed_e_energy_force_and_virial():
     )
 
 
+# Codecov: covers dielectric property lookup validation errors.
 def test_dielectric_property_rejects_invalid_forcefield_names():
     properties = Properties()
     properties.simul = SimpleNamespace(fflist={})
@@ -182,6 +186,7 @@ def test_dielectric_property_rejects_invalid_forcefield_names():
         properties.get_dielectric_electric_field("plain")
 
 
+# Codecov: covers vector-field summation and time-cache reuse.
 def test_dielectric_field_evaluation_is_cached_and_sums_fields():
     class Field:
         def __init__(self, value):
@@ -204,6 +209,7 @@ def test_dielectric_field_evaluation_is_cached_and_sums_fields():
     np.testing.assert_allclose(dielectric.get_electric_field(), [1.0, 2.0, 3.0])
 
 
+# Codecov: covers unconfigured-field and unsupported-operation errors.
 def test_dielectric_field_configuration_errors():
     dielectric = _server_dielectric()
     with pytest.raises(ValueError, match="has no electric field"):

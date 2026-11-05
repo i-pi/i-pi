@@ -1409,42 +1409,23 @@ class InputFFDielectric(InputForceField):
             input_field.store(field)
             self.extra.append(("electric_field", input_field))
         _obj = ff.forcefield
-        if isinstance(_obj, FFSocket):
-            _iobj = InputFFSocket()
-            _iobj.store(_obj)
-            self.extra.append(("ffsocket", _iobj))
-        elif isinstance(_obj, FFDirect):
-            _iobj = InputFFDirect()
-            _iobj.store(_obj)
-            self.extra.append(("ffdirect", _iobj))
-        elif isinstance(_obj, FFLennardJones):
-            _iobj = InputFFLennardJones()
-            _iobj.store(_obj)
-            self.extra.append(("fflj", _iobj))
-        elif isinstance(_obj, FFdmd):
-            _iobj = InputFFdmd()
-            _iobj.store(_obj)
-            self.extra.append(("ffdmd", _iobj))
-        elif isinstance(_obj, FFDebye):
-            _iobj = InputFFDebye()
-            _iobj.store(_obj)
-            self.extra.append(("ffdebye", _iobj))
-        elif isinstance(_obj, FFPlumed):
-            _iobj = InputFFPlumed()
-            _iobj.store(_obj)
-            self.extra.append(("ffplumed", _iobj))
-        elif isinstance(_obj, FFYaff):
-            _iobj = InputFFYaff()
-            _iobj.store(_obj)
-            self.extra.append(("ffyaff", _iobj))
-        elif isinstance(_obj, FFsGDML):
-            _iobj = InputFFsGDML()
-            _iobj.store(_obj)
-            self.extra.append(("ffsgdml", _iobj))
-        elif isinstance(_obj, FFCommittee):
-            _iobj = InputFFCommittee()
-            _iobj.store(_obj)
-            self.extra.append(("ffcommittee", _iobj))
+        wrapped_forcefields = (
+            (FFSocket, "ffsocket", InputFFSocket),
+            (FFDirect, "ffdirect", InputFFDirect),
+            (FFLennardJones, "fflj", InputFFLennardJones),
+            (FFdmd, "ffdmd", InputFFdmd),
+            (FFDebye, "ffdebye", InputFFDebye),
+            (FFPlumed, "ffplumed", InputFFPlumed),
+            (FFYaff, "ffyaff", InputFFYaff),
+            (FFsGDML, "ffsgdml", InputFFsGDML),
+            (FFCommittee, "ffcommittee", InputFFCommittee),
+        )
+        for forcefield_type, tag, input_type in wrapped_forcefields:
+            if isinstance(_obj, forcefield_type):
+                input_object = input_type()
+                input_object.store(_obj)
+                self.extra.append((tag, input_object))
+                break
         else:
             raise TypeError(
                 f"The wrapped forcefield type {type(_obj).__name__} is not supported."

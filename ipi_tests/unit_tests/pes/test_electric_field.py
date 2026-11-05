@@ -46,6 +46,7 @@ def test_ramp_accepts_period_parameters_via_ffdielectric_field_loader():
     assert np.allclose(field.get(1.0), [0.0, 0.0, 2.0])
 
 
+# Codecov: covers Gaussian and Gaussian-modulated plane-wave profiles.
 def test_gaussian_and_plane_wave_gaussian_profiles():
     amplitude = np.array([1.0, -2.0, 0.5])
     assert np.allclose(gaussian(1.0, amplitude, sigma=2.0, peak=1.0), amplitude)
@@ -62,11 +63,13 @@ def test_gaussian_and_plane_wave_gaussian_profiles():
         (ramp, {"amplitude": [1, 0, 0], "period": 0.0}, "period"),
     ],
 )
+# Codecov: covers validation of nonpositive Gaussian/ramp time scales.
 def test_profiles_reject_nonpositive_time_scales(function, kwargs, message):
     with pytest.raises(ValueError, match=message):
         function(0.0, **kwargs)
 
 
+# Codecov: covers custom vector-field import and callable/shape errors.
 def test_python_vector_field_reports_invalid_user_functions(tmp_path):
     missing = tmp_path / "missing.py"
     with pytest.raises(ValueError, match="does not exist"):
@@ -84,6 +87,7 @@ def test_python_vector_field_reports_invalid_user_functions(tmp_path):
         field.get(0.0)
 
 
+# Codecov: covers InputPythonVectorField store/fetch round trips.
 def test_python_vector_field_input_round_trip():
     field = PythonVectorField(
         file="",
@@ -100,6 +104,7 @@ def test_python_vector_field_input_round_trip():
     assert restored.parameters == field.parameters
 
 
+# Codecov: covers vector-field family and JSON-parameter validation.
 def test_python_vector_field_input_validates_family_and_parameters():
     with pytest.raises(ValueError, match="Unknown unit family"):
         InputPythonVectorField.specialize("not-a-family")
