@@ -549,7 +549,8 @@ class BaroBZP(Barostat):
     Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     The mass of the piston is 3 V B tau^2, with the bulk modulus B = N kB T / V
-    of an ideal gas unless an estimate of B is given, and V the volume at bind.
+    of an ideal gas unless an estimate of B is given, and V the reference
+    volume v0, which defaults to the volume at the first bind.
     The period of the volume oscillations is then about 2 pi tau / sqrt(3) for
     any material and temperature. With the ideal-gas mass it is shorter by
     sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho.
@@ -558,6 +559,7 @@ class BaroBZP(Barostat):
        p: The momentum associated with the volume degree of freedom.
        m: The mass associated with the volume degree of freedom.
        bulk_modulus: The estimate of the bulk modulus, -1 for an ideal gas.
+       v0: The reference volume that sets the mass with a given bulk modulus.
     """
 
     def __init__(
@@ -570,6 +572,7 @@ class BaroBZP(Barostat):
         pext=None,
         p=None,
         bulk_modulus=None,
+        v0=None,
     ):
         """Initializes BZP barostat.
 
@@ -586,6 +589,8 @@ class BaroBZP(Barostat):
            p: Optional initial volume conjugate momentum. Defaults to 0.
            bulk_modulus: Optional estimate of the bulk modulus, which sets the
               mass of the piston. Defaults to that of an ideal gas.
+           v0: Optional reference volume for the mass of the piston. Defaults
+              to the volume of the cell at bind.
         """
 
         super(BaroBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
@@ -594,6 +599,7 @@ class BaroBZP(Barostat):
             name="bulk_modulus",
             value=-1.0 if bulk_modulus is None else bulk_modulus,
         )
+        self.v0_ = depend_value(name="v0", value=-1.0 if v0 is None else v0)
         self.p_ = depend_array(name="p", value=xp.zeros(1))
 
         if p is not None:
@@ -626,13 +632,13 @@ class BaroBZP(Barostat):
 
         super(BaroBZP, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
-        # the volume that sets the mass of the piston with a given bulk modulus
-        self.v0 = float(self.cell.V)
+        if self.v0 <= 0.0:
+            self.v0 = float(self.cell.V)
         self.m_ = depend_array(
             name="m",
             value=xp.zeros(1),
             func=self.get_m,
-            dependencies=[self.tau_, self.temp_, self.bulk_modulus_],
+            dependencies=[self.tau_, self.temp_, self.bulk_modulus_, self.v0_],
         )
 
         # binds the thermostat to the piston degrees of freedom
@@ -740,7 +746,7 @@ class BaroBZP(Barostat):
         self.cell.h_ *= expq
 
 
-dproperties(BaroBZP, ["p", "m", "bulk_modulus"])
+dproperties(BaroBZP, ["p", "m", "bulk_modulus", "v0"])
 
 
 class BaroSCBZP(BaroBZP):
