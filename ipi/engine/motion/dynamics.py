@@ -190,7 +190,6 @@ class Dynamics(Motion):
             bforce,
             bias=self.ensemble.bias,
             prng=prng,
-            fixdof=fixdof,
             nmts=len(self.nmts),
         )
 
@@ -682,7 +681,7 @@ class NPTIntegrator(NVTIntegrator):
     # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
 
     def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
+        """Velocity Verlet momentum propagator."""
 
         if self._stresscheck and not bool(xp.any(self.forces.vir != 0)):
             warning(
@@ -708,18 +707,10 @@ class NPTIntegrator(NVTIntegrator):
 
 
 class NSTIntegrator(NPTIntegrator):
-    """Ensemble object for constant pressure simulations.
+    """Integrator object for constant stress simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant pressure ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant, and a barostat to keep the
-    pressure constant.
-
-    Attributes:
-    barostat: A barostat object to keep the pressure constant.
-
-    Depend objects:
-    pext: External pressure.
+    The same as `NPTIntegrator`, with the anisotropic barostat that keeps the
+    stress constant.
     """
 
 
@@ -764,7 +755,7 @@ class SCIntegrator(NVTIntegrator):
         self.ensemble.add_xlpot(self.forces.potsc_)
 
     def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
+        """Velocity Verlet momentum propagator."""
 
         if level == 0:
             # bias goes in the outer loop

@@ -31,13 +31,16 @@ class InputBaro(Input):
 
     Fields:
        thermostat: A thermostat object giving the cell thermostat.
-       tau: The time constant associated with the dynamics of the piston.
-       bulk_modulus: An estimate of the bulk modulus, for stochastic cell
-          rescaling and the mass of the isotropic pistons.
-       v0: The reference volume for the mass of the isotropic pistons.
+       tau: The time constant associated with the dynamics of the cell.
+       bulk_modulus: An estimate of the bulk modulus, which sets the mass of
+          the cell, or the size of the moves of stochastic cell rescaling.
+       v0: The reference volume for the mass of the cell.
        ebaro: The accumulated stochastic cell-rescaling effective-energy
           correction.
-       p: The conjugate momentum to the volume degree of freedom.
+       p: The momentum of the cell.
+       h0: The reference cell of the anisotropic barostat.
+       hfix: The elements of the cell that are kept fixed.
+       vol_constraint: Whether the volume of the cell is kept fixed.
     """
 
     attribs = {
@@ -46,7 +49,7 @@ class InputBaro(Input):
             {
                 "dtype": str,
                 "default": "dummy",
-                "help": """The type of barostat. 'isotropic' implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889] that isotropically scales the volume while sampling the isothermal isobaric ensemble. The implementation details are given in [doi:10.1016/j.cpc.2013.10.027]. This barostat is suitable for simulating liquids. 'stochastic-rescaling' implements the Bernetti-Bussi stochastic cell-rescaling barostat [doi:10.1063/5.0020514] for classical dynamics. It requires an estimate of the bulk modulus and uses the reversible Trotter scheme with instantaneous kinetic pressure. 'sc-isotropic' implements the Bussi-Zykova-Parrinello barostat for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297] and should only be used with the Suzuki-Chin NPT ensemble. 'flexible' implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat which incorporates full cell fluctuations while sampling the isothermal isobaric ensemble [doi:10.1063/1.478193]. This is suitable for anisotropic systems such as molecular solids. 'anisotropic' implements the Raiteri-Gale-Bussi barostat which enables cell fluctuations at constant external stress [10.1088/0953-8984/23/33/334213]. It is suitable for simulating solids at given external (non-diagonal) stresses and requires specifying a reference cell for estimating strain. Note that this ensemble is valid only within the elastic limit of small strains. For diagonal stresses (or external pressures) the 'flexible' and the 'anisotropic' modes should give very similar results. 'dummy' barostat does not do anything.""",
+                "help": """The type of barostat. 'isotropic' implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889], which scales the cell isotropically while sampling the isothermal-isobaric ensemble, and is suitable for liquids; the implementation details are given in [doi:10.1016/j.cpc.2013.10.027]. 'stochastic-rescaling' implements the Bernetti-Bussi stochastic cell-rescaling barostat [doi:10.1063/5.0020514] for classical dynamics, with the reversible Trotter scheme and the instantaneous kinetic pressure; it requires an estimate of the bulk modulus and no cell thermostat. 'sc-isotropic' implements the Bussi-Zykova-Parrinello barostat for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297], for the 'scnpt' dynamics. 'flexible' implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat [doi:10.1063/1.478193], which changes the lengths and angles of the cell at constant pressure, for anisotropic systems such as molecular solids. 'anisotropic' implements the Raiteri-Gale-Bussi barostat [10.1088/0953-8984/23/33/334213], which changes the lengths and angles of the cell at a constant (possibly non-diagonal) stress, with the 'nst' dynamics; it requires a reference cell h0, and is valid within the elastic limit of small strains. For diagonal stresses (or external pressures) and small strains, 'flexible' and 'anisotropic' give very similar results. 'dummy' does nothing.""",
                 "options": [
                     "dummy",
                     "isotropic",
@@ -63,7 +66,7 @@ class InputBaro(Input):
             InputThermo,
             {
                 "default": input_default(factory=ipi.engine.thermostats.Thermostat),
-                "help": "The thermostat for the cell. Keeps the cell velocity distribution at the correct temperature. Note that the 'pile_l', 'pile_g', 'nm_gle' and 'nm_gle_g' options will not work for this thermostat.",
+                "help": "The thermostat for the cell. Keeps the cell velocity distribution at the correct temperature. Note that the 'pile_l', 'pile_g', 'nm_gle' and 'nm_gle_g' options will not work for this thermostat, and that 'stochastic-rescaling' uses none.",
             },
         ),
         "tau": (
@@ -72,7 +75,7 @@ class InputBaro(Input):
                 "default": 1.0,
                 "dtype": float,
                 "dimension": "time",
-                "help": "The time constant associated with the dynamics of the piston. For 'stochastic-rescaling' it is the relaxation time of the volume. For 'isotropic' and 'sc-isotropic' the mass of the piston is 3 N kB T tau^2, and the period of the volume oscillations is about 2 pi tau / sqrt(3) for an ideal gas, and shorter by sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho: about 1.6 tau for water and 0.2 tau for copper at 300 K. Giving bulk_modulus makes it about 3.6 tau for any material and temperature. For 'flexible' and 'anisotropic' the mass of each element of the cell momentum is a third of that of the isotropic piston, so that a uniform dilation of the cell oscillates in the same way, while the other deformations oscillate with frequencies set by the shear moduli rather than by 3 B.",
+                "help": "The time scale of the barostat. For 'stochastic-rescaling' it is the relaxation time of the volume. For the other modes it sets the mass of the cell (see bulk_modulus): the volume oscillates with a period of about 2 pi tau / sqrt(3) = 3.6 tau if bulk_modulus is given, for any material and temperature, and otherwise shorter by sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho (about 1.6 tau for water and 0.2 tau for copper at 300 K). With 'flexible' and 'anisotropic', the shear deformations of the cell oscillate with frequencies set by the shear moduli rather than by B.",
             },
         ),
         "bulk_modulus": (
@@ -81,7 +84,7 @@ class InputBaro(Input):
                 "default": -1.0,
                 "dtype": float,
                 "dimension": "pressure",
-                "help": "An estimate of the isothermal bulk modulus of the system. It must be given for the 'stochastic-rescaling' mode, where it sets the size of the volume moves. For 'isotropic' and 'sc-isotropic' it sets the mass of the piston to 3 V B tau^2, so that tau sets the period of the volume oscillations for any material and temperature; if it is not given, the mass is 3 N kB T tau^2, the value for an ideal gas. For 'flexible' and 'anisotropic' the mass of each element of the cell momentum is V B tau^2, or N kB T tau^2. V is the reference volume v0, or the volume of the reference cell h0 for 'anisotropic'. Only the dynamics depend on it, not the ensemble that is sampled.",
+                "help": "An estimate of the isothermal bulk modulus B of the system, which only affects the dynamics, not the ensemble that is sampled. It must be given for 'stochastic-rescaling', where it sets the size of the volume moves. For the other modes it sets the mass of the cell to 3 V B tau^2 for 'isotropic' and 'sc-isotropic', and to V B tau^2 for each element of the cell momentum for 'flexible' and 'anisotropic', with V the reference volume v0, or the volume of h0 for 'anisotropic'. Without it V B is replaced by N kB T, the value for an ideal gas of N atoms. Both masses are multiplied by the number of beads.",
             },
         ),
         "v0": (
@@ -90,7 +93,7 @@ class InputBaro(Input):
                 "default": -1.0,
                 "dtype": float,
                 "dimension": "volume",
-                "help": "The reference volume V in the mass of the piston, 3 V B tau^2 (V B tau^2 for each element of the cell momentum with 'flexible'), for the 'isotropic', 'sc-isotropic' and 'flexible' modes with a bulk_modulus. Defaults to the volume of the cell at the start, and is written in restarts so that they continue with the same mass. A value close to the average volume makes the dynamics independent of the initial cell.",
+                "help": "The reference volume V in the mass of the cell (see bulk_modulus), for the 'isotropic', 'sc-isotropic' and 'flexible' modes with a bulk_modulus. Defaults to the volume of the cell at the start, and is written in restarts so that they continue with the same mass. A value close to the average volume makes the dynamics independent of the initial cell.",
             },
         ),
         "ebaro": (
@@ -107,7 +110,7 @@ class InputBaro(Input):
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "Momentum (or momenta) of the piston.",
+                "help": "The momentum of the cell: one value for 'isotropic' and 'sc-isotropic', and a 3x3 upper-triangular matrix for 'flexible' and 'anisotropic'.",
                 "dimension": "momentum",
             },
         ),
@@ -116,7 +119,7 @@ class InputBaro(Input):
             {
                 "dtype": float,
                 "default": input_default(factory=Cell),
-                "help": "Reference cell for Parrinello-Rahman-like barostats. Should be roughly equal to the mean size of the cell averaged over the trajectory. Sampling might be inaccurate if the difference is too large.",
+                "help": "The reference cell of the 'anisotropic' barostat, which requires it. The external stress acts on the strain of the cell relative to h0, and equals the stress on the cell only when the cell is close to h0, which should therefore be close to the average cell.",
                 "dimension": "length",
             },
         ),
@@ -133,7 +136,7 @@ class InputBaro(Input):
             {
                 "default": False,
                 "dtype": bool,
-                "help": "If True, the (N, V, sigma_a = 0, T)-ensemble is sampled, which allows for full cell fluctuations while keeping the cell volume fixed. This ensemble was introduced in [doi:10.1021/acs.jctc.5b00748]. Note that it is only implemented for the MTTK ('flexible') barostat, enabling it for any other barostat will not work and result in an error.",
+                "help": "If True, the (N, V, sigma_a = 0, T) ensemble [doi:10.1021/acs.jctc.5b00748] is sampled, in which the shape of the cell changes at constant volume. Only for the 'flexible' barostat, and not with fixed diagonal elements of the cell.",
             },
         ),
     }
