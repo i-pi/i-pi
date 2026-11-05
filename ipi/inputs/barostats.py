@@ -34,6 +34,7 @@ class InputBaro(Input):
        tau: The time constant associated with the dynamics of the piston.
        bulk_modulus: An estimate of the bulk modulus, for stochastic cell
           rescaling and the mass of the isotropic pistons.
+       v0: The reference volume for the mass of the isotropic pistons.
        ebaro: The accumulated stochastic cell-rescaling effective-energy
           correction.
        p: The conjugate momentum to the volume degree of freedom.
@@ -80,7 +81,16 @@ class InputBaro(Input):
                 "default": -1.0,
                 "dtype": float,
                 "dimension": "pressure",
-                "help": "An estimate of the isothermal bulk modulus of the system. It must be given for the 'stochastic-rescaling' mode, where it sets the size of the volume moves. For 'isotropic' and 'sc-isotropic' it sets the mass of the piston to 3 V B tau^2, with V the initial volume, so that tau sets the period of the volume oscillations for any material and temperature; if it is not given, the mass is 3 N kB T tau^2, the value for an ideal gas. Only the dynamics depend on it, not the ensemble that is sampled.",
+                "help": "An estimate of the isothermal bulk modulus of the system. It must be given for the 'stochastic-rescaling' mode, where it sets the size of the volume moves. For 'isotropic' and 'sc-isotropic' it sets the mass of the piston to 3 V B tau^2, with V the reference volume v0, so that tau sets the period of the volume oscillations for any material and temperature; if it is not given, the mass is 3 N kB T tau^2, the value for an ideal gas. Only the dynamics depend on it, not the ensemble that is sampled.",
+            },
+        ),
+        "v0": (
+            InputValue,
+            {
+                "default": -1.0,
+                "dtype": float,
+                "dimension": "volume",
+                "help": "The reference volume V in the mass of the piston, 3 V B tau^2, for the 'isotropic' and 'sc-isotropic' modes with a bulk_modulus. Defaults to the volume of the cell at the start, and is written in restarts so that they continue with the same mass. A value close to the average volume makes the dynamics independent of the initial cell.",
             },
         ),
         "ebaro": (
@@ -145,16 +155,12 @@ class InputBaro(Input):
             self.mode.store("stochastic-rescaling")
             self.bulk_modulus.store(baro.bulk_modulus)
             self.ebaro.store(baro.ebaro)
-        elif type(baro) is BaroBZP:
-            self.mode.store("isotropic")
+        elif type(baro) in (BaroBZP, BaroSCBZP):
+            self.mode.store("isotropic" if type(baro) is BaroBZP else "sc-isotropic")
             self.p.store(baro.p)
             if baro.bulk_modulus > 0.0:
                 self.bulk_modulus.store(baro.bulk_modulus)
-        elif type(baro) is BaroSCBZP:
-            self.mode.store("sc-isotropic")
-            self.p.store(baro.p)
-            if baro.bulk_modulus > 0.0:
-                self.bulk_modulus.store(baro.bulk_modulus)
+                self.v0.store(baro.v0)
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
@@ -203,6 +209,14 @@ class InputBaro(Input):
                 + self.mode.fetch()
                 + " barostat."
             )
+        if self.v0._explicit and (
+            self.mode.fetch() not in ("isotropic", "sc-isotropic")
+            or self.bulk_modulus.fetch() <= 0.0
+        ):
+            raise ValueError(
+                "The reference volume v0 is only used by the 'isotropic' and "
+                "'sc-isotropic' barostats with a bulk modulus."
+            )
         if self.mode.fetch() == "stochastic-rescaling":
             if len(self.hfix.fetch()) > 0:
                 raise ValueError(
@@ -244,6 +258,7 @@ class InputBaro(Input):
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
                 bulk_modulus=self.bulk_modulus.fetch(),
+                v0=self.v0.fetch(),
             )
             if self.p._explicit:
                 baro.p = xp.asarray(self.p.fetch())
@@ -256,6 +271,7 @@ class InputBaro(Input):
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
                 bulk_modulus=self.bulk_modulus.fetch(),
+                v0=self.v0.fetch(),
             )
             if self.p._explicit:
                 baro.p = xp.asarray(self.p.fetch())
