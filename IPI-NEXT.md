@@ -140,6 +140,15 @@ or because they were approved explicitly:
   differed from 1 (since 5e863291), so the replicas evolved with the unscaled Hamiltonian, and with no explicit
   bias, while the conserved quantity, the exchange acceptance and the barostat included them. This changes
   the results of Hamiltonian replica exchange runs. New unit test.
+- Replica exchange with GLE thermostats: an accepted exchange multiplied the momenta of the GLE (`s`) by
+  T_j / T_i (since 2018). They are mass-scaled, with variance kB T, so they scale by sqrt(T_j / T_i), as the
+  momenta of the beads. The atomic momenta were right at the exchange (`s[0]` is reset from them at each GLE
+  step), but the auxiliary momenta were too hot after an exchange to a higher temperature and too cold after
+  one to a lower temperature, and the GLE passed this energy to the atoms afterwards: two harmonic replicas at
+  T = 0.2 and 0.4 with a strongly coupled GLE and exchanges at every step gave <U> 11% too high at 0.4 and 3%
+  too low at 0.2 (exact with the fix). This changes the results of replica exchange runs with GLE
+  thermostats. GLEs with an explicit C (e.g. PIGLET) do not follow the temperature, and are inconsistent
+  with temperature exchanges either way. New unit test.
 - Combining the extras of several force components appended the raw strings of the other components to
   those of the first component (since cf4419b5), so `extras_component_raw(0)` printed the strings of all the
   components once the combined extras had been computed. Unit test extended.
