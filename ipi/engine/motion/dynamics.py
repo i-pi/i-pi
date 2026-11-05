@@ -17,7 +17,7 @@ from ipi.utils.depend import *
 from ipi.utils.array_backend import xp
 from ipi.utils.jit import compiled
 from ipi.engine.thermostats import Thermostat
-from ipi.engine.barostats import Barostat, BaroRGB
+from ipi.engine.barostats import Barostat, BaroRGB, BaroSCBZP
 from ipi.utils.messages import warning, verbosity
 
 
@@ -208,23 +208,28 @@ class Dynamics(Motion):
         self.integrator.pconstraints()
 
         # TODO THOROUGH CLEAN-UP AND CHECK
-        if (
-            self.enstype == "nvt"
-            or self.enstype == "nvt-cc"
-            or self.enstype == "npt"
-            or self.enstype == "nst"
-        ):
+        if self.enstype in ("nvt", "nvt-cc", "npt", "nst", "scnpt"):
             if self.ensemble.temp < 0:
                 raise ValueError(
                     "Negative or unspecified temperature for a constant-T integrator"
                 )
-            if self.enstype == "npt":
+            if self.enstype in ("npt", "scnpt"):
                 if type(self.barostat) is Barostat:
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
                 if np.any(np.isnan(self.ensemble.pext)):
                     raise ValueError("Unspecified pressure for a constant-p integrator")
+                if type(self.barostat) is BaroRGB:
+                    raise ValueError(
+                        "The 'anisotropic' barostat applies an external stress: "
+                        "use it with the 'nst' dynamics."
+                    )
+                if (self.enstype == "scnpt") != (type(self.barostat) is BaroSCBZP):
+                    raise ValueError(
+                        "The Suzuki-Chin 'scnpt' dynamics requires the 'sc-isotropic' "
+                        "barostat, which only works with it."
+                    )
             elif self.enstype == "nst":
                 if bool(xp.any(xp.isnan(self.ensemble.stressext))):
                     raise ValueError("Unspecified stress for a constant-s integrator")

@@ -220,6 +220,15 @@ class Barostat:
 
         return self.forces.mts_forces[level].f
 
+    def kick_force(self, level):
+        """Returns the force that kicks the beads at the MTS level `level`: that
+        of the level and, at level 0, the bias."""
+
+        force = self.mts_force(level)
+        if level == 0 and self.bias is not None:
+            force = force + self.bias.f
+        return force
+
     def mts_virial(self, level):
         """Returns the virial at the MTS level `level`."""
 
@@ -230,14 +239,9 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        fall = self.mts_force(level)
-        if level == 0 and self.bias is not None:
-            # adds the bias. NB: don't += we don't want to overwrite the force
-            fall = fall + self.bias.f
-
         beads = self.beads
         qqc = (beads.q - beads.qc).reshape(-1, 3)
-        fall = fall.reshape(-1, 3)
+        fall = self.kick_force(level).reshape(-1, 3)
 
         kst = -(qqc.T @ fall)
 
@@ -721,7 +725,7 @@ class BaroBZP(Barostat):
             )
 
             pc = self.beads.pc
-            fc = self.mts_force(level).sum(axis=0) / nbeads
+            fc = self.kick_force(level).sum(axis=0) / nbeads
             fc_m = fc / self.beads.m3[0]
 
             dt2 = dt * dt * nbeads
@@ -1051,13 +1055,9 @@ class BaroFlexibleCell(Barostat):
         nbeads p_c p_c^T / m over the atoms.
         """
 
-        fall = self.mts_force(level)
-        if level == 0 and self.bias is not None:
-            fall = fall + self.bias.f
-
         beads = self.beads
         qqc = (beads.q - beads.qc).reshape(-1, 3)
-        kst = -(fall.reshape(-1, 3).T @ qqc)
+        kst = -(self.kick_force(level).reshape(-1, 3).T @ qqc)
 
         if level == self.nmtslevels - 1:
             pc = beads.pc.reshape(-1, 3)
@@ -1084,9 +1084,7 @@ class BaroFlexibleCell(Barostat):
 
             pc = self.beads.pc.reshape(self.beads.natoms, 3)
             fc = (
-                self.forces.mts_forces[level]
-                .f.sum(axis=0)
-                .reshape(self.beads.natoms, 3)
+                self.kick_force(level).sum(axis=0).reshape(self.beads.natoms, 3)
                 / self.beads.nbeads
             )
             fcTonm = (fc / self.beads.m3[0].reshape(self.beads.natoms, 3)).T
@@ -1098,13 +1096,16 @@ class BaroFlexibleCell(Barostat):
                 * self.beads.nbeads
             )
 
-        # the fixed cell elements receive no momentum from the stress
-        self.p_ += dp * self.hmask
+        # the fixed cell elements, and the volume if it is constrained, receive
+        # no momentum from the stress
+        dp = dp * self.hmask
+        if self.vol_constraint is True:
+            dp = dp - xp.eye(3) * xp.linalg.trace(dp) / 3.0
+        self.p_ += dp
 
-        # applies the mask of the fixed cell elements to the momentum from the
-        # thermostat, and the volume constraint, and accumulates the change of
-        # kinetic energy in the energy of the thermostat, so that the conserved
-        # quantity is unchanged
+        # applies the same constraints to the momentum from the thermostat, and
+        # accumulates the change of kinetic energy in the energy of the
+        # thermostat, so that the conserved quantity is unchanged
         if len(self.hfix) > 0 or self.vol_constraint is True:
             self.thermostat.ethermo += self.kin
             self.p_ *= self.hmask
