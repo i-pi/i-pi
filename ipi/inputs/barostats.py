@@ -214,6 +214,10 @@ class InputBaro(Input):
                 "The reference volume v0 is only used by the 'isotropic', "
                 "'sc-isotropic' and 'flexible' barostats with a bulk modulus."
             )
+        if self.h0._explicit and self.mode.fetch() != "anisotropic":
+            raise ValueError(
+                "The reference cell h0 is only used by the 'anisotropic' barostat."
+            )
         if self.mode.fetch() == "stochastic-rescaling":
             if len(self.hfix.fetch()) > 0:
                 raise ValueError(

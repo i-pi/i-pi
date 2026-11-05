@@ -1,0 +1,4 @@
+#Settings file for automatic test
+driver_model qtip4pf
+address h2o-npt-scr
+socket_mode unix
