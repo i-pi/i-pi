@@ -1,9 +1,14 @@
 """Tests for the built-in FFDielectric vector-field functions."""
 
 import numpy as np
+import pytest
 
 from ipi.engine.motion.driven_dynamics import PythonVectorField
-from ipi.pes.electric_field import plane_wave, ramp
+from ipi.inputs.motion.driven_dynamics import (
+    InputFieldParameters,
+    InputPythonVectorField,
+)
+from ipi.pes.electric_field import gaussian, plane_wave, plane_wave_gaussian, ramp
 
 
 def test_plane_wave_starts_at_zero_without_a_phase():
@@ -39,3 +44,69 @@ def test_ramp_accepts_period_parameters_via_ffdielectric_field_loader():
 
     assert np.allclose(field.get(0.0), [0.0, 0.0, 0.0])
     assert np.allclose(field.get(1.0), [0.0, 0.0, 2.0])
+
+
+def test_gaussian_and_plane_wave_gaussian_profiles():
+    amplitude = np.array([1.0, -2.0, 0.5])
+    assert np.allclose(gaussian(1.0, amplitude, sigma=2.0, peak=1.0), amplitude)
+    expected = plane_wave(0.5, amplitude, omega=2.0) * np.exp(-0.5 * (0.5 / 2.0) ** 2)
+    np.testing.assert_allclose(
+        plane_wave_gaussian(0.5, amplitude, omega=2.0, sigma=2.0), expected
+    )
+
+
+@pytest.mark.parametrize(
+    "function, kwargs, message",
+    [
+        (gaussian, {"amplitude": [1, 0, 0], "sigma": 0.0}, "sigma"),
+        (ramp, {"amplitude": [1, 0, 0], "period": 0.0}, "period"),
+    ],
+)
+def test_profiles_reject_nonpositive_time_scales(function, kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        function(0.0, **kwargs)
+
+
+def test_python_vector_field_reports_invalid_user_functions(tmp_path):
+    missing = tmp_path / "missing.py"
+    with pytest.raises(ValueError, match="does not exist"):
+        PythonVectorField(missing, "field", "electric-field")
+
+    source = tmp_path / "field.py"
+    source.write_text("field = 1\n")
+    with pytest.raises(ValueError, match="not callable"):
+        PythonVectorField(source, "field", "electric-field")
+
+    source_valid = tmp_path / "valid.py"
+    source_valid.write_text("def field(time):\n    return [time, 0]\n")
+    field = PythonVectorField(source_valid, "field", "electric-field")
+    with pytest.raises(ValueError, match="shape"):
+        field.get(0.0)
+
+
+def test_python_vector_field_input_round_trip():
+    field = PythonVectorField(
+        file="",
+        name="static",
+        family="electric-field",
+        units="atomic_unit",
+        parameters={"amplitude": [1.0, 2.0, 3.0]},
+    )
+    input_field = InputPythonVectorField.specialize("electric-field")()
+    input_field.store(field)
+    restored = input_field.fetch()
+    assert restored.name == field.name
+    assert restored.family == field.family
+    assert restored.parameters == field.parameters
+
+
+def test_python_vector_field_input_validates_family_and_parameters():
+    with pytest.raises(ValueError, match="Unknown unit family"):
+        InputPythonVectorField.specialize("not-a-family")
+
+    parameters = InputFieldParameters()
+    parameters.store({"amplitude": [1, 2, 3]})
+    assert parameters.fetch() == {"amplitude": [1, 2, 3]}
+    parameters.store("[1, 2, 3]")
+    with pytest.raises(ValueError, match="JSON dictionary"):
+        parameters.fetch()

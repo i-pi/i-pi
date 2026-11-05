@@ -8,6 +8,8 @@ import pytest
 
 from ipi.engine.forcefields import FFDielectric, ForceField, ForceRequest
 from ipi.engine.properties import Properties
+from ipi.inputs.forcefields import InputFFDielectric
+from ipi.utils.io.inputs.io_xml import xml_parse_string
 
 
 def _server_dielectric(**kwargs):
@@ -52,6 +54,25 @@ def test_dielectric_rejects_wrapped_forcefield():
             electric_fields=[],
             forcefield=ForceField(dopbc=True),
         )
+
+
+def test_input_ffdielectric_parses_server_e_configuration():
+    xml = """
+    <ffdielectric name="mu+E" where="server">
+      <electric_field name="static">
+        <parameters>{"amplitude": [1.0, 0.0, 0.0]}</parameters>
+      </electric_field>
+      <ffdirect name="mace"><pes>dummy</pes></ffdirect>
+    </ffdielectric>
+    """
+    input_ff = InputFFDielectric()
+    input_ff.parse(xml_parse_string(xml).fields[0][1])
+    dielectric = input_ff.fetch()
+    assert dielectric.name == "mu+E"
+    assert dielectric.where == "server"
+    assert len(dielectric.electric_fields) == 1
+    np.testing.assert_allclose(dielectric.electric_fields[0].get(0.0), [1.0, 0.0, 0.0])
+    assert dielectric.forcefield.pes == "dummy"
 
 
 def test_dielectric_applies_fixed_e_energy_force_and_virial():
