@@ -1,0 +1,12 @@
+{
+  "model_type": "PolarMACE",
+  "default_dtype": "float64",
+  "instructions": {
+    "_comments": {
+      "instructions": "The electric field is supplied by FFDielectric at run time.",
+      "compute_BEC": "Disabled because the client applies the field directly."
+    },
+    "compute_BEC": false,
+    "ignore": ["charges", "density_coefficients", "spin_charge_density", "spins", "electrostatic_energy", "electron_energy", "polarizability", "polarizability_sh", "node_energy"]
+  }
+}
