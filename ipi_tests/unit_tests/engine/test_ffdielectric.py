@@ -34,10 +34,32 @@ def _server_dielectric(**kwargs):
     )
 
 
-def test_dielectric_is_server_only_for_now():
-    """Client-side coupling belongs to the follow-up PR."""
-    with pytest.raises(ValueError, match="where='server'"):
-        _server_dielectric(where="client")
+def test_dielectric_accepts_client_electric_field_mode():
+    """The specialized extmace driver can receive the field from i-PI."""
+    dielectric = _server_dielectric(where="client")
+    assert dielectric.where == "client"
+
+
+def test_client_queue_serializes_electric_field():
+    """Client requests carry the field in the driver extra payload."""
+    field = PythonVectorField(
+        file="",
+        name="static",
+        family="electric-field",
+        units="atomic_unit",
+        parameters={"amplitude": [0.0, 0.0, 1.0]},
+    )
+    dielectric = _server_dielectric(
+        where="client", electric_fields=[field], forcefield=FFDirect(pes="dummy")
+    )
+    atoms = SimpleNamespace(
+        q=np.zeros((1, 3)),
+        motion=SimpleNamespace(integrator=SimpleNamespace(actual_time=0.0)),
+    )
+    cell = SimpleNamespace(h=np.eye(3), ih=np.eye(3))
+    request = dielectric.queue(atoms, cell)
+    assert request["electric_field"] == [0.0, 0.0, 1.0]
+    assert '"electric_field"' in request["extra"]
 
 
 def test_dielectric_rejects_wrapped_forcefield():

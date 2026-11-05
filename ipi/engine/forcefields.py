@@ -2573,11 +2573,8 @@ class FFDielectric(ForceField):
         where: str = "server",
     ):
         super().__init__()
-        if where != "server":
-            raise ValueError(
-                "FFDielectric currently supports only where='server'; "
-                "client mode is not implemented yet."
-            )
+        if where not in ("server", "client"):
+            raise ValueError("FFDielectric 'where' must be 'server' or 'client'.")
         self.name = name
         self.where = where
         self.dipole = ArrayFromDict(
@@ -2687,6 +2684,8 @@ class FFDielectric(ForceField):
         if electric_field is not None:
             electric_field = electric_field.tolist()
             extra_template["electric_field"] = electric_field
+            if self.where == "client":
+                extra_template["extra"] = json.dumps({"electric_field": electric_field})
         self.template = extra_template.copy()
 
         # The top-level request retains fields needed by i-PI post-processing.
@@ -2715,6 +2714,15 @@ class FFDielectric(ForceField):
                 message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
             )
 
+        if self.where == "client":
+            applied = r["result"][3] if len(r["result"]) > 3 else {}
+            if not isinstance(applied, dict) or "electric_field" not in applied.get(
+                "applied_fields", []
+            ):
+                raise ValueError(
+                    "The extmace client must acknowledge the applied electric field."
+                )
+            return r
         return self.apply_ensemble(r)
 
     def apply_ensemble(self, request: dict) -> dict:

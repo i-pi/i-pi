@@ -33,6 +33,15 @@ class Dummy_driver(object):
         """Dummy function that checks the arguments required to run the driver"""
         pass
 
+    def store_extra(self, extra):
+        """Store per-request metadata supplied by a force-field wrapper."""
+        if not extra:
+            self.extra = {}
+        elif isinstance(extra, str):
+            self.extra = json.loads(extra)
+        else:
+            self.extra = dict(extra)
+
     def compute_structure(self, cell, pos):
         """Evaluate a single structure"""
         # just evaluates zeros

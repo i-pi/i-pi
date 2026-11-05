@@ -24,10 +24,10 @@ clients/mace/polar # covered by .github/workflows/mace.ym
 features/ffdieletric/mace-polar+E-server # requires MACE; covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-ramp-server # requires MACE; covered by .github/workflows/mace.yml
 features/ffdieletric/mace-polar+E-resonant-server # requires MACE; covered by .github/workflows/mace.yml
+features/ffdieletric/mace-polar+E-client # requires MACE; covered by .github/workflows/mace.yml
 clients/metatomic  # covered by .github/workflows/metatomic.yml
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
 features/metadynamics/wte_metadynamics_zundel
 features/metadynamics/opes_metadynamics_zundel
-
