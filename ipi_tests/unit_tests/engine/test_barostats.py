@@ -513,18 +513,48 @@ def test_bzp_mass_from_bulk_modulus(simulation):
         assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
 
 
+def test_bzp_restart_keeps_the_reference_volume(restart_states):
+    """The reference volume of the piston mass is the first volume, also after a
+    restart, which continues the trajectory of the continuous run."""
+
+    root = ET.fromstring(pressure_input("isotropic"))
+    root.find("system/motion/dynamics/timestep").text = "0.5"
+    baro = root.find("system/motion/dynamics/barostat")
+    ET.SubElement(baro, "bulk_modulus").text = "1e-6"
+
+    def snapshot(sim):
+        barostat = sim.syslist[0].motion.barostat
+        return simulation_state(sim) + (barostat.v0, float(barostat.m[0]))
+
+    continuous, restarted = restart_states(
+        ET.tostring(root, encoding="unicode"), snapshot, steps=(6, 4)
+    )
+
+    assert continuous[5] == 8000.0
+    assert restarted[5] == continuous[5]
+    assert np.linalg.det(continuous[3]) != pytest.approx(8000.0, rel=1e-6)
+    assert restarted[6] == continuous[6]
+    assert restarted[0] == continuous[0]
+    for restarted_value, continuous_value in zip(restarted[1:5], continuous[1:5]):
+        np.testing.assert_allclose(
+            restarted_value, continuous_value, rtol=1e-12, atol=1e-12
+        )
+
+
 def test_bulk_modulus_input():
-    """The bulk modulus of the isotropic barostats is stored only when given, and
-    the barostats that do not use it reject it."""
+    """The bulk modulus and the reference volume of the isotropic barostats are
+    stored only when the bulk modulus is given, and they are rejected where they
+    are not used."""
 
     stored = InputBaro()
-    stored.store(BaroBZP(tau=100.0))
-    assert not stored.bulk_modulus._explicit
+    stored.store(BaroBZP(tau=100.0, v0=10.0))
+    assert not stored.bulk_modulus._explicit and not stored.v0._explicit
     stored = InputBaro()
-    stored.store(BaroBZP(tau=100.0, bulk_modulus=0.5))
+    stored.store(BaroBZP(tau=100.0, bulk_modulus=0.5, v0=10.0))
     restored = stored.fetch()
     assert type(restored) is BaroBZP
     assert restored.bulk_modulus == pytest.approx(0.5)
+    assert restored.v0 == pytest.approx(10.0)
 
     for mode in ("flexible", "anisotropic", "dummy"):
         input_baro = InputBaro()
@@ -532,6 +562,16 @@ def test_bulk_modulus_input():
         input_baro.mode.store(mode)
         input_baro.bulk_modulus.store(1.0)
         with pytest.raises(ValueError, match="bulk modulus is not used"):
+            input_baro.fetch()
+
+    for mode, bulk_modulus in (("isotropic", None), ("stochastic-rescaling", 1.0)):
+        input_baro = InputBaro()
+        input_baro._explicit = True
+        input_baro.mode.store(mode)
+        if bulk_modulus is not None:
+            input_baro.bulk_modulus.store(bulk_modulus)
+        input_baro.v0.store(10.0)
+        with pytest.raises(ValueError, match="v0 is only used"):
             input_baro.fetch()
 
 

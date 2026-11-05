@@ -436,11 +436,13 @@ bugs pass, and are no longer marked.
 - `bulk_modulus` (a pressure) replaces `compressibility` in `<barostat>`; `stochastic-rescaling` requires it, and
   inputs need the inverse of the old value (2.2 GPa for 4.5e-5 bar^-1).
 - `isotropic` and `sc-isotropic` take it too, to set the mass of the piston to 3 P V B tau^2 (P beads, V the
-  volume at bind) instead of 3 N kB (P T) tau^2, which is the same for an ideal gas (B = N kB T / V). The
+  reference volume `v0`) instead of 3 N kB (P T) tau^2, which is the same for an ideal gas (B = N kB T / V). The
   period of the volume oscillations is then about 2 pi tau / sqrt(3) for any material and temperature. With the
   default mass, as in Bussi, Zykova-Timan, Parrinello (2009), it is 2 pi tau / sqrt(3 B / (rho kB T)) (about
   1.6 tau for water and 0.2 tau for copper at 300 K), and scales as sqrt(T). Without `bulk_modulus` nothing
-  changes; the other barostats reject it. After a restart V, and so the mass, are those of the restart.
+  changes; the other barostats reject it. `v0` (a volume, like `h0` of the anisotropic barostat) defaults to the
+  volume of the cell at the first bind, and is written in restarts with `bulk_modulus`, so that they continue the
+  trajectory; it is rejected without a bulk modulus.
 
 ## Status and work left
 
