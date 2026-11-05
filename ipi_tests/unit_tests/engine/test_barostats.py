@@ -643,7 +643,19 @@ __DRIVER_CLASS__ = "CellMetric"
 class CellMetric(Dummy_driver):
     def compute_structure(self, cell, pos):
         dg = cell.T @ cell - 100.0 * np.eye(3)
-        return 0.005 * np.sum(dg**2), np.zeros_like(pos), -0.02 * cell @ dg @ cell.T, ""
+        u, f = 0.005 * np.sum(dg**2), np.zeros_like(pos)
+        vir = -0.02 * cell @ dg @ cell.T
+        # harmonic bonds of length 1.5 between all the pairs of atoms
+        for i in range(len(pos)):
+            for j in range(i):
+                r = pos[i] - pos[j]
+                d = np.linalg.norm(r)
+                fij = -0.5 * (d - 1.5) * r / d
+                u += 0.25 * (d - 1.5) ** 2
+                f[i] += fij
+                f[j] -= fij
+                vir += np.outer(fij, r)
+        return u, f, vir, ""
 """
 
 
@@ -679,6 +691,54 @@ def test_conserved_quantity_with_fixed_cell_elements(simulation, tmp_path):
             diagonal.append(np.log(np.diag(to_numpy(system.cell.h))))
     assert np.ptp(diagonal, axis=0).min() > 0.01
     assert np.ptp(econs) < 1e-3
+
+
+@pytest.mark.parametrize(
+    "hfix,nbeads", [("[]", 2), ("[offdiagonal, xx, yy]", 1)], ids=["full", "npzt"]
+)
+def test_conserved_quantity_converges_as_dt_squared(simulation, tmp_path, hfix, nbeads):
+    """Without thermostats, the error on the conserved quantity of a flexible
+    cell decreases as dt^2: the barostat feels the off-diagonal kinetic stress
+    and centroid virial that a shear cell velocity exchanges with the beads,
+    and the fixed elements of the cell receive no momentum. Three bonded atoms
+    in a cell with U = (k/2) |h^T h - a0^2 I|^2."""
+
+    (tmp_path / "cell_metric.py").write_text(CELL_METRIC)
+    rng = np.random.default_rng(3)
+    q = np.tile([1.0, 2.0, 3.0, 2.5, 2.0, 3.0, 1.7, 3.3, 3.2], (nbeads, 1))
+    if nbeads > 1:
+        q += 0.1 * rng.standard_normal(q.shape)
+    p = rng.standard_normal(q.shape)
+
+    def spread(dt):
+        xml = f"""<simulation verbosity="quiet">
+          <total_steps>1000</total_steps>
+          <ffdirect name="metric"><pes>custom</pes><parameters>{{}}</parameters>
+            <pes_path>{tmp_path / "cell_metric.py"}</pes_path></ffdirect>
+          <system><forces><force forcefield="metric"/></forces>
+            <ensemble><temperature>1.0</temperature><pressure>0.0</pressure></ensemble>
+            <motion mode="dynamics"><fixcom>False</fixcom>
+              <dynamics mode="npt"><timestep>{dt}</timestep>
+                <barostat mode="flexible"><tau>10</tau><hfix>{hfix}</hfix>
+                  <p shape="(3,3)">[2, 10, 10, 0, -3, 10, 0, 0, 1]</p></barostat>
+              </dynamics></motion>
+            <beads natoms="3" nbeads="{nbeads}">
+              <q shape="({nbeads},9)">{q.ravel().tolist()}</q>
+              <p shape="({nbeads},9)">{p.ravel().tolist()}</p><m shape="(3)">[1, 1, 1]</m>
+              <names shape="(3)">[H, H, H]</names></beads>
+            <cell shape="(3,3)">[10, 0, 0, 0, 10, 0, 0, 0, 10]</cell>
+          </system></simulation>"""
+        with simulation(xml) as sim:
+            system = sim.syslist[0]
+            econs = []
+            for _ in range(round(8.0 / dt)):
+                sim.run(steps=1, write_outputs=False)
+                econs.append(float(system.ensemble.econs))
+        return np.ptp(econs)
+
+    coarse, fine = spread(0.04), spread(0.02)
+    assert fine < 5e-3
+    assert coarse / fine > 3.0
 
 
 def test_cell_propagators_match_power_series():
