@@ -75,7 +75,7 @@ class InputBaro(Input):
                 "default": 1.0,
                 "dtype": float,
                 "dimension": "time",
-                "help": "The time scale of the barostat. For 'stochastic-rescaling' it is the relaxation time of the volume. For the other modes it sets the mass of the cell (see bulk_modulus): the volume oscillates with a period of about 2 pi tau / sqrt(3) = 3.6 tau if bulk_modulus is given, for any material and temperature, and otherwise shorter by sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho (about 1.6 tau for water and 0.2 tau for copper at 300 K). With 'flexible' and 'anisotropic', the shear deformations of the cell oscillate with frequencies set by the shear moduli rather than by B.",
+                "help": "The time scale of the barostat. For 'stochastic-rescaling' it is the relaxation time of the volume. For the other modes it sets the mass of the cell (see bulk_modulus): if bulk_modulus is given, the volume oscillates with a period of about tau, for any material and temperature, and otherwise with a period of 2 pi tau / sqrt(3 B / (rho kB T)) for a material of bulk modulus B and atomic density rho (about 1.6 tau for water and 0.2 tau for copper at 300 K). With 'flexible' and 'anisotropic', the shear deformations of the cell oscillate with frequencies set by the shear moduli rather than by B.",
             },
         ),
         "bulk_modulus": (
@@ -84,7 +84,7 @@ class InputBaro(Input):
                 "default": -1.0,
                 "dtype": float,
                 "dimension": "pressure",
-                "help": "An estimate of the isothermal bulk modulus B of the system, which only affects the dynamics, not the ensemble that is sampled. It must be given for 'stochastic-rescaling', where it sets the size of the volume moves. For the other modes it sets the mass of the cell to 3 V B tau^2 for 'isotropic' and 'sc-isotropic', and to V B tau^2 for each element of the cell momentum for 'flexible' and 'anisotropic', with V the reference volume v0, or the volume of h0 for 'anisotropic'. Without it V B is replaced by N kB T, the value for an ideal gas of N atoms. Both masses are multiplied by the number of beads.",
+                "help": "An estimate of the isothermal bulk modulus B of the system, which only affects the dynamics, not the ensemble that is sampled. It must be given for 'stochastic-rescaling', where it sets the size of the volume moves. For the other modes it sets the mass of the cell to 9 V B (tau / 2 pi)^2 for 'isotropic' and 'sc-isotropic', and to 3 V B (tau / 2 pi)^2 for each element of the cell momentum for 'flexible' and 'anisotropic', with V the reference volume v0, or the volume of h0 for 'anisotropic', so that tau is the period of the volume oscillations. Without it the masses are 3 N kB T tau^2 and N kB T tau^2, with N the number of atoms. Both masses are multiplied by the number of beads.",
             },
         ),
         "v0": (

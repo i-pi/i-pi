@@ -506,8 +506,8 @@ def test_dynamics_rejects_unsuitable_barostats(simulation, dynamics, barostat, m
 
 
 def test_bzp_mass_from_bulk_modulus(simulation):
-    """The piston mass is 3 N kB (P T) tau^2, or 3 P V B tau^2 with a bulk modulus:
-    the same for that of an ideal gas, N kB T / V, but independent of T."""
+    """The piston mass is 3 N kB (P T) tau^2, or 9 P V B (tau / 2 pi)^2 with a
+    bulk modulus, which does not depend on T."""
 
     root = ET.fromstring(pressure_input("isotropic", nbeads=2))
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
@@ -516,15 +516,16 @@ def test_bzp_mass_from_bulk_modulus(simulation):
         kbt = Constants.kb * float(system.ensemble.temp)
         mass = 3 * system.beads.natoms * 2 * kbt * barostat.tau**2
         assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
-        ideal_gas = system.beads.natoms * kbt / float(system.cell.V)
+        volume = float(system.cell.V)
         system.ensemble.temp = 4 * system.ensemble.temp
         assert float(barostat.m[0]) == pytest.approx(4 * mass, rel=1e-12)
 
     baro = root.find("system/motion/dynamics/barostat")
-    ET.SubElement(baro, "bulk_modulus").text = repr(ideal_gas)
+    ET.SubElement(baro, "bulk_modulus").text = "0.5"
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         system = sim.syslist[0]
         barostat = system.motion.barostat
+        mass = 9 * 2 * volume * 0.5 * (barostat.tau / (2 * np.pi)) ** 2
         assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
         system.ensemble.temp = 4 * system.ensemble.temp
         assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
@@ -532,8 +533,8 @@ def test_bzp_mass_from_bulk_modulus(simulation):
 
 @pytest.mark.parametrize("mode", ["flexible", "anisotropic"])
 def test_flexible_cell_mass_from_bulk_modulus(simulation, mode):
-    """The mass of the cell is N kB (P T) tau^2, or P V B tau^2 with a bulk
-    modulus, with V the volume of the reference cell for 'anisotropic'."""
+    """The mass of the cell is N kB (P T) tau^2, or 3 P V B (tau / 2 pi)^2 with a
+    bulk modulus, with V the volume of the reference cell for 'anisotropic'."""
 
     root = ET.fromstring(pressure_input(mode, nbeads=2))
     baro = root.find("system/motion/dynamics/barostat")
@@ -551,7 +552,7 @@ def test_flexible_cell_mass_from_bulk_modulus(simulation, mode):
         barostat = sim.syslist[0].motion.barostat
         volume = 21.0**3 if mode == "anisotropic" else 20.0**3
         assert barostat.v0 == pytest.approx(volume, rel=1e-12)
-        mass = 2 * volume * 0.5 * barostat.tau**2
+        mass = 3 * 2 * volume * 0.5 * (barostat.tau / (2 * np.pi)) ** 2
         assert float(barostat.m[0]) == pytest.approx(mass, rel=1e-12)
 
 
