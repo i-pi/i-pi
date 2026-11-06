@@ -533,12 +533,12 @@ class BaroBZP(Barostat):
     Implementation details: Ceriotti, More, Manolopoulos, Comp. Phys. Comm.
         185, 1019 (2014) [doi:10.1016/j.cpc.2013.10.027]
 
-    The mass of the piston is 3 V B tau^2, with the bulk modulus B = N kB T / V
-    of an ideal gas unless an estimate of B is given, and V the reference
-    volume v0, which defaults to the volume at the first bind.
-    The period of the volume oscillations is then about 2 pi tau / sqrt(3) for
-    any material and temperature. With the ideal-gas mass it is shorter by
-    sqrt(B / (rho kB T)) for a material of bulk modulus B and atomic density rho.
+    With an estimate of the bulk modulus B, the mass of the piston is
+    9 V B (tau / 2 pi)^2, with V the reference volume v0, which defaults to the
+    volume at the first bind, so that the volume oscillates with a period of
+    about tau for any material and temperature. Otherwise it is 3 N kB T tau^2,
+    as in Bussi et al., and the period is 2 pi tau / sqrt(3 B / (rho kB T)) for
+    a material of bulk modulus B and atomic density rho.
 
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
@@ -636,15 +636,15 @@ class BaroBZP(Barostat):
         )
 
     def get_m(self):
-        """Calculates the mass of the piston, 3 V B tau^2 (see the class)."""
+        """Calculates the mass of the piston (see the class)."""
 
         # the force on the piston is a sum over the beads, so V B carries a
         # factor nbeads, as does the temperature of the barostat
         if self.bulk_modulus > 0.0:
             vb = self.beads.nbeads * self.v0 * self.bulk_modulus
-        else:
-            vb = self.beads.natoms * Constants.kb * self.temp
-        return xp.asarray([3.0 * self.tau**2 * vb])
+            return xp.asarray([9.0 * vb * (self.tau / (2.0 * np.pi)) ** 2])
+        nkt = self.beads.natoms * Constants.kb * self.temp
+        return xp.asarray([3.0 * nkt * self.tau**2])
 
     def get_pot(self):
         """Calculates the P V term of the enthalpy, for the nbeads replicas of
@@ -813,13 +813,14 @@ class BaroFlexibleCell(Barostat):
     the cell (`get_pot`, which depends on `pot_dependencies`) and the external
     stress (`external_stress`).
 
-    The mass of each element of the cell momentum is V B tau^2, a third of the
-    mass of the isotropic piston (as in Martyna, Tobias, Klein, J. Chem. Phys.
-    101, 4177 (1994) [doi:10.1063/1.467468]), so that
-    a uniform dilation of the cell oscillates as the volume of `BaroBZP`. The
-    other modes oscillate with frequencies set by the corresponding elastic
-    constants instead of 3 B: C11 - C12 for a tetragonal and C44 for a shear
-    deformation of a cubic crystal.
+    The mass of each element of the cell momentum is a third of the mass of the
+    isotropic piston, 3 V B (tau / 2 pi)^2 or N kB T tau^2 (as in Martyna,
+    Tobias, Klein, J. Chem. Phys. 101, 4177 (1994) [doi:10.1063/1.467468]), so
+    that a uniform dilation of the cell oscillates as the volume of `BaroBZP`,
+    with a period of about tau with an estimate of B. The other modes oscillate
+    with frequencies set by the corresponding elastic constants instead of 3 B:
+    C11 - C12 for a tetragonal and C44 for a shear deformation of a cubic
+    crystal.
 
     The cell moves as dh/dt = v h, with v = p / m upper triangular and zero in
     the elements fixed by `hfix`, so the dynamics conserves the measure of the
@@ -967,14 +968,14 @@ class BaroFlexibleCell(Barostat):
         return float(self.cell.V)
 
     def get_m(self):
-        """Calculates the mass of the elements of the cell momentum, V B tau^2,
-        with V B = N kB T for an ideal gas (see the class and `BaroBZP.get_m`)."""
+        """Calculates the mass of the elements of the cell momentum, a third of
+        that of `BaroBZP.get_m` (see the class)."""
 
         if self.bulk_modulus > 0.0:
             vb = self.beads.nbeads * self.v0 * self.bulk_modulus
-        else:
-            vb = self.beads.natoms * Constants.kb * self.temp
-        return xp.asarray([self.tau**2 * vb])
+            return xp.asarray([3.0 * vb * (self.tau / (2.0 * np.pi)) ** 2])
+        nkt = self.beads.natoms * Constants.kb * self.temp
+        return xp.asarray([nkt * self.tau**2])
 
     def get_3x3to6(self):
         return self.select6 @ self.p.reshape(9)
