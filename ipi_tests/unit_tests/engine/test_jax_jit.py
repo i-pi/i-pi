@@ -33,10 +33,9 @@ def jax_random(device_random):
 def jit_step(sim):
     """The object compiling the steps of the first system, if any."""
 
-    from ipi.engine.jit import JaxStep
+    from ipi.engine.jit import compiled_step
 
-    step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return step if isinstance(step, JaxStep) else None
+    return compiled_step(sim.syslist[0])
 
 
 def assert_same_state(a, b):
@@ -95,7 +94,7 @@ def test_forces_of_untraceable_drivers_are_eager(driver, simulation, monkeypatch
         xml = write_input("nvt_langevin", HARMONIC)
     else:
         monkeypatch.setattr(Zero_driver, "compute_structure", untraceable)
-        monkeypatch.setattr(Zero_driver, "jax_traceable", False, raising=False)
+        monkeypatch.setattr(Zero_driver, "traceable", False)
         xml = write_input("nvt_langevin", DUMMY)
     with simulation(xml, **JAX) as eager, simulation(xml, **JAX, jit=True) as compiled:
         for step in range(5):

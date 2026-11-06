@@ -12,10 +12,10 @@ from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
-@pytest.mark.parametrize("threading", [False, True])
-def test_nve_tracks_exact_harmonic_motion(simulation, threading):
+@pytest.mark.parametrize("interleave", [False, True])
+def test_nve_tracks_exact_harmonic_motion(simulation, interleave):
     """Velocity Verlet agrees with the analytic oscillator at a finite time."""
-    with simulation(harmonic_input(threading=threading, timestep=0.01)) as sim:
+    with simulation(harmonic_input(interleave=interleave, timestep=0.01)) as sim:
         beads = sim.syslist[0].beads
         q0, p0, masses = [to_numpy(x).copy() for x in (beads.q, beads.p, beads.m3)]
         frequency = np.sqrt(0.5 / masses)
@@ -108,10 +108,10 @@ def test_com_removal_from_beads_or_normal_modes(simulation):
         )
 
 
-@pytest.mark.parametrize("threading", [False, True])
-def test_output_stride_matches_completed_steps(simulation, threading):
+@pytest.mark.parametrize("interleave", [False, True])
+def test_output_stride_matches_completed_steps(simulation, interleave):
     """Output rows hold the step and energies of the state at that step."""
-    xml = harmonic_input(threading=threading).replace(
+    xml = harmonic_input(interleave=interleave).replace(
         "<system>",
         '<output prefix="sample"><properties filename="properties" stride="2">'
         "[step, potential, kinetic_md]</properties></output><system>",
@@ -168,7 +168,6 @@ def test_read_only_initialization_starts_no_services(tmp_path, monkeypatch, sour
     assert sim.chk is None
     assert sim.sockets_prefix == "/tmp/initialization-test-"
     assert not list(tmp_path.iterdir())
-    assert all(field._thread is None for field in sim.fflist.values())
     np.testing.assert_array_equal(sim.syslist[0].beads.q, 2)
     # Forces are bound to the modified coordinates even in read-only mode.
     assert sim.syslist[0].forces.pot == pytest.approx(6.0)

@@ -6,6 +6,7 @@
 
 import contextlib
 import json
+from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -30,13 +31,31 @@ cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not availa
 CUDA = dict(backend="torch", device="cuda")
 
 
+def recording():
+    """Whether a function is being recorded, rather than run (and observed)
+    eagerly."""
+
+    from ipi.utils import depend
+
+    return depend._recorder is not None and not depend._recorder.observes
+
+
 def graph_step(sim):
     """The object replaying the steps of the first system, if any."""
 
-    from ipi.engine.jit import GraphStep
+    from ipi.engine.jit import compiled_step
 
-    step = getattr(getattr(sim.syslist[0].motion, "integrator", None), "step", None)
-    return step if isinstance(step, GraphStep) else None
+    return compiled_step(sim.syslist[0])
+
+
+@pytest.fixture
+def eager_driver(monkeypatch):
+    """Makes the `dummy` driver not traceable, so that it is called eagerly
+    between the CUDA graphs."""
+
+    from ipi.pes.dummy import Zero_driver
+
+    monkeypatch.setattr(Zero_driver, "traceable", False)
 
 
 @cuda
@@ -46,10 +65,10 @@ def graph_step(sim):
         ("nve", NO_FORCES, 1),
         ("nvt_langevin", HARMONIC, 2),
         ("nvt_svr", HARMONIC, 2),
-        ("pimd_nvt", DUMMY, 5),
+        ("pimd_nvt", DUMMY, 1),
         ("pimd_pile_g", HARMONIC, 2),
-        ("pimd_nvt", DUMMY_BATCHED, 2),
-        ("mts", HARMONIC, 14),
+        ("pimd_nvt", DUMMY_BATCHED, 1),
+        ("mts", HARMONIC, 2),
         ("npt_isotropic", HARMONIC, 2),
         ("npt_flexible", HARMONIC, 2),
         ("pimd_npt", HARMONIC, 2),
@@ -61,10 +80,34 @@ def test_replay_matches_eager_steps(
 ):
     """The replayed steps give the same trajectory and outputs as eager steps
     (to rounding errors), with one CUDA graph per segment between eager force
-    evaluations (of a force component, or only of the driver for direct
-    forcefields)"""
+    evaluations (of a force component), and a single one with a traceable
+    driver"""
+
+    assert_replay_matches_eager_steps(
+        case_input(case, forcefield), nsegments, simulation
+    )
+
+
+EAGER_DRIVER_CASES = [
+    ("pimd_nvt", DUMMY, 5),
+    ("pimd_nvt", DUMMY_BATCHED, 2),
+    ("mts", HARMONIC, 14),
+]
+
+
+@cuda
+@pytest.mark.parametrize("case,forcefield,nsegments", EAGER_DRIVER_CASES)
+def test_replay_with_eager_driver_calls(
+    case, forcefield, nsegments, simulation, device_random, eager_driver
+):
+    """A driver that is not traceable is called eagerly between the CUDA graphs,
+    which end at each call"""
 
     xml = case_input(case, forcefield)
+    assert_replay_matches_eager_steps(xml, nsegments, simulation)
+
+
+def assert_replay_matches_eager_steps(xml, nsegments, simulation):
     with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for step in range(8):
             eager.run_step(step)
@@ -145,7 +188,8 @@ def test_forces_converted_in_part_before_the_recording(simulation, device_random
 def test_recording_in_a_new_thread(simulation, device_random):
     """A step is recorded in a thread that has run eager steps, as some
     libraries (e.g. cuBLAS) initialize per-thread state that cannot be
-    recorded: steps run in threads (threading='true') then still replay"""
+    recorded: steps run in other threads (e.g. a script running i-PI in a
+    thread) then still replay"""
 
     from concurrent.futures import ThreadPoolExecutor
 
@@ -180,13 +224,12 @@ def test_failed_recording_stops_the_replay(
     apply the thermostat) stops the steps, also at the following calls"""
 
     from ipi.engine.thermostats import ThermoLangevin
-    from ipi.utils import depend
     from ipi.utils.jit import JitError
 
     step, calls = ThermoLangevin.step, []
 
     def failing(self):
-        if depend._recorder is not None:
+        if recording():
             calls.append(None)
             if len(calls) == segment:
                 raise RuntimeError("recording failed")
@@ -204,8 +247,11 @@ def test_failed_recording_stops_the_replay(
 
 
 @cuda
-def test_driver_extras_are_updated(simulation, monkeypatch, device_random):
-    """The extras returned by the driver reach the forces at each replayed step"""
+def test_driver_extras_are_updated(
+    simulation, monkeypatch, device_random, eager_driver
+):
+    """The extras returned by an eager driver reach the forces at each replayed
+    step"""
 
     from ipi.pes.dummy import Zero_driver
 
@@ -318,17 +364,17 @@ def fake_cuda(simulation, select_backend, monkeypatch):
         ("nve", NO_FORCES, 1),
         ("nvt_langevin", HARMONIC, 2),
         ("nvt_svr", HARMONIC, 2),
-        ("pimd_nvt", DUMMY, 5),
+        ("pimd_nvt", DUMMY, 1),
         ("pimd_pile_g", HARMONIC, 2),
-        ("pimd_nvt", DUMMY_BATCHED, 2),
-        ("mts", HARMONIC, 14),
+        ("pimd_nvt", DUMMY_BATCHED, 1),
+        ("mts", HARMONIC, 2),
     ],
 )
 def test_recording_is_split_at_force_evaluations(
     case, forcefield, nsegments, simulation, fake_cuda
 ):
     """A step is recorded in segments that end at the eager force evaluations
-    (of a force component, or only of the driver for direct forcefields)"""
+    (of a force component), and not at the calls of a traceable driver"""
 
     with simulation(case_input(case, forcefield)) as sim:
         for step in range(4):
@@ -336,9 +382,45 @@ def test_recording_is_split_at_force_evaluations(
         assert len(graph_step(sim).segments) == nsegments
 
 
-def test_replays_call_the_driver(simulation, monkeypatch, fake_cuda):
-    """At each replay the driver is called, its tensor results are copied into
-    those read by the graphs, and its extras reach the forces"""
+@pytest.mark.parametrize("case,forcefield,nsegments", EAGER_DRIVER_CASES)
+def test_recording_is_split_at_eager_driver_calls(
+    case, forcefield, nsegments, simulation, fake_cuda, eager_driver
+):
+    """The segments end at the calls of a driver that is not traceable"""
+
+    with simulation(case_input(case, forcefield)) as sim:
+        for step in range(4):
+            sim.run_step(step)
+        assert len(graph_step(sim).segments) == nsegments
+
+
+def test_traceable_drivers_are_recorded(simulation, monkeypatch, fake_cuda):
+    """A traceable driver is called by the eager steps and the recorded one,
+    and not by the replays, which keep the extras of the recorded call"""
+
+    from ipi.pes.dummy import Zero_driver
+
+    calls = []
+
+    def compute_structure(self, cell, pos):
+        calls.append(None)
+        return pos.sum() * 0.0, pos * 0.0, cell * 0.0, json.dumps({"n": len(calls)})
+
+    monkeypatch.setattr(Zero_driver, "compute_structure", compute_structure)
+    with simulation(write_input("nve", DUMMY)) as sim:
+        for step in range(3):
+            sim.run_step(step)
+        recorded = len(calls)
+        for step in range(3, 6):
+            sim.run_step(step)
+        assert len(graph_step(sim).segments) == 1
+        assert len(calls) == recorded
+        assert sim.syslist[0].forces.extras["n"] == [recorded]
+
+
+def test_replays_call_the_driver(simulation, monkeypatch, fake_cuda, eager_driver):
+    """At each replay an eager driver is called, its tensor results are copied
+    into those read by the graphs, and its extras reach the forces"""
 
     from ipi.pes.dummy import Zero_driver
 
@@ -472,7 +554,7 @@ def test_failed_recording_is_final(kind, fake_cuda):
     between two segments, is not called again, as the kernels of the segment
     being recorded have not run: the following calls raise a JitError"""
 
-    from ipi.utils import depend, jit
+    from ipi.utils import jit
     from ipi.utils.cudagraphs import GraphReplay
     from ipi.utils.jit import JitError
 
@@ -487,7 +569,7 @@ def test_failed_recording_is_final(kind, fake_cuda):
         calls.append(None)
         if kind == "eager":
             jit.eager(fail)
-        elif depend._recorder is not None:
+        elif recording():
             fail()
 
     replay = GraphReplay(func)
@@ -508,7 +590,6 @@ def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
     ending it fails, and is raised as a JitError; JitErrors are raised as they
     are"""
 
-    from ipi.utils import depend
     from ipi.utils.cudagraphs import GraphReplay
     from ipi.utils.jit import JitError
 
@@ -520,7 +601,7 @@ def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
     error = JitError("raised in the step") if kind == "jit" else ValueError()
 
     def func():
-        if depend._recorder is not None:
+        if recording():
             raise error
 
     replay = GraphReplay(func)
@@ -695,7 +776,7 @@ def test_compilation_errors_during_a_recording_are_raised(monkeypatch):
 
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: (9, 0))
     monkeypatch.setattr(torch, "compile", lambda func, **kwargs: failing)
-    monkeypatch.setattr(depend, "_recorder", object())
+    monkeypatch.setattr(depend, "_recorder", SimpleNamespace(observes=False))
 
     def func(x):
         return 2 * x

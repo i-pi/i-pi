@@ -5,25 +5,24 @@ so these tests only rely on what a driver could observe: the bytes i-PI sends,
 the errors it raises, and the state of the force requests.
 """
 
+import contextlib
+import gc
+import os
+import select
 import socket
+import struct
 import tempfile
 import threading
 import time
-from concurrent.futures import Future
-from multiprocessing import shared_memory
+import warnings
+from multiprocessing import resource_tracker, shared_memory
 
 import numpy as np
 import pytest
 
 from ipi.engine.forcefields import ForceRequest
 from ipi.interfaces import sockets
-from ipi.interfaces.sockets import (
-    Disconnected,
-    Driver,
-    InvalidSize,
-    InvalidStatus,
-    Status,
-)
+from ipi.interfaces.sockets import Disconnected, Driver, InvalidSize, Status
 
 # Protocol headers are fixed 12-byte ASCII fields, spelled out here rather
 # than taken from sockets.MESSAGE so that a typo there is caught.
@@ -71,7 +70,6 @@ def request(rid=17, shift=0.0):
         pos=np.arange(6, dtype=float) + shift,
         active=np.array([3, 4, 5]),
         cell=(np.eye(3), np.eye(3)),
-        offset=0.25,
         result=None,
         status="Queued",
         start=-1,
@@ -92,15 +90,40 @@ def pending(peer):
     return data
 
 
+@contextlib.contextmanager
+def no_leaked_descriptors():
+    """Fails if the block leaves descriptors open, or leaves them to the garbage collector."""
+    # the tracker of the shared memory segments keeps a pipe open once started
+    resource_tracker.ensure_running()
+    gc.collect()
+    before = len(os.listdir("/dev/fd"))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ResourceWarning)
+        yield
+        gc.collect()
+    unclosed = [str(w.message) for w in caught if w.category is ResourceWarning]
+    assert unclosed == []
+    assert len(os.listdir("/dev/fd")) == before, "descriptors left open"
+
+
+def announced_segments(wire):
+    """Names of the shared-memory segments announced by a POSDATA trigger, and
+    the length of the trigger."""
+    names, offset = [], 16
+    for _ in range(6):  # positions, cell, inverse cell, energy, forces, virial
+        length = int(np.frombuffer(wire[offset : offset + 4], dtype=np.int32)[0])
+        names.append(wire[offset + 4 : offset + 4 + length].decode())
+        offset += 4 + length
+    return names, offset
+
+
 def assert_pending(r):
     assert r["status"] != "Done"
     assert r["result"] is None
-    assert not r._event_done.is_set()
 
 
 def assert_completed(r, energy=1.0, forces=(0, 0, 0, 0, 1, 2)):
     assert r["status"] == "Done"
-    assert r._event_done.is_set()
     assert r["result"][0] == pytest.approx(energy)
     np.testing.assert_array_equal(r["result"][1], forces)
 
@@ -115,50 +138,61 @@ def connection(request):
     try:
         yield driver, peer
     finally:
-        try:
-            driver.shutdown()  # also releases shared-memory segments
-        except OSError:
-            pass
-        driver.close()
+        driver.disconnect()  # also releases shared-memory segments
         peer.close()
 
 
 @pytest.fixture
-def server(monkeypatch):
-    """A listening TCP interface and a function that connects handshaken clients."""
-    monkeypatch.setattr(sockets, "SERVERTIMEOUT", 0.01)
-    interface = sockets.InterfaceSocket(
-        mode="inet", address="127.0.0.1", port=0, timeout=0.3
-    )
+def server(request):
+    """A listening interface (TCP unless another mode is requested) and a
+    function that connects handshaken clients."""
+    mode = getattr(request, "param", "inet")
+    directory = tempfile.TemporaryDirectory(prefix="ipi-socket-", dir="/tmp")
+    address = dict(address="127.0.0.1", port=0)
+    if mode != "inet":
+        address = dict(address="server", sockets_prefix=directory.name + "/")
+    interface = sockets.InterfaceSocket(mode=mode, timeout=0.3, **address)
     interface.open()
     interface.requests = []
     interface.offset = 0.25
     peers = []
 
     def connect(reply=READY):
-        peer = socket.create_connection(interface.server.getsockname(), timeout=2)
+        peer = socket.socket(interface.server.family, socket.SOCK_STREAM)
+        peer.settimeout(2)
+        peer.connect(interface.server.getsockname())
         peers.append(peer)
-        peer.sendall(reply)
-        interface.pool_update()
+        interface.poll()  # accepts the client, and asks for its status
         assert peer.recv(12) == STATUS
+        peer.sendall(reply)
+        wait_readable(interface.clients[-1])
+        interface.poll()  # reads the status
         return peer
 
     try:
         yield interface, connect
     finally:
         interface.close()
-        interface.server.close()
-        interface.executor.shutdown(wait=True)
         for peer in peers:
             peer.close()
+        directory.cleanup()
+
+
+def wait_readable(client, timeout=2.0):
+    """Waits until the reply of `client` can be read."""
+    select.select([client], [], [], timeout)
 
 
 def run_pool(interface, requests, timeout=2.0):
-    """Distributes work until every request is done or the deadline passes."""
+    """Polls until every request is done or the deadline passes."""
     deadline = time.time() + timeout
-    while time.time() < deadline and not all(r._event_done.is_set() for r in requests):
-        interface.pool_distribute()
-    interface.pool_distribute()
+    while time.time() < deadline and not all(r["status"] == "Done" for r in requests):
+        interface.poll()
+        time.sleep(0.001)
+    interface.poll()
+
+
+# -- one client ---------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -167,93 +201,59 @@ def run_pool(interface, requests, timeout=2.0):
         (READY, Status.Up | Status.Ready),
         (MESSAGE["needinit"], Status.Up | Status.NeedsInit),
         (HAVEDATA, Status.Up | Status.HasData),
-        (b"UNKNOWN     ", Status.Up),
-        (b"BAD", Status.Disconnected),
     ],
 )
 def test_status_replies(connection, reply, status):
     driver, peer = connection
+    driver.ask_status()
+    assert pending(peer) == STATUS
+    assert driver.expect == "status" and not driver.free()
     peer.sendall(reply)
-    assert driver.get_status() == status
-    assert pending(peer) == STATUS
+    driver.read_status()
+    assert driver.status == status
+    assert driver.expect is None
+    assert driver.free() == (reply != HAVEDATA)
 
 
-def test_status_wait_sends_a_single_request(connection, monkeypatch):
-    """A slow client is asked once, not repeatedly, while i-PI waits."""
-    monkeypatch.setattr(sockets, "SELECTTIMEOUT", 0.01)
+@pytest.mark.parametrize("reply", [b"UNKNOWN     ", b"BAD", b""])
+def test_bad_status_reply_disconnects(connection, monkeypatch, reply):
+    monkeypatch.setattr(sockets, "NTIMEOUT", 1)
     driver, peer = connection
-    late_reply = threading.Timer(0.2, peer.sendall, [READY])
-    late_reply.start()
-    try:
-        assert driver.get_status() == Status.Up | Status.Ready
-    finally:
-        late_reply.join()
-    assert pending(peer) == STATUS
-
-
-def test_closed_peer_is_disconnected(connection):
-    driver, peer = connection
-    peer.close()
-    assert driver.get_status() == Status.Disconnected
+    driver.ask_status()
+    peer.sendall(reply)
+    if reply != b"UNKNOWN     ":
+        peer.close()
+    with pytest.raises(Disconnected):
+        driver.read_status()
 
 
 @pytest.mark.parametrize("batch_size,pars", [(1, ""), (3, ""), (3, "model=harmonic")])
-def test_initialization_wire_format(connection, batch_size, pars):
+def test_initialization_is_sent_with_the_positions(connection, batch_size, pars):
     driver, peer = connection
-    peer.sendall(MESSAGE["needinit"])
-    driver.get_status()
+    driver.status = Status.Up | Status.NeedsInit
     driver.batch_size = batch_size
-    driver.initialize(17, pars)
+    r = request()
+    r["pars"] = pars
+    driver.send_job([r])
     wire = pending(peer)
-    assert wire[:12] == STATUS
-    init = wire[12:]
-    assert init[:12] == MESSAGE["init"]
-    assert np.frombuffer(init[12:20], dtype=np.int32).tolist() == [17, len(init) - 20]
+    assert wire[:12] == MESSAGE["init"]
+    rid, length = np.frombuffer(wire[12:20], dtype=np.int32).tolist()
     expected = pars
     if batch_size > 1:
         expected += ("," if pars else "") + " batch_size:3"
-    assert init[20:].decode() == expected
+    assert rid == 17 and wire[20 : 20 + length].decode() == expected
+    assert wire[20 + length : 32 + length] == MESSAGE["posdata"]
+    assert wire.endswith(MESSAGE["getforce"])
+    assert driver.expect == "forces"
 
 
 @pytest.mark.parametrize("extra", [b"", b'{"dipole":[1,2,3]}', b"x" * 2048])
-def test_getforce_reads_complete_reply(connection, extra):
+def test_force_reply_is_read_completely(connection, extra):
     driver, peer = connection
-    peer.sendall(HAVEDATA + payload(extra=extra))
-    driver.get_status()
-    energy, force, virial, extras = driver.getforce()
-    assert pending(peer) == STATUS + MESSAGE["getforce"]
-    assert energy == 1.25
-    np.testing.assert_array_equal(force, [0, 1, 2])
-    np.testing.assert_array_equal(virial, np.eye(3))
-    assert extras.get("raw", "") == extra.decode()
-
-
-def test_getforce_requires_data(connection):
-    driver, _ = connection
-    with pytest.raises(InvalidStatus):
-        driver.getforce()
-
-
-@DRIVERS
-@pytest.mark.parametrize("method", ["initialize", "sendpos"])
-def test_invalid_status_reports_protocol_error(connection, method):
-    driver, peer = connection
-    peer.sendall(HAVEDATA)
-    driver.get_status()
-    args = (17, "") if method == "initialize" else (np.zeros(3), (np.eye(3), np.eye(3)))
-    with pytest.raises(InvalidStatus):
-        getattr(driver, method)(*args)
-
-
-def test_request_roundtrip_sends_active_atoms_and_expands_forces(connection):
-    driver, peer = connection
-    first, second = request(), request(rid=18)
-    peer.sendall(READY)
-    driver.get_status()
-    assert driver.dispatch_send(first)
+    driver.status = Status.Up | Status.Ready
+    driver.send_job([request()])
     assert pending(peer) == b"".join(
         [
-            STATUS,
             MESSAGE["posdata"],
             np.eye(3).tobytes(),
             np.eye(3).tobytes(),
@@ -262,27 +262,22 @@ def test_request_roundtrip_sends_active_atoms_and_expands_forces(connection):
             MESSAGE["getforce"],
         ]
     )
-    peer.sendall(payload(extra=b'{"energy_component":2}') + READY)
-    assert driver.dispatch_recv(first)
-    assert_completed(first)
-    np.testing.assert_array_equal(first["result"][2], np.eye(3))
-    assert first["result"][3]["energy_component"] == 2
-    # A later reply must not overwrite the results already handed out.
-    assert driver.dispatch_send(second)
-    peer.sendall(payload(energy=2.25, forces=[6.0, 7.0, 8.0]) + READY)
-    assert driver.dispatch_recv(second)
-    assert_completed(second, energy=2.0, forces=[0, 0, 0, 6, 7, 8])
-    assert_completed(first)
+    peer.sendall(payload(extra=extra))
+    ((energy, force, virial, extras),) = driver.read_job()
+    assert energy == 1.25
+    np.testing.assert_array_equal(force, [0, 1, 2])
+    np.testing.assert_array_equal(virial, np.eye(3))
+    assert extras.get("raw", "") == extra.decode()
+    assert driver.lastreq == 17 and driver.job is None and driver.expect is None
 
 
 def test_batch_is_padded_and_results_keep_request_order(connection):
     driver, peer = connection
     driver.batch_size = 3
+    driver.status = Status.Up | Status.Ready
     requests = [request(), request(rid=18, shift=10)]
-    peer.sendall(READY)
-    driver.get_status()
-    assert driver.dispatch_send_batch(requests)
-    wire = pending(peer)[12:]
+    driver.send_job(requests)
+    wire = pending(peer)
     assert wire[:12] == MESSAGE["posdata"]
     assert np.frombuffer(wire[12:16], dtype=np.int32)[0] == 1
     cells = np.frombuffer(wire[16:448], dtype=np.float64).reshape(3, 2, 3, 3)
@@ -302,176 +297,122 @@ def test_batch_is_padded_and_results_keep_request_order(connection):
             np.int32(len(extra)).tobytes() + extra
             for extra in [b"first", b"second", b"padding"]
         )
-        + MESSAGE["needinit"]
     )
-    assert driver.dispatch_recv_batch(requests)
-    for index, r in enumerate(requests):
-        assert_completed(
-            r,
-            energy=index + 0.75,
-            forces=[0, 0, 0, 3 * index, 3 * index + 1, 3 * index + 2],
-        )
-        assert r["result"][3]["raw"] == ["first", "second"][index]
-    assert driver.status == Status.Up | Status.NeedsInit
+    results = driver.read_job()
+    assert len(results) == 2
+    for index, (energy, force, _, extras) in enumerate(results):
+        assert energy == index + 1
+        np.testing.assert_array_equal(force, [3 * index, 3 * index + 1, 3 * index + 2])
+        assert extras["raw"] == ["first", "second"][index]
 
 
 @pytest.mark.parametrize("batched", [False, True])
 @pytest.mark.parametrize(
-    "reply,closed,error",
+    "reply,error",
     [
-        (payload(natoms=2), False, InvalidSize),
-        (payload(header=b"BADHEADER   "), False, None),
-        (payload()[:20], True, None),
-        (payload(extra=b"abc")[:-2], True, None),
-        (b"", False, None),
+        (payload(natoms=2), InvalidSize),
+        (payload(header=b"BADHEADER   "), Disconnected),
+        (payload()[:20], Disconnected),
+        (payload(extra=b"abc")[:-2], Disconnected),
+        (b"", Disconnected),
     ],
     ids=["wrong-size", "bad-header", "truncated", "truncated-extra", "silent"],
 )
-def test_malformed_force_reply_never_completes_request(
-    connection, monkeypatch, batched, reply, closed, error
-):
+def test_malformed_force_reply_raises(connection, monkeypatch, batched, reply, error):
     monkeypatch.setattr(sockets, "NTIMEOUT", 1)
     driver, peer = connection
-    r = request()
-    peer.sendall(READY)
-    driver.get_status()
-    assert driver.dispatch_send_batch([r]) if batched else driver.dispatch_send(r)
+    driver.status = Status.Up | Status.Ready
+    driver.batch_size = 2 if batched else 1
+    driver.send_job([request()])
     pending(peer)
+    if batched:
+        reply = reply.replace(np.float64(1.25).tobytes(), np.zeros(2).tobytes(), 1)
     peer.sendall(reply)
-    if closed:
-        peer.shutdown(socket.SHUT_WR)
-    receive = (
-        (lambda: driver.dispatch_recv_batch([r]))
-        if batched
-        else (lambda: driver.dispatch_recv(r))
-    )
-    if error is None:
-        assert receive() is False
-        assert driver.status == Status.Disconnected
-    else:
-        with pytest.raises(error):
-            receive()
-    assert_pending(r)
+    peer.shutdown(socket.SHUT_WR)
+    with pytest.raises(error):
+        driver.read_job()
 
 
 @DRIVERS
-@pytest.mark.parametrize("batched", [False, True])
-@pytest.mark.parametrize("state", ["closed", "has-data"])
-def test_unavailable_client_receives_no_coordinates(connection, batched, state):
+def test_send_to_vanished_client_fails(connection):
     driver, peer = connection
-    r = request()
-    if state == "closed":
-        peer.close()
-    else:
-        peer.sendall(HAVEDATA)
-    assert not (driver.dispatch_send_batch([r]) if batched else driver.dispatch_send(r))
-    assert_pending(r)
-    if state == "closed":
-        assert driver.status == Status.Disconnected
-    else:
-        assert pending(peer) == STATUS
-
-
-@DRIVERS
-@pytest.mark.parametrize("batched", [False, True])
-def test_send_to_vanished_client_fails(connection, batched):
-    driver, peer = connection
-    r = request()
-    peer.sendall(READY)
-    driver.get_status()
+    driver.status = Status.Up | Status.Ready
     peer.close()
-    assert not (driver.dispatch_send_batch([r]) if batched else driver.dispatch_send(r))
-    assert driver.status == Status.Disconnected
-    assert_pending(r)
+    with pytest.raises(OSError):
+        driver.send_job([request()])
+    assert driver.job is None
 
 
-@pytest.mark.parametrize("needs_initialization", [False, True])
-def test_worker_dispatch_roundtrip(connection, needs_initialization):
+def test_exit_on_disconnect_requests_soft_exit(connection):
     driver, peer = connection
-    r = request()
-    replies = READY
-    if needs_initialization:
-        replies = MESSAGE["needinit"] + replies
-    peer.sendall(replies + HAVEDATA + payload(extra=b'{"energy_component":2}') + READY)
-    driver.dispatch(r)
-    assert_completed(r)
-    np.testing.assert_array_equal(r["result"][2], np.eye(3))
-    assert r["result"][3]["energy_component"] == 2
-    assert driver.status == Status.Up | Status.Ready
-    wire = pending(peer)
-    assert (MESSAGE["init"] in wire) == needs_initialization
-    assert MESSAGE["posdata"] in wire
-    assert MESSAGE["getforce"] in wire
-
-
-@pytest.mark.parametrize(
-    "stage", ["closed", "not-ready", "no-data", "truncated", "wrong-size"]
-)
-def test_worker_dispatch_failure_leaves_request_pending(connection, monkeypatch, stage):
-    monkeypatch.setattr(sockets, "NTIMEOUT", 1)
-    driver, peer = connection
-    r = request()
-    if stage == "closed":
-        peer.close()
-    elif stage == "not-ready":
-        peer.sendall(HAVEDATA)
-    elif stage == "no-data":
-        peer.sendall(READY + READY)
-    elif stage == "truncated":
-        peer.sendall(READY + HAVEDATA + payload()[:30])
-        peer.shutdown(socket.SHUT_WR)
-    else:
-        r["active"] = np.arange(6)
-        peer.sendall(READY + HAVEDATA + payload(natoms=1) + READY)
-    if stage == "wrong-size":
-        with pytest.raises(InvalidSize):
-            driver.dispatch(r)
-    else:
-        driver.dispatch(r)
-    assert r["status"] != "Done"
-    assert not r._event_done.is_set()
-    if stage == "truncated":
-        assert driver.status == Status.Disconnected
-
-
-def test_exit_on_disconnect_requests_soft_exit(connection, monkeypatch):
-    driver, peer = connection
-    messages = []
-    called = threading.Event()
-
-    def record_exit(**kwargs):
-        messages.append(kwargs["message"])
-        called.set()
-
-    monkeypatch.setattr(sockets.softexit, "trigger", record_exit)
-    driver.exit_on_disconnect = True
-    driver.shutdown()
-    assert called.wait(2)
-    driver.exit_on_disconnect = False
-    assert messages == ["Client shutdown."]
+    sockets.softexit.reset()
+    try:
+        driver.exit_on_disconnect = True
+        driver.disconnect()
+        assert sockets.softexit.requested == "Client shutdown."
+        assert not sockets.softexit.triggered
+    finally:
+        sockets.softexit.reset()
     assert peer.recv(12) == MESSAGE["exit"]
     assert driver.status == Status.Disconnected
+    assert driver.fileno() == -1
 
 
 @pytest.mark.parametrize("connection", [sockets.SHMDriver], indirect=True)
 def test_shared_memory_segments_are_announced_and_released(connection):
     driver, peer = connection
-    peer.sendall(READY)
-    driver.get_status()
-    assert driver.dispatch_send(request())
-    wire = pending(peer)[12:]
+    driver.status = Status.Up | Status.Ready
+    driver.send_job([request()])
+    wire = pending(peer)
     assert wire[:12] == MESSAGE["posdata"]
     assert np.frombuffer(wire[12:16], dtype=np.int32)[0] == 1
-    names, offset = [], 16
-    for _ in range(6):  # positions, cell, inverse cell, energy, forces, virial
-        length = int(np.frombuffer(wire[offset : offset + 4], dtype=np.int32)[0])
-        names.append(wire[offset + 4 : offset + 4 + length].decode())
-        offset += 4 + length
+    names, offset = announced_segments(wire)
     assert wire[offset:] == MESSAGE["getforce"]
-    driver.shutdown()
+    driver.disconnect()
     for name in names:
         with pytest.raises(FileNotFoundError):
             shared_memory.SharedMemory(name=name)
+
+
+def test_shm_clients_use_distinct_segments():
+    """Clients connected one after the other share no segment, also when the
+    accepted sockets reuse the same descriptor numbers"""
+    drivers, peers, names = [], [], []
+    try:
+        for _ in range(3):
+            server, peer = socket.socketpair()
+            server.settimeout(0.05)
+            drivers.append(sockets.SHMDriver(server))
+            server.close()
+            peers.append(peer)
+        for driver, peer in zip(drivers, peers):
+            driver.status = Status.Up | Status.Ready
+            driver.send_job([request()])
+            names += announced_segments(pending(peer))[0]
+        assert len(set(names)) == len(names)
+    finally:
+        for driver in drivers:
+            driver.disconnect()
+        for peer in peers:
+            peer.close()
+
+
+def test_unreferenced_shm_driver_closes_its_descriptor():
+    server, peer = socket.socketpair()
+    driver = sockets.SHMDriver(server)
+    server.close()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        del driver
+        gc.collect()
+    assert select.select([peer], [], [], 1)[0], "the driver descriptor is still open"
+    assert peer.recv(12) == b""
+    peer.close()
+
+
+# -- the pool of clients -------------------------------------------------------
+
+SERVER_MODES = pytest.mark.parametrize("server", ["unix", "inet", "shm"], indirect=True)
 
 
 @pytest.mark.parametrize("reply", [READY, MESSAGE["needinit"]])
@@ -487,63 +428,183 @@ def test_handshake_and_exit_on_close(server, reply):
     assert interface.clients == []
 
 
+@SERVER_MODES
 @pytest.mark.parametrize("closed", [False, True], ids=["half-closed", "closed"])
 def test_disconnected_handshake_is_not_accepted(server, closed):
     interface, _ = server
-    with socket.create_connection(interface.server.getsockname(), timeout=1) as peer:
+    with no_leaked_descriptors():
+        peer = socket.socket(interface.server.family, socket.SOCK_STREAM)
+        peer.connect(interface.server.getsockname())
         if closed:
             # e.g. a check that the server is listening
             peer.close()
         else:
             peer.shutdown(socket.SHUT_WR)
-        interface.pool_update()
+        deadline = time.time() + 2
+        interface.poll()
+        while interface.clients and time.time() < deadline:
+            interface.poll()
         assert not interface.clients
+        peer.close()
 
 
-@pytest.mark.parametrize("consolidated", [True, False], ids=["select", "workers"])
-def test_pool_sends_each_request_to_one_client(server, consolidated):
+@SERVER_MODES
+def test_dead_client_is_closed_when_removed(server):
     interface, connect = server
-    interface.consolidate_messages = consolidated
+    with no_leaked_descriptors():
+        peer = connect()
+        driver = interface.clients[0]
+        interface.requests.append(request())
+        interface.poll()  # sends the request
+        # a reset makes the exit message fail also over TCP
+        peer.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        peer.close()
+        wait_readable(driver)
+        interface.poll()
+        assert interface.clients == []
+        assert driver.fileno() == -1
+        assert interface.requests[0]["status"] == "Queued"
+
+
+def test_request_roundtrip_sends_active_atoms_and_expands_forces(server):
+    interface, connect = server
+    peer = connect()
+    first, second = request(), request(rid=18)
+    interface.requests[:] = [first]
+    interface.poll()
+    assert pending(peer) == b"".join(
+        [
+            MESSAGE["posdata"],
+            np.eye(3).tobytes(),
+            np.eye(3).tobytes(),
+            np.int32(1).tobytes(),
+            np.arange(3.0, 6.0).tobytes(),
+            MESSAGE["getforce"],
+        ]
+    )
+    assert first["status"] == "Running"
+    peer.sendall(payload(extra=b'{"energy_component":2}'))
+    run_pool(interface, [first])
+    assert_completed(first)
+    np.testing.assert_array_equal(first["result"][2], np.eye(3))
+    assert first["result"][3]["energy_component"] == 2
+    # the status of the client is asked after the results
+    assert pending(peer) == STATUS
+    # a later reply must not overwrite the results already handed out
+    peer.sendall(READY)
+    interface.requests[:] = [first, second]
+    run_pool(interface, [second], timeout=0.2)
+    peer.sendall(payload(energy=2.25, forces=[6.0, 7.0, 8.0]))
+    run_pool(interface, [second])
+    assert_completed(second, energy=2.0, forces=[0, 0, 0, 6, 7, 8])
+    assert_completed(first)
+
+
+def test_poll_does_not_wait_for_clients(server):
+    """Requests are sent to the clients that become free while others still
+    compute, and a poll returns at once, whatever the clients do."""
+    interface, connect = server
+    interface.timeout = 0.0
+    slow, fast = connect(), connect()
+    requests = [request(rid=i) for i in range(3)]
+    interface.requests[:] = requests
+    start = time.time()
+    interface.poll()
+    assert [r["status"] for r in requests] == ["Running", "Running", "Queued"]
+    for peer in (slow, fast):
+        assert MESSAGE["posdata"] in pending(peer)
+    fast.sendall(payload() + READY)
+    deadline = time.time() + 2
+    while requests[2]["status"] == "Queued" and time.time() < deadline:
+        interface.poll()
+    assert requests[2]["status"] == "Running"
+    assert MESSAGE["posdata"] in pending(fast)
+    assert sum(r["status"] == "Done" for r in requests) == 1
+    assert time.time() - start < 1.0
+
+
+def test_pool_sends_each_request_to_one_client(server):
+    interface, connect = server
     r = request()
-    interface.requests = [r]
-    replies = payload() + READY
-    if not consolidated:
-        replies = READY + HAVEDATA + replies
     peers = [connect(), connect()]
-    for peer in peers:
-        peer.sendall(replies)
+    interface.requests[:] = [r]
+    interface.poll()
+    received = [MESSAGE["posdata"] in pending(peer) for peer in peers]
+    assert sum(received) == 1
+    peers[received.index(True)].sendall(payload() + READY)
     run_pool(interface, [r])
     assert_completed(r)
-    assert sum(MESSAGE["posdata"] in pending(peer) for peer in peers) == 1
 
 
+# the clients replaced over shared memory are tested with real drivers in test_sockets.py
+@pytest.mark.parametrize("server", ["unix", "inet"], indirect=True)
 @pytest.mark.parametrize("failure", ["in-flight", "silent"])
 def test_request_of_failed_client_is_completed_by_another(server, failure):
     interface, connect = server
-    r = request()
-    interface.requests = [r]
     failing = connect()
+    r = request()
+    interface.requests[:] = [r]
+    interface.poll()
+    assert r["status"] == "Running"
     if failure == "in-flight":
         failing.shutdown(socket.SHUT_WR)
-    interface.pool_distribute()  # a silent client is dropped after the timeout
-    assert r["status"] == "Queued"
+    # a silent client is dropped after the time-out
+    deadline = time.time() + 2
+    while interface.clients and time.time() < deadline:
+        interface.poll()
+    assert interface.clients == []
+    assert (r["status"], r["start"]) == ("Queued", -1)
     assert_pending(r)
-    replacement = connect()  # pool_update also removes the failed client
-    assert len(interface.clients) == 1
+    replacement = connect()
     replacement.sendall(payload() + READY)
     run_pool(interface, [r])
     assert_completed(r)
 
 
-def test_client_with_pending_data_gets_no_work(server):
+def test_wrong_size_reply_requeues_request(server):
+    """A client that returns the forces of a different number of atoms is
+    removed, and its request queued again"""
+    interface, connect = server
+    interface.timeout = 0.0
+    peer = connect()
+    r = request()
+    interface.requests[:] = [r]
+    interface.poll()
+    peer.sendall(payload(natoms=2) + READY)
+    deadline = time.time() + 2
+    while interface.clients and time.time() < deadline:
+        interface.poll()
+    assert interface.clients == []
+    assert (r["status"], r["start"]) == ("Queued", -1)
+    assert_pending(r)
+
+
+@pytest.mark.parametrize("reply", [b"UNKNOWN     ", HAVEDATA])
+def test_client_in_unexpected_status_is_removed(server, reply):
     interface, connect = server
     r = request()
-    interface.requests = [r]
-    peer = connect(HAVEDATA)
-    interface.pool_distribute()
+    interface.requests[:] = [r]
+    peer = connect(reply)
+    assert interface.clients == []
     assert r["status"] == "Queued"
-    assert_pending(r)
-    assert pending(peer) == b""
+    assert MESSAGE["posdata"] not in pending(peer)
+
+
+def test_completed_request_of_failed_client_stays_done(server):
+    """A request completed by a client that then disconnects (e.g. it exits
+    after sending the forces) is not queued again"""
+    interface, connect = server
+    peer = connect()
+    r = request()
+    interface.requests[:] = [r]
+    interface.poll()
+    peer.sendall(payload())
+    peer.close()
+    deadline = time.time() + 2
+    while interface.clients and time.time() < deadline:
+        interface.poll()
+    assert interface.clients == []
+    assert_completed(r)
 
 
 def test_locked_client_keeps_replica_with_large_id(server):
@@ -553,83 +614,74 @@ def test_locked_client_keeps_replica_with_large_id(server):
     for _ in range(2):
         # Each round uses a new, equal integer id, as after a checkpoint restart.
         r = request(rid=int("1000"))
-        interface.requests = [r]
+        interface.requests[:] = [r]
+        interface.poll()
+        assert MESSAGE["posdata"] in pending(peer)
         peer.sendall(payload() + READY)
         run_pool(interface, [r], timeout=0.5)
         assert_completed(r)
 
 
-def test_worker_timeout_does_not_lose_request(server, connection, monkeypatch):
+def test_locked_request_of_failed_client_goes_to_another(server):
+    """The id bound to a client that fails is sent to another client in the
+    poll that drops it."""
+    interface, connect = server
+    interface.match_mode = "lock"
+    failing = connect()
+    first = request()
+    interface.requests[:] = [first]
+    interface.poll()
+    failing.sendall(payload() + READY)
+    run_pool(interface, [first])
+    assert_completed(first)
+    replacement = connect()
+    second = request()
+    interface.requests[:] = [second]
+    interface.poll()
+    assert MESSAGE["posdata"] in pending(failing)
+    assert MESSAGE["posdata"] not in pending(replacement)
+    driver = interface.clients[0]
+    failing.shutdown(socket.SHUT_WR)
+    wait_readable(driver)
+    interface.poll()
+    assert interface.clients[0] is not driver
+    assert second["status"] == "Running"
+    assert MESSAGE["posdata"] in pending(replacement)
+    replacement.sendall(payload() + READY)
+    run_pool(interface, [second])
+    assert_completed(second)
 
-    interface, _ = server
-    interface.consolidate_messages = False
-    driver, _ = connection
-    driver.status = Status.Up | Status.Busy
+
+def test_close_waits_for_the_status_reply(server):
+    """A client that answers the status request sent after its results is
+    not interrupted while it writes the reply, which would kill it."""
+    interface, connect = server
+    peer = connect()
     r = request()
-    r["status"], r["start"] = "Running", 1
-    future = Future()
-    future.set_result(None)
-    interface.requests = [r]
-    interface.clients = [driver]
-    interface.jobs = [[r, driver, future]]
-    monkeypatch.setattr(sockets.time, "time", lambda: 3)
-    interface.pool_distribute()
-    interface.pool_update()
-    assert r["status"] == "Queued"
-    assert_pending(r)
-
-
-def test_force_header_eof_is_disconnected(connection, monkeypatch):
-    driver, peer = connection
-    peer.sendall(HAVEDATA)
-    driver.get_status()
-    peer.shutdown(socket.SHUT_WR)
-    receive = driver.recv_msg
-    calls = []
-
-    def bounded_receive(length=12):
-        # Stop a receive loop deterministically instead of hanging the test.
-        calls.append(1)
-        if len(calls) > 1:
-            raise ConnectionResetError("test guard: receive retried after EOF")
-        return receive(length)
-
-    monkeypatch.setattr(driver, "recv_msg", bounded_receive)
-    with pytest.raises(Disconnected):
-        driver.getforce()
-    assert len(calls) == 1
-
-
-def test_server_descriptor_closes_even_if_shutdown_fails(server, monkeypatch):
-    interface, _ = server
-
-    def fail_shutdown(*args):
-        raise OSError("injected shutdown failure")
-
-    monkeypatch.setattr(socket.socket, "shutdown", fail_shutdown)
+    interface.requests[:] = [r]
+    interface.poll()
+    peer.sendall(payload())
+    run_pool(interface, [r])
+    assert_completed(r)
+    assert pending(peer).endswith(STATUS)
+    late_reply = threading.Timer(0.05, peer.sendall, [READY])
+    start = time.time()
+    late_reply.start()
     interface.close()
-    assert interface.server.fileno() == -1
+    # the exit is sent once the reply has been read
+    assert time.time() - start >= 0.05
+    late_reply.join()
+    assert peer.recv(12) == MESSAGE["exit"]
 
 
-def test_duplicate_unix_address_does_not_replace_listener():
-    with tempfile.TemporaryDirectory(prefix="ipi-socket-", dir="/tmp") as directory:
-        first = sockets.InterfaceSocket(
-            address="server", sockets_prefix=directory + "/"
-        )
-        second = sockets.InterfaceSocket(
-            address="server", sockets_prefix=directory + "/"
-        )
-        first.open()
-        try:
-            with pytest.raises(RuntimeError, match="Error opening unix socket"):
-                second.open()
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as peer:
-                peer.settimeout(1)
-                peer.connect(directory + "/server")
-                accepted, _ = first.server.accept()
-                accepted.close()
-        finally:
-            second.server.close()
-            first.close()
-            first.server.close()
-            first.executor.shutdown(wait=True)
+def test_closed_interface_stops_the_requests(server):
+    interface, connect = server
+    connect()
+    r = request()
+    interface.requests[:] = [r]
+    interface.poll()
+    assert r["status"] == "Running"
+    interface.close()
+    assert interface.fds() == []
+    assert interface.poll()
+    assert r["status"] == "Exit"

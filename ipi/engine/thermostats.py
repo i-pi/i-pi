@@ -177,7 +177,8 @@ def _langevin_step(p, t_on_sm, T2, S, noise, sm):
     if p.ndim == 1:
         deltah = (p @ p) / T2
     else:
-        deltah = ((p[:, None, :] @ p[:, :, None])[:, :, 0] / T2).sum()
+        # sums over the rows, which compiled steps merge with the other operations
+        deltah = ((p * p).sum(axis=1, keepdims=True) / T2).sum()
 
     p = p + S * noise  # random part (in ms coordinates)
     flat = p if p.ndim == 1 else p.reshape(-1)

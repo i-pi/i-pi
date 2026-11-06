@@ -23,6 +23,13 @@ recorded (`_Recorder`, notified by the depend objects, see
   data, at the end of the call. As the code of the depend objects does not
   run, they are restored after each call of the compiled version.
 
+The computed objects that the eager calls read, or recompute and leave up to
+date (e.g. the coefficients of a thermostat), are brought up to date before
+the next eager calls and before the recording, if something else has made
+them stale since (e.g. the exchange of the temperatures of two replicas).
+The compiled version then reads them, as inputs, and does not recompute them
+from values that would be fixed in it.
+
 Code that is part of a compiled function marks with `split` the points where
 the recording may be interrupted (e.g. a force evaluation), and calls with
 `eager` the functions that must run eagerly at each call (e.g. a driver).
@@ -109,7 +116,10 @@ def _compiled(func):
         )
         return func
     try:
-        compiled = torch.compile(func, fullgraph=True, dynamic=False)
+        # combo_kernels launches independent kernels of the function as one
+        compiled = torch.compile(
+            func, fullgraph=True, dynamic=False, options={"combo_kernels": True}
+        )
     except RuntimeError as err:
         warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
         return func
@@ -122,7 +132,7 @@ def _compiled(func):
             try:
                 return compiled(*args)
             except Exception as err:
-                if depend._recorder is not None:
+                if depend._recorder is not None and not depend._recorder.observes:
                     # also invalidates the CUDA graph being captured
                     raise
                 warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
@@ -146,6 +156,8 @@ class Replay:
         compiled: The compiled function, or None before the compilation.
         fixed: The inputs of the compiled function that are fixed in it, as
             (depend object, value, bytes of a host array).
+        computed: The computed objects that the observed eager calls read, or
+            recomputed and left up to date, keyed by their status.
     """
 
     # how the function is compiled, for the error messages
@@ -155,6 +167,7 @@ class Replay:
         self.func = func
         self.compiled = None
         self.fixed = []
+        self.computed = {}
         # the error raised by the compilation, if it failed
         self.error = None
 
@@ -167,8 +180,10 @@ class Replay:
         elif self.error is not None:
             raise JitError("The compilation of the step has failed") from self.error
         elif not self.ready():
+            self.refresh()
             self.warm(*args)
         else:
+            self.refresh()
             try:
                 self.record(*args)
             except Exception as err:
@@ -176,6 +191,21 @@ class Replay:
                 self.compiled = None
                 self.error = err
                 raise
+
+    def note(self, recorder):
+        """Notes the computed objects that an observed eager call read, or
+        recomputed and left up to date."""
+
+        for dep in recorder.computed():
+            self.computed[dep._status] = dep
+
+    def refresh(self):
+        """Brings up to date the noted computed objects that have been made
+        stale since the last call, so that the next call reads them."""
+
+        for dep in self.computed.values():
+            if dep._status.tainted:
+                dep.get()
 
     def failed(self, err):
         """Returns the error raised when the compilation fails with `err`."""
@@ -246,6 +276,9 @@ class _Recorder:
     """Notified by the depend objects of their operations while a function is
     recorded, see `depend.set_recorder`."""
 
+    # whether the call is only observed, rather than recorded
+    observes = False
+
     def __init__(self, replay):
         self.split = replay.split
         self.call = replay.call
@@ -261,6 +294,8 @@ class _Recorder:
         # scalars written or recomputed, and host arrays that are written
         self.values = {}
         self.host_writes = set()
+        # computed objects that are recomputed, keyed by their status
+        self.recomputed = {}
 
     def read(self, dep):
         status = dep._status
@@ -274,10 +309,20 @@ class _Recorder:
         self.statuses.add(dep._status)
         if not taintme:
             self.written.add(dep._status)
+            if dep._status.func is not None:
+                self.recomputed[dep._status] = dep._root()
             if isinstance(dep, depend.depend_value):
                 self.values[dep] = None
             elif isinstance(dep._root()._data, np.ndarray):
                 self.host_writes.add(dep._name)
+
+    def computed(self):
+        """Returns the computed objects that the call read before writing them,
+        or recomputed and left up to date."""
+
+        read = [dep for dep, value, data in self.inputs.values()]
+        recomputed = [dep for dep in self.recomputed.values() if not dep.tainted()]
+        return [dep for dep in read + recomputed if dep._status.func is not None]
 
     def synchronized(self, synchro):
         self.synchros.add(synchro)
@@ -306,3 +351,32 @@ class _Recorder:
             [(status, status.tainted) for status in statuses],
             [(synchro, synchro.manual) for synchro in synchros],
         )
+
+
+class _Observer(_Recorder):
+    """Recorder of an eager call, which runs its splits and eager calls as
+    they are, and only finds the objects that it reads and modifies."""
+
+    observes = True
+
+    def __init__(self):
+        self.reset()
+
+    def split(self, obj):
+        pass
+
+    def call(self, func, *args):
+        return func(*args)
+
+
+def observe(func, *args):
+    """Calls func(*args) eagerly, and returns the recorder of its operations on
+    the depend objects."""
+
+    recorder = _Observer()
+    depend.set_recorder(recorder)
+    try:
+        func(*args)
+    finally:
+        depend.set_recorder(None)
+    return recorder

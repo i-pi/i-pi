@@ -81,7 +81,7 @@ def write_input(nbeads, device, rotations=False):
     else:
         ff = ff.replace("name='lj'", "name='ff'")
     return f"""
-<simulation verbosity='quiet' threading='false'>
+<simulation verbosity='quiet' interleave='false'>
   {ff}
   <total_steps>10</total_steps>
   <output prefix='lj'/>

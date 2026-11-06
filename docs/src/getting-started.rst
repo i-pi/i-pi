@@ -14,9 +14,10 @@ compiled and installed. The ``i-pi`` file in the ``bin`` directory of
 the distribution is the main (executable) script, and can be run as long
 as the system has installed:
 
--  Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
-   compatible)
--  The Python numerical library NumPy
+-  Python version 3.10 or greater
+-  The Python numerical library NumPy, and ``array-api-compat``
+-  ``greenlet``, with which i-PI runs several systems, and waits for several
+   clients, in a single thread
 
 See :ref:`runningsimulations` for more details on how to launch i-PI.
 
@@ -305,15 +306,22 @@ the step that precede and follow each force evaluation, so any forcefield can
 be used. For direct forcefields whose potential works with the arrays of the
 backend, such as ``metatomic``, only the potential is evaluated between the
 replays, while the requests and the collection of the results are part of the
-graphs. The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
+graphs, and potentials that can be recorded too (``traceable``, such as
+``dummy``) are part of the graphs, so that the whole step is a single graph.
+The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
 integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
 PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
-no thermostat or a Langevin one on the barostat. The other simulations run as
-usual, with a warning: other motions, thermostats or barostats, fixed atoms,
-open paths, bosons, motions of several systems (e.g. replica exchange), and
-several systems stepped in threads. ``--jit`` needs the torch backend on a
-CUDA device, or the jax backend: with numpy, or torch on the CPU, i-PI stops
-with an error. The parameters that are fixed in the recorded
+no thermostat or a Langevin one on the barostat. With ``interleave`` (the
+default), the steps of several systems whose forces all come from such direct
+forcefields are recorded together, so that a batched forcefield
+(``batch_size``) evaluates the structures of all the systems at once, also in
+the replays; otherwise the systems are stepped one after the other. Replica
+exchange is supported, unless the replicas have a barostat or different
+weights of the forces, which are fixed in the graphs. The other simulations
+run as usual, with a warning: other motions, thermostats or barostats, fixed
+atoms, open paths, bosons, and other motions of several systems. ``--jit``
+needs the torch backend on a CUDA device, or the jax backend: with numpy, or
+torch on the CPU, i-PI stops with an error. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
 barostat, cannot change while the steps are replayed: i-PI stops with an error
 if they do, or if a step cannot be recorded (the simulation can then be
@@ -330,8 +338,9 @@ much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
 the forces are computed by a direct forcefield whose potential can be
-compiled by JAX (at present only ``dummy``): the whole step, including the
-force evaluation, is then compiled. Otherwise, the steps run as usual. As
+compiled by JAX (``traceable``, at present only ``dummy``): the whole step, including the
+force evaluation, is then compiled, together with the steps of the other
+systems as with torch. Otherwise, the steps run as usual. As
 with torch, the parameters that are fixed in the compiled step, such as the
 time step, cannot change, and i-PI stops with an error if a step cannot be
 compiled.

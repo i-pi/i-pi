@@ -42,7 +42,7 @@ import threading
 import warnings
 
 from ipi.utils import depend
-from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _changed, _Recorder
+from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _changed, _Recorder, observe
 from ipi.utils.messages import info, verbosity
 
 __all__ = ["GraphReplay"]
@@ -83,12 +83,12 @@ class GraphReplay(Replay):
     def warm(self, *args):
         """Calls the function eagerly, also to initialize the libraries on the
         stream used by the recording, and in this thread (e.g. cuBLAS handles
-        are created per thread)."""
+        are created per thread), and notes the computed objects it reads."""
 
         default = self.torch.cuda.current_stream()
         self.stream.wait_stream(default)
         with self.torch.cuda.stream(self.stream):
-            self.func(*args)
+            self.note(observe(self.func, *args))
         default.wait_stream(self.stream)
         self.ncalls += 1
         self.local.warm = True
@@ -186,8 +186,8 @@ class GraphReplay(Replay):
 class _Call:
     """A function called eagerly after a segment. The graphs read the results
     of the call made while recording, which are lists: the tensors returned
-    by the following calls are copied into them, and the other items replace
-    theirs."""
+    by the following calls are copied into them, the dictionaries updated, and
+    the other items replace theirs."""
 
     def __init__(self, func, args):
         import torch
@@ -223,6 +223,11 @@ def _match(recorded, new, targets, sources):
                 raise JitError("The results of an eager call have changed shape")
             targets.append(a)
             sources.append(b)
+        elif isinstance(a, dict) and isinstance(b, dict):
+            # dictionaries (e.g. the extras) are updated in place, so that all
+            # the objects that hold them see the new values
+            a.clear()
+            a.update(b)
         else:
             recorded[i] = b
 
@@ -286,6 +291,16 @@ def _is_cuda_tensor(value):
     return getattr(value, "is_cuda", False)
 
 
+def _holds_cuda_tensors(value):
+    """Whether `value` is a CUDA tensor, or a list holding some (e.g. the
+    results of a driver recorded in the graphs), whose other items are then
+    fixed in the graphs."""
+
+    if isinstance(value, list):
+        return any(_holds_cuda_tensors(item) for item in value)
+    return _is_cuda_tensor(value)
+
+
 class _GraphRecorder(_Recorder):
     """Recorder of a function replayed as CUDA graphs, which returns the
     recorded segments."""
@@ -309,7 +324,7 @@ class _GraphRecorder(_Recorder):
             raise JitError(f"The step modifies host arrays: {sorted(self.host_writes)}")
         for dep in self.values:
             if (
-                not _is_cuda_tensor(dep._value)
+                not _holds_cuda_tensors(dep._value)
                 and id(dep._value) not in self.eager_results
             ):
                 raise JitError(f"The step modifies the host value <{dep._name}>")
