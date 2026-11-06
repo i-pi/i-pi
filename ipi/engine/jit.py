@@ -29,16 +29,16 @@ from functools import partial
 
 from ipi.utils.array_backend import backend
 from ipi.utils.cudagraphs import GraphReplay
-from ipi.utils.jaxjit import JitReplay
+from ipi.utils.jaxjit import JaxReplay
 from ipi.utils.jit import JitError
 from ipi.utils.messages import verbosity, warning
 
-__all__ = ["replay_steps"]
+__all__ = ["compile_steps"]
 
 
 def unsupported(simulation, system):
-    """Returns why the steps of `system` cannot be replayed as CUDA graphs, or
-    None if they can."""
+    """Returns why the steps of `system` cannot be compiled (replayed as CUDA
+    graphs, or compiled with jax.jit), or None if they can."""
 
     from ipi.engine.barostats import Barostat, BaroBZP, BaroMTK, BaroRGB
     from ipi.engine.motion.dynamics import (
@@ -82,14 +82,15 @@ def unsupported(simulation, system):
     return None
 
 
-def replay_steps(simulation):
+def compile_steps(simulation):
     """Replays the steps of the systems of `simulation` as CUDA graphs, or
     compiles them with JAX, for the systems that support it."""
 
     for system in simulation.syslist:
         reason = unsupported(simulation, system)
         if reason is None:
-            JitStep(system) if backend() == "jax" else GraphStep(system)
+            step = JaxStep if backend() == "jax" else GraphStep
+            system.motion.integrator.step = step(system)
         else:
             warning(
                 f"The steps are not recorded and replayed: {reason} is not supported",
@@ -97,9 +98,10 @@ def replay_steps(simulation):
             )
 
 
-def _eager_driver(ff):
-    """Whether the requests to `ff` are recorded, with only the calls to its
-    driver done eagerly."""
+def _driver_in_step(ff):
+    """Whether the requests to `ff` can be made in the compiled step: CUDA
+    graphs record them and call only its driver eagerly, and jax.jit traces
+    them if the driver is `jax_traceable`."""
 
     from ipi.engine.forcefields import FFDirect
 
@@ -107,14 +109,12 @@ def _eager_driver(ff):
 
 
 class GraphStep(GraphReplay):
-    """Replaces the step of the integrator of a system: runs the first steps
-    eagerly, records the next one as CUDA graphs, and replays them for all the
-    following steps."""
+    """The step of the integrator of a system, which runs eagerly for the first
+    steps, is recorded as CUDA graphs at the next one, and is replayed for all
+    the following steps."""
 
     def __init__(self, system):
-        integrator = system.motion.integrator
-        super().__init__(integrator.step, system.prng.torch_generator)
-        integrator.step = self
+        super().__init__(system.motion.integrator.step, system.prng.torch_generator)
         self.prng = system.prng
 
         # the force components, which may be computed eagerly, of each bead
@@ -141,7 +141,7 @@ class GraphStep(GraphReplay):
         only the calls to the driver of its forcefield are eager."""
 
         computed = (bead.ufvx_, bead.f_, bead.pot_, bead.vir_)
-        if any(dep.tainted() for dep in computed) and not _eager_driver(bead.ff):
+        if any(dep.tainted() for dep in computed) and not _driver_in_step(bead.ff):
             self.interrupt(partial(_compute, self.components[bead]))
 
 
@@ -153,15 +153,13 @@ def _compute(component):
     component.virs_.get()
 
 
-class JitStep(JitReplay):
-    """Replaces the step of the integrator of a system: runs the first steps
-    eagerly, compiles the next one with jax.jit, and calls the compiled step
+class JaxStep(JaxReplay):
+    """The step of the integrator of a system, which runs eagerly for the first
+    steps, is compiled with jax.jit at the next one, and the compiled step runs
     at all the following steps."""
 
     def __init__(self, system):
-        integrator = system.motion.integrator
-        super().__init__(integrator.step, system.prng)
-        integrator.step = self
+        super().__init__(system.motion.integrator.step, system.prng)
 
     def split(self, bead):
         """The forces on `bead` are computed in the compiled step only if the
@@ -170,6 +168,6 @@ class JitStep(JitReplay):
 
         ff = bead.ff
         if bead.ufvx_.tainted() and not (
-            _eager_driver(ff) and getattr(ff.driver, "jax_traceable", False)
+            _driver_in_step(ff) and getattr(ff.driver, "jax_traceable", False)
         ):
             self.cannot(f"the forces of the forcefield '{ff.name}' are needed")

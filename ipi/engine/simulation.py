@@ -20,8 +20,8 @@ from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_wri
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
-from ipi.utils.array_backend import jit
-from ipi.engine.jit import replay_steps
+from ipi.utils.array_backend import jit_enabled
+from ipi.engine.jit import compile_steps
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 import threading
@@ -251,8 +251,8 @@ class Simulation:
         if read_only:  # returns before we open the sockets
             return
 
-        if jit():
-            replay_steps(self)
+        if jit_enabled():
+            compile_steps(self)
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads

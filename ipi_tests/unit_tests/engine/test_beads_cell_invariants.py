@@ -65,8 +65,18 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
 
 
 def test_total_bead_kinetic_energy_sums_independent_replicas():
+    """The kinetic energies and the kinetic stress of the replicas are those of
+    independent particles, summed over the replicas"""
     beads = Beads(2, 4)
     beads.m_[:] = [2.0, 3.0]
-    beads.p_[:] = np.arange(24).reshape(4, 6) / 10
-    expected = np.sum(beads.p**2 / np.repeat([2.0, 3.0], 3)) / 2
-    assert beads.kin == pytest.approx(expected)
+    p = np.arange(24).reshape(4, 6) / 10
+    beads.p_[:] = p
+    m3 = np.repeat([2.0, 3.0], 3)
+    np.testing.assert_allclose(beads.kins, np.sum(p**2 / m3, axis=1) / 2)
+    assert beads.kin == pytest.approx(np.sum(p**2 / m3) / 2)
+    pa = p.reshape(-1, 3)
+    stress = sum(np.outer(v, v) / m for v, m in zip(pa, np.tile([2.0, 3.0], 4)))
+    np.testing.assert_allclose(beads.kstress, np.triu(stress), atol=1e-14)
+    # the kinetic energies follow the momenta and the masses
+    beads.m_[:] *= 2
+    assert beads.kin == pytest.approx(np.sum(p**2 / m3) / 4)

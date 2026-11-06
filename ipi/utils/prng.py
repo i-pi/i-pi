@@ -7,9 +7,8 @@ simulation is restarted from a checkpoint, we will see the same dynamics as if
 it had not been stopped.
 
 Scalars and host-side arrays are drawn with numpy generators. Arrays of
-Gaussian numbers (`gvec`, `gfill`) are drawn with the generator of the array
-backend, i.e. on the device when using torch. With JAX, whose arrays cannot be
-filled in place, only `gvec` is available.
+Gaussian numbers (`gvec`, `gammavec`) are drawn with the generator of the array
+backend, i.e. on the device when using torch or JAX.
 """
 
 # This file is part of i-PI.
@@ -40,13 +39,10 @@ class Random(object):
     Attributes:
         rng: The random number generator to be used.
         seed: The seed number to start the generator.
-        state: A tuple of five objects giving the current state of the random
-            number generator. The first is the type of random number generator,
-            here 'MT19937', the second is an array of 624 integers, the third
-            is the current position in the array that is being read from, the
-            fourth gives whether it has a gaussian random number stored, and
-            the fifth is this stored Gaussian random number, or else the last
-            Gaussian random number returned.
+        state: The state of the generators, which can be stored in a
+            checkpoint and restored (see `get_state` and `set_state`).
+        jax_key: The JAX key from which the random arrays are drawn with the
+            JAX backend, replaced by a new one at each draw, or None.
     """
 
     def __init__(self, seed=-1, state=None, n_threads=1):
@@ -72,13 +68,13 @@ class Random(object):
 
         self.n_threads = n_threads
         self._torch_rng = None
-        self._jax_key = None
+        self.jax_key = None
         if backend() == "jax":
             import jax
 
             # Gaussian arrays are drawn with a JAX key, split at each draw and
             # seeded independently of the numpy generators
-            self._jax_key = jax.random.key(
+            self.jax_key = jax.random.key(
                 int(np.random.SeedSequence(seed).generate_state(1)[0])
             )
             self.gvec = self.gvec_jax
@@ -93,15 +89,12 @@ class Random(object):
                 int(np.random.SeedSequence(seed).generate_state(1, np.uint64)[0])
             )
             self.gvec = self.gvec_torch
-            self.gfill = self.gfill_torch
             self.gammavec = self.gammavec_torch
         elif self.n_threads == 1:
             self.gvec = self.gvec_serial
-            self.gfill = self.gfill_serial
         else:
             self.executor = concurrent.futures.ThreadPoolExecutor(n_threads)
             self.gvec = self.gvec_threaded
-            self.gfill = self.gfill_threaded
 
         if state is not None:
             self.state = state
@@ -121,20 +114,34 @@ class Random(object):
         if present.
         """
 
+        return self.encode_state(self.snapshot())
+
+    def snapshot(self):
+        """Returns a copy of the state of the generators, which `encode_state`
+        converts to the state returned by `get_state`. It is faster to take,
+        as the state of torch or JAX is kept as an array."""
+
         states = [r.bit_generator.state for r in self.rng]
-        if self._jax_key is not None:
+        if self.jax_key is not None:
+            # JAX arrays cannot be modified, so the key is not copied
+            return states, ("jax", self.jax_key)
+        if self._torch_rng is not None:
+            return states, (str(self._torch_rng.device), self._torch_rng.get_state())
+        return states, None
+
+    @staticmethod
+    def encode_state(snapshot):
+        """Converts a `snapshot` of the state to lists, as returned by `get_state`."""
+
+        states, device_state = snapshot
+        if device_state is None:
+            return states
+        kind, state = device_state
+        if kind == "jax":
             import jax
 
-            return {"numpy": states, "jax": jax.random.key_data(self._jax_key).tolist()}
-        if self._torch_rng is None:
-            return states
-        return {
-            "numpy": states,
-            "torch": {
-                "device": str(self._torch_rng.device),
-                "state": self._torch_rng.get_state().tolist(),
-            },
-        }
+            return {"numpy": states, "jax": jax.random.key_data(state).tolist()}
+        return {"numpy": states, "torch": {"device": kind, "state": state.tolist()}}
 
     def set_state(self, value):
         """Interface to the standard set_state() function.
@@ -152,11 +159,11 @@ class Random(object):
             value = value["numpy"]
         for r, s in zip(self.rng, value):
             r.bit_generator.state = s
-        if self._jax_key is not None:
+        if self.jax_key is not None:
             import jax
 
             if jax_state is not None:
-                self._jax_key = jax.random.wrap_key_data(
+                self.jax_key = jax.random.wrap_key_data(
                     jax.numpy.asarray(jax_state, dtype=jax.numpy.uint32)
                 )
             else:
@@ -343,15 +350,6 @@ class Random(object):
 
         return rvec
 
-    def gfill_torch(self, out):
-        """Fills a pre-allocated torch array with the torch generator.
-
-        Args:
-            out: The array to be filled.
-        """
-
-        out.normal_(generator=self._torch_rng)
-
     def gvec_torch(self, shape):
         """Returns an array of Gaussian random numbers drawn with the torch
         generator, on its device.
@@ -377,7 +375,7 @@ class Random(object):
             shape: The shape of the array to be returned.
         """
 
-        self._jax_key, rvec = _jax_normal()(self._jax_key, shape)
+        self.jax_key, rvec = _jax_normal()(self.jax_key, shape)
         return rvec
 
     def gammavec_torch(self, k, shape):
@@ -393,7 +391,7 @@ class Random(object):
         """Returns an array of gamma-distributed random numbers drawn with a new
         key split from the JAX key (see `gammavec`)."""
 
-        self._jax_key, rvec = _jax_gamma()(self._jax_key, k, shape)
+        self.jax_key, rvec = _jax_gamma()(self.jax_key, k, shape)
         return rvec
 
 

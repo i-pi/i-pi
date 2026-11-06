@@ -25,7 +25,8 @@ What we expect from a contribution
 
 To start contributing, note the following general guidelines:
 
-* Your contribution should be based on the main branch of the repository
+* Your contribution should be based on, and target, the ``next`` branch of the
+  repository, where i-PI 4.0 is developed
 
 * We expect you to fork the repository and make all the changes in your fork
 

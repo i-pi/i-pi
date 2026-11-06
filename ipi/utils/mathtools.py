@@ -23,7 +23,6 @@ __all__ = [
     "det_ut3x3",
     "root_herm",
     "logsumlog",
-    "sinch",
     "gaussian_inv",
     "get_rotation_quadrature_legendre",
     "get_rotation_quadrature_lebedev",
@@ -65,9 +64,9 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
        M: Matrix to be exponentiated, or a stack of matrices with shape
           (..., n, n), which are exponentiated together.
        ntaylor: Optional integer giving the number of terms in the Taylor series.
-          Defaults to 15.
+          Defaults to 20.
        nsquare: Optional integer giving how many times the original matrix will
-          be halved. Defaults to 15.
+          be halved. Defaults to 10.
 
     Returns:
        The matrix exponential of M.
@@ -109,9 +108,11 @@ def stab_cholesky(M):
        M: The matrix to be decomposed.
     """
 
+    # the matrices are small, and decomposed element by element on the host
+    M = np.array(to_numpy(M), dtype=float)
     n = M.shape[1]
-    D = xp.zeros(n)
-    L = xp.zeros(M.shape)
+    D = np.zeros(n)
+    L = np.zeros(M.shape)
     for i in range(n):
         L[i, i] = 1.0
         for j in range(i):
@@ -125,7 +126,7 @@ def stab_cholesky(M):
             D[i] -= L[i, k] * L[i, k] * D[k]
 
     negev = False
-    S = xp.zeros(M.shape)
+    S = np.zeros(M.shape)
     for i in range(n):
         if D[i] > 0:
             D[i] = math.sqrt(D[i])
@@ -145,7 +146,7 @@ def stab_cholesky(M):
             verbosity.low,
         )
 
-    return S
+    return xp.asarray(S)
 
 
 def h2abc(h):
@@ -292,66 +293,23 @@ def root_herm(A):
     if not bool(xp.all(xp.abs(A.T - A) < 1e-10)):
         raise ValueError("Non-Hermitian matrix passed to root_herm function")
     eigvals, eigvecs = xp.linalg.eigh(A)
-    ndgrs = eigvals.shape[0]
-    diag = xp.zeros((ndgrs, ndgrs))
-    negev = False
-    for i in range(ndgrs):
-        if eigvals[i] >= 0:
-            diag[i, i] = math.sqrt(eigvals[i])
-        else:
-            warning(
-                "Zeroing negative %d-th element in matrix square root: %e"
-                % (i, eigvals[i]),
-                verbosity.low,
-            )
-            diag[i, i] = 0
-            negev = True
-    rv = eigvecs @ (diag @ eigvecs.T)
-    if negev:
+    negative = np.flatnonzero(to_numpy(eigvals) < 0)
+    for i in negative:
+        warning(
+            "Zeroing negative %d-th element in matrix square root: %e"
+            % (i, eigvals[i]),
+            verbosity.low,
+        )
+    # the eigenvectors scaled by the square roots of the (non-negative) eigenvalues
+    roots = xp.sqrt(xp.where(eigvals >= 0, eigvals, xp.zeros_like(eigvals)))
+    rv = (eigvecs * roots) @ eigvecs.T
+    if len(negative) > 0:
         warning(
             "Checking decomposition after negative eigenvalue: \n" + str(A - rv @ rv.T),
             verbosity.low,
         )
 
     return rv
-
-
-def sinch(x):
-    """Computes sinh(x)/x elementwise, in a way that is stable for x->0.
-
-    Works for complex x too (e.g. complex eigenvalues from a non-symmetric
-    barostat momentum tensor), so the small-argument test uses abs()."""
-
-    x2 = x * x
-    small = xp.abs(x2) < 1e-12
-    # the series is used for small arguments, and x is replaced by one to avoid 0/0
-    xs = xp.where(small, xp.ones_like(x), x)
-    series = 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
-    return xp.where(small, series, xp.sinh(xs) / xs)
-
-
-def mat_taylor(x, function):
-    """compute matrix function as direct taylor expansion
-    Args:
-       x: matrix
-       function: the function to be expanded
-    Return:
-       function of matrix.
-    """
-    if not (x.shape[0] == x.shape[1]):
-        warning("input matrix is not squared")
-        return None
-    dim = x.shape[0]
-    I = xp.eye(dim)
-    if function == "sinhx/x":
-        # compute sinhx/x by directly taylor
-        x2 = x @ x
-        return I + (x2 / (2.0 * 3.0)) @ (
-            I + (x2 / (4.0 * 5.0)) @ (I + (x2 / (6.0 * 7.0)) @ (I + x2 / (8.0 * 9.0)))
-        )
-
-    else:
-        warning("function {} not implemented".format(function))
 
 
 def gaussian_inv(x):

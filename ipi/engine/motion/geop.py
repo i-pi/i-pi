@@ -15,6 +15,7 @@ import numpy as np
 import time
 
 from ipi.engine.motion import Motion
+from ipi.engine.motion.motion import zeros_or_check
 from ipi.utils.array_backend import xp, xp_size
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
@@ -66,7 +67,7 @@ class GeopMotion(Motion):
         tr_trm=np.zeros(0, float),
         ls_options={"tolerance": 1e-4, "iter": 100, "step": 1e-3, "adaptive": 1.0},
         tolerances={"energy": 1e-7, "force": 1e-4, "position": 1e-4},
-        corrections_lbfgs=6,  # changed to 6 because it's 6 in inputs/motion/geop.py, which overrides it anyways
+        corrections_lbfgs=6,  # the default of inputs/motion/geop.py, which overrides it
         scale_lbfgs=1,
         qlist_lbfgs=np.zeros(0, float),
         glist_lbfgs=np.zeros(0, float),
@@ -316,33 +317,11 @@ class DummyOptimizer:
             )
 
         # The resize action must be done before the bind
-        nq = xp_size(self.beads.q)
-        if xp_size(geop.old_x) != nq:
-            if xp_size(geop.old_x) == 0:
-                geop.old_x = xp.zeros((self.beads.nbeads, 3 * self.beads.natoms))
-            else:
-                raise ValueError(
-                    "Conjugate gradient position size does not match system size"
-                )
-        if xp_size(geop.old_u) != 1:
-            if xp_size(geop.old_u) == 0:
-                geop.old_u = xp.zeros(1)
-            else:
-                raise ValueError("Conjugate gradient has weird potential (size != 1)")
-        if xp_size(geop.old_f) != nq:
-            if xp_size(geop.old_f) == 0:
-                geop.old_f = xp.zeros((self.beads.nbeads, 3 * self.beads.natoms))
-            else:
-                raise ValueError(
-                    "Conjugate gradient force size does not match system size"
-                )
-        if xp_size(geop.d) != nq:
-            if xp_size(geop.d) == 0:
-                geop.d = xp.zeros((self.beads.nbeads, 3 * self.beads.natoms))
-            else:
-                raise ValueError(
-                    "Conjugate gradient direction size does not match system size"
-                )
+        shape = (self.beads.nbeads, 3 * self.beads.natoms)
+        geop.old_x = zeros_or_check(geop.old_x, shape, "Conjugate gradient position")
+        geop.old_u = zeros_or_check(geop.old_u, (1,), "Conjugate gradient potential")
+        geop.old_f = zeros_or_check(geop.old_f, shape, "Conjugate gradient force")
+        geop.d = zeros_or_check(geop.d, shape, "Conjugate gradient direction")
 
         self.old_x = geop.old_x
         self.old_u = geop.old_u
@@ -408,11 +387,9 @@ class BFGSOptimizer(DummyOptimizer):
         super(BFGSOptimizer, self).bind(geop)
 
         nq = xp_size(self.beads.q)
-        if xp_size(geop.invhessian) != nq * nq:
-            if xp_size(geop.invhessian) == 0:
-                geop.invhessian = xp.eye(nq)
-            else:
-                raise ValueError("Inverse Hessian size does not match system size")
+        geop.invhessian = zeros_or_check(
+            geop.invhessian, (nq, nq), "Inverse Hessian", xp.eye(nq)
+        )
 
         self.invhessian = geop.invhessian
         self.gm.bind(self)
@@ -476,11 +453,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
         super(BFGSTRMOptimizer, self).bind(geop)
 
         nq = xp_size(self.beads.q)
-        if xp_size(geop.hessian) != nq * nq:
-            if xp_size(geop.hessian) == 0:
-                geop.hessian = xp.eye(nq)
-            else:
-                raise ValueError("Hessian size does not match system size")
+        geop.hessian = zeros_or_check(geop.hessian, (nq, nq), "Hessian", xp.eye(nq))
 
         self.hessian = geop.hessian
         self.tr = geop.tr
@@ -536,7 +509,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
 class LBFGSOptimizer(DummyOptimizer):
     """L-BFGS Minimization: Note that the accuracy you can achieve with this method depends
-    on how many ''corrections'' you store (default is 5)."""
+    on how many ''corrections'' you store (default is 6)."""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -547,17 +520,9 @@ class LBFGSOptimizer(DummyOptimizer):
         self.big_step = geop.big_step
         self.ls_options = geop.ls_options
 
-        nq = xp_size(self.beads.q)
-        if xp_size(geop.qlist) != (self.corrections * nq):
-            if xp_size(geop.qlist) == 0:
-                geop.qlist = xp.zeros((self.corrections, nq))
-            else:
-                raise ValueError("qlist size does not match system size")
-        if xp_size(geop.glist) != (self.corrections * nq):
-            if xp_size(geop.glist) == 0:
-                geop.glist = xp.zeros((self.corrections, nq))
-            else:
-                raise ValueError("qlist size does not match system size")
+        shape = (self.corrections, xp_size(self.beads.q))
+        geop.qlist = zeros_or_check(geop.qlist, shape, "qlist")
+        geop.glist = zeros_or_check(geop.glist, shape, "glist")
 
         self.qlist = geop.qlist
         self.glist = geop.glist
@@ -604,7 +569,6 @@ class LBFGSOptimizer(DummyOptimizer):
             self.ls_options["iter"],
             self.corrections,
             self.scale,
-            step,
         )
         self.d[:, mask] = d
         self.qlist[:, self.flat_mask] = qlist
@@ -642,11 +606,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         super(Damped_BFGSOptimizer, self).bind(geop)
 
         nq = xp_size(self.beads.q)
-        if xp_size(geop.hessian) != nq * nq:
-            if xp_size(geop.hessian) == 0:
-                geop.hessian = xp.eye(nq)
-            else:
-                raise ValueError("Hessian size does not match system size")
+        geop.hessian = zeros_or_check(geop.hessian, (nq, nq), "Hessian", xp.eye(nq))
 
         self.hessian = geop.hessian
         self.gm.bind(self)

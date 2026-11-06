@@ -158,6 +158,14 @@ class ConstraintBase:
             return spla.cho_factor(self.Gram)
         return xp.linalg.cholesky(self.Gram)
 
+    def solve_gram(self, b):
+        """Returns the solution x of Gram x = b, with the Cholesky factors of
+        the Gram matrix if they are computed with scipy."""
+
+        if use_cho_factor():
+            return spla.cho_solve(self.GramChol, b)
+        return xp.linalg.solve(self.Gram, b)
+
 
 dproperties(ConstraintBase, ["m3", "q", "g", "qprev", "Dg", "Gram", "GramChol"])
 

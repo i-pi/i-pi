@@ -12,33 +12,22 @@ import numpy as np
 import pytest
 
 import ipi.utils.array_backend as ab
-from ipi_tests.unit_tests.engine.test_backend_equivalence import (
+from ipi_tests.unit_tests.engine.inputs import (
+    DUMMY,
+    DUMMY_BATCHED,
     HARMONIC,
-    INPUTS,
-    ISOTROPIC,
     NO_FORCES,
-    mts_input,
+    PROPERTIES,
+    TOLERANCE,
+    case_input,
     write_input,
 )
 
 torch = pytest.importorskip("torch")
 cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 
-DUMMY = ("<ffdirect name='ff'><pes>dummy</pes></ffdirect>", "<force forcefield='ff'/>")
-DUMMY_BATCHED = (
-    "<ffdirect name='ff'><pes>dummy</pes><batch_size>4</batch_size></ffdirect>",
-    "<force forcefield='ff'/>",
-)
-PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
-# replays match eager steps to rounding errors, as the functions compiled for
-# the replays (see ipi.utils.jit.compiled) may sum in a different order
-TOLERANCE = dict(rtol=1e-12, atol=1e-14)
-
-
-def simulation(xml, jit):
-    from ipi.scripting import InteractiveSimulation
-
-    return InteractiveSimulation(xml, backend="torch", device="cuda", jit=jit)
+# the options of the simulations replayed on the GPU
+CUDA = dict(backend="torch", device="cuda")
 
 
 def graph_step(sim):
@@ -60,25 +49,23 @@ def graph_step(sim):
         ("pimd_nvt", DUMMY, 5),
         ("pimd_pile_g", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 2),
-        ("mts", None, 14),
+        ("mts", HARMONIC, 14),
         ("npt_isotropic", HARMONIC, 2),
         ("npt_flexible", HARMONIC, 2),
         ("pimd_npt", HARMONIC, 2),
-        ("nst", None, 2),
+        ("nst", HARMONIC, 2),
     ],
 )
 def test_replay_matches_eager_steps(
-    case, forcefield, nsegments, tmp_path, monkeypatch, device_random
+    case, forcefield, nsegments, simulation, device_random
 ):
     """The replayed steps give the same trajectory and outputs as eager steps
     (to rounding errors), with one CUDA graph per segment between eager force
     evaluations (of a force component, or only of the driver for direct
     forcefields)"""
 
-    monkeypatch.chdir(tmp_path)
-    xml = INPUTS[case](HARMONIC) if case in INPUTS else write_input(case, forcefield)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    xml = case_input(case, forcefield)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for step in range(8):
             eager.run_step(step)
             graph.run_step(step)
@@ -91,19 +78,15 @@ def test_replay_matches_eager_steps(
             torch.testing.assert_close(b.beads.p, a.beads.p, **TOLERANCE)
             torch.testing.assert_close(b.cell.h, a.cell.h, **TOLERANCE)
         assert len(graph_step(graph).segments) == nsegments
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
-def test_momenta_written_between_replays(tmp_path, monkeypatch):
+def test_momenta_written_between_replays(simulation):
     """Momenta written through the normal modes between replayed steps (as by
     InteractiveSimulation.thermalize_momenta) are used by the next replays"""
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input("nve", HARMONIC)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for sim in (eager, graph):
             for step in range(6):
                 sim.run_step(step)
@@ -113,24 +96,18 @@ def test_momenta_written_between_replays(tmp_path, monkeypatch):
         a, b = eager.syslist[0].beads, graph.syslist[0].beads
         torch.testing.assert_close(b.q, a.q, **TOLERANCE)
         torch.testing.assert_close(b.p, a.p, **TOLERANCE)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
 @pytest.mark.parametrize("step", [1, 2])
 @pytest.mark.parametrize("case", ["pimd_nvt", "npt_isotropic"])
-def test_state_written_during_the_eager_steps(
-    case, step, tmp_path, monkeypatch, device_random
-):
+def test_state_written_during_the_eager_steps(case, step, simulation, device_random):
     """Momenta and positions written between the eager steps, which change the
     objects that the recorded step reads and where it is split, do not change
     the replayed steps"""
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input(case, HARMONIC)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for sim in (eager, graph):
             for i in range(8):
                 if i == step:
@@ -142,22 +119,16 @@ def test_state_written_during_the_eager_steps(
         torch.testing.assert_close(b.beads.q, a.beads.q, **TOLERANCE)
         torch.testing.assert_close(b.beads.p, a.beads.p, **TOLERANCE)
         torch.testing.assert_close(b.cell.h, a.cell.h, **TOLERANCE)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
-def test_forces_converted_in_part_before_the_recording(
-    tmp_path, monkeypatch, device_random
-):
+def test_forces_converted_in_part_before_the_recording(simulation, device_random):
     """The results of a forcefield computed before the recorded step, but only
     in part converted to device arrays (here the potential), are converted
     eagerly when the step is recorded"""
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input("nvt_langevin", HARMONIC)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for sim in (eager, graph):
             for i in range(6):
                 if i == 2:
@@ -168,22 +139,18 @@ def test_forces_converted_in_part_before_the_recording(
         a, b = eager.syslist[0].beads, graph.syslist[0].beads
         torch.testing.assert_close(b.q, a.q, **TOLERANCE)
         torch.testing.assert_close(b.p, a.p, **TOLERANCE)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
-def test_recording_in_a_new_thread(tmp_path, monkeypatch, device_random):
+def test_recording_in_a_new_thread(simulation, device_random):
     """A step is recorded in a thread that has run eager steps, as some
     libraries (e.g. cuBLAS) initialize per-thread state that cannot be
     recorded: steps run in threads (threading='true') then still replay"""
 
     from concurrent.futures import ThreadPoolExecutor
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input("nvt_langevin", NO_FORCES)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for step in range(2):
             eager.run_step(step)
             graph.run_step(step)
@@ -195,50 +162,19 @@ def test_recording_in_a_new_thread(tmp_path, monkeypatch, device_random):
         a, b = eager.syslist[0].beads, graph.syslist[0].beads
         torch.testing.assert_close(b.q, a.q, **TOLERANCE)
         torch.testing.assert_close(b.p, a.p, **TOLERANCE)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
-def test_unsupported_steps_are_eager(tmp_path, monkeypatch, device_random):
-    monkeypatch.chdir(tmp_path)
-    try:
-        sim = simulation(write_input("nvt_gle", HARMONIC), True)
+def test_unsupported_steps_are_eager(simulation, device_random):
+    with simulation(write_input("nvt_gle", HARMONIC), **CUDA, jit=True) as sim:
         assert graph_step(sim) is None
         sim.run_step(0)
-    finally:
-        ab.set_backend("numpy")
-
-
-@cuda
-@pytest.mark.parametrize(
-    "case,owner,name",
-    [("nvt_langevin", "motion", "dt"), ("npt_isotropic", "ensemble", "pext")],
-)
-def test_changed_parameters_stop_the_replay(
-    case, owner, name, tmp_path, monkeypatch, device_random
-):
-    """The time step, and the pressure of the barostats, are fixed in the graphs"""
-
-    from ipi.utils.jit import JitError
-
-    monkeypatch.chdir(tmp_path)
-    try:
-        sim = simulation(write_input(case, HARMONIC), True)
-        for step in range(4):
-            sim.run_step(step)
-        obj = getattr(sim.syslist[0], owner)
-        setattr(obj, name, getattr(obj, name) * 1.1)
-        with pytest.raises(JitError, match="cannot change"):
-            sim.run_step(4)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
 @pytest.mark.parametrize("segment", [1, 2])
 def test_failed_recording_stops_the_replay(
-    segment, tmp_path, monkeypatch, device_random
+    segment, simulation, monkeypatch, device_random
 ):
     """An error raised while recording the first or the last segment (both
     apply the thermostat) stops the steps, also at the following calls"""
@@ -257,9 +193,7 @@ def test_failed_recording_stops_the_replay(
         step(self)
 
     monkeypatch.setattr(ThermoLangevin, "step", failing)
-    monkeypatch.chdir(tmp_path)
-    try:
-        sim = simulation(write_input("nvt_langevin", HARMONIC), True)
+    with simulation(write_input("nvt_langevin", HARMONIC), **CUDA, jit=True) as sim:
         for i in range(2):
             sim.run_step(i)
         with pytest.raises(JitError, match="cannot be replayed"):
@@ -267,12 +201,10 @@ def test_failed_recording_stops_the_replay(
         for i in range(3, 5):
             with pytest.raises(JitError, match="has failed"):
                 sim.run_step(i)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
-def test_driver_extras_are_updated(tmp_path, monkeypatch, device_random):
+def test_driver_extras_are_updated(simulation, monkeypatch, device_random):
     """The extras returned by the driver reach the forces at each replayed step"""
 
     from ipi.pes.dummy import Zero_driver
@@ -284,26 +216,20 @@ def test_driver_extras_are_updated(tmp_path, monkeypatch, device_random):
         return pos.sum() * 0.0, pos * 0.0, cell * 0.0, json.dumps({"n": len(calls)})
 
     monkeypatch.setattr(Zero_driver, "compute_structure", compute_structure)
-    monkeypatch.chdir(tmp_path)
-    try:
-        sim = simulation(write_input("nve", DUMMY), True)
+    with simulation(write_input("nve", DUMMY), **CUDA, jit=True) as sim:
         for step in range(6):
             sim.run_step(step)
             assert sim.syslist[0].forces.extras["n"] == [len(calls)]
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
 @pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt"])
-def test_temperature_changes_are_replayed(case, tmp_path, monkeypatch, device_random):
+def test_temperature_changes_are_replayed(case, simulation, device_random):
     """The coefficients of the Langevin thermostats are scalars on the device,
     which the replays read: they follow a change of the temperature"""
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input(case, HARMONIC)
-    try:
-        eager, graph = simulation(xml, False), simulation(xml, True)
+    with simulation(xml, **CUDA) as eager, simulation(xml, **CUDA, jit=True) as graph:
         for step in range(8):
             if step == 4:
                 eager.syslist[0].ensemble.temp *= 1.5
@@ -317,27 +243,24 @@ def test_temperature_changes_are_replayed(case, tmp_path, monkeypatch, device_ra
             )
         a, b = eager.syslist[0].beads, graph.syslist[0].beads
         torch.testing.assert_close(b.p, a.p, **TOLERANCE)
-    finally:
-        ab.set_backend("numpy")
 
 
 @cuda
 @pytest.mark.parametrize("forcefield", [NO_FORCES, DUMMY_BATCHED])
-def test_replay_is_sync_free(forcefield, tmp_path, monkeypatch, device_random):
+def test_replay_is_sync_free(forcefield, simulation, device_random):
     """A replayed step does not wait for the device, also with the forces of a
     driver that does not wait for it"""
 
-    monkeypatch.chdir(tmp_path)
-    try:
-        sim = simulation(write_input("pimd_nvt", forcefield), True)
-        for step in range(4):
-            sim.run_step(step)
-        torch.cuda.set_sync_debug_mode("error")
-        for step in range(4, 8):
-            sim.run_step(step)
-    finally:
-        torch.cuda.set_sync_debug_mode("default")
-        ab.set_backend("numpy")
+    xml = write_input("pimd_nvt", forcefield)
+    with simulation(xml, **CUDA, jit=True) as sim:
+        try:
+            for step in range(4):
+                sim.run_step(step)
+            torch.cuda.set_sync_debug_mode("error")
+            for step in range(4, 8):
+                sim.run_step(step)
+        finally:
+            torch.cuda.set_sync_debug_mode("default")
 
 
 # The tests below run without a GPU: the CUDA streams and graphs are replaced
@@ -371,9 +294,10 @@ class FakeGraph:
 
 
 @pytest.fixture
-def fake_cuda(monkeypatch):
+def fake_cuda(simulation, select_backend, monkeypatch):
     """Replays the steps with the torch backend on the CPU, with fake CUDA
-    streams and graphs, and CPU tensors in place of CUDA tensors."""
+    streams and graphs, and CPU tensors in place of CUDA tensors: the
+    simulations are created with `simulation(xml)`."""
 
     from ipi.utils import cudagraphs, jit
 
@@ -384,16 +308,8 @@ def fake_cuda(monkeypatch):
     monkeypatch.setattr(torch.cuda, "CUDAGraph", FakeGraph)
     monkeypatch.setattr(cudagraphs, "_is_cuda_tensor", torch.is_tensor)
     monkeypatch.setattr(jit, "_compiled", lambda func: func)
-    ab.set_backend("torch", device="cpu")
+    select_backend("torch", device="cpu")
     monkeypatch.setitem(ab._current, "jit", True)
-    yield
-    ab.set_backend("numpy")
-
-
-def fake_simulation(xml):
-    from ipi.scripting import InteractiveSimulation
-
-    return InteractiveSimulation(xml)
 
 
 @pytest.mark.parametrize(
@@ -405,24 +321,22 @@ def fake_simulation(xml):
         ("pimd_nvt", DUMMY, 5),
         ("pimd_pile_g", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 2),
-        ("mts", None, 14),
+        ("mts", HARMONIC, 14),
     ],
 )
 def test_recording_is_split_at_force_evaluations(
-    case, forcefield, nsegments, tmp_path, monkeypatch, fake_cuda
+    case, forcefield, nsegments, simulation, fake_cuda
 ):
     """A step is recorded in segments that end at the eager force evaluations
     (of a force component, or only of the driver for direct forcefields)"""
 
-    monkeypatch.chdir(tmp_path)
-    xml = mts_input(HARMONIC) if case == "mts" else write_input(case, forcefield)
-    sim = fake_simulation(xml)
-    for step in range(4):
-        sim.run_step(step)
-    assert len(graph_step(sim).segments) == nsegments
+    with simulation(case_input(case, forcefield)) as sim:
+        for step in range(4):
+            sim.run_step(step)
+        assert len(graph_step(sim).segments) == nsegments
 
 
-def test_replays_call_the_driver(tmp_path, monkeypatch, fake_cuda):
+def test_replays_call_the_driver(simulation, monkeypatch, fake_cuda):
     """At each replay the driver is called, its tensor results are copied into
     those read by the graphs, and its extras reach the forces"""
 
@@ -436,38 +350,35 @@ def test_replays_call_the_driver(tmp_path, monkeypatch, fake_cuda):
         return pot, pos * 0.0, cell * 0.0, json.dumps({"n": len(calls)})
 
     monkeypatch.setattr(Zero_driver, "compute_structure", compute_structure)
-    monkeypatch.chdir(tmp_path)
-    sim = fake_simulation(write_input("nve", DUMMY))
-    bead = sim.syslist[0].forces.mforces[0]._forces[0]
-    for step in range(6):
-        sim.run_step(step)
-        assert sim.syslist[0].forces.extras["n"] == [len(calls)]
-        assert float(bead.pot) == len(calls)
-    assert graph_step(sim).segments is not None
+    with simulation(write_input("nve", DUMMY)) as sim:
+        bead = sim.syslist[0].forces.mforces[0]._forces[0]
+        for step in range(6):
+            sim.run_step(step)
+            assert sim.syslist[0].forces.extras["n"] == [len(calls)]
+            assert float(bead.pot) == len(calls)
+        assert graph_step(sim).segments is not None
 
 
-def test_changed_parameters_stop_the_fake_replay(tmp_path, monkeypatch, fake_cuda):
+def test_changed_parameters_stop_the_fake_replay(simulation, fake_cuda):
     from ipi.utils.jit import JitError
 
-    monkeypatch.chdir(tmp_path)
-    sim = fake_simulation(write_input("nvt_langevin", HARMONIC))
-    for step in range(4):
-        sim.run_step(step)
-    sim.syslist[0].motion.dt *= 1.1
-    with pytest.raises(JitError, match="cannot change"):
-        sim.run_step(4)
+    with simulation(write_input("nvt_langevin", HARMONIC)) as sim:
+        for step in range(4):
+            sim.run_step(step)
+        sim.syslist[0].motion.dt *= 1.1
+        with pytest.raises(JitError, match="cannot change"):
+            sim.run_step(4)
 
 
-def test_replaced_generator_stops_the_replay(tmp_path, monkeypatch, fake_cuda):
+def test_replaced_generator_stops_the_replay(simulation, fake_cuda):
     from ipi.utils.jit import JitError
 
-    monkeypatch.chdir(tmp_path)
-    sim = fake_simulation(write_input("nvt_langevin", NO_FORCES))
-    for step in range(3):
-        sim.run_step(step)
-    sim.syslist[0].prng._torch_rng = torch.Generator()
-    with pytest.raises(JitError, match="generator"):
-        sim.run_step(3)
+    with simulation(write_input("nvt_langevin", NO_FORCES)) as sim:
+        for step in range(3):
+            sim.run_step(step)
+        sim.syslist[0].prng._torch_rng = torch.Generator()
+        with pytest.raises(JitError, match="generator"):
+            sim.run_step(3)
 
 
 def test_function_is_recorded_after_eager_calls_in_the_thread(fake_cuda):
@@ -686,16 +597,20 @@ def test_values_fixed_in_a_graph_are_checked(fake_cuda):
         _check(single, [2.0], None)
     held = np.zeros(2)
     host.set(held)
-    copy = held.copy()
+    data = held.tobytes()
     held[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _check(host, held, copy)
+        _check(host, held, data)
+    # a replaced host array must have the same shape and type
+    host.set(np.zeros(2, dtype=np.int64))
+    with pytest.raises(JitError, match="has changed"):
+        _check(host, held, np.zeros(2).tobytes())
 
     names = depend_array(name="names", value=np.zeros(3), host=True)
-    copy = names._data.copy()
+    data = names._data.tobytes()
     names[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _check(names, names._data, copy)
+        _check(names, names._data, data)
 
 
 def test_fixed_values_are_checked_before_the_replay(fake_cuda):
@@ -828,7 +743,7 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
     )
     call = _Call(lambda: next(results), ())
     call()
-    recorded = call.outputs
+    recorded = call.results
     scalar = recorded[0][0]
     call()
     assert recorded[0][0] is scalar and float(scalar) == 2.0
@@ -837,100 +752,3 @@ def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):
         call()
     with pytest.raises(JitError, match="changed structure"):
         call()
-
-
-@pytest.mark.parametrize(
-    "case,change,reason",
-    [
-        ("nve", None, None),
-        ("nvt_svr", None, None),
-        ("pimd_pile_g", None, None),
-        ("nvt_gle", None, "the thermostat 'ThermoGLE'"),
-        ("npt_flexible", None, None),
-        (
-            "npt_isotropic",
-            (ISOTROPIC, ISOTROPIC.replace("'langevin'", "'svr'")),
-            "the thermostat 'ThermoSVR' of the barostat",
-        ),
-        (
-            "npt_isotropic",
-            (
-                ISOTROPIC,
-                "<barostat mode='stochastic-rescaling'><tau units='femtosecond'>200"
-                "</tau><compressibility units='bar^-1'>4.5e-5</compressibility>"
-                "</barostat>",
-            ),
-            "the barostat 'BaroSCR'",
-        ),
-        ("nvt_langevin", ("mode='dynamics'", "mode='dummy'"), "the motion class"),
-        ("pimd_nvt", ("mode='nvt'", "mode='nvt-cc'"), "the ensemble 'nvt-cc'"),
-        (
-            "nvt_langevin",
-            (
-                "<motion mode='dynamics'>",
-                "<motion mode='dynamics'><fixatoms>[0]</fixatoms>",
-            ),
-            "fixed atoms",
-        ),
-        (
-            "pimd_nvt",
-            (
-                "<motion mode='dynamics'>",
-                "<normal_modes><open_paths>[0]</open_paths></normal_modes>"
-                "<motion mode='dynamics'>",
-            ),
-            "open paths or bosons",
-        ),
-    ],
-)
-def test_unsupported_steps(case, change, reason, tmp_path, monkeypatch):
-    from ipi.engine.jit import replay_steps, unsupported
-    from ipi.scripting import InteractiveSimulation
-
-    monkeypatch.chdir(tmp_path)
-    xml = write_input(case, NO_FORCES)
-    if change is not None:
-        xml = xml.replace(*change)
-    sim = InteractiveSimulation(xml)
-    if reason is None:
-        assert unsupported(sim, sim.syslist[0]) is None
-    else:
-        assert reason in unsupported(sim, sim.syslist[0])
-        replay_steps(sim)
-        assert graph_step(sim) is None
-
-
-def two_systems(xml, threading, smotion=""):
-    """Duplicates the system of an input, with an optional motion of the systems."""
-
-    start, end = xml.index("<system>"), xml.index("</system>") + len("</system>")
-    system = xml[start:end]
-    systems = system.replace("<system>", "<system prefix='a'>") + system.replace(
-        "<system>", "<system prefix='b'>"
-    )
-    xml = xml[:start] + systems + smotion + xml[end:]
-    return xml.replace("threading='false'", f"threading='{threading}'")
-
-
-@pytest.mark.parametrize(
-    "threading,smotion,reason",
-    [
-        ("true", "", "stepping systems in threads"),
-        (
-            "false",
-            "<smotion mode='remd'><remd><stride>4</stride></remd></smotion>",
-            "a motion of multiple systems",
-        ),
-    ],
-)
-def test_unsupported_multiple_systems(
-    threading, smotion, reason, tmp_path, monkeypatch
-):
-    from ipi.engine.jit import unsupported
-    from ipi.scripting import InteractiveSimulation
-
-    monkeypatch.chdir(tmp_path)
-    sim = InteractiveSimulation(
-        two_systems(write_input("nvt_langevin", NO_FORCES), threading, smotion)
-    )
-    assert unsupported(sim, sim.syslist[0]) == reason

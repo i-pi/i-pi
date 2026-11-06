@@ -4,15 +4,30 @@ A function that operates on depend objects, such as the step of an
 integrator, runs eagerly for the first calls, which fill the caches of the
 depend objects, and is then replaced by a compiled version: CUDA graphs with
 the torch backend on a CUDA device (see `ipi.utils.cudagraphs`), or a function
-compiled with jax.jit with the jax backend (see `ipi.utils.jaxjit`). Both find
-what the function reads and writes by recording the operations on the depend
-objects while it runs (`_Recorder`, see `depend.set_recorder`), and share the
-calls of the function and of its compiled version (`Replay`).
+compiled with jax.jit with the jax backend (see `ipi.utils.jaxjit`). Both share
+the calls of the function and of its compiled version (`Replay`).
+
+As the compiled version does not run the Python code, it is built from the
+operations on the depend objects made by a call of the function, which are
+recorded (`_Recorder`, notified by the depend objects, see
+`depend.set_recorder`):
+
+- the inputs, i.e. the objects read before being written. Those held on the
+  device are read by the compiled version at each call; those held on the
+  host (Python scalars, numpy arrays, e.g. the time step) are fixed in it, and
+  checked before each call (`_check`);
+- the outputs, i.e. the objects written, which hold the values computed by
+  the compiled version after each call;
+- the taint status of the objects that are written or recomputed, and of
+  their dependants, and which object of each synchronized pair holds the
+  data, at the end of the call. As the code of the depend objects does not
+  run, they are restored after each call of the compiled version.
 
 Code that is part of a compiled function marks with `split` the points where
-the recording may be interrupted, and calls with `eager` the functions that
-must run eagerly. Functions of arrays decorated with `compiled` are compiled
-with torch.compile when the steps are compiled with the torch backend.
+the recording may be interrupted (e.g. a force evaluation), and calls with
+`eager` the functions that must run eagerly at each call (e.g. a driver).
+Functions of arrays decorated with `compiled` are compiled with torch.compile
+when the steps are compiled with the torch backend.
 
 A `JitError` is raised if the function cannot be compiled, or if a value that
 is fixed in the compiled function changes. A failed compilation leaves the
@@ -28,7 +43,7 @@ import functools
 import numpy as np
 
 from ipi.utils import depend
-from ipi.utils.array_backend import backend, device, jit
+from ipi.utils.array_backend import backend, device, jit_enabled
 from ipi.utils.messages import verbosity, warning
 
 __all__ = ["JitError", "Replay", "split", "eager", "compiled"]
@@ -71,7 +86,7 @@ def compiled(func):
 
     @functools.wraps(func)
     def wrapper(*args):
-        if jit() and backend() == "torch":
+        if jit_enabled() and backend() == "torch":
             return _compiled(func)(*args)
         return func(*args)
 
@@ -130,7 +145,7 @@ class Replay:
         func: The function.
         compiled: The compiled function, or None before the compilation.
         fixed: The inputs of the compiled function that are fixed in it, as
-            (depend object, value, copy of a host array).
+            (depend object, value, bytes of a host array).
     """
 
     # how the function is compiled, for the error messages
@@ -146,8 +161,8 @@ class Replay:
     def __call__(self, *args):
         if self.compiled is not None:
             # the values fixed in the compiled function are checked before it runs
-            for dep, value, copy in self.fixed:
-                _check(dep, value, copy)
+            for dep, value, data in self.fixed:
+                _check(dep, value, data)
             self.replay()
         elif self.error is not None:
             raise JitError("The compilation of the step has failed") from self.error
@@ -179,21 +194,29 @@ class Replay:
 
 def _input(dep, value):
     """An input of a compiled function, as recorded: the depend object, the
-    value it holds, and a copy of the value if it is a host array."""
+    value it holds, and the bytes of the value if it is a host array (which
+    are faster to compare than the arrays)."""
 
-    return dep, value, value.copy() if isinstance(value, np.ndarray) else None
+    return dep, value, value.tobytes() if isinstance(value, np.ndarray) else None
 
 
-def _check(dep, recorded, copy):
+def _check(dep, recorded, data):
     """Checks that the value of the input `dep`, which is fixed in a compiled
-    function that read the object `recorded` (with a copy `copy` of its host
-    array), is unchanged."""
+    function that read the object `recorded` (with the bytes `data` of its
+    host array), is unchanged."""
 
     current = dep.get()
     if isinstance(dep, depend.depend_array) and dep._data is not recorded:
         raise _changed(dep, "has been replaced")
-    if copy is not None:
-        if not np.array_equal(current, copy):
+    if data is not None:
+        # a host array that has been replaced must have the same shape and type
+        if current is not recorded and not (
+            isinstance(current, np.ndarray)
+            and current.shape == recorded.shape
+            and current.dtype == recorded.dtype
+        ):
+            raise _changed(dep, "has changed")
+        if current.tobytes() != data:
             raise _changed(dep, "has changed")
     elif current is not recorded and not _equal(current, recorded):
         raise _changed(dep, "has changed")
@@ -226,8 +249,6 @@ class _Recorder:
     def __init__(self, replay):
         self.split = replay.split
         self.call = replay.call
-        # the lists returned by eager calls, which are kept up to date
-        self.outputs = set()
         self.reset()
 
     def reset(self):
@@ -260,12 +281,6 @@ class _Recorder:
 
     def synchronized(self, synchro):
         self.synchros.add(synchro)
-
-    def add_outputs(self, outputs):
-        if isinstance(outputs, list):
-            self.outputs.add(id(outputs))
-            for item in outputs:
-                self.add_outputs(item)
 
     def final_state(self):
         """Returns the taint status of all the objects that may have been

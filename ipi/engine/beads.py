@@ -134,12 +134,12 @@ class Beads:
             for i in range(nbeads)
         ]
 
-        # kinetic energies of thhe beads, and total (classical) kinetic stress tensor
+        # kinetic energies of the beads, and total (classical) kinetic stress tensor
         self.kins_ = depend_array(
             name="kins",
             value=np.zeros(nbeads, float),
-            func=self.kin_gather,
-            dependencies=[b.kin_ for b in self._blist],
+            func=self.get_kins,
+            dependencies=[self.p_, self.m3_],
         )
         self.kin_ = depend_value(
             name="kin", func=self.get_kin, dependencies=[self.kins_]
@@ -148,7 +148,7 @@ class Beads:
             name="kstress",
             value=np.zeros((3, 3), float),
             func=self.get_kstress,
-            dependencies=[b.kstress_ for b in self._blist],
+            dependencies=[self.p_, self.m_],
         )
 
     def clone(self, nbeads=-1):
@@ -190,22 +190,17 @@ class Beads:
         """Gets the centroid coordinates."""
 
         return self.q.sum(axis=0) / self.nbeads
-        # return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
         return self.p.sum(axis=0) / self.nbeads
-        # return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
 
-    def kin_gather(self):
-        """Gets the kinetic energy for all the replicas.
+    def get_kins(self):
+        """Gets the kinetic energy of each replica."""
 
-        Returns:
-           A list of the kinetic energy for each system.
-        """
-
-        return xp.stack([b.kin for b in self._blist])
+        p = self.p
+        return 0.5 * (p * p / self.m3).sum(axis=1)
 
     def get_kin(self):
         """Gets the total kinetic energy of all the replicas.
@@ -229,10 +224,9 @@ class Beads:
            The sum of the kinetic stress tensor of each replica.
         """
 
-        ks = xp.zeros((3, 3))
-        for b in range(self.nbeads):
-            ks += self[b].kstress
-        return ks
+        p = self.p.reshape(-1, 3)
+        pm = (self.p.reshape(self.nbeads, -1, 3) / self.m[:, None]).reshape(-1, 3)
+        return xp.triu(p.T @ pm)
 
     # A set of functions to access individual beads as Atoms objects
     def __len__(self):

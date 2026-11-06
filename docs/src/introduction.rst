@@ -243,7 +243,7 @@ at runtime, to the value of the other object. A typical usage pattern is
       def bind(self, factor):
 
          self.factor = factor # stores a reference to the object holding the value
-         self.scaled_ = depend_array(value=np.ones(4), name="vec",
+         self.scaled_ = depend_array(value=np.ones(4), name="scaled",
                                     func=self.get_scaled, dependencies=[self.vec_])
 
          # dependencies can also be added after object creation
@@ -442,8 +442,9 @@ must not be created at import time (module constants, default arguments).
   and files are converted with ``xp.asarray`` before being stored; outputs,
   checkpoints, sockets, forcefields and calls to scipy use ``to_numpy``,
   which may return a view of the stored data with numpy (copy it if it is
-  kept). Depend objects never convert their argument: writing a numpy array
-  into a torch-backed ``depend_array`` raises an error.
+  kept). Depend objects convert the initial value given to their constructor,
+  but never the values written into them: writing a numpy array into a
+  torch-backed ``depend_array`` raises an error.
 * Small arrays used for indexing or control on the host (atom names, index
   lists, the number of multiple-time-step sub-steps, the time scales of the
   normal-mode thermostats) are stored as numpy arrays with
@@ -451,9 +452,9 @@ must not be created at import time (module constants, default arguments).
 * With a GPU, ``float(x)``, ``bool(x)``, ``if x > 0`` and ``x.item()`` on a
   device array wait for all the queued operations to complete: avoid them in
   the MD step, and prefer array operations (e.g. ``xp.where``).
-* ``prng.gvec`` and ``prng.gfill`` produce backend arrays (drawn on the device
-  with torch), while scalar draws (``prng.u``, ``prng.g``, ``prng.gamma``, ...)
-  are Python or numpy numbers. ``prng.gfill`` is not available with JAX.
+* ``prng.gvec`` and ``prng.gammavec`` produce backend arrays (drawn on the
+  device with torch and JAX), while scalar draws (``prng.u``, ``prng.g``,
+  ``prng.gamma``, ...) are Python or numpy numbers.
 * JAX arrays cannot be modified in place. Depend objects hide this: with the
   ``jax`` backend, writes (``obj.x_[i] = v``, ``obj.x_ += v``, also through
   views such as ``obj.x_[i]``) replace the stored array. Other arrays must not
@@ -464,13 +465,61 @@ must not be created at import time (module constants, default arguments).
   with an error when they are used with JAX.
 
 The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
-check that the torch and JAX backends reproduce the numpy trajectories and
-that an MD step does not synchronize with the GPU. The regression tests and
-the examples can be run with another backend with ``pytest --ipi-backend torch
-[--ipi-device cuda]`` or ``--ipi-backend jax``. In these runs (and in the tests that use the
-``strict_torch`` fixture) implicit conversions of torch tensors to numpy
-arrays raise an error also on the CPU, as they do on GPUs, so that missing
-``to_numpy`` calls are detected without a GPU.
+check, for a table of dynamics (``CASES``), that the torch and JAX backends
+reproduce the numpy trajectories when they draw the same random numbers
+(``numpy_draws``), and that an MD step does not synchronize with the GPU. The
+unit tests select a backend with the ``select_backend`` fixture, which restores
+numpy afterwards, and the simulations of the ``simulation`` and
+``reference_system`` fixtures use the backend given with ``--ipi-backend``. The
+unit tests, the regression tests and the examples can be run with another
+backend with ``pytest --ipi-backend torch [--ipi-device cuda]`` or
+``--ipi-backend jax``; the CI runs the unit and regression tests with torch,
+and the regression tests with JAX (``tox -e backends``). The regression tests
+of the features that JAX does not support (``JAX_UNSUPPORTED`` in
+``ipi_tests/test_tools.py``) are expected to fail with JAX. In the torch runs
+(and in the tests that use the ``strict_torch`` fixture) implicit conversions
+of torch tensors to numpy arrays raise an error also on the CPU, as they do on
+GPUs, so that missing ``to_numpy`` calls are detected without a GPU.
+
+Compiled steps (``--jit``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With ``--jit``, the step of the integrator runs eagerly for the first steps,
+and is then compiled: recorded as CUDA graphs and replayed with torch, or
+traced with ``jax.jit`` with JAX (``ipi/engine/jit.py`` and
+``ipi/utils/jit.py``). The compiled step does not run the Python code: it is
+built from the operations on the depend objects made by one step, so the code
+of an MD step must follow a few rules.
+
+* Python scalars and host arrays read in the step (the time step, the number
+  of sub-steps, arrays created with ``host=True``) are fixed in the compiled
+  step, and i-PI stops with a ``JitError`` if they change. Parameters that can
+  change during a run are held as backend scalars instead (e.g. the
+  coefficients of the Langevin thermostats, which depend on the temperature),
+  and host arrays must not be written in a step.
+* Random numbers are drawn as arrays with ``prng.gvec`` and ``prng.gammavec``,
+  which are part of the compiled step: a scalar draw (``prng.u``, ``prng.g``)
+  would be fixed in it.
+* The points where a step must call outside code are marked with
+  ``jit.split(obj)``, e.g. the force evaluations: with CUDA graphs the
+  recording is interrupted there and the forces are computed eagerly between
+  the replays, while with JAX the step is compiled only if the forces can be
+  traced too. Functions that run eagerly between the replays (e.g. a driver)
+  are called with ``jit.eager(func, *args)``, and functions of arrays decorated
+  with ``jit.compiled`` are compiled with ``torch.compile``, which merges their
+  operations in fewer kernels. Without ``--jit`` these are plain calls.
+* Only the dynamics accepted by ``unsupported`` (``ipi/engine/jit.py``) are
+  compiled. A new thermostat, barostat or integrator is added there once it
+  follows these rules, and its compiled steps are tested against the eager ones
+  (``test_cuda_graphs.py``, ``test_jax_jit.py``).
+
+The potentials of direct forcefields (:ref:`ffdirect`) receive and return
+numpy arrays, unless their driver sets ``backend_arrays = True``: it then works
+on the arrays of the backend (e.g. torch tensors on a GPU), which it must not
+modify nor keep after the call, as they may be overwritten when the steps are
+replayed. A driver that also sets ``jax_traceable = True`` computes its results
+with JAX operations, so that the force evaluation is part of the step compiled
+with ``jax.jit``.
 
 
 Licence and credits

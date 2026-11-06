@@ -175,16 +175,16 @@ class GraphReplay(Replay):
 
     def call(self, func, *args):
         """Interrupts the recording to call `func(*args)` eagerly, and returns
-        the outputs."""
+        the results."""
 
         call = _Call(func, args)
         self.interrupt(call)
-        self.recorder.add_outputs(call.outputs)
-        return call.outputs
+        self.recorder.add_eager_results(call.results)
+        return call.results
 
 
 class _Call:
-    """A function called eagerly after a segment. The graphs read the outputs
+    """A function called eagerly after a segment. The graphs read the results
     of the call made while recording, which are lists: the tensors returned
     by the following calls are copied into them, and the other items replace
     theirs."""
@@ -195,15 +195,15 @@ class _Call:
         self.copy = torch._foreach_copy_
         self.func = func
         self.args = args
-        self.outputs = None
+        self.results = None
 
     def __call__(self):
-        outputs = self.func(*self.args)
-        if self.outputs is None:
-            self.outputs = outputs
+        results = self.func(*self.args)
+        if self.results is None:
+            self.results = results
             return
         targets, sources = [], []
-        _match(self.outputs, outputs, targets, sources)
+        _match(self.results, results, targets, sources)
         if targets:
             self.copy(targets, sources)
 
@@ -243,7 +243,7 @@ class _Segment:
         self.after = after
 
     def replay(self):
-        for dep, value, copy in self.inputs:
+        for dep, value, data in self.inputs:
             _stage(dep, value)
         self.graph.replay()
         for status, tainted in self.statuses:
@@ -256,12 +256,12 @@ class _Segment:
             self.after()
 
 
-def _is_fixed(dep, recorded, copy):
+def _is_fixed(dep, recorded, data):
     """Whether the value of the input `dep`, recorded as the object `recorded`
-    (with a copy of its host array `copy`), is held on the host."""
+    (with the bytes `data` of its host array), is held on the host."""
 
     if isinstance(dep, depend.depend_array):
-        return copy is not None
+        return data is not None
     return not _is_cuda_tensor(recorded)
 
 
@@ -290,6 +290,17 @@ class _GraphRecorder(_Recorder):
     """Recorder of a function replayed as CUDA graphs, which returns the
     recorded segments."""
 
+    def __init__(self, replay):
+        super().__init__(replay)
+        # the lists returned by eager calls, which are kept up to date
+        self.eager_results = set()
+
+    def add_eager_results(self, results):
+        if isinstance(results, list):
+            self.eager_results.add(id(results))
+            for item in results:
+                self.add_eager_results(item)
+
     def segment(self, graph, after):
         """Returns the recorded segment, with the state of the depend objects
         at its end."""
@@ -297,7 +308,10 @@ class _GraphRecorder(_Recorder):
         if self.host_writes:
             raise JitError(f"The step modifies host arrays: {sorted(self.host_writes)}")
         for dep in self.values:
-            if not _is_cuda_tensor(dep._value) and id(dep._value) not in self.outputs:
+            if (
+                not _is_cuda_tensor(dep._value)
+                and id(dep._value) not in self.eager_results
+            ):
                 raise JitError(f"The step modifies the host value <{dep._name}>")
 
         statuses, synchros = self.final_state()

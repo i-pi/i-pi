@@ -65,6 +65,8 @@ or because they were approved explicitly:
   per-bead ones (it depended on the SC potential), and the combined extras and the components added to a bias
   (`add_component`) on the component weights; they gave stale values when these changed (e.g. the extras of a
   bias whose weights are exchanged by replica exchange). New unit tests.
+- A forcefield that returns a non-symmetric virial gets a warning, once per forcefield: as on main, only the
+  upper triangle of the virial is used.
 - Force copies (`dump_state`/`load_state`, `transfer_forces`): forces that were not up to date when the state
   was saved, in practice those of components with zero weight, which are not computed, were loaded as up to
   date: reading such a component afterwards (e.g. `forces_component(k, weighted=False)`) failed, or returned
@@ -322,6 +324,19 @@ or because they were approved explicitly:
   of the array or its type beyond a `same_kind` cast (it replaced the array).
 - New tool `i-pi-depend-graph` (`ipi.utils.tools.DependGraph`): writes the graph of the depend objects of a
   simulation in the dot format of Graphviz, optionally only around some objects (`--around`, `--depth`).
+- Dead code removed: `Atoms.kin`/`kstress` (each replica of the beads had them as dependants of the momenta;
+  `Beads.kins`, `kin` and `kstress` are computed from the momenta of all the beads), `Random.gfill`,
+  `mintools.bracket_neb`/`min_brent_neb`/`L_BFGS_nls` (only used by their tests), the `k` argument of
+  `L_BFGS`, `mathtools.sinch`/`mat_taylor`, `Forces.run`/`stop`, the `GradientMapper` and the unimplemented
+  single-force-call step of the string method, and commented-out code. The SC stresses of the barostats
+  (`kstress_sc`, `stress_sc`) are members of `BaroSCBZP` only. NEB and the string method printed the
+  distances between the beads at every evaluation, and debugging information at each step: these are now
+  messages at debug verbosity. The NEB, string and instanton modules no longer change the global print
+  options of numpy when they are imported. The Al6xxx KMC motion prints its messages through i-PI, with the
+  details of each event at debug verbosity and a summary of each step at high verbosity. Suzuki-Chin with
+  an odd number of beads, or with a forward difference and ring-polymer contraction, raises an error
+  instead of exiting. Suzuki-Chin NPT only warns when the forcefield returns a zero stress, like NPT: it
+  stopped the simulation at medium verbosity and above.
 
 The unit tests marked as strict xfail on main for the `b2tob1`, NMFD/eNMFD and `Fix.get_full_vector` (t=3, 4, 5)
 bugs pass, and are no longer marked.
@@ -329,8 +344,9 @@ bugs pass, and are no longer marked.
 ## Status and work left
 
 ### Pre-existing bugs found and not fixed (need a decision)
-- Instanton: the spring term for non-uniform discretizations (`SpringMapper`, under `if False:`) is disabled,
-  while the physical potential is weighted by the discretization coefficients.
+- Instanton: the spring term for non-uniform discretizations is not implemented (`SpringMapper` ignores the
+  discretization; a disabled draft of it was removed), while the physical potential is weighted by the
+  discretization coefficients.
 - VSCF, not checked or changed: with `nprim > 1` the one-mode and the pair terms are scaled differently (the
   pair mean field is divided by `nprim` once more); `mptwo`, `threebody`, `print_mftpot`, `print_2b_map`,
   `print_vib_density`, `nkbt`, `nexc` and `ethresh` are accepted but not used (the MP2 correction and the
@@ -365,8 +381,8 @@ bugs pass, and are no longer marked.
 
 ### GPU performance and `torch.compile`
 - The cell and barostat state stay on the device, so that whole steps can be compiled. The remaining host
-  syncs in step code are graph breaks: `float(K)` in the SVR thermostat, the scalar acceptance logic of stochastic cell rescaling, the
-  convergence loop of the constraint solver.
+  syncs in step code are graph breaks: the scalar acceptance logic of stochastic cell rescaling, the convergence
+  loop of the constraint solver.
 - Fixed per-step cost on CUDA (Quadro P400): ~0.35 ms NVE, ~0.9 ms Langevin, ~2.7 ms NPT, 4-6.5 ms PIMD,
   independent of size (many small kernel launches). NPT on CUDA is slower than torch on CPU: fusing the 3x3
   cell/barostat operations, CUDA graphs or `torch.compile` should remove most of this.
@@ -380,10 +396,20 @@ bugs pass, and are no longer marked.
 - The metatomic driver synchronizes the device before each batched model call (`_compute_chunk`).
 - Storing the state for soft exits walks the whole input tree: ~0.3 ms per step with numpy, ~0.5-1.4 ms
   with torch on CUDA (P400, 100-10000 atoms), more than an NVE step. Runs with cheap forcefields should use
-  `safe_stride` > 1.
+  `safe_stride` > 1. The state of the PRNG is kept as a copy and encoded as JSON only when the checkpoint is
+  written or read back (`Random.snapshot`/`encode_state`): storing it takes ~50 us with all the backends, it
+  took 120 us with numpy and 320 us with torch on the CPU (copying the state of the numpy MT19937 generator
+  takes most of the 50 us). `InputArray.store` copies the arrays once.
+- Reading the spring energy (`nm.vspring`, e.g. for the conserved quantity at every step) no longer computes
+  the spring forces, which only the propagator of bosons and the `forces_spring` output read: 37 -> 20 us
+  with 100 atoms and 8 beads, 890 -> 390 us with 1000 atoms and 32 beads, after a change of the positions.
+  The virials of the beads and of the components are summed with `sum` instead of a loop; `FFDirect` applies
+  the offset only if it is not zero (in place, it modified the energy returned by the driver);
+  `ForceField.queue` copies the positions once.
 - Host-side code that could move to the device if it becomes a bottleneck: properties estimators that loop over
-  atoms (they run on numpy copies), the bosonic exchange recursions (cycle energies and prefix/suffix
-  potentials), the constraint solver (batch groups of the same shape).
+  atoms and beads (on the arrays of the backend, with a host synchronization per element on GPUs), the bosonic
+  exchange recursions (cycle energies and prefix/suffix potentials), the constraint solver (batch groups of the
+  same shape).
 - Benchmarks to repeat on a compute GPU (the numbers above come from a 2 GB Quadro P400 with slow float64).
 - H100 with metatomic models through `ffdirect` (in-process steps without outputs, ms/step, i-PI overhead
   = step - model): with the torch backend the overhead is ~0.44 ms (NVE) and ~2.2 ms (4-bead PIMD), independent
@@ -495,7 +521,7 @@ bugs pass, and are no longer marked.
   1.53 -> 1.28; eager 1.48 -> 1.07 (4 beads), 2.01 -> 1.61 (8), 5.26 -> 4.94 (32); numpy 8 beads 0.47 -> 0.33 /
   20.2 -> 15.2, 32 beads 1.35 -> 1.14 / 84.5 -> 65.8. With PET-MAD-xs (water, 384 and 768 atoms, 4 and 8
   beads, 25-74 ms/step) no difference within noise.
-- Possible extensions: stochastic cell rescaling (host logic and `float` syncs), SVR without `float(K)`, PILE_G, evaluating the forces of all the components of a level at once
+- Possible extensions: stochastic cell rescaling (host logic and `float` syncs), evaluating the forces of all the components of a level at once
   (now each component is computed when its first bead is queued), cheaper staging of the inputs (host
   arrays such as `nmts` and `pdt` are compared with `np.array_equal` at each replay).
 
@@ -531,7 +557,7 @@ bugs pass, and are no longer marked.
   jit of whole steps, which would need the depend state passed in and out of the traced function (as the
   CUDA-graph replay does).
 - JAX, jit of the MD steps (`--jit` with JAX):
-  `ipi.utils.jaxjit.JitReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
+  `ipi.utils.jaxjit.JaxReplay` uses the recording of the CUDA graphs (`_Recorder`, the depend hooks, the
   restoration of the taint status, the `split`/`eager` markers, `jit.Replay`, `unsupported` and the warmup
   steps). The eager steps from the second are observed to find the depend objects read before being
   written, until two steps read the same ones (the second and the third, unless the state is written
@@ -572,8 +598,9 @@ bugs pass, and are no longer marked.
   14.3 -> 11.4. 32-bead NPT at 100 / 1000 atoms: torch `--jit` 0.89 -> 0.78 -> 0.75 / 1.04 -> 0.91 -> 0.89,
   numpy 1.55 -> 1.30 -> 1.14 / 8.54 -> 7.75 -> 5.88.
 - One option, `--jit` (`set_backend(..., jit=True)`, `InteractiveSimulation(jit=True)`), compiles the steps
-  with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX (it was `--cuda-graphs` for
-  torch); with numpy, or torch on the CPU, it is an error.
+  with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX; with numpy, or torch on the
+  CPU, it is an error (a usage error of `i-pi`). `InteractiveSimulation` raises if `device` or `jit` is given
+  without `backend`, which it ignored.
 
 ### Multiple systems and replica exchange
 - Systems are stepped in threads by default (`threading='true'`). With in-process forcefields this only adds
@@ -599,9 +626,15 @@ bugs pass, and are no longer marked.
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
-- The torch CI jobs run the unit tests, the regression tests and the examples with the torch backend
-  (`tox -e torch`, `tox -e torch-examples`); the unit tests use it for the simulations of the engine fixtures
-  (`simulation`, `reference_system`), the other tests select their backend.
+- The array-backend CI jobs run the unit tests and the regression tests with the torch backend, the regression
+  tests with JAX (`tox -e backends`, with the `jax` extra), and the examples with torch (`tox -e torch-examples`);
+  the unit tests use the backend of `--ipi-backend` for the simulations of the `simulation` and
+  `reference_system` fixtures, the other tests select their backend (`select_backend`). With JAX, the
+  regression tests of the features it does not support (`JAX_UNSUPPORTED` in `ipi_tests/test_tools.py`: they
+  stop at the start, or write arrays in place) are strict expected failures.
+- Opt-in tests are pytest options: `--ipi-mpi` (the ffmpi end-to-end tests, `tox -e mpitests`),
+  `--ipi-metatomic-model PATH` (an exported PET-MAD-xs, otherwise exported with upet), `--ipi-fetch-driver`
+  (fetching the Fortran driver from GitHub; the other `test_setup` tests compile it from the source tree).
 - On CUDA, `test_restart.py::test_restart_matches_regression_reference[instanton]` fails about one time in
   three, with a 3e-10 difference in one element of the final Hessian (non-deterministic GPU arithmetic).
 - PLUMED: the regression tests `PLUMED/METAD` and `PLUMED/BIAS` (they were `.NOAUTO`, with an outdated input

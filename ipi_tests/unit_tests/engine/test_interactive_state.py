@@ -10,6 +10,15 @@ from ipi.utils.units import unit_to_user
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
+@pytest.mark.parametrize("options", [{"device": "cuda"}, {"jit": True}])
+def test_device_and_jit_need_the_backend(options):
+    """The device and the compilation of the steps are given with the backend"""
+    from ipi.scripting import InteractiveSimulation
+
+    with pytest.raises(ValueError, match="only be given with the backend"):
+        InteractiveSimulation(harmonic_input(), **options)
+
+
 @pytest.mark.parametrize("systems,beads", [(1, 1), (1, 4), (2, 1), (2, 4)])
 def test_ase_roundtrip_and_coordinate_update(simulation, systems, beads):
     root = ET.fromstring(harmonic_input(nbeads=beads))

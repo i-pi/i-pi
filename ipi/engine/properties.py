@@ -1000,9 +1000,6 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
-        # self.properties_init()  # Initialize the properties here so that all
-        # +all variables are accessible (for example to set
-        # +the size of the hamiltonian_weights).
 
     def __getitem__(self, key):
         """Retrieves the item given by key.
@@ -1085,10 +1082,9 @@ class Properties:
             )
 
         if bead < 0:
-            atom_vec = xp.zeros(3)
-            for b in range(self.beads.nbeads):
-                atom_vec += prop_vec[b, 3 * atom : 3 * (atom + 1)]
-            return atom_vec / float(self.beads.nbeads)
+            return prop_vec[:, 3 * atom : 3 * (atom + 1)].sum(axis=0) / float(
+                self.beads.nbeads
+            )
         else:
             return prop_vec[bead, 3 * atom : 3 * (atom + 1)]
 
@@ -1122,6 +1118,23 @@ class Properties:
                     atom_ids.append(i)
 
             return np.array(atom_ids, dtype=int)
+
+    def _selected_atoms(self, atom, iatom=-1, latom=""):
+        """Returns the indices of the atoms selected by `atom`: all of them if it
+        is empty, otherwise the atom of index `iatom` and those of label `latom`."""
+
+        if atom == "":
+            return np.arange(self.beads.natoms)
+        names = np.asarray(self.beads.names)
+        return np.flatnonzero(
+            (np.arange(self.beads.natoms) == iatom) | (names == latom)
+        )
+
+    def _atom_rows(self, x):
+        """Returns the array `x` of the beads (one row per bead) with one row of
+        three coordinates per atom: shape (nbeads, natoms, 3)."""
+
+        return x.reshape(self.beads.nbeads, self.beads.natoms, 3)
 
     def get_temp(self, atom="", bead="", nm=""):
         """Calculates the MD kinetic temperature.
@@ -1246,15 +1259,10 @@ class Properties:
 
     def get_scpottd(self):
         """Calculates the Suzuki-Chin thermodynamic potential energy estimator."""
-        v = 0.0
-        pots = self.forces.pots
-        potssc = self.forces.potssc
-        for k in range(self.beads.nbeads):
-            if k % 2 == 0:
-                v += 2.0 * pots[k] / 3.0 + 2.0 * (potssc[k] + pots[k] / 3.0)
-            else:
-                v += 4.0 * pots[k] / 3.0 + 2.0 * (potssc[k] - pots[k] / 3.0)
-        return v / (k + 1)
+        nbeads = self.beads.nbeads
+        # the potential of the even beads has weight 4/3, that of the odd ones 2/3
+        weights = xp.asarray(np.where(np.arange(nbeads) % 2 == 0, 4.0, 2.0) / 3.0)
+        return (weights * self.forces.pots + 2.0 * self.forces.potssc).sum() / nbeads
 
     def get_sckinop(self, atom=""):
         """Calculates the Suzuki-Chin quantum centroid virial kinetic energy estimator.
@@ -1278,30 +1286,13 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = self.beads.q
-        qc = self.beads.qc
-        f = self.forces.f
+        atoms = self._selected_atoms(atom, iatom, latom)
+        dq = self._atom_rows(self.beads.q - self.beads.qc)[0::2, atoms]
+        f = self._atom_rows(self.forces.f)[0::2, atoms]
+        acv = -1.0 / self.beads.nbeads * (dq * f).sum()
+        acv += len(atoms) * 1.5 * Constants.kb * self.ensemble.temp
 
-        acv = 0.0
-        ncount = 0
-        for i in range(self.beads.natoms):
-            if atom != "" and iatom != i and latom != self.beads.names[i]:
-                continue
-
-            kcv = 0.0
-            k = 3 * i
-            for b in range(0, self.beads.nbeads, 2):
-                kcv += (
-                    (q[b, k] - qc[k]) * f[b, k]
-                    + (q[b, k + 1] - qc[k + 1]) * f[b, k + 1]
-                    + (q[b, k + 2] - qc[k + 2]) * f[b, k + 2]
-                )
-            kcv *= -0.5 / self.beads.nbeads * 2.0
-            kcv += 1.5 * Constants.kb * self.ensemble.temp
-            acv += kcv
-            ncount += 1
-
-        if ncount == 0:
+        if len(atoms) == 0:
             warning(
                 "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
                 verbosity.medium,
@@ -1321,10 +1312,7 @@ class Properties:
                     raise ValueError(
                         "Atom number mismatch in reference file for virial_fq"
                     )
-        fq = 0.0
-        for b in range(self.beads.nbeads):
-            fq += self.forces.f[b] @ (self.beads.q[b] - self.fqref)
-
+        fq = (self.forces.f * (self.beads.q - self.fqref)).sum()
         return fq * 0.5 / self.beads.nbeads
 
     def _require_trotter_springs(self, name):
@@ -1360,51 +1348,22 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = self.beads.q
-        qc = self.beads.qc
-        f = self.forces.f
-        fsc = self.forces.fsc
+        nbeads = self.beads.nbeads
+        atoms = self._selected_atoms(atom, iatom, latom)
+        dq = self._atom_rows(self.beads.q - self.beads.qc)[:, atoms]
+        f = self._atom_rows(self.forces.f)[:, atoms]
+        fsc = self._atom_rows(self.forces.fsc)[:, atoms]
+        m3 = self._atom_rows(self.forces.beads.m3)[:, atoms]
+        # the coefficients of the square forces of the even and of the odd beads
+        alpha = self.forces.alpha
+        coef = np.where(np.arange(nbeads) % 2 == 0, alpha, 1.0 - alpha)
+        coef = xp.asarray(coef[:, None, None]) / self.forces.omegan2 / 9.0
 
-        acv = 0.0
-        ncount = 0
-        for i in range(self.beads.natoms):
-            if atom != "" and iatom != i and latom != self.beads.names[i]:
-                continue
+        kcv = (dq * (f + fsc)).sum() - 2 * (coef * f * f / m3).sum()
+        acv = -0.5 / nbeads * kcv
+        acv += len(atoms) * 1.5 * Constants.kb * self.ensemble.temp
 
-            kcv = 0.0
-            k = 3 * i
-            for b in range(self.beads.nbeads):
-                kcv += (
-                    (q[b, k] - qc[k]) * (f + fsc)[b, k]
-                    + (q[b, k + 1] - qc[k + 1]) * (f + fsc)[b, k + 1]
-                    + (q[b, k + 2] - qc[k + 2]) * (f + fsc)[b, k + 2]
-                )
-                if b % 2 == 0:
-                    kcv -= (
-                        2
-                        * (self.forces.alpha / self.forces.omegan2 / 9.0)
-                        * (
-                            f[b, k] * f[b, k] / self.forces.beads.m3[b, k]
-                            + f[b, k + 1] * f[b, k + 1] / self.forces.beads.m3[b, k + 1]
-                            + f[b, k + 2] * f[b, k + 2] / self.forces.beads.m3[b, k + 2]
-                        )
-                    )
-                else:
-                    kcv -= (
-                        2
-                        * ((1.0 - self.forces.alpha) / self.forces.omegan2 / 9.0)
-                        * (
-                            f[b, k] * f[b, k] / self.forces.beads.m3[b, k]
-                            + f[b, k + 1] * f[b, k + 1] / self.forces.beads.m3[b, k + 1]
-                            + f[b, k + 2] * f[b, k + 2] / self.forces.beads.m3[b, k + 2]
-                        )
-                    )
-            kcv *= -0.5 / self.beads.nbeads
-            kcv += 1.5 * Constants.kb * self.ensemble.temp
-            acv += kcv
-            ncount += 1
-
-        if ncount == 0:
+        if len(atoms) == 0:
             warning(
                 "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
                 verbosity.medium,
@@ -1488,43 +1447,28 @@ class Properties:
            skip_atom_indices:
                 atoms not to be considered in the distinguishable estimator (e.g. bosons)
         """
-        q = self.beads.q
-        qnm = self.nm.qnm
-        m = self.beads.m
-        omegak2 = self.nm.omegak2
-        PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
+        nbeads = self.beads.nbeads
+        PkT32 = 1.5 * Constants.kb * self.ensemble.temp * nbeads
+        atoms = self._selected_atoms(atom, iatom, latom)
+        if skip_atom_indices:
+            atoms = np.setdiff1d(atoms, list(skip_atom_indices))
 
-        atd = 0.0
-        ncount = 0
-        for i in range(self.beads.natoms):
-            if atom != "" and iatom != i and latom != self.beads.names[i]:
-                continue
+        # spring energy of each atom, computed in the normal-mode representation
+        # so that it is valid for any circulant spring matrix (Trotter or eco)
+        spring = self.nm.omegak2 @ (self._atom_rows(self.nm.qnm) ** 2).sum(axis=2)
+        if len(self.nm.open_paths) > 0:
+            # open-path atoms are not described by the ring-polymer normal modes;
+            # uses the cyclic bead-difference spring energy (primitive-estimator
+            # definition, including the ring-closure term)
+            q = self.beads.q
+            dq = self._atom_rows(q - xp.roll(q, 1, axis=0))
+            open_spring = self.nm.omegan2 * (dq**2).sum(axis=(0, 2))
+            is_open = np.zeros(self.beads.natoms, bool)
+            is_open[self.nm.open_paths] = True
+            spring = xp.where(xp.asarray(is_open), open_spring, spring)
 
-            if i in skip_atom_indices:
-                continue
-
-            if i in self.nm.open_paths:
-                # open-path atoms are not described by the ring-polymer normal modes;
-                # uses the cyclic bead-difference spring energy (primitive-estimator
-                # definition, including the ring-closure term)
-                dq = q[:, 3 * i : 3 * (i + 1)] - xp.roll(
-                    q[:, 3 * i : 3 * (i + 1)], 1, axis=0
-                )
-                ktd = -0.5 * m[i] * self.nm.omegan2 * xp.sum(dq**2) / self.beads.nbeads
-            else:
-                # spring energy of atom i, computed in the normal-mode representation
-                # so that it is valid for any circulant spring matrix (Trotter or eco)
-                ktd = (
-                    -0.5
-                    * m[i]
-                    * (omegak2 @ xp.sum(qnm[:, 3 * i : 3 * (i + 1)] ** 2, axis=1))
-                    / self.beads.nbeads
-                )
-            ktd += PkT32
-            atd += ktd
-            ncount += 1
-
-        return atd, ncount
+        ktd = -0.5 * self.beads.m * spring / nbeads
+        return ktd[atoms].sum() + len(atoms) * PkT32, len(atoms)
 
     def get_sckinpr(self):
         """Calculates the quantum centroid virial kinetic energy estimator."""
@@ -1629,6 +1573,7 @@ class Properties:
             raise ValueError(
                 "Cannot specify both NM and bead for classical kinetic energy estimator"
             )
+        iatom, latom = -1, ""
         if atom != "":
             try:
                 # iatom gives the index of the atom to be studied
@@ -1670,55 +1615,33 @@ class Properties:
 
         pnm = self.nm.pnm
         dm3 = self.nm.dynm3
-        p = self.beads.p
-        m3 = self.beads.m3
-        kmd = 0.0
-        ncount = 0
+        atoms = self._selected_atoms(atom, iatom, latom)
+        ncount = len(atoms)
+
+        def kinetic(p, m3):
+            """Kinetic energy of the selected atoms, from the rows of momenta
+            and masses of beads or normal modes."""
+            p = p.reshape(p.shape[:-1] + (self.beads.natoms, 3))[..., atoms, :]
+            return ((p**2).sum(axis=-1) / (2.0 * m3[..., 3 * atoms])).sum()
 
         if ibead > -1:
             nbeads = 1
-            for i in range(self.beads.natoms):
-                if atom != "" and iatom != i and latom != self.beads.names[i]:
-                    continue
-                k = 3 * i
-
-                # Checks if all the beads have the same mass. If not, raises an error.
-                mass_vals = [float(dm3[b, k]) for b in range(self.beads.nbeads)]
-                if len(set(mass_vals)) > 1:
-                    raise ValueError(
-                        "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."
-                    )
-
-                kmd += (
-                    p[ibead, k] ** 2 + p[ibead, k + 1] ** 2 + p[ibead, k + 2] ** 2
-                ) / (2.0 * m3[ibead, k])
-                ncount += 1
+            # the masses must be the same for all the beads
+            k = 3 * atoms
+            if not bool(xp.all(dm3[:, k] == dm3[0, k])):
+                raise ValueError(
+                    "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."
+                )
+            kmd = kinetic(self.beads.p[ibead], self.beads.m3[ibead])
         elif inm > -1:
             nbeads = 1
-            for i in range(self.beads.natoms):
-                if atom != "" and iatom != i and latom != self.beads.names[i]:
-                    continue
-                k = 3 * i
-                kmd += (
-                    pnm[inm, k] ** 2 + pnm[inm, k + 1] ** 2 + pnm[inm, k + 2] ** 2
-                ) / (2.0 * dm3[inm, k])
-                ncount += 1
+            kmd = kinetic(pnm[inm], dm3[inm])
         else:
             nbeads = self.beads.nbeads
-            ncount = 0
             if atom == "":
                 kmd = self.nm.kin
-                ncount = self.beads.natoms
             else:
-                for i in range(self.beads.natoms):
-                    if atom != "" and iatom != i and latom != self.beads.names[i]:
-                        continue
-                    k = 3 * i
-                    for b in range(self.beads.nbeads):
-                        kmd += (
-                            pnm[b, k] ** 2 + pnm[b, k + 1] ** 2 + pnm[b, k + 2] ** 2
-                        ) / (2.0 * dm3[b, k])
-                    ncount += 1
+                kmd = kinetic(pnm, dm3)
 
         if ncount == 0:
             warning(
@@ -1733,9 +1656,6 @@ class Properties:
 
     def get_kstress_md(self):
         """Calculates the (bead-average) classical kinetic stress of the simulation (pp^T/m)"""
-
-        # sp = (dstrip(self.beads.p) / dstrip(self.beads.sm3)).reshape(-1, 3)
-        # return sp.T @ sp
 
         # uses normal modes to keep into account also possible mass-scaling
         return self.nm.kstress
@@ -1764,16 +1684,21 @@ class Properties:
             iatom = -1
             latom = atom
 
-        tkcv = xp.zeros(6)
-        ncount = 0
-        for i in range(self.beads.natoms):
-            if atom != "" and iatom != i and latom != self.beads.names[i]:
-                continue
+        # the sum of the diagonal terms of get_kij over the selected atoms
+        atoms = self._selected_atoms(atom, iatom, latom)
+        dq = self._atom_rows(self.beads.q - self.beads.qc)[:, atoms]
+        f = self._atom_rows(self.forces.f)[:, atoms]
+        # components xx, yy, zz, xy, xz, yz
+        a, b = [0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]
+        tkcv = (
+            -0.25
+            / self.beads.nbeads
+            * (dq[..., a] * f[..., b] + dq[..., b] * f[..., a]).sum(axis=(0, 1))
+        )
+        diagonal = xp.asarray([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        tkcv = tkcv + len(atoms) * 0.5 * Constants.kb * self.ensemble.temp * diagonal
 
-            tkcv += self.get_kij(str(i), str(i))
-            ncount += 1
-
-        if ncount == 0:
+        if len(atoms) == 0:
             warning(
                 "Couldn't find an atom which matched the argument of kinetic tensor, setting to zero.",
                 verbosity.medium,
@@ -1789,16 +1714,10 @@ class Properties:
             p = self.beads.pc
         else:
             p = self.beads.p[bead]
-        pcom = xp.zeros(3)
-        tm = 0
-        for i in range(self.beads.natoms):
-            if latom != "" and latom != self.beads.names[i]:
-                continue
-
-            tm += self.beads.m[i]
-            pcom += p[3 * i : 3 * (i + 1)]
-        pcom /= tm
-        return pcom
+        atoms = self._selected_atoms(latom, latom=latom)
+        return p.reshape(self.beads.natoms, 3)[atoms].sum(axis=0) / (
+            self.beads.m[atoms].sum()
+        )
 
     def get_kij(self, ni="0", nj="0"):
         """Calculates the quantum centroid virial kinetic energy
@@ -1870,29 +1789,15 @@ class Properties:
             iatom = -1
             latom = atom
 
-        q = self.beads.q
-        qc = self.beads.qc
-        nat = self.beads.natoms
-        nb = self.beads.nbeads
-        rg_tot = 0.0
-        ncount = 0
-        for i in range(nat):
-            if atom != "" and iatom != i and latom != self.beads.names[i]:
-                continue
-
-            rg_at = 0.0
-            for j in range(nb):
-                dq = q[j, 3 * i : 3 * (i + 1)] - qc[3 * i : 3 * (i + 1)]
-                rg_at += dq @ dq
-            ncount += 1
-            rg_tot += xp.sqrt(rg_at / float(nb))
-
-        if ncount == 0:
+        atoms = self._selected_atoms(atom, iatom, latom)
+        if len(atoms) == 0:
             raise IndexError(
                 "Couldn't find an atom which matched the argument of r_gyration"
             )
 
-        return rg_tot / float(ncount)
+        dq = self._atom_rows(self.beads.q - self.beads.qc)[:, atoms]
+        rg = xp.sqrt((dq * dq).sum(axis=(0, 2)) / float(self.beads.nbeads))
+        return rg.sum() / float(len(atoms))
 
     def kstress_sctd(self):
         """Calculates the quantum centroid virial kinetic stress tensor
@@ -2232,9 +2137,7 @@ class Properties:
         sawke = 1.0
         ni = 0
 
-        # strips dependency control since we are not gonna change the true beads in what follows
         q = self.beads.q
-        #        f = dstrip(self.forces.f)
         qc = self.beads.qc
 
         for i in range(self.beads.natoms):

@@ -1,4 +1,4 @@
-name: Torch backend
+name: Array backends
 
 on:
   push:
@@ -7,19 +7,19 @@ on:
     # Check all PR
 
 concurrency:
-  group: torch-backend-${{ github.ref }}
+  group: array-backends-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  torch-backend:
+  array-backends:
     runs-on: ubuntu-24.04
     name: ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - toxenv: torch
-            name: Unit and regression tests with the torch backend (CPU)
+          - toxenv: backends
+            name: Unit and regression tests with the torch and JAX backends (CPU)
           - toxenv: torch-examples
             name: Examples with the torch backend (CPU)
 
@@ -41,16 +41,16 @@ jobs:
       - name: install tox
         run: python -m pip install --upgrade pip 'tox>=4'
 
-      - name: tests with the torch backend
+      - name: tests with the array backends
         run: tox -e ${{ matrix.toxenv }}
         env:
           # the examples run i-PI in separate processes, which are not measured
-          COVERAGE_FLAGS: ${{ matrix.toxenv == 'torch' && '--cov=ipi --cov-append --cov-report=xml:coverage-torch.xml' || '' }}
+          COVERAGE_FLAGS: ${{ matrix.toxenv == 'backends' && '--cov=ipi --cov-append --cov-report=xml:coverage-backends.xml' || '' }}
 
       - name: upload coverage
-        if: matrix.toxenv == 'torch'
+        if: matrix.toxenv == 'backends'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-torch.xml
+          files: coverage-backends.xml
           fail_ci_if_error: true

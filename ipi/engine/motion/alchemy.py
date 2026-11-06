@@ -94,7 +94,6 @@ class AlchemyMC(Motion):
 
         """Does one round of alchemical exchanges."""
         # record the spring energy (divided by mass) for each atom in the exchange chain
-        # q = dstrip(self.beads.q)
         nb = self.beads.nbeads
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)

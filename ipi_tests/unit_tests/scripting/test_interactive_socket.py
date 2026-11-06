@@ -16,12 +16,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ipi.scripting import (
-    InteractiveSimulation,
-    forcefield_xml,
-    motion_nvt_xml,
-    simulation_xml,
-)
+from ipi.scripting import forcefield_xml, motion_nvt_xml, simulation_xml
 from ipi.utils.softexit import softexit
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -37,14 +32,12 @@ def _abort(sim, thread, message):
     Force requests only give up once softexit is triggered; cleanup() does
     that without calling sys.exit(). Otherwise the thread pool workers,
     which are joined at interpreter exit, would keep pytest from exiting.
-    The softexit state is only reset once the stuck threads have noticed
-    the trigger, so that it cannot leak into later tests.
+    The simulation fixture stops the simulation and resets softexit once
+    the stuck threads have noticed the trigger.
     """
 
     softexit.cleanup(status="bad", message=message)
     thread.join(timeout=10.0)
-    sim.stop()
-    softexit.reset()
     pytest.fail(message)
 
 
@@ -76,9 +69,8 @@ def _run_with_deadline(sim, steps, driver, timeout=_RUN_TIMEOUT):
         raise errors[0]
 
 
-def test_interactive_simulation_with_unix_socket_driver(tmp_path, monkeypatch):
+def test_interactive_simulation_with_unix_socket_driver(simulation):
     ase = pytest.importorskip("ase")
-    monkeypatch.chdir(tmp_path)  # keeps the simulation outputs out of the way
 
     address = f"ipiut_interactive_{os.getpid()}"
     atoms = ase.Atoms(
@@ -94,28 +86,27 @@ def test_interactive_simulation_with_unix_socket_driver(tmp_path, monkeypatch):
         temperature=300,
     )
 
-    sim = InteractiveSimulation(xml)
+    with simulation(xml) as sim:
+        # makes sure the driver imports this source tree
+        env = dict(os.environ)
+        env["PYTHONPATH"] = os.pathsep.join(
+            [str(_ROOT)] + [p for p in [env.get("PYTHONPATH")] if p]
+        )
+        driver = subprocess.Popen(
+            [sys.executable, str(_DRIVER_PATH)]
+            + ["-u", "-a", address, "-m", "harmonic", "-o", "1e-3"],
+            env=env,
+        )
+        try:
+            _run_with_deadline(sim, 5, driver)
+            assert sim.step == 5
+            assert np.isfinite(sim.properties("potential"))
+            _run_with_deadline(sim, 5, driver)
+            assert sim.step == 10
 
-    # makes sure the driver imports this source tree
-    env = dict(os.environ)
-    env["PYTHONPATH"] = os.pathsep.join(
-        [str(_ROOT)] + [p for p in [env.get("PYTHONPATH")] if p]
-    )
-    driver = subprocess.Popen(
-        [sys.executable, str(_DRIVER_PATH)]
-        + ["-u", "-a", address, "-m", "harmonic", "-o", "1e-3"],
-        env=env,
-    )
-    try:
-        _run_with_deadline(sim, 5, driver)
-        assert sim.step == 5
-        assert np.isfinite(sim.properties("potential"))
-        _run_with_deadline(sim, 5, driver)
-        assert sim.step == 10
-
-        # closing the socket sends the exit message to the driver
-        sim.stop()
-        assert driver.wait(timeout=30) == 0
-    finally:
-        if driver.poll() is None:
-            driver.kill()
+            # closing the socket sends the exit message to the driver
+            sim.stop()
+            assert driver.wait(timeout=30) == 0
+        finally:
+            if driver.poll() is None:
+                driver.kill()
