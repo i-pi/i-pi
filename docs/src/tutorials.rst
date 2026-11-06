@@ -932,8 +932,8 @@ bulk modulus :math:`B` and atomic density :math:`\rho`: about :math:`1.6\tau`
 for water and :math:`0.2\tau` for a metal at room temperature, and shorter at
 lower temperatures. Giving an estimate of the bulk modulus, e.g.
 ``<bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>`` for water, sets the
-mass to :math:`3 V B \tau^2` instead, so that the period is about
-:math:`3.6\tau` for any material and temperature. :math:`V` is the initial
+mass to :math:`9 V B (\tau/2\pi)^2` instead, so that the period is about
+:math:`\tau` for any material and temperature. :math:`V` is the initial
 volume, unless a reference volume is given with ``<v0>``.
 
 For classical simulations of liquids, the Bernetti--Bussi stochastic
