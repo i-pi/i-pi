@@ -28,7 +28,9 @@ def test_driver_noroot():
         os.environ["IPI_ROOT"] = ipi_root
 
 
-def test_driver_forcebuild():
-    """Tests what happens if IPI_ROOT is not set"""
+def test_driver_forcebuild(tmp_path):
+    """Tests that the driver is compiled and installed in the requested place"""
 
-    install_driver(force_install=True)
+    driver = tmp_path / "i-pi-driver"
+    install_driver(force_install=True, path=driver)
+    assert os.access(driver, os.X_OK)

@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("metatomic.torch")
 pytest.importorskip("vesin.metatomic")
 import ase.io
+import torch
 from ase import Atoms as AseAtoms
 from metatomic.torch.ase_calculator import MetatomicCalculator
 
@@ -73,7 +74,19 @@ def driver(upet_model, water):
     return MetatomicDriver(water[0], upet_model)
 
 
-@pytest.mark.parametrize("device", ["cpu", "cpu;cpu"])
+# two GPUs, so that the model can run on one that is not the current one
+TWO_GPUS = pytest.mark.skipif(torch.cuda.device_count() < 2, reason="needs 2 GPUs")
+
+
+@pytest.mark.parametrize(
+    "device",
+    [
+        "cpu",
+        "cpu;cpu",
+        pytest.param("cuda:1", marks=TWO_GPUS),
+        pytest.param("cuda:0;cuda:1", marks=TWO_GPUS),
+    ],
+)
 def test_batched_matches_single(upet_model, water, device):
     template, _, cell, pos = water
     driver = MetatomicDriver(template, upet_model, device=device)
@@ -215,7 +228,7 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
     )
     assert len(ff._rotations) == 18
     atoms = Atoms(len(pos))
-    atoms.q[:] = pos.flatten()
+    atoms.q_[:] = pos.flatten()
     request = ff.queue(atoms, Cell(cell))
     ff.poll()
     assert request["status"] == "Done"

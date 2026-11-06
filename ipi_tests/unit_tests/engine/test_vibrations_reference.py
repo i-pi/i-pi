@@ -63,8 +63,10 @@ def test_independent_modes_recover_exact_harmonic_free_energy(simulation, reuse_
             )
 
 
-@pytest.mark.parametrize("reuse_map", [False, True])
-def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(simulation, reuse_map):
+@pytest.mark.parametrize("reuse_map,nparallel", [(False, 1), (True, 1), (False, 2)])
+def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(
+    simulation, reuse_map, nparallel
+):
     options = ET.Element("normalmodes", mode="vscf")
     for key, value in {
         "nint": 51,
@@ -72,6 +74,7 @@ def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(simulation, reuse_map
         "nevib": 8,
         "grid": "False",
         "solve": "False",
+        "nparallel": nparallel,
     }.items():
         ET.SubElement(options, key).text = str(value)
     masses = np.repeat([2.0, 3.0], 3)
@@ -163,23 +166,7 @@ def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
     )
 
 
-@pytest.mark.parametrize(
-    "mode",
-    [
-        "fd",
-        *[
-            pytest.param(
-                mode,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="NMFD transform discards the refined matrix and restores the input matrix",
-                ),
-            )
-            for mode in ("nmfd", "enmfd")
-        ],
-    ],
-)
+@pytest.mark.parametrize("mode", ["fd", "nmfd", "enmfd"])
 def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
     options = ET.Element("vibrations", mode=mode)
     masses = np.repeat([2.0, 3.0], 3)

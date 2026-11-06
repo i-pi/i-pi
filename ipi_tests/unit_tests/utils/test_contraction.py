@@ -57,11 +57,6 @@ CASES = (
             8,
             [atom],
             id=f"mixed-open{atom}-p3-to-8",
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="nm_rescale.b2tob1 applies the open-path map to closed-path atoms",
-            ),
         )
         for atom in [0, 1]
     ]

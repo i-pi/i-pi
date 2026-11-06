@@ -6,9 +6,8 @@
 
 
 import numpy as np
-
-from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, info, warning
+from ipi.utils.array_backend import xp, backend
 
 __all__ = [
     "nm_noop",
@@ -287,6 +286,22 @@ class nm_noop(object):
         return qnm
 
 
+def _apply(matrix, q):
+    """Multiplies `matrix` by `q`, contracting the first axis of `q`, that can
+    have any number of dimensions."""
+
+    if q.ndim <= 2:
+        return matrix @ q
+    q2 = q.reshape(q.shape[0], -1)
+    return (matrix @ q2).reshape(matrix.shape[0], *q.shape[1:])
+
+
+def _open_columns(open_paths):
+    """Indices of the coordinates of the atoms with open paths."""
+
+    return np.array([3 * io + k for io in open_paths for k in range(3)], int)
+
+
 class nm_trans(object):
     """Uses matrix multiplication to do normal mode transformations.
 
@@ -304,13 +319,14 @@ class nm_trans(object):
            nbeads: The number of beads.
         """
 
-        self._b2nm = mk_nm_matrix(nbeads)
+        self._b2nm = xp.asarray(mk_nm_matrix(nbeads))
         self._nm2b = self._b2nm.T
         if open_paths is None:
             open_paths = []
         self._open = open_paths
+        self._open_cols = _open_columns(open_paths)
         # definition of the transformation also with the open path matrx
-        self._b2o_nm = mk_o_nm_matrix(nbeads)
+        self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
 
     def b2nm(self, q):
@@ -320,21 +336,11 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the bead representation.
         """
 
-        qnm = np.tensordot(self._b2nm, q, axes=(1, 0))
+        qnm = self._b2nm @ q
         if len(self._open) > 0:
-            for (
-                io
-            ) in (
-                self._open
-            ):  # does separately the transformation for the atom that are marked as open paths
-                qnm[:, 3 * io] = np.tensordot(self._b2o_nm, q[:, 3 * io], axes=(1, 0))
-                qnm[:, 3 * io + 1] = np.tensordot(
-                    self._b2o_nm, q[:, 3 * io + 1], axes=(1, 0)
-                )
-                qnm[:, 3 * io + 2] = np.tensordot(
-                    self._b2o_nm, q[:, 3 * io + 2], axes=(1, 0)
-                )
-
+            # the atoms with open paths use the open-path transformation
+            cols = self._open_cols
+            qnm[:, cols] = self._b2o_nm @ q[:, cols]
         return qnm
 
     def nm2b(self, qnm):
@@ -344,17 +350,10 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the normal mode representation.
         """
 
-        q = np.tensordot(self._nm2b, qnm, axes=(1, 0))
+        q = self._nm2b @ qnm
         if len(self._open) > 0:
-            for io in self._open:
-                q[:, 3 * io] = np.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=(1, 0))
-                q[:, 3 * io + 1] = np.tensordot(
-                    self._o_nm2b, qnm[:, 3 * io + 1], axes=(1, 0)
-                )
-                q[:, 3 * io + 2] = np.tensordot(
-                    self._o_nm2b, qnm[:, 3 * io + 2], axes=(1, 0)
-                )
-
+            cols = self._open_cols
+            q[:, cols] = self._o_nm2b @ qnm[:, cols]
         return q
 
 
@@ -383,17 +382,43 @@ class nm_rescale(object):
         if open_paths is None:
             open_paths = []
         self._open = open_paths
+        self._open_cols = _open_columns(open_paths)
 
         if nbeads1 == nbeads2:
             # avoids doing much if we try to contract between sambe beads number
             self.noop = True
         else:
             self.noop = False
-            self._b1tob2 = mk_rs_matrix(nbeads1, nbeads2)
-            self._b2tob1 = self._b1tob2.T * (float(nbeads1) / float(nbeads2))
+            b1tob2 = mk_rs_matrix(nbeads1, nbeads2)
+            self._b1tob2 = xp.asarray(b1tob2)
+            self._b2tob1 = xp.asarray(b1tob2.T * (float(nbeads1) / float(nbeads2)))
             # definition of the scaling also using the open case normal mode matrix transformations
-            self._o_b1tob2 = mk_o_rs_matrix(nbeads1, nbeads2)
-            self._o_b2tob1 = self._o_b1tob2.T * (float(nbeads1) / float(nbeads2))
+            o_b1tob2 = mk_o_rs_matrix(nbeads1, nbeads2)
+            self._o_b1tob2 = xp.asarray(o_b1tob2)
+            self._o_b2tob1 = xp.asarray(o_b1tob2.T * (float(nbeads1) / float(nbeads2)))
+
+    def _rescale(self, q, matrix, o_matrix):
+        """Applies the rescaling `matrix` to `q`, and `o_matrix` to the atoms
+        with open paths."""
+
+        # inputs can also be numpy arrays, e.g. the extras returned by forcefields
+        q = xp.asarray(q)
+        if self.noop:
+            # still must return a copy, as the contraction is meant to return new data, not a view
+            return xp.asarray(q, copy=True)
+        if len(self._open) == 0:
+            return _apply(matrix, q)
+        if q.ndim != 2:
+            # this applies the open path contraction to EVERYTHING because otherwise we don't know how to handle
+            # the fact that only some beads are open. clearly this is a hack, and in practice the point is that
+            # a "per bead" NM transformation of the potential is not well-defined when different beads have different
+            # NM transformations
+            return _apply(o_matrix, q)
+        # this applies to bead vector properties (e.g. positions, forces)
+        q_scal = matrix @ q
+        cols = self._open_cols
+        q_scal[:, cols] = o_matrix @ q[:, cols]
+        return q_scal
 
     def b1tob2(self, q):
         """Transforms a matrix from one value of beads to another.
@@ -403,31 +428,8 @@ class nm_rescale(object):
         """
 
         if self.noop:
-            # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = dstrip(q).copy()
-        else:
-            # this applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
-            q_scal = np.tensordot(self._b1tob2, q, axes=(1, 0))
-            if len(self._open) > 0:
-                if len(q_scal.shape) == 2:
-                    for io in self._open:
-                        q_scal[:, 3 * io] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io], axes=(1, 0)
-                        )
-                        q_scal[:, 3 * io + 1] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io + 1], axes=(1, 0)
-                        )
-                        q_scal[:, 3 * io + 2] = np.tensordot(
-                            self._o_b1tob2, q[:, 3 * io + 2], axes=(1, 0)
-                        )
-                else:
-                    # this applies the open path contraction to EVERYTHING because otherwise we don't know how to handle
-                    # the fact that only some beads are open. clearly this is a hack, and in practice the point is that
-                    # a "per bead" NM transformation of the potential is not well-defined when different beads have different
-                    # NM transformations
-                    q_scal = np.tensordot(self._o_b1tob2, q, axes=(1, 0))
-
-        return q_scal
+            return self._rescale(q, None, None)
+        return self._rescale(q, self._b1tob2, self._o_b1tob2)
 
     def b2tob1(self, q):
         """Transforms a matrix from one value of beads to another.
@@ -437,136 +439,156 @@ class nm_rescale(object):
         """
 
         if self.noop:
-            # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = dstrip(q).copy()
-        else:
-            # see b1tob2 for an explanation of the rationale for dealing with open path transformations
-            q_scal = np.tensordot(self._b2tob1, q, axes=(1, 0))
-            if len(self._open) > 0:
-                if len(q_scal.shape) == 2:
-                    for io in self._open:
-                        q_scal[:, 3 * io] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io], axes=(1, 0)
-                        )
-                        q_scal[:, 3 * io + 1] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io + 1], axes=(1, 0)
-                        )
-                        q_scal[:, 3 * io + 2] = np.tensordot(
-                            self._o_b2tob1, q[:, 3 * io + 2], axes=(1, 0)
-                        )
-                    else:
-                        q_scal = np.tensordot(self._o_b2tob1, q, axes=(1, 0))
-        return q_scal
+            return self._rescale(q, None, None)
+        return self._rescale(q, self._b2tob1, self._o_b2tob1)
 
 
-class nm_fft(
-    object
-):  # ! TODO add (matrix-version) of the open path transformation here
+class nm_fft(object):
     """Uses Fast Fourier transforms to do normal mode transformations.
 
+    The real FFT of the bead coordinates along the beads axis gives the
+    cosine (real part) and sine (imaginary part) components of the normal
+    modes, which are scaled to make the transformation orthogonal and arranged
+    in the same order as the rows of `mk_nm_matrix`. The atoms with open paths
+    are transformed with the open-path matrix. With the numpy backend, PyFFTW
+    is used if it is available.
+
     Attributes:
-       fft: The fast-Fourier transform function to transform between the
-          bead and normal mode representations.
-       ifft: The inverse fast-Fourier transform function to transform
-          between the normal mode and bead representations.
-       qdummy: A matrix to hold a copy of the bead positions to transform
-          them to the normal mode representation.
-       qnmdummy: A matrix to hold a copy of the normal modes to transform
-          them to the bead representation.
        nbeads: The number of beads.
        natoms: The number of atoms.
+       nmodes: The number of cosine components beyond the centroid.
+       nsin: The number of sine components.
     """
 
     def __init__(
         self, nbeads, natoms, open_paths=None, n_threads=1, single_precision=False
     ):
-        """Initializes nm_trans.
+        """Initializes nm_fft.
 
         Args:
            nbeads: The number of beads.
            natoms: The number of atoms.
+           open_paths: Indices of the atoms with open paths.
+           n_threads: Number of threads used by PyFFTW.
+           single_precision: Whether the FFT is computed in single precision.
         """
 
         self.nbeads = nbeads
         self.natoms = natoms
         self.n_threads = n_threads
         self.single_precision = single_precision
+        self.nmodes = nbeads // 2
+        self.nsin = nbeads - self.nmodes - 1
+        # scaling of the FFT components that makes the transformation orthogonal
+        weights = np.full(self.nmodes + 1, np.sqrt(2.0))
+        weights[0] = 1.0
+        if nbeads % 2 == 0:
+            weights[-1] = 1.0
+        self._weights = xp.asarray(weights[:, np.newaxis] / np.sqrt(nbeads))
         if open_paths is None:
             open_paths = []
         self._open = open_paths
+        self._open_cols = _open_columns(open_paths)
         # for atoms with open path we still use the matrix transformation
-        self._b2o_nm = mk_o_nm_matrix(nbeads)
+        self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
-        try:
-            import pyfftw
+        self._setup_fft()
 
-            info("Import of PyFFTW successful", verbosity.medium)
-            self.qdummy = pyfftw.empty_aligned(
-                (nbeads, 3 * natoms),
-                dtype="float32" if self.single_precision else "float64",
-                n=16,
-            )
-            self.qnmdummy = pyfftw.empty_aligned(
-                (nbeads // 2 + 1, 3 * natoms),
-                dtype="complex64" if self.single_precision else "complex128",
-                n=16,
-            )
+    def _setup_fft(self):
+        """Defines `_rfft(q)`, the real FFT along the beads axis, and
+        `_irfft(re, im)`, its inverse given the real parts of the FFT
+        components and the imaginary parts of the components 1 to nsin
+        (the others being zero)."""
 
-            pyfftw.config.NUM_THREADS = self.n_threads
+        nbeads, natoms = self.nbeads, self.natoms
+        if backend() == "numpy":
+            try:
+                import pyfftw
 
-            self.pyfftw_fw = pyfftw.FFTW(
-                self.qdummy,
-                self.qnmdummy,
-                axes=(0,),
-                direction="FFTW_FORWARD",
-                threads=self.n_threads,
-            )
-            self.pyfftw_bw = pyfftw.FFTW(
-                self.qnmdummy,
-                self.qdummy,
-                axes=(0,),
-                direction="FFTW_BACKWARD",
-                threads=self.n_threads,
-            )
-
-            # wrapping these calls into functions has negligible overhead and makes profiling easier
-            def call_fft(self):
-                self.pyfftw_fw()
-
-            def call_ifft(self):
-                self.pyfftw_bw()
-
-            self.fft = lambda: call_fft(self)
-            self.ifft = lambda: call_ifft(self)
-        except ImportError:  # Uses standard numpy fft library if nothing better
-            # is available
-            info(
-                "Import of PyFFTW unsuccessful, using NumPy library instead. ",
-                verbosity.low,
-            )
-            if self.nbeads > 1:
-                warning(
-                    "Install PyFFTW to avoid slow normal-modes integration",
-                    verbosity.low,
+                info("Import of PyFFTW successful", verbosity.medium)
+                qbuf = pyfftw.empty_aligned(
+                    (nbeads, 3 * natoms),
+                    dtype="float32" if self.single_precision else "float64",
+                    n=16,
+                )
+                cbuf = pyfftw.empty_aligned(
+                    (nbeads // 2 + 1, 3 * natoms),
+                    dtype="complex64" if self.single_precision else "complex128",
+                    n=16,
+                )
+                pyfftw.config.NUM_THREADS = self.n_threads
+                forward = pyfftw.FFTW(
+                    qbuf,
+                    cbuf,
+                    axes=(0,),
+                    direction="FFTW_FORWARD",
+                    threads=self.n_threads,
+                )
+                backward = pyfftw.FFTW(
+                    cbuf,
+                    qbuf,
+                    axes=(0,),
+                    direction="FFTW_BACKWARD",
+                    threads=self.n_threads,
                 )
 
-            self.qdummy = np.zeros(
-                (nbeads, 3 * natoms),
-                dtype="float32" if self.single_precision else "float64",
+                nsin = self.nsin
+
+                def rfft(q):
+                    qbuf[:] = q
+                    forward()
+                    return cbuf
+
+                def irfft(re, im):
+                    # writes directly in the real and imaginary parts of the buffer
+                    cbuf.real[:] = re
+                    cbuf.imag[0] = 0.0
+                    cbuf.imag[1 : 1 + nsin] = im
+                    cbuf.imag[1 + nsin :] = 0.0
+                    backward()
+                    return qbuf.copy()
+
+                self._rfft, self._irfft = rfft, irfft
+                return
+            except ImportError:
+                info(
+                    "Import of PyFFTW unsuccessful, using NumPy library instead. ",
+                    verbosity.low,
+                )
+                if nbeads > 1:
+                    warning(
+                        "Install PyFFTW to avoid slow normal-modes integration",
+                        verbosity.low,
+                    )
+
+        nsin = self.nsin
+
+        def to_complex(re, im):
+            # the imaginary part is zero for the centroid and, for an even
+            # number of beads, for the last component
+            im = xp.concat(
+                [xp.zeros_like(re[:1]), im, xp.zeros_like(re[1 + nsin :])], axis=0
             )
-            self.qnmdummy = np.zeros(
-                (nbeads // 2 + 1, 3 * natoms),
-                dtype="complex64" if self.single_precision else "complex128",
-            )
+            return re + 1j * im
 
-            def dummy_fft(self):
-                self.qnmdummy = np.fft.rfft(self.qdummy, axis=0)
+        if self.single_precision:
 
-            def dummy_ifft(self):
-                self.qdummy = np.fft.irfft(self.qnmdummy, n=self.nbeads, axis=0)
+            def rfft(q):
+                return xp.fft.rfft(xp.astype(q, xp.float32), axis=0)
 
-            self.fft = lambda: dummy_fft(self)
-            self.ifft = lambda: dummy_ifft(self)
+            def irfft(re, im):
+                c = xp.astype(to_complex(re, im), xp.complex64)
+                return xp.astype(xp.fft.irfft(c, n=nbeads, axis=0), xp.float64)
+
+        else:
+
+            def rfft(q):
+                return xp.fft.rfft(q, axis=0)
+
+            def irfft(re, im):
+                return xp.fft.irfft(to_complex(re, im), n=nbeads, axis=0)
+
+        self._rfft, self._irfft = rfft, irfft
 
     def b2nm(self, q):
         """Transforms a matrix to the normal mode representation.
@@ -578,39 +600,16 @@ class nm_fft(
 
         if self.nbeads == 1:
             return q
-        self.qdummy[:] = q
-        self.fft()
-        if self.nbeads == 2:
-            return self.qnmdummy.real / np.sqrt(self.nbeads)
-
-        nmodes = self.nbeads // 2
-
-        self.qnmdummy /= np.sqrt(self.nbeads)
-        qnm = np.zeros(q.shape)
-        qnm[0, :] = self.qnmdummy[0, :].real
-
-        if self.nbeads % 2 == 0:
-            self.qnmdummy[1:-1, :] *= np.sqrt(2)
-            qnm[1:nmodes, :], qnm[self.nbeads : nmodes : -1, :] = (
-                self.qnmdummy[1:-1, :].real,
-                self.qnmdummy[1:-1, :].imag,
-            )
-            qnm[nmodes, :] = self.qnmdummy[nmodes, :].real
-        else:
-            self.qnmdummy[1:, :] *= np.sqrt(2)
-            qnm[1 : nmodes + 1, :], qnm[self.nbeads : nmodes : -1, :] = (
-                self.qnmdummy[1:, :].real,
-                self.qnmdummy[1:, :].imag,
-            )
-
-        for (
-            io
-        ) in (
-            self._open
-        ):  # does separately the transformation for the atom that are marked as open paths
-            qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
-            qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
-            qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
+        c = self._rfft(q) * self._weights
+        # cosine components first, then sine components in reverse order
+        qnm = xp.concat(
+            [xp.real(c), xp.flip(xp.imag(c[1 : 1 + self.nsin]), axis=0)], axis=0
+        )
+        if self.single_precision:
+            qnm = xp.astype(qnm, q.dtype)
+        if len(self._open) > 0:
+            cols = self._open_cols
+            qnm[:, cols] = self._b2o_nm @ q[:, cols]
         return qnm
 
     def nm2b(self, qnm):
@@ -621,36 +620,15 @@ class nm_fft(
               in the normal mode representation.
         """
 
-        nbeads = self.nbeads
-        if nbeads == 1:
+        if self.nbeads == 1:
             return qnm
-        if nbeads == 2:
-            self.qnmdummy[:] = qnm
-            self.ifft()
-            return self.qdummy * np.sqrt(nbeads)
-
-        nmodes = nbeads // 2
-        odd = nbeads - 2 * nmodes  # 0 if even, 1 if odd
-
-        isqrt2 = np.sqrt(0.5)
-        qnm_complex = self.qnmdummy
-        qnm_complex[0, :] = qnm[0, :]
-        if not odd:
-            qnm_complex[1:-1, :].real = qnm[1:nmodes, :] * isqrt2
-            qnm_complex[1:-1, :].imag = qnm[nbeads:nmodes:-1, :] * isqrt2
-            qnm_complex[nmodes, :] = qnm[nmodes, :]
-        else:
-            qnm_complex[1:, :].real = qnm[1 : nmodes + 1, :] * isqrt2
-            qnm_complex[1:, :].imag = qnm[nbeads:nmodes:-1, :] * isqrt2
-
-        self.ifft()
-        q = self.qdummy * np.sqrt(nbeads)
-        for (
-            io
-        ) in (
-            self._open
-        ):  # does separately the transformation for the atom that are marked as open paths
-            q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
-            q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
-            q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+        nmodes = self.nmodes
+        # real (cosine) and imaginary (sine, stored in reverse order) parts
+        # of the non-zero FFT components
+        re = qnm[: nmodes + 1] / self._weights
+        im = xp.flip(qnm[nmodes + 1 :], axis=0) / self._weights[1 : 1 + self.nsin]
+        q = self._irfft(re, im)
+        if len(self._open) > 0:
+            cols = self._open_cols
+            q[:, cols] = self._o_nm2b @ qnm[:, cols]
         return q

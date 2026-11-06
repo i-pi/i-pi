@@ -18,13 +18,14 @@ from contextlib import nullcontext
 import numpy as np
 
 from ipi.engine.cell import GenericCell
+from ipi.utils import jit
 from ipi.utils.prng import Random
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.interfaces.mpi import InterfaceMPI
 from ipi.interfaces.utils import parse_extra
-from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
@@ -77,7 +78,11 @@ class ForceField:
         _doloop: A list of booleans. Used to decide when to stop running the
             polling loop.
         _threadlock: Python handle used to lock the thread held in _thread.
+        backend_arrays: Whether requests carry, and results are, arrays of the
+            array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
     """
+
+    backend_arrays = False
 
     def __init__(
         self,
@@ -161,7 +166,7 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = xp.asarray(atoms.q, copy=True)
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -184,13 +189,21 @@ class ForceField:
             self.iactive = activehere
 
         if self.dopbc:
-            cell.array_pbc(pbcpos)
+            pbcpos = cell.array_pbc(pbcpos)
 
+        # requests hold copies of the positions and of the cell, as numpy arrays
+        # or, for forcefields that work on them directly, as backend arrays
+        if self.backend_arrays:
+            pos = pbcpos
+            h, ih = xp.asarray(cell.h, copy=True), xp.asarray(cell.ih, copy=True)
+        else:
+            pos = to_numpy(pbcpos)
+            h, ih = np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))
         fields = {
             "id": reqid,
-            "pos": pbcpos,
+            "pos": pos,
             "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "cell": (h, ih),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -549,6 +562,7 @@ class FFDirect(ForceField):
             print(f"Error setting up PES mode {self.pes}")
             print("Error trace: ")
             raise err
+        self.backend_arrays = getattr(self.driver, "backend_arrays", False)
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -576,13 +590,25 @@ class FFDirect(ForceField):
                 if self._batch_idle_cycles >= self._batch_idle_threshold:
                     self.launch_batch()
 
-    def _process_results(self, results, request):
-        # ensure shapes, apply the offset and parse the extra string
-        results[0] -= self.offset
-        results[1] = np.asarray(results[1]).reshape(-1)
-        results[2] = np.asarray(results[2]).reshape(3, 3)
-        results[3] = parse_extra(results[3])
+    def _results(self, cell, pos):
+        """Evaluates the driver on a structure, or on lists of structures, and
+        returns the processed results."""
 
+        if isinstance(cell, list):
+            return [self._process_results(r) for r in self.driver(cell, pos)]
+        return self._process_results(self.driver(cell, pos))
+
+    def _process_results(self, results):
+        # ensure shapes, apply the offset and parse the extra string
+        asarray = xp.asarray if self.backend_arrays else np.asarray
+        results = list(results)
+        results[0] -= self.offset
+        results[1] = asarray(results[1]).reshape(-1)
+        results[2] = asarray(results[2]).reshape(3, 3)
+        results[3] = parse_extra(results[3])
+        return results
+
+    def _finish(self, request, results):
         request["result"] = results
         request["status"] = "Done"
         request._event_done.set()
@@ -598,18 +624,20 @@ class FFDirect(ForceField):
         )
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
-        results_batch = self.driver(cell_batch, pos_batch)
+        # the driver is not part of the CUDA graphs that record a step
+        results_batch = jit.eager(self._results, cell_batch, pos_batch)
         for results, request in zip(results_batch, self.request_batch):
-            self._process_results(list(results), request)
+            self._finish(request, results)
         self.request_batch = []
         self._batch_idle_cycles = 0
 
     def evaluate(self, request):
         if self.batch_size == 1:
-            results = list(
-                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
+            # the driver is not part of the CUDA graphs that record a step
+            results = jit.eager(
+                self._results, request["cell"][0], request["pos"].reshape(-1, 3)
             )
-            self._process_results(results, request)
+            self._finish(request, results)
         else:
             self.request_batch.append(request)
             if len(self.request_batch) >= self.batch_size:
@@ -939,8 +967,8 @@ class FFPlumed(FFEval):
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
-            myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
-            mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+            myatoms.q_ *= unit_to_internal("length", self.init_file.units, 1.0)
+            mycell.h_ *= unit_to_internal("length", self.init_file.units, 1.0)
         else:
             raise ValueError(
                 "Unsupported init file format for FFPlumed: "
@@ -985,8 +1013,8 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = dstrip(myatoms.q) * 0.0
-        self.masses = dstrip(myatoms.m)
+        self.charges = myatoms.q * 0.0
+        self.masses = myatoms.m
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -1021,9 +1049,9 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
-            vir[:] = -dstrip(self.system_force.vir)
-            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
+            f[:] = self.system_force.f.reshape((-1, 3))
+            vir[:] = -self.system_force.vir
+            self.plumed.cmd("setEnergy", self.system_force.pot)
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
@@ -1047,8 +1075,8 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= dstrip(self.system_force.f).flatten()
-            vir[:] -= -dstrip(self.system_force.vir)
+            f[:] -= self.system_force.f.flatten()
+            vir[:] -= -self.system_force.vir
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1084,7 +1112,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            request = {"pos": pos, "cell": (cell, None), "result": None}
             self.evaluate(request)
 
         if self.compute_work:
@@ -1460,6 +1488,10 @@ class FFCommittee(ForceField):
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         com_handles = r["ff_handles"].copy()
+        # the committee is evaluated with numpy
+        for ff, ff_r in zip(self.fflist, com_handles):
+            if ff.backend_arrays:
+                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
         if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
@@ -1753,12 +1785,12 @@ class FFRotations(ForceField):
 
         for R, w, _ in self._rotations:
             R = R @ R_random
+            # the rotation matrix used on the positions and the cell
+            xR = xp.asarray(R)
 
             rot_atoms = atoms.clone()
-            rot_cell = GenericCell(
-                R @ dstrip(cell.h).copy()
-            )  # NB we need generic cell orientation
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+            rot_cell = GenericCell(xR @ cell.h)  # NB we need generic cell orientation
+            rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
             rots.append((R, w))
             ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1766,10 +1798,11 @@ class FFRotations(ForceField):
             if self.inversion:
                 # also add a "flipped rotation" to the evaluation list
                 R = R * -1
+                xR = xR * -1
 
-                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+                rot_cell = GenericCell(xR @ cell.h)
                 rot_atoms = atoms.clone()
-                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+                rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
 
                 rots.append((R, w))
                 ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
@@ -1780,8 +1813,9 @@ class FFRotations(ForceField):
         req = ForceField.queue(
             self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
         )
-        req["status"] = "Running"
+        # the polling thread completes the request once it is running
         req["t_dispatched"] = time.time()
+        req["status"] = "Running"
         return req
 
     def check_finish(self, r):
@@ -1806,6 +1840,10 @@ class FFRotations(ForceField):
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         rot_handles = r["ff_handles"].copy()
         rots = r["rots"].copy()
+        # the rotational average is evaluated with numpy
+        if self.ff.backend_arrays:
+            for ff_r in rot_handles:
+                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
 
         # Gathers the forcefield energetics and extras
         pots = []
@@ -1864,7 +1902,7 @@ class FFRotations(ForceField):
 
         with self._threadlock:
             for r in self.requests:
-                if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
+                if r["status"] == "Running" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
                     r["result"][0] -= self.offset
@@ -2279,7 +2317,7 @@ class FFCavPhSocket(FFSocket):
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = np.array(to_numpy(atoms.q))
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -2316,13 +2354,15 @@ class FFCavPhSocket(FFSocket):
             iactive_local = self.iactive[0:ndim_local]
             # Let's try to do PBC for the small regions
             if self.dopbc:
-                cell.array_pbc(pbcpos_local)
+                pbcpos_local = xp.asarray(pbcpos_local)
+                pbcpos_local = cell.array_pbc(pbcpos_local)
+                pbcpos_local = to_numpy(pbcpos_local)
             newreq_local = ForceRequest(
                 {
                     "id": int(reqid * self.n_independent_bath) + idx,
                     "pos": pbcpos_local,
                     "active": iactive_local,
-                    "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                    "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
                     "pars": par_str,
                     "result": None,
                     "status": "Queued",
@@ -2474,7 +2514,7 @@ class FFCavPhSocket(FFSocket):
                 "id": reqid,
                 "pos": pbcpos,
                 "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
                 "pars": par_str,
                 "result": result_tot,
                 "status": newreq_lst[-1]["status"],

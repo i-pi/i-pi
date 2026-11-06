@@ -96,8 +96,8 @@ def test_read_output(verbosity, dipoles):
 @pytest.mark.parametrize("units", ["atomic_unit", "angstrom"])
 def test_path_output_roundtrip(mode, units):
     beads = Beads(2, 3)
-    beads.names[:] = ["H", "O"]
-    beads.q[:] = np.arange(18).reshape(3, 6) / 10
+    beads.names_[:] = ["H", "O"]
+    beads.q_[:] = np.arange(18).reshape(3, 6) / 10
     cell = Cell(np.diag([10.0, 12.0, 14.0]))
     stream = io.StringIO()
     print_file_path(

@@ -1,11 +1,12 @@
-# Coverage is uploaded by 5 CI jobs (2 unit-test + 2 regression-test matrix
-# entries + 1 MACE job); waits for all of them before computing statuses and
-# commenting, so that partial uploads don't trigger spurious low-coverage
-# reports. NB: after_n_builds must be kept in sync with the number of jobs that
-# upload coverage in .github/workflows/{unit_tests,regression_tests,mace}.yml
+# Coverage is uploaded by 7 CI jobs (2 unit-test + 2 regression-test matrix
+# entries, and the MACE, metatomic and torch-backend jobs); waits for all of
+# them before computing statuses and commenting, so that partial uploads don't
+# trigger spurious low-coverage reports. NB: after_n_builds must be kept in sync
+# with the number of jobs that upload coverage in
+# .github/workflows/{unit_tests,regression_tests,mace,metatomic,torch}.yml
 codecov:
   notify:
-    after_n_builds: 5
+    after_n_builds: 7
     wait_for_ci: true
 
 coverage:
@@ -16,4 +17,4 @@ coverage:
         threshold: 0.5%
 
 comment:
-  after_n_builds: 5
+  after_n_builds: 7

@@ -12,8 +12,9 @@ import copy
 
 import numpy as np
 
+from ipi.utils.array_backend import to_numpy
+
 import ipi.utils.mathtools as mt
-from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
 __all__ = ["print_pdb_path", "print_pdb", "read_pdb"]
@@ -38,7 +39,7 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     )
     fmt_conect = "CONECT%5i%5i\n"
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(to_numpy(cell.h) * cell_conv)
 
     z = 1  # What even is this parameter?
     filedesc.write(fmt_cryst % (a, b, c, alpha, beta, gamma, " P 1        ", z))
@@ -47,8 +48,8 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     nbeads = beads.nbeads
     for j in range(nbeads):
         for i in range(natoms):
-            qs = dstrip(beads.q) * atoms_conv
-            lab = dstrip(beads.names)
+            qs = to_numpy(beads.q) * atoms_conv
+            lab = beads.names
             data = (
                 j * natoms + i + 1,
                 lab[i],
@@ -102,14 +103,14 @@ def print_pdb(
     if title != "":
         filedesc.write("TITLE   %70s\n" % (title))
 
-    a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
+    a, b, c, alpha, beta, gamma = mt.h2abc_deg(to_numpy(cell.h) * cell_conv)
 
     z = 1
     filedesc.write(fmt_cryst % (a, b, c, alpha, beta, gamma, " P 1        ", z))
 
     natoms = atoms.natoms
-    qs = dstrip(atoms.q) * atoms_conv
-    lab = dstrip(atoms.names)
+    qs = to_numpy(atoms.q) * atoms_conv
+    lab = atoms.names
     for i in range(natoms):
         data = (
             i + 1,

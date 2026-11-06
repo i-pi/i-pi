@@ -48,3 +48,16 @@ The parameters select:
 
 For an example that evaluates multiple ring-polymer beads in one MACE batch,
 see [`../mace-batched`](../mace-batched/README.md).
+
+## Execution-path comparison
+
+The [`comparison`](comparison) folder compares three equivalent NVE
+trajectories: ASE `MACECalculator` over `ffsocket`, the bundled
+`i-pi-py_driver` over `ffsocket`, and native `ffdirect`.
+
+```bash
+cd comparison
+./run.sh
+```
+
+The comparison runner downloads `../mace.model` automatically if necessary.

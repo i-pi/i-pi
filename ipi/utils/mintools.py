@@ -58,10 +58,10 @@ Functions:
 
 __all__ = ["min_brent"]
 
-import numpy as np
 import math
 
 # import time
+from ipi.utils.array_backend import xp, xp_size
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info, warning
 
@@ -422,33 +422,29 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
 
     # Initializations and constants
     info(" @MINIMIZE: Started approx. line search", verbosity.debug)
-    n = len(x0.flatten())
+    n = xp_size(x0)
     if fdf0 is None:
         fdf0 = fdf(x0)
     f0, df0 = fdf0
     if d0 is None:
-        d0 = -df0 / np.linalg.norm(df0.flatten())
-    x = np.zeros(n)
+        d0 = -df0 / xp.linalg.vector_norm(df0)
+    x = xp.zeros(n)
     alf = 1.0e-4
 
     # Step size
-    stepsum = np.linalg.norm(d0.flatten())
+    stepsum = xp.linalg.vector_norm(d0)
 
     # Scale if attempted step is too large
     if stepsum > big_step:
         info(" @MINIMIZE: Scaled step size for line search", verbosity.debug)
         d0 *= big_step / stepsum
 
-    slope = np.dot(df0.flatten(), d0.flatten())
+    slope = df0.reshape(-1) @ d0.reshape(-1)
 
     if slope >= 0.0:
         info(" @MINIMIZE: Warning -- gradient is >= 0 (%f)" % slope, verbosity.low)
 
-    test = np.amax(
-        np.divide(
-            np.absolute(d0.flatten()), np.maximum(np.absolute(x0.flatten()), np.ones(n))
-        )
-    )
+    test = xp.max(xp.abs(d0) / xp.maximum(xp.abs(x0), xp.ones_like(x0)))
 
     # Setup to try Newton step first
     alamin = tol / test
@@ -457,7 +453,7 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
     # Minimization Loop
     i = 1
     while i < itmax:
-        x = np.add(x0, (alam * d0))
+        x = x0 + alam * d0
         fx, dfx = fdf(x)
         info(" @MINIMIZE: Calculated energy", verbosity.debug)
 
@@ -511,10 +507,10 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
                         tmplam = 0.5 * alam
 
                     elif b <= 0.0:
-                        tmplam = (-b + np.sqrt(disc)) / (3.0 * a)
+                        tmplam = (-b + xp.sqrt(disc)) / (3.0 * a)
 
                     else:
-                        tmplam = -slope / (b + np.sqrt(disc))
+                        tmplam = -slope / (b + xp.sqrt(disc))
 
                     # Coefficient less than 0.5 * lambda_1
                     if tmplam > (0.5 * alam):
@@ -558,32 +554,35 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
     u0, g0 = fdf0
 
     # Maximum step size
-    n = len(x0.flatten())
-    linesum = np.dot(x0.flatten(), x0.flatten())
-    big_step = big_step * max(np.sqrt(linesum), n)
+    n = xp_size(x0)
+    linesum = x0.reshape(-1) @ x0.reshape(-1)
+    big_step = big_step * max(xp.sqrt(linesum), n)
 
     # Perform approximate line minimization in direction d0
     x, u, g = min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax)
-    d_x = np.subtract(x, x0)
+    d_x = x - x0
 
     # Update invhessian.
-    d_g = np.subtract(g, g0)
-    hdg = np.dot(invhessian, d_g.flatten())
+    d_g = g - g0
+    hdg = invhessian @ d_g.reshape(-1)
 
-    fac = np.vdot(d_g, d_x)
-    fae = np.dot(d_g.flatten(), hdg)
-    sumdg = np.vdot(d_g, d_g)
-    sumxi = np.vdot(d_x, d_x)
+    fac = d_g.reshape(-1) @ d_x.reshape(-1)
+    fae = d_g.reshape(-1) @ hdg
+    sumdg = d_g.reshape(-1) @ d_g.reshape(-1)
+    sumxi = d_x.reshape(-1) @ d_x.reshape(-1)
 
     # Skip update if not 'fac' sufficiently positive
-    if fac > np.sqrt(zeps * sumdg * sumxi):
+    if fac > xp.sqrt(zeps * sumdg * sumxi):
         fac = 1.0 / fac
         fad = 1.0 / fae
 
         # Compute BFGS term
-        dg = np.subtract((fac * d_x).flatten(), fad * hdg)
+        dg = (fac * d_x).reshape(-1) - fad * hdg
+        dx1 = d_x.reshape(-1)
         invhessian += (
-            np.outer(d_x, d_x) * fac - np.outer(hdg, hdg) * fad + np.outer(dg, dg) * fae
+            (dx1[:, None] * dx1[None, :]) * fac
+            - (hdg[:, None] * hdg[None, :]) * fad
+            + (dg[:, None] * dg[None, :]) * fae
         )
         info(" @MINIMIZE: Updated invhessian", verbosity.debug)
     else:
@@ -593,7 +592,7 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
         )
 
     # Update direction
-    d = np.dot(invhessian, -g.flatten())
+    d = invhessian @ -g.reshape(-1)
     d0[:] = d.reshape(d_x.shape)
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
 
@@ -623,14 +622,14 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
         # Compute energy gain
 
         true_gain = u - u0
-        expected_gain = -np.dot(f0.flatten(), d_x.flatten())
-        expected_gain += 0.5 * np.dot(
-            d_x.reshape((1, d_x.size)), np.dot(h0, d_x.reshape((d_x.size, 1)))
+        expected_gain = -(f0.reshape(-1) @ d_x.reshape(-1))
+        expected_gain = expected_gain + 0.5 * (
+            d_x.reshape((1, -1)) @ (h0 @ d_x.reshape((-1, 1)))
         )
-        harmonic_gain = -0.5 * np.dot(d_x.flatten(), (f0 + f).flatten())
+        harmonic_gain = -0.5 * (d_x.reshape(-1) @ (f0 + f).reshape(-1))
 
         # Compute quality:
-        d_x_norm = np.linalg.norm(d_x)
+        d_x_norm = float(xp.linalg.vector_norm(d_x))
 
         if d_x_norm > 0.05:
             quality = true_gain / expected_gain
@@ -647,8 +646,8 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
                 tr[0] = big_step
 
     # After accept, update the Hessian
-    d_f = np.subtract(f, f0)
-    TRM_UPDATE(d_x.flatten(), d_f.flatten(), h0)
+    d_f = f - f0
+    TRM_UPDATE(d_x.reshape(-1), d_f.reshape(-1), h0)
 
 
 # TRM functions (TRM_UPDATE and min_trm)
@@ -661,18 +660,18 @@ def TRM_UPDATE(dx, df, h):
            H  = hessian
     Task: updated hessian"""
 
-    dx = dx[:, np.newaxis]  # dimension nx1
+    dx = dx[:, None]  # dimension nx1
     dx_t = dx.T  # dimension 1xn
-    dg = -df[:, np.newaxis]
+    dg = -df[:, None]
     dg_t = dg.T
 
     # Bakken and Helgaker, JCP, 117,9160. Eq 44
-    h1 = np.dot(dg, dg_t)
-    h1 = h1 / (np.dot(dg_t, dx))
-    h2a = np.dot(h, dx)
-    h2b = np.dot(dx_t, h)
-    h2 = np.dot(h2a, h2b)
-    h2 = h2 / np.dot(dx_t, h2a)
+    h1 = dg @ dg_t
+    h1 = h1 / (dg_t @ dx)
+    h2a = h @ dx
+    h2b = dx_t @ h
+    h2 = h2a @ h2b
+    h2 = h2 / (dx_t @ h2a)
 
     h += h1 - h2
 
@@ -699,41 +698,38 @@ def min_trm(f, h, tr):
     """
 
     # Resize
-    ndim = f.size
+    ndim = xp_size(f)
     shape = f.shape
     f = f.reshape((1, ndim))
 
     # Diagonalize
-    d, w = np.linalg.eigh(h)
-    d = d[:, np.newaxis]  # dimension nx1
+    d, w = xp.linalg.eigh(h)
+    d = d[:, None]  # dimension nx1
 
-    gEt = np.dot(f, w)  # Change of basis  ##
+    gEt = f @ w  # Change of basis  ##
     gE = gEt.T  # dimension nx1
 
     # Count negative, zero and positive eigenvalues
-    neg = (d < -1e-7).sum()
-    zero = (d < 1e-7).sum() - neg
+    neg = int((d < -1e-7).sum())
+    zero = int((d < 1e-7).sum()) - neg
     # pos = d.size - neg - zero
 
     # Pull out zero-mode gE
     if zero > 0:
-        gE[neg : neg + zero] = np.zeros((zero, 1))
+        gE[neg : neg + zero] = 0.0
 
-    # Real work starts here
-    DXE = np.zeros((ndim, 1))
+    # Real work starts here: DXE = gE / d, excluding near-zero eigenvalues
+    nonzero = xp.abs(d) > 1e-5
+    DXE = xp.where(nonzero, gE / xp.where(nonzero, d, 1.0), 0.0)
 
-    for i in range(0, ndim):
-        if np.absolute(d[i]) > 1e-5:
-            DXE[i] = gE[i] / d[i]
-
-    min_d = np.amin(d)
+    min_d = xp.min(d)
 
     # Check if h is positive definite and use trivial result if within trust radius
     if min_d > 0.0:
         if neg != 0:
             print("problem in 'find'!!!")
-        if np.linalg.norm(DXE) < tr:
-            DX = np.dot(w, DXE)
+        if xp.linalg.vector_norm(DXE) < tr:
+            DX = w @ DXE
             DX = DX.reshape(shape)
             return DX
 
@@ -744,10 +740,10 @@ def min_trm(f, h, tr):
 
     for i in range(0, 100):
         DXE = gE / (d + lamb)
-        y = np.sum(DXE**2) - tr**2
-        dy = -2.0 * np.sum((DXE**2) / (d + lamb))
+        y = (DXE**2).sum() - tr**2
+        dy = -2.0 * ((DXE**2) / (d + lamb)).sum()
 
-        if np.absolute(y / dy) < 1e-5 or np.absolute(y) < 1e-13:
+        if abs(y / dy) < 1e-5 or abs(y) < 1e-13:
             break
 
         if y < 0.0:
@@ -763,7 +759,7 @@ def min_trm(f, h, tr):
             lamb = 0.5 * (lamb_min + lamb_max)
     #  print 'iter',i,lamb, lamb_max,lamb_min,y,dy
 
-    DX = np.dot(w, DXE)
+    DX = w @ DXE
     DX = DX.reshape(shape)
     return DX
 
@@ -774,6 +770,14 @@ def min_trm(f, h, tr):
 def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
     """L-BFGS minimization. Uses approximate line minimizations.
     Does one step.
+
+    The history of position and gradient differences is stored in the rows
+    of qlist and glist in chronological order, starting from the first row.
+    A new pair is stored only if it satisfies the curvature condition
+    (as in the BFGS update of Numerical Recipes), which keeps the approximate
+    inverse Hessian positive definite. The new direction is computed with the
+    two-loop recursion of Nocedal and Wright, Numerical Optimization, Alg. 7.4.
+
         Arguments:
             fdf = function and gradient
             fdf0 = initial function and gradient value
@@ -789,102 +793,82 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
     """
 
     zeps = 1.0e-10
-    n = len(x0.flatten())
-    alpha = np.zeros(m)
-    beta = np.zeros(m)
-    rho = np.zeros(m)
+    n = xp_size(x0)
+    alpha = xp.zeros(m)
+    beta = xp.zeros(m)
+    rho = xp.zeros(m)
 
     u0, g0 = fdf0
 
     # Maximum step size
-    linesum = np.dot(x0.flatten(), x0.flatten())
-    big_step = big_step * max(np.sqrt(linesum), n)
+    linesum = x0.reshape(-1) @ x0.reshape(-1)
+    big_step = big_step * max(xp.sqrt(linesum), n)
 
-    # MC try to resolve the stuck BFGS bug
-    if np.dot(g0.flatten(), d0.flatten()) > 0.0:
-        # reset search direction if we are moving uphill!
+    if g0.reshape(-1) @ d0.reshape(-1) > 0.0:
+        # resets to the steepest-descent direction if we are moving uphill
         info(" @MINIMIZE: moving uphill, resetting search direction! ", verbosity.debug)
-        d0 = g0 / np.sqrt(np.dot(g0.flatten(), g0.flatten()))
+        d0[:] = -g0 / xp.sqrt(g0.reshape(-1) @ g0.reshape(-1))
 
-    print("@ GEOP step ", big_step)
+    info(" @MINIMIZE: maximum step %f" % big_step, verbosity.debug)
     # Perform approximate line minimization in direction d0
     x, u, g = min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax)
 
+    # number of stored pairs (the unused rows are zero)
+    nstored = int(xp.sum(xp.any(qlist != 0, axis=1)))
+
     # Compute difference of positions (gradients)
-    # Build list of previous 'd_positions (d_gradients)'
+    d_x = x - x0
+    d_g = g - g0
+    fac = d_g.reshape(-1) @ d_x.reshape(-1)
+    sumdg = d_g.reshape(-1) @ d_g.reshape(-1)
+    sumdx = d_x.reshape(-1) @ d_x.reshape(-1)
 
-    d_x = np.subtract(x, x0)
-    if k < m:
-        qlist[k] = d_x.flatten()
-    else:
-        qlist_aux = np.roll(qlist, -1, axis=0)
-        qlist[:] = qlist_aux
-        qlist[m - 1] = d_x.flatten()
-
-    d_g = np.subtract(g, g0)
-    if k < m:
-        glist[k] = d_g.flatten()
-    else:
-        glist_aux = np.roll(glist, -1, axis=0)
-        glist[:] = glist_aux
-        glist[m - 1] = d_g.flatten()
-
-    # Update direction.
-    # 1_Determine bounds for L-BFGS 'two loop recursion'
-    if k < (m - 1):
-        bound1 = k
-        bound2 = k + 1
-    else:
-        bound1 = m - 1
-        bound2 = m
-
-    # 2
-    q = g.flatten()
-
-    # 3_Loops
-    fac = np.dot(d_g.flatten(), d_x.flatten())
-    sumdg = np.dot(d_g.flatten(), d_g.flatten())
-    sumdx = np.dot(d_x.flatten(), d_x.flatten())
-
-    # Skip update if not 'fac' sufficiently positive
-    if fac > np.sqrt(zeps * sumdg * sumdx):
-        # Begin two loop recursion:
-        # First loop
-        for j in range(bound1, -1, -1):
-            rho[j] = 1.0 / np.dot(glist[j], qlist[j])
-            alpha[j] = rho[j] * np.dot(qlist[j], q)
-            q = q - alpha[j] * glist[j]
-
-        info(" @MINIMIZE: First L-BFGS loop recursion completed", verbosity.debug)
-
-        if scale == 0:
-            hk = 1.0
-        elif scale == 1:
-            hk = np.dot(glist[0], qlist[0]) / np.dot(glist[0], glist[0])
-        elif scale == 2:
-            hk = np.dot(glist[bound1], qlist[bound1]) / np.dot(
-                glist[bound1], glist[bound1]
-            )
-
-        d = hk * q
-
-        # Second loop
-        for j in range(0, bound2, 1):
-            beta[j] = rho[j] * np.dot(glist[j], d)
-            d = d + qlist[j] * (alpha[j] - beta[j])
-
-        info(" @MINIMIZE: Second L-BFGS loop recursion completed", verbosity.debug)
-        d = -1.0 * d.reshape(d0.shape)
-
+    # Stores the new pair only if 'fac' is sufficiently positive
+    if fac > xp.sqrt(zeps * sumdg * sumdx):
+        if nstored < m:
+            nstored += 1
+        else:
+            # drops the oldest pair
+            qlist[:] = xp.roll(qlist, -1, axis=0)
+            glist[:] = xp.roll(glist, -1, axis=0)
+        qlist[nstored - 1] = d_x.reshape(-1)
+        glist[nstored - 1] = d_g.reshape(-1)
     else:
         info(
-            " @MINIMIZE: Skipped direction update; direction * gradient insufficient",
+            " @MINIMIZE: Skipped the update of the inverse Hessian; "
+            "direction * gradient insufficient",
             verbosity.debug,
         )
-        # d = d0
-        d = -1.0 * d_x
 
-    d0[:] = d
+    # Two loop recursion, with the stored pairs
+    q = g.reshape(-1)
+
+    # First loop
+    for j in range(nstored - 1, -1, -1):
+        rho[j] = 1.0 / (glist[j] @ qlist[j])
+        alpha[j] = rho[j] * (qlist[j] @ q)
+        q = q - alpha[j] * glist[j]
+
+    info(" @MINIMIZE: First L-BFGS loop recursion completed", verbosity.debug)
+
+    if scale == 0 or nstored == 0:
+        hk = 1.0
+    elif scale == 1:
+        hk = (glist[0] @ qlist[0]) / (glist[0] @ glist[0])
+    elif scale == 2:
+        last = nstored - 1
+        hk = (glist[last] @ qlist[last]) / (glist[last] @ glist[last])
+
+    d = hk * q
+
+    # Second loop
+    for j in range(0, nstored, 1):
+        beta[j] = rho[j] * (glist[j] @ d)
+        d = d + qlist[j] * (alpha[j] - beta[j])
+
+    info(" @MINIMIZE: Second L-BFGS loop recursion completed", verbosity.debug)
+
+    d0[:] = -1.0 * d.reshape(d0.shape)
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
 
 
@@ -921,7 +905,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     info(" @DampedBFGS: Started.", verbosity.debug)
     _, g0 = fdf0
-    g0 = g0.flatten()
+    g0 = g0.reshape(-1)
 
     # Nocedal's notation
     B = hessian
@@ -938,15 +922,15 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     info("Operands:", verbosity.debug)
     info("%s,  %s" % (type(B), str(B.shape)), verbosity.debug)
     info("%s,  %s" % (type(g0), str(g0.shape)), verbosity.debug)
-    sk = np.linalg.solve(B, -g0)
+    sk = xp.linalg.solve(B, -g0)
     info(" @DampedBFGS: Calculated direction.", verbosity.debug)
 
     # Cosine of the (f, dx) angle
-    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+    quality = -((sk / xp.linalg.vector_norm(sk)) @ (g0 / xp.linalg.vector_norm(g0)))
     info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
 
     # I use maximal cartesian atomic displacement as a measure of step length
-    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
+    maxdispl = xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))
     info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
     if maxdispl > big_step:
         info(
@@ -957,23 +941,23 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     info(
         " @DampedBFGS: maxdispl:                %.6f bohr"
-        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
+        % (xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))),
         verbosity.debug,
     )
 
     # Force call
     _, g = fdf(x0 + sk.reshape(x0.shape))
-    g = g.flatten()
+    g = g.reshape(-1)
     # coordinates CHECKED
 
     # Update hessian
     yk = g - g0
-    skyk = np.dot(sk, yk)
+    skyk = sk @ yk
 
     # Equation 18.15 in Nocedal
     theta = 1.0
-    Bsk = np.dot(B, sk)
-    sBs = np.dot(sk, Bsk)
+    Bsk = B @ sk
+    sBs = sk @ Bsk
     # Damped update if rhok isn't sufficiently positive
     if skyk < 0.2 * sBs:
         theta = (0.8 * sBs) / (sBs - skyk)
@@ -984,7 +968,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
             verbosity.debug,
         )
         yk = theta * yk + (1 - theta) * Bsk
-        skyk = np.dot(sk, yk)
+        skyk = sk @ yk
     else:
         info(" @DampedBFGS: Update of the Hessian, no damping.", verbosity.debug)
 
@@ -996,16 +980,16 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
         rhok = 1e5
 
     # Compute BFGS term (eq. 18.16 in Nocedal)
-    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
+    B += (yk[:, None] * yk[None, :]) * rhok - (Bsk[:, None] * Bsk[None, :]) / sBs
 
     # If small numbers are found on the diagonal of the Hessian,
     # add small positive numbers. Somewhat dirty solution,
     # but it increased stability in some tests.
     # 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
-    eigvals = np.real(np.linalg.eigvals(B))
-    if np.any(eigvals < 1e-1):
+    eigvals = xp.real(xp.linalg.eigvals(B))
+    if xp.any(eigvals < 1e-1):
         info(" @DampedBFGS: stabilizing the diagonal of the Hessian.", verbosity.debug)
-        B += 1e-2 * np.eye(len(B))
+        B += 1e-2 * xp.eye(len(B))
 
     return quality
 
@@ -1065,7 +1049,7 @@ def FIRE(
     _, g0 = fdf0
     force = -g0
 
-    p = np.vdot(force, v)
+    p = force.reshape(-1) @ v.reshape(-1)
     # downhill
     if p > 0.0:
         N_dn += 1
@@ -1084,18 +1068,18 @@ def FIRE(
         # correct uphill motion
         x0 -= 0.5 * dt * v
         # stop moving in uphill direction
-        v = np.zeros(v.shape)
+        v = xp.zeros(v.shape)
 
     # accelerate
     v += dt * force
     # change velocity direction with inertia
     if p > 0.0:
-        f_unit = force / np.linalg.norm(force)
-        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
+        f_unit = force / xp.linalg.vector_norm(force)
+        v = (1 - a) * v + a * xp.linalg.vector_norm(v) * f_unit
     # update posistion
     dx = dt * v
     # check max dx
-    normdx = np.linalg.norm(dx)
+    normdx = xp.linalg.vector_norm(dx)
     if normdx > maxstep:
         dx = maxstep * dx / normdx
     x0 += dx
@@ -1425,73 +1409,70 @@ def L_BFGS_nls(
     if fdf0 is None:
         fdf0 = fdf(x0)
     f0, df0 = fdf0
-    n = len(x0.flatten())
-    dg = np.zeros(n)
+    n = xp_size(x0)
+    dg = xp.zeros(n)
     g = df0
-    x = np.zeros(n)
+    x = xp.zeros(n)
     # linesum = np.dot(x0.flatten(), x0.flatten())
-    alpha = np.zeros(m)
-    beta = np.zeros(m)
-    rho = np.zeros(m)
-    q = np.zeros(n)
+    alpha = xp.zeros(m)
+    beta = xp.zeros(m)
+    rho = xp.zeros(m)
+    q = xp.zeros(n)
 
     # Initial line direction
     xi = d0
     dg = df0
 
     # Step size
-    stepsize = np.linalg.norm(d0.flatten())
+    stepsize = xp.linalg.vector_norm(d0)
 
     # First iteration; use initial step
     if k == 0:
         scale = 1.0
         while (
-            np.linalg.norm(g.flatten()) >= np.linalg.norm(df0.flatten())
-            or np.isnan(np.linalg.norm(g.flatten()))
-            or np.isinf(np.linalg.norm(g.flatten()))
+            xp.linalg.vector_norm(g) >= xp.linalg.vector_norm(df0)
+            or xp.isnan(xp.linalg.vector_norm(g))
+            or xp.isinf(xp.linalg.vector_norm(g))
         ):
-            x = np.add(
-                x0,
-                (scale * init_step * d0 / np.linalg.norm(d0.flatten())),
-            )
+            x = x0 + scale * init_step * d0 / xp.linalg.vector_norm(d0)
             scale *= 0.1
             fx, g = fdf(x)
     else:
         # Scale if attempted step is too large
         if stepsize > big_step:
-            d0 = big_step * d0 / np.linalg.norm(d0.flatten())
+            d0 = big_step * d0 / xp.linalg.vector_norm(d0)
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
-        x = np.add(x0, d0)
-        print("step size:", np.linalg.norm(d0.flatten()))
+        x = x0 + d0
+        print("step size:", xp.linalg.vector_norm(d0))
         fx, g = fdf(x)
 
     info(" @MINIMIZE: Started L-BFGS", verbosity.debug)
     info(" @MINIMIZE: Updated gradient", verbosity.debug)
 
     # Update line direction (xi) and current point (x0)
-    xi = np.subtract(x, x0)
+    xi = x - x0
 
     # Build list of previous positions
     if k < m:
-        qlist[k] = xi.flatten()
+        qlist[k] = xi.reshape(-1)
     else:
-        qlist = np.roll(qlist, -1, axis=0)
-        qlist[m - 1] = xi.flatten()
+        qlist = xp.roll(qlist, -1, axis=0)
+        qlist[m - 1] = xi.reshape(-1)
 
     # Update current point
     x0 = x
 
     # Compute difference of gradients
-    q = g.flatten()
-    dg = np.subtract(g, dg)
+    q = g.reshape(-1)
+    dg = g - dg
 
     # Build list of previous gradients
     if k < m:
-        glist[k] = dg.flatten()
+        glist[k] = dg.reshape(-1)
     else:
-        glist = np.roll(glist, -1, axis=0)
-        glist[m - 1] = dg.flatten()
+        glist = xp.roll(glist, -1, axis=0)
+        glist[m - 1] = dg.reshape(-1)
 
     # Determine bounds for L-BFGS 'two loop recursion'
     if k < (m - 1):
@@ -1504,21 +1485,21 @@ def L_BFGS_nls(
     # Begin two loop recursion:
     # First loop
     for j in range(bound1, -1, -1):
-        rho[j] = 1.0 / np.dot(glist[j], qlist[j])
-        alpha[j] = rho[j] * np.dot(qlist[j], q)
+        rho[j] = 1.0 / (glist[j] @ qlist[j])
+        alpha[j] = rho[j] * (qlist[j] @ q)
         q = q - alpha[j] * glist[j]
 
     info(" @MINIMIZE: First L-BFGS loop recursion completed", verbosity.debug)
 
     # Two possiblities for scaling: using first or most recent
     # members of the gradient and position lists
-    hk = np.dot(glist[bound1], qlist[bound1]) / np.dot(glist[bound1], glist[bound1])
+    hk = (glist[bound1] @ qlist[bound1]) / (glist[bound1] @ glist[bound1])
     # hk = np.dot(glist[0], qlist[0]) / np.dot(glist[0], glist[0])
     xi = hk * q
 
     # Second loop
     for j in range(0, bound2, 1):
-        beta[j] = rho[j] * np.dot(glist[j], xi)
+        beta[j] = rho[j] * (glist[j] @ xi)
         xi = xi + qlist[j] * (alpha[j] - beta[j])
 
     # Update direction xi
@@ -1550,15 +1531,15 @@ def nichols(f0, d, dynmax, m3, big_step, mode=1):
     """
 
     # Resize
-    ndim = f0.size
+    ndim = xp_size(f0)
     shape = f0.shape
     f = (
         f0.reshape((1, ndim)) / m3.reshape((1, ndim)) ** 0.5
     )  # From cartesian base to mass-weighted base
 
     # Change of basis to eigenvector space
-    d = d[:, np.newaxis]  # dimension nx1
-    gEt = -np.dot(f, dynmax)  # Change of basis  #
+    d = d[:, None]  # dimension nx1
+    gEt = -(f @ dynmax)  # Change of basis  #
     gE = gEt.T  # dimension (n-m)x1
     # The step has the general form:
     # d_x[j] =  alpha *( gE[j] )  / ( lambda-d[j] )
@@ -1570,8 +1551,8 @@ def nichols(f0, d, dynmax, m3, big_step, mode=1):
 
         d_x = alpha * (gE) / (lamb - d)
 
-        if d[0] < 0 or np.vdot(d_x, d_x) > big_step**2:
-            lamb = d[0] - np.absolute(gE[0] / big_step)
+        if d[0] < 0 or d_x.reshape(-1) @ d_x.reshape(-1) > big_step**2:
+            lamb = d[0] - xp.abs(gE[0] / big_step)
             d_x = alpha * (gE) / (lamb - d)
 
     elif mode == 1:
@@ -1605,9 +1586,9 @@ def nichols(f0, d, dynmax, m3, big_step, mode=1):
         d_x = alpha * (gE) / (lamb - d)
     # Some check or any type of reject? ALBERTO
 
-    DX = np.dot(dynmax, d_x)  # From ev base to mass-weighted base
+    DX = dynmax @ d_x  # From ev base to mass-weighted base
     DX = DX.reshape(shape)
-    DX = np.multiply(DX, m3 ** (-0.5))  # From mass-weighted base to cartesion base
+    DX = DX * m3 ** (-0.5)  # From mass-weighted base to cartesion base
 
     return DX
 
@@ -1620,7 +1601,11 @@ def Powell(d, Dg, H):
 
     Output: H = Cartesian Hessian"""
 
-    ddi = 1 / np.dot(d, d)
-    y = Dg - np.dot(H, d)
-    H += ddi * (np.outer(y, d) + np.outer(d, y) - np.dot(y, d) * np.outer(d, d) * ddi)
+    ddi = 1 / (d @ d)
+    y = Dg - H @ d
+    H += ddi * (
+        y[:, None] * d[None, :]
+        + d[:, None] * y[None, :]
+        - (y @ d) * (d[:, None] * d[None, :]) * ddi
+    )
     return H

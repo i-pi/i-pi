@@ -9,6 +9,7 @@ import numpy as np
 
 from ipi.engine.beads import *
 from ipi.utils.inputvalue import *
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.inputs.atoms import *
@@ -102,10 +103,10 @@ class InputBeads(Input):
         self.natoms.store(beads.natoms)
         self.nbeads.store(beads.nbeads)
 
-        self.q.store(dstrip(beads.q))
-        self.p.store(dstrip(beads.p))
-        self.m.store(dstrip(beads.m))
-        self.names.store(dstrip(beads.names))
+        self.q.store(beads.q)
+        self.p.store(beads.p)
+        self.m.store(beads.m)
+        self.names.store(beads.names)
 
     def fetch(self):
         """Creates a beads object.
@@ -121,23 +122,23 @@ class InputBeads(Input):
         # tries to fill up with as much data as available and valid
         q = self.q.fetch()
         if q.shape == (beads.nbeads, 3 * beads.natoms):
-            beads.q = q
+            beads.q = xp.asarray(q)
         elif beads.nbeads == 1 and q.shape == (3 * beads.natoms,):
-            beads.q = q
+            beads.q = xp.asarray(q)
         elif len(q) != 0:
             raise ValueError("Array shape mismatches for q in <beads> input.")
 
         p = self.p.fetch()
         if p.shape == (beads.nbeads, 3 * beads.natoms):
-            beads.p = p
+            beads.p = xp.asarray(p)
         elif beads.nbeads == 1 and p.shape == (3 * beads.natoms,):
-            beads.p = p
+            beads.p = xp.asarray(p)
         elif len(p) != 0:
             raise ValueError("Array shape mismatches for p in <beads> input.")
 
         m = self.m.fetch()
         if m.shape == (beads.natoms,):
-            beads.m = m
+            beads.m = xp.asarray(m)
         elif len(m) != 0:
             raise ValueError("Array shape mismatches for m in <beads> input.")
 

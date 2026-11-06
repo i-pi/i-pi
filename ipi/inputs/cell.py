@@ -8,6 +8,7 @@
 from copy import copy
 
 from ipi.engine.cell import *
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.inputvalue import *
 
 __all__ = ["InputCell"]
@@ -69,7 +70,7 @@ vector in the xy plane).
 
         super(InputCell, self).check()
 
-        h = self.value.reshape(9)
+        h = to_numpy(self.value).reshape(9)
 
         if (h[[3, 6, 7]] ** 2).sum() > 1e-20:
             raise ValueError("The cell matrix must be upper triangular.")

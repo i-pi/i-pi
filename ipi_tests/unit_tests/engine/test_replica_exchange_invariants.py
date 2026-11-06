@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 import numpy as np
 import pytest
+from ipi.engine.ensembles import ensemble_swap
 from ipi.engine.smotion.remd import ReplicaExchange, motion_scale
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
@@ -77,6 +78,25 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
             for i, s in enumerate(systems):
                 assert s.ensemble.temp == temperatures[i]
                 np.testing.assert_allclose(s.beads.p, momenta[i])
+
+
+def test_hamiltonian_weights_are_exchanged(simulation):
+    """Exchanging the ensembles exchanges the scaling of the forces in the bias."""
+    weights = [0.5, 1.0]
+    root = ET.fromstring(harmonic_input())
+    second = copy.deepcopy(root.find("system"))
+    for system_input, weight in zip([root.find("system"), second], weights):
+        ensemble = system_input.find("ensemble")
+        ET.SubElement(ensemble, "hamiltonian_weights", shape="(1)").text = f"[{weight}]"
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        systems = sim.syslist
+        for s, weight in zip(systems, weights):
+            assert s.ensemble.bias.pot == pytest.approx((weight - 1) * s.forces.pot)
+        ensemble_swap(systems[0].ensemble, systems[1].ensemble)
+        for s, weight in zip(systems, weights[::-1]):
+            assert s.ensemble.hweights[0] == weight
+            assert s.ensemble.bias.pot == pytest.approx((weight - 1) * s.forces.pot)
 
 
 def test_nested_thermostat_scaling_reaches_all_auxiliary_momenta():

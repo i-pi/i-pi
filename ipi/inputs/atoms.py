@@ -13,6 +13,7 @@ import numpy as np
 
 from ipi.engine.atoms import *
 from ipi.utils.inputvalue import *
+from ipi.utils.array_backend import xp
 from ipi.utils.depend import *
 
 __all__ = ["InputAtoms"]
@@ -95,10 +96,10 @@ class InputAtoms(Input):
 
         super(InputAtoms, self).store()
         self.natoms.store(atoms.natoms)
-        self.q.store(dstrip(atoms.q))
-        self.p.store(dstrip(atoms.p))
-        self.m.store(dstrip(atoms.m))
-        self.names.store(dstrip(atoms.names))
+        self.q.store(atoms.q)
+        self.p.store(atoms.p)
+        self.m.store(atoms.m)
+        self.names.store(atoms.names)
 
     def fetch(self):
         """Creates an atoms object.
@@ -110,9 +111,9 @@ class InputAtoms(Input):
 
         super(InputAtoms, self).fetch()
         atoms = Atoms(self.natoms.fetch())
-        atoms.q = self.q.fetch()
-        atoms.p = self.p.fetch()
-        atoms.m = self.m.fetch()
+        atoms.q = xp.asarray(self.q.fetch())
+        atoms.p = xp.asarray(self.p.fetch())
+        atoms.m = xp.asarray(self.m.fetch())
         atoms.names = self.names.fetch()
         return atoms
 

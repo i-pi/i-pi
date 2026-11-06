@@ -186,7 +186,7 @@ def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation, projec
         q = np.zeros((7, 6))
         q[:, 0] = np.linspace(-1, 1, 7)
         q[:, 1] = 0.2
-        system.beads.q[:] = q
+        system.beads.q_[:] = q
         mapper = (StringGradientMapper if projected else GradientMapper)()
         mapper.bind(
             SimpleNamespace(
