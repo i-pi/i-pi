@@ -22,6 +22,7 @@ from ipi.engine.forcefields import (
     FFdmd,
     FFCavPhSocket,
     FFRotations,
+    FFDielectric,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.pes import __drivers__
@@ -31,6 +32,7 @@ from ipi.utils.inputvalue import *
 from ipi.utils.messages import verbosity, warning
 from ipi.utils.prng import Random
 from ipi.inputs.prng import InputRandom
+from ipi.inputs.motion.driven_dynamics import InputPythonVectorField
 
 __all__ = [
     "InputFFSocket",
@@ -1331,4 +1333,129 @@ class InputFFCavPhSocket(InputFFSocket):
             E0=self.E0.fetch(),
             omega_c=self.omega_c.fetch(),
             ph_rep=self.ph_rep.fetch(),
+        )
+
+
+class InputFFDielectric(InputForceField):
+    _dipole_cls = InputValueFromDict.specialize(
+        family="electric-dipole", units="eang", key="dipole"
+    )
+    _bec_cls = InputValueFromDict.specialize(family="charge", units="e", key="BEC")
+    _piezo_cls = InputValueFromDict.specialize(
+        family="electric-polarization", units="e/ang2", key="piezoelectric"
+    )
+    _electric_field_cls = InputPythonVectorField.specialize(
+        family="electric-field", units="atomic_unit"
+    )
+
+    dynamic = {
+        "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
+        "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "electric_field": (
+            _electric_field_cls,
+            {
+                "help": "A Python callable returning an electric-field vector as a function of simulation time.",
+            },
+        ),
+    }
+
+    fields = copy(InputForceField.fields)
+    attribs = copy(InputForceField.attribs)
+    attribs["where"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "options": ["server", "client"],
+            "default": "server",
+            "help": "Where the electric-field coupling is applied. Client mode is reserved for a later implementation.",
+        },
+    )
+
+    fields["dipole"] = (
+        _dipole_cls,
+        {
+            "default": _dipole_cls().default(),
+            "help": "How to extract the dipole (keyword and units) from the extra information.",
+        },
+    )
+    fields["bec"] = (
+        _bec_cls,
+        {
+            "default": _bec_cls().default(),
+            "help": "How to extract the Born Charges (keyword and units) from the extra information.",
+        },
+    )
+    fields["piezo"] = (
+        _piezo_cls,
+        {
+            "default": _piezo_cls().default(),
+            "help": "How to extract the piezoelectric tensor (keyword and units) from the extra information. "
+            "Use a symmetric (3,3,3) tensor or Voigt (3,6) order (xx,yy,zz,yz,xz,xy); "
+            "Voigt shear entries need no factor of two.",
+        },
+    )
+
+    default_help = "still empty"
+    default_label = "FFDIELECTRIC"
+
+    def store(self, ff: FFDielectric):
+        """Store all the sub-forcefields"""
+        super().store(ff)
+        self.where.store(ff.where)
+
+        self.extra = []
+        for field in ff.electric_fields:
+            input_field = self._electric_field_cls()
+            input_field.store(field)
+            self.extra.append(("electric_field", input_field))
+        _obj = ff.forcefield
+        wrapped_forcefields = (
+            (FFSocket, "ffsocket", InputFFSocket),
+            (FFDirect, "ffdirect", InputFFDirect),
+            (FFLennardJones, "fflj", InputFFLennardJones),
+            (FFdmd, "ffdmd", InputFFdmd),
+            (FFDebye, "ffdebye", InputFFDebye),
+            (FFPlumed, "ffplumed", InputFFPlumed),
+            (FFYaff, "ffyaff", InputFFYaff),
+            (FFsGDML, "ffsgdml", InputFFsGDML),
+            (FFCommittee, "ffcommittee", InputFFCommittee),
+        )
+        for forcefield_type, tag, input_type in wrapped_forcefields:
+            if isinstance(_obj, forcefield_type):
+                input_object = input_type()
+                input_object.store(_obj)
+                self.extra.append((tag, input_object))
+                break
+        else:
+            raise TypeError(
+                f"The wrapped forcefield type {type(_obj).__name__} is not supported."
+            )
+
+        self.dipole.store(ff.dipole)
+        self.bec.store(ff.bec)
+        self.piezo.store(ff.piezo)
+
+    def fetch(self):
+        """Fetches all of the FF objects"""
+        super().fetch()
+
+        electric_fields = []
+        forcefields = []
+        for name, input_object in self.extra:
+            if name == "electric_field":
+                electric_fields.append(input_object.fetch())
+            else:
+                forcefields.append(input_object.fetch())
+
+        if len(forcefields) != 1:
+            raise ValueError("You must provide only one ForceField.")
+
+        return FFDielectric(
+            name=self.name.fetch(),
+            where=self.where.fetch(),
+            dipole=self.dipole.fetch(),
+            bec=self.bec.fetch(),
+            piezo=self.piezo.fetch(),
+            electric_fields=electric_fields,
+            forcefield=forcefields[0],
         )

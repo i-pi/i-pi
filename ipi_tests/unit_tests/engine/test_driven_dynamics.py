@@ -8,6 +8,8 @@ import pytest
 
 from ipi.engine.beads import Beads
 from ipi.engine.motion.driven_dynamics import BEC, ElectricDipole, ElectricField
+from ipi.engine.motion.driven_dynamics import DrivenDynamics
+from ipi.engine.motion import dynamics as dynamics_module
 from ipi.utils.depend import depend_value
 from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
@@ -89,6 +91,27 @@ def test_invalid_client_charges_are_rejected(data, match):
     bec, _ = response_objects(data)
     with pytest.raises(ValueError, match=match):
         _ = bec.bec
+
+
+# Codecov: covers the flattened BEC response reshaping path.
+def test_flattened_client_charges_are_reshaped():
+    flattened = [np.zeros((2, 9))] * 2
+    bec, _ = response_objects({"BEC": flattened})
+    result = bec._get_driver_BEC()
+    assert result.shape == (2, 6, 3)
+    np.testing.assert_allclose(result, 0.0)
+
+
+# Codecov: covers the DrivenDynamics deprecation forwarding path.
+def test_driven_dynamics_step_warns_about_deprecation(monkeypatch):
+    called = []
+
+    def fake_step(self, *args, **kwargs):
+        called.append((args, kwargs))
+
+    monkeypatch.setattr(dynamics_module.Dynamics, "step", fake_step)
+    DrivenDynamics.step(object.__new__(DrivenDynamics), 1, mode="test")
+    assert called == [((1,), {"mode": "test"})]
 
 
 @pytest.mark.parametrize("index", [-1, 2])

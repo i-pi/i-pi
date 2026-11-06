@@ -165,6 +165,12 @@ class Beads:
             func=self.get_kstress,
             dependencies=[b.kstress_ for b in self._blist],
         )
+        self.motion = None
+
+    def bind(self, motion):
+        self.motion = motion
+        for b in self._blist:
+            b.bind(motion)
 
     def clone(self, nbeads=-1):
         """Creates a new beads object with newP <= P beads from the original.
@@ -183,6 +189,8 @@ class Beads:
         newbd.p_[:] = self.p[:nbeads]
         newbd.m_[:] = self.m
         newbd.names_[:] = self.names
+        if self.motion is not None:
+            newbd.bind(self.motion)
         return newbd
 
     def m3tosm3(self):

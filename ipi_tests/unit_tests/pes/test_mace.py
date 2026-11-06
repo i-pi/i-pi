@@ -6,9 +6,15 @@ import numpy as np
 import pytest
 from ase.io import read
 
+torch = pytest.importorskip("torch")
 pytest.importorskip("mace")
 
-from ipi.pes._mace import BatchedMACE, ase_like_properties
+from ipi.pes._mace import (
+    BatchedMACE,
+    _normalize_dipole_shape,
+    compute_dielectric_gradients,
+    proper_dipole,
+)
 from ipi.pes.tools import ModelResults
 from mace.calculators import MACECalculator
 
@@ -79,19 +85,45 @@ def test_mace_warns_and_skips_unknown_model_outputs():
     assert results[0] == {"energy": 1.0}
 
 
-def test_plain_mace_has_no_electrical_response_implementation():
-    """The base calculator remains independent of response extensions."""
+def test_plain_mace_accepts_generic_dielectric_response_instruction():
+    """The base MACE driver owns generic BEC/piezo response support."""
 
-    assert "BEC" not in ase_like_properties
-    assert "piezoelectric" not in ase_like_properties
-    assert "compute_BEC" not in BatchedMACE.supported_instruction_keys
-    assert not hasattr(BatchedMACE, "add_dielectric_response")
-    assert not hasattr(BatchedMACE, "compute_dmu_dR_deta")
-    assert not hasattr(BatchedMACE, "_response_dipole")
+    assert "compute_BEC" in BatchedMACE.supported_instruction_keys
+    assert hasattr(BatchedMACE, "add_dielectric_response")
+    assert hasattr(BatchedMACE, "compute_dmu_dR_deta")
+    assert hasattr(BatchedMACE, "_response_dipole")
 
 
-def test_plain_mace_rejects_extension_instructions():
-    """Extension settings are not silently ignored by plain MACE."""
+def test_proper_dipole_is_symmetric_strain_corrected():
+    """The response dipole uses the proper-dipole strain correction."""
 
-    with pytest.raises(ValueError, match="Unsupported mace instruction"):
-        BatchedMACE(instructions={"compute_BEC": True})
+    dipole = np.asarray([[1.0, 2.0, 3.0]])
+    strain = np.zeros((1, 3, 3))
+    strain[0, 0, 1] = 0.2
+    strain[0, 1, 0] = 0.4
+    corrected = proper_dipole(torch.as_tensor(dipole), torch.as_tensor(strain)).numpy()
+    np.testing.assert_allclose(corrected[0], [0.4, 1.7, 3.0])
+
+
+# Codecov: covers component-wise dielectric autograd gradients.
+def test_dielectric_gradient_helper_differentiates_each_dipole_component():
+    positions = torch.randn(2, 3, requires_grad=True)
+    strain = torch.randn(1, 3, 3, requires_grad=True)
+    dielectric = torch.stack(
+        (positions.sum() + strain.sum(), positions.square().sum() + strain.sum())
+    ).reshape(1, 2)
+    gradients = compute_dielectric_gradients(dielectric, [positions, strain])
+    assert gradients[0].shape == (2, 2, 3)
+    assert gradients[1].shape == (2, 1, 3, 3)
+    np.testing.assert_allclose(gradients[0][0], 1.0)
+
+
+# Codecov: covers dielectric dipole/displacement shape validation.
+def test_dielectric_response_shape_validation():
+    strain = torch.zeros(1, 3, 3)
+    normalized = _normalize_dipole_shape(torch.ones(1, 1, 3), strain)
+    assert normalized.shape == (1, 3)
+    with pytest.raises(ValueError, match="displacement"):
+        _normalize_dipole_shape(torch.ones(1, 3), torch.zeros(1, 2, 2))
+    with pytest.raises(ValueError, match="incompatible"):
+        _normalize_dipole_shape(torch.ones(2, 4), strain)
