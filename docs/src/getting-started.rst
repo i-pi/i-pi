@@ -308,20 +308,25 @@ PILE-G thermostats and the isotropic, flexible and anisotropic barostats, while 
 other simulations run as usual. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
 barostat, cannot change while the steps are replayed: i-PI stops with an error
-if they do.
+if they do, or if a step cannot be recorded (the simulation can then be
+restarted without ``--jit``).
 
 ``--backend jax`` (experimental) stores the arrays as
 `JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
-runs molecular dynamics, but not yet geometry optimization, NEB, phonons,
-instantons, bosonic exchange, open paths or the GLE thermostats, and it is
+runs molecular dynamics, replays, ramps and Monte Carlo exchanges of atoms,
+but not yet constrained dynamics, geometry optimization, NEB, string methods,
+phonons, vibrational and SCP analyses, instantons, planetary models, kinetic
+Monte Carlo, bosonic exchange, open paths or the GLE thermostats (i-PI stops
+with an error at the start for the motions it cannot run), and it is
 much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
-the forces are computed by a direct forcefield whose potential works with JAX
-arrays (e.g. ``dummy``): the whole step, including the force evaluation, is
-then compiled. Otherwise, the steps run as usual. As with torch, the
-parameters that are fixed in the compiled step, such as the time step,
-cannot change.
+the forces are computed by a direct forcefield whose potential can be
+compiled by JAX (at present only ``dummy``): the whole step, including the
+force evaluation, is then compiled. Otherwise, the steps run as usual. As
+with torch, the parameters that are fixed in the compiled step, such as the
+time step, cannot change, and i-PI stops with an error if a step cannot be
+compiled.
 
 .. _runningclients:
 

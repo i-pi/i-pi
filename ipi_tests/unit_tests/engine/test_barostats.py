@@ -14,6 +14,7 @@ from ipi.engine.barostats import BaroSCR, cell_propagators
 from ipi.engine.motion.dynamics import Dynamics, NPTIntegrator
 from ipi.engine.thermostats import ThermoLangevin
 from ipi.inputs.barostats import InputBaro
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.depend import depend_array, depend_value, dproperties
 from ipi.utils.units import unit_to_internal
 from ipi_tests.unit_tests.engine.inputs import pressure_input
@@ -104,10 +105,10 @@ def simulation_state(sim):
     system = sim.syslist[0]
     return (
         sim.step,
-        np.asarray(system.beads.q).copy(),
-        np.asarray(system.beads.p).copy(),
-        np.asarray(system.cell.h).copy(),
-        system.motion.barostat.ebaro,
+        to_numpy(system.beads.q).copy(),
+        to_numpy(system.beads.p).copy(),
+        to_numpy(system.cell.h).copy(),
+        float(system.motion.barostat.ebaro),
     )
 
 
@@ -181,10 +182,13 @@ def test_scr_pressure_force_for_noninteracting_particles(
     with simulation(scr_two_particle_xml(external_pressure)) as sim:
         system = sim.syslist[0]
         barostat = system.motion.barostat
-        assert system.nm.kin == pytest.approx(3.0, rel=1e-12)
-        np.testing.assert_allclose(system.forces.vir, np.zeros((3, 3)), atol=1e-12)
-        assert np.trace(barostat.stress_mts(0)) / 3.0 == pytest.approx(0.25, rel=1e-12)
-        assert barostat.get_lambda_force() == pytest.approx(
+        assert float(system.nm.kin) == pytest.approx(3.0, rel=1e-12)
+        np.testing.assert_allclose(
+            to_numpy(system.forces.vir), np.zeros((3, 3)), atol=1e-12
+        )
+        stress = to_numpy(barostat.stress_mts(0))
+        assert np.trace(stress) / 3.0 == pytest.approx(0.25, rel=1e-12)
+        assert float(barostat.get_lambda_force()) == pytest.approx(
             force_coefficient * np.sqrt(8.0), rel=1e-12, abs=1e-12
         )
 
@@ -205,15 +209,17 @@ def test_scr_pressure_force_for_harmonic_pair(
     ) as sim:
         system = sim.syslist[0]
         barostat = system.motion.barostat
-        assert system.nm.kin == pytest.approx(3.0, rel=1e-12)
-        assert system.forces.pot == pytest.approx(1.0, rel=1e-12)
+        assert float(system.nm.kin) == pytest.approx(3.0, rel=1e-12)
+        assert float(system.forces.pot) == pytest.approx(1.0, rel=1e-12)
         np.testing.assert_allclose(
-            system.forces.vir, np.diag([-2.0, 0.0, 0.0]), rtol=1e-12, atol=1e-12
+            to_numpy(system.forces.vir),
+            np.diag([-2.0, 0.0, 0.0]),
+            rtol=1e-12,
+            atol=1e-12,
         )
-        assert np.trace(barostat.stress_mts(0)) / 3.0 == pytest.approx(
-            1.0 / 6.0, rel=1e-12
-        )
-        assert barostat.get_lambda_force() == pytest.approx(
+        stress = to_numpy(barostat.stress_mts(0))
+        assert np.trace(stress) / 3.0 == pytest.approx(1.0 / 6.0, rel=1e-12)
+        assert float(barostat.get_lambda_force()) == pytest.approx(
             force_coefficient * np.sqrt(8.0), rel=1e-12, abs=1e-12
         )
 
@@ -473,9 +479,9 @@ def test_scr_uses_standard_multiple_time_stepping(simulation):
 
 def test_flexible_barostat_volume_constraint(simulation):
     with simulation(pressure_input("flexible", constant_volume=True)) as sim:
-        initial = sim.syslist[0].cell.V
+        initial = float(sim.syslist[0].cell.V)
         sim.run(steps=8, write_outputs=False)
-        assert sim.syslist[0].cell.V == pytest.approx(initial, rel=1e-12)
+        assert float(sim.syslist[0].cell.V) == pytest.approx(initial, rel=1e-12)
 
 
 def test_cell_propagators_match_power_series():

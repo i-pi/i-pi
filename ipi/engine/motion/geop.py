@@ -31,7 +31,7 @@ class GeopMotion(Motion):
         old_force: force on previous step
         old_direction: move direction on previous step
         invhessian_bfgs: stored inverse Hessian matrix for BFGS
-        hessian_trm: stored  Hessian matrix for trm
+        hessian_trm: stored Hessian matrix for BFGSTRM and damped BFGS
         ls_options:
         {tolerance: energy tolerance for exiting minimization algorithm
         iter: maximum number of allowed iterations for minimization algorithm for each MD step
@@ -47,6 +47,8 @@ class GeopMotion(Motion):
         qlist_lbfgs: list of previous positions (x_n+1 - x_n) for L-BFGS. Number of entries = corrections_lbfgs
         glist_lbfgs: list of previous gradients (g_n+1 - g_n) for L-BFGS. Number of entries = corrections_lbfgs
     """
+
+    jax_support = False
 
     def __init__(
         self,
@@ -88,6 +90,8 @@ class GeopMotion(Motion):
         self.big_step = biggest_step
         self.tolerances = tolerances
         self.ls_options = ls_options
+        # initial step of the adaptive line search, for reset
+        self.ls_step_initial = ls_options["step"]
 
         # optimizer state, stored as backend arrays
         self.old_x = xp.asarray(old_pos)
@@ -100,7 +104,9 @@ class GeopMotion(Motion):
             self.invhessian = xp.asarray(invhessian_bfgs)
             self.optimizer = BFGSOptimizer()
         elif self.mode == "bfgstrm":
-            self.tr = tr_trm  # trust radius, kept on the host
+            # trust radius, kept on the host, and its initial value for reset
+            self.tr = np.array(tr_trm if tr_trm.size > 0 else [0.4], dtype=float)
+            self.tr_initial = self.tr.copy()
             self.hessian = xp.asarray(hessian_trm)
             self.optimizer = BFGSTRMOptimizer()
         elif self.mode == "lbfgs":
@@ -114,7 +120,7 @@ class GeopMotion(Motion):
         elif self.mode == "cg":
             self.optimizer = CGOptimizer()
         elif self.mode == "damped_bfgs":
-            self.invhessian = xp.asarray(invhessian_bfgs)
+            self.hessian = xp.asarray(hessian_trm)
             self.optimizer = Damped_BFGSOptimizer()
         else:
             self.optimizer = DummyOptimizer()
@@ -125,17 +131,17 @@ class GeopMotion(Motion):
         self.old_f *= 0.0
         self.old_u *= 0.0
         self.d *= 0.0
+        self.optimizer.converged = False
+        self.ls_options["step"] = self.ls_step_initial
 
         if self.mode == "bfgs":
             self.invhessian[:] = xp.eye(len(self.invhessian))
-        # bfgstrm
-        elif self.mode == "bfgstrm":
+        elif self.mode in ["bfgstrm", "damped_bfgs"]:
             self.hessian[:] = xp.eye(len(self.hessian))
-            self.tr = self.initial_values["tr_trm"]
+            if self.mode == "bfgstrm":
+                self.tr[:] = self.tr_initial  # in place, as the optimizer shares it
         # lbfgs
         elif self.mode == "lbfgs":
-            self.corrections *= 0.0
-            self.scale *= 0.0
             self.qlist *= 0.0
             self.glist *= 0.0
 
@@ -193,12 +199,7 @@ class LineMapper(object):
         self.dbeads = dumop.beads.clone()
         self.dcell = dumop.cell.clone()
         self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
-
-        self.fixatoms_mask = np.ones(
-            3 * dumop.beads.natoms, dtype=bool
-        )  # Mask to exclude fixed atoms from 3N-arrays
-        if len(dumop.fixatoms_dof) > 0:
-            self.fixatoms_mask[dumop.fixatoms_dof] = 0
+        self.fixatoms_mask = dumop.fixatoms_mask
 
     def set_dir(self, x0, mdir):
         self.x0 = xp.asarray(x0, copy=True)
@@ -245,12 +246,7 @@ class GradientMapper(object):
         self.dbeads = dumop.beads.clone()
         self.dcell = dumop.cell.clone()
         self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
-
-        self.fixatoms_mask = np.ones(
-            3 * dumop.beads.natoms, dtype=bool
-        )  # Mask to exclude fixed atoms from 3N-arrays
-        if len(dumop.fixatoms_dof) > 0:
-            self.fixatoms_mask[dumop.fixatoms_dof] = 0
+        self.fixatoms_mask = dumop.fixatoms_mask
 
     def __call__(self, x):
         """computes energy and gradient for optimization step"""
@@ -290,6 +286,13 @@ class DummyOptimizer:
         self.forces = geop.forces
         self.fixcom = geop.fixcom
         self.fixatoms_dof = geop.fixatoms_dof
+
+        # the optimizers only see the free coordinates of each bead, and of all
+        # the beads in the flattened arrays and in the Hessians
+        self.fixatoms_mask = np.ones(3 * self.beads.natoms, dtype=bool)
+        self.fixatoms_mask[self.fixatoms_dof] = False
+        self.flat_mask = np.tile(self.fixatoms_mask, self.beads.nbeads)
+        self.hessian_mask = np.ix_(self.flat_mask, self.flat_mask)
 
         self.mode = geop.mode
         self.tolerances = geop.tolerances
@@ -425,68 +428,32 @@ class BFGSOptimizer(DummyOptimizer):
         self.qtime = -time.time()
         info("\nMD STEP %d" % step, verbosity.debug)
 
+        mask = self.fixatoms_mask
         if step == 0:
             info(" @GEOP: Initializing BFGS", verbosity.debug)
-            self.d += self.forces.f / xp.sqrt(
-                self.forces.f.reshape(-1) @ self.forces.f.reshape(-1)
-            )
-
-            if len(self.fixatoms_dof) > 0:
-                for dqb in self.d:
-                    dqb[self.fixatoms_dof] = 0.0
+            f = self.forces.f[:, mask]
+            self.d[:, mask] += f / xp.sqrt(f.reshape(-1) @ f.reshape(-1))
 
         self.old_x[:] = self.beads.q
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms_dof) > 0:
-            for dqb in self.old_f:
-                dqb[self.fixatoms_dof] = 0.0
-
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
-
-            # Reduce dimensionality
-            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
-            masked_d = self.d[:, self.gm.fixatoms_mask]
-            masked_invhessian = self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ]
-
-            # Do one iteration of BFGS
-            # The invhessian and the directions are updated inside.
-            # Everything passed inside BFGS() in masked form, including the invhessian
-            BFGS(
-                masked_old_x,
-                masked_d,
-                self.gm,
-                fdf0,
-                masked_invhessian,
-                self.big_step,
-                self.ls_options["tolerance"] * self.tolerances["energy"],
-                self.ls_options["iter"],
-            )
-
-            # Restore dimensionality of d and invhessian
-            self.d[:, self.gm.fixatoms_mask] = masked_d
-            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_invhessian
-            )
-
-        else:
-            fdf0 = (self.old_u, -self.old_f)
-
-            # Do one iteration of BFGS
-            # The invhessian and the directions are updated inside.
-            BFGS(
-                self.old_x,
-                self.d,
-                self.gm,
-                fdf0,
-                self.invhessian,
-                self.big_step,
-                self.ls_options["tolerance"] * self.tolerances["energy"],
-                self.ls_options["iter"],
-            )
+        # Do one iteration of BFGS on the free coordinates.
+        # The invhessian and the directions are updated inside.
+        d = self.d[:, mask]
+        invhessian = self.invhessian[self.hessian_mask]
+        BFGS(
+            self.old_x[:, mask],
+            d,
+            self.gm,
+            (self.old_u, -self.old_f[:, mask]),
+            invhessian,
+            self.big_step,
+            self.ls_options["tolerance"] * self.tolerances["energy"],
+            self.ls_options["iter"],
+        )
+        self.d[:, mask] = d
+        self.invhessian[self.hessian_mask] = invhessian
 
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
@@ -516,8 +483,6 @@ class BFGSTRMOptimizer(DummyOptimizer):
                 raise ValueError("Hessian size does not match system size")
 
         self.hessian = geop.hessian
-        if geop.tr.size == 0:
-            geop.tr = np.array([0.4])
         self.tr = geop.tr
         self.gm.bind(self)
         self.big_step = geop.big_step
@@ -539,43 +504,19 @@ class BFGSTRMOptimizer(DummyOptimizer):
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms_dof) > 0:
-            for dqb in self.old_f:
-                dqb[self.fixatoms_dof] = 0.0
-
-            # Reduce dimensionality
-            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
-            masked_hessian = self.hessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ]
-
-            # Do one iteration of BFGSTRM.
-            # The Hessian is updated inside. Everything is passed inside BFGSTRM() in masked form, including the Hessian
-            BFGSTRM(
-                masked_old_x,
-                self.old_u,
-                self.old_f[:, self.gm.fixatoms_mask],
-                masked_hessian,
-                self.tr,
-                self.gm,
-                self.big_step,
-            )
-
-            # Restore dimensionality of the hessian
-            self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_hessian
-            )
-        else:
-            # Make one step. ( A step is finished when a movement is accepted)
-            BFGSTRM(
-                self.old_x,
-                self.old_u,
-                self.old_f,
-                self.hessian,
-                self.tr,
-                self.gm,
-                self.big_step,
-            )
+        # Make one step on the free coordinates (a step is finished when a
+        # movement is accepted). The Hessian is updated inside.
+        hessian = self.hessian[self.hessian_mask]
+        BFGSTRM(
+            self.old_x[:, self.fixatoms_mask],
+            self.old_u,
+            self.old_f[:, self.fixatoms_mask],
+            hessian,
+            self.tr,
+            self.gm,
+            self.big_step,
+        )
+        self.hessian[self.hessian_mask] = hessian
 
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
@@ -636,67 +577,38 @@ class LBFGSOptimizer(DummyOptimizer):
 
         info("\nMD STEP %d" % step, verbosity.debug)
 
+        mask = self.fixatoms_mask
         if step == 0:
             info(" @GEOP: Initializing L-BFGS", verbosity.debug)
-            self.d += self.forces.f / xp.sqrt(
-                self.forces.f.reshape(-1) @ self.forces.f.reshape(-1)
-            )
+            f = self.forces.f[:, mask]
+            self.d[:, mask] += f / xp.sqrt(f.reshape(-1) @ f.reshape(-1))
 
         self.old_x[:] = self.beads.q
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms_dof) > 0:
-            for dqb in self.old_f:
-                dqb[self.fixatoms_dof] = 0.0
-
-            # Reduce the dimensionality
-            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
-            masked_d = self.d[:, self.gm.fixatoms_mask]
-            # self.gm is reduced inside its __init__() and __call__() functions
-            masked_qlist = self.qlist[:, self.gm.fixatoms_mask]
-            masked_glist = self.glist[:, self.gm.fixatoms_mask]
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
-
-            # We update everything within L_BFGS (and all other calls).
-            L_BFGS(
-                masked_old_x,
-                masked_d,
-                self.gm,
-                masked_qlist,
-                masked_glist,
-                fdf0,
-                self.big_step,
-                self.ls_options["tolerance"] * self.tolerances["energy"],
-                self.ls_options["iter"],
-                self.corrections,
-                self.scale,
-                step,
-            )
-
-            # Restore the dimensionality
-            self.d[:, self.gm.fixatoms_mask] = masked_d
-            self.qlist[:, self.gm.fixatoms_mask] = masked_qlist
-            self.glist[:, self.gm.fixatoms_mask] = masked_glist
-
-        else:
-            fdf0 = (self.old_u, -self.old_f)
-
-            # We update everything  within L_BFGS (and all other calls).
-            L_BFGS(
-                self.old_x,
-                self.d,
-                self.gm,
-                self.qlist,
-                self.glist,
-                fdf0,
-                self.big_step,
-                self.ls_options["tolerance"] * self.tolerances["energy"],
-                self.ls_options["iter"],
-                self.corrections,
-                self.scale,
-                step,
-            )
+        # Do one iteration of L-BFGS on the free coordinates.
+        # The directions and the stored corrections are updated inside.
+        d = self.d[:, mask]
+        qlist = self.qlist[:, self.flat_mask]
+        glist = self.glist[:, self.flat_mask]
+        L_BFGS(
+            self.old_x[:, mask],
+            d,
+            self.gm,
+            qlist,
+            glist,
+            (self.old_u, -self.old_f[:, mask]),
+            self.big_step,
+            self.ls_options["tolerance"] * self.tolerances["energy"],
+            self.ls_options["iter"],
+            self.corrections,
+            self.scale,
+            step,
+        )
+        self.d[:, mask] = d
+        self.qlist[:, self.flat_mask] = qlist
+        self.glist[:, self.flat_mask] = glist
 
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
@@ -718,7 +630,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
     It is meant to be used in NEB only.
     One of the differences is that it uses neither TRM
     nor line search, because the potential is ill-defined for NEB.
-    It just takes the step suggested from invhessian and force
+    It just takes the step suggested from the Hessian and force
     and downscales it if it's too big.
     Therefore it's MUCH WORSE than the other BFGS versions for geometry optimization.
     It is kept here for testing mainly, to prove that
@@ -730,13 +642,13 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         super(Damped_BFGSOptimizer, self).bind(geop)
 
         nq = xp_size(self.beads.q)
-        if xp_size(geop.invhessian) != nq * nq:
-            if xp_size(geop.invhessian) == 0:
-                geop.invhessian = xp.eye(nq)
+        if xp_size(geop.hessian) != nq * nq:
+            if xp_size(geop.hessian) == 0:
+                geop.hessian = xp.eye(nq)
             else:
-                raise ValueError("Inverse Hessian size does not match system size")
+                raise ValueError("Hessian size does not match system size")
 
-        self.invhessian = geop.invhessian
+        self.hessian = geop.hessian
         self.gm.bind(self)
         self.big_step = geop.big_step
         self.ls_options = geop.ls_options
@@ -754,46 +666,18 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms_dof) > 0:
-            for dqb in self.old_f:
-                dqb[self.fixatoms_dof] = 0.0
-
-            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
-
-            # Reduce dimensionality
-            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
-            masked_invhessian = self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ]
-
-            # Do one iteration of Damped_BFGS
-            # The invhessian and the directions are updated inside.
-            # Everything passed inside Damped_BFGS() in masked form, including the invhessian
-            Damped_BFGS(
-                masked_old_x,
-                self.gm,
-                fdf0,
-                masked_invhessian,
-                self.big_step,
-            )
-
-            # Restore dimensionality of the invhessian
-            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_invhessian
-            )
-
-        else:
-            fdf0 = (self.old_u, -self.old_f)
-
-            # Do one iteration of Damped_BFGS
-            # The invhessian and the directions are updated inside.
-            Damped_BFGS(
-                self.old_x,
-                self.gm,
-                fdf0,
-                self.invhessian,
-                self.big_step,
-            )
+        # Do one iteration of Damped_BFGS on the free coordinates.
+        # The Hessian is updated inside.
+        hessian = self.hessian[self.hessian_mask]
+        Damped_BFGS(
+            self.old_x[:, self.fixatoms_mask],
+            self.gm,
+            (self.old_u, -self.old_f[:, self.fixatoms_mask]),
+            hessian,
+            self.big_step,
+            self.fixatoms_mask,
+        )
+        self.hessian[self.hessian_mask] = hessian
 
         info("   Number of force calls: %d" % (self.gm.fcount))
         self.gm.fcount = 0
@@ -916,8 +800,12 @@ class CGOptimizer(DummyOptimizer):
 
         info("\nMD STEP %d" % step, verbosity.debug)
 
+        # forces on the free coordinates
+        gradf1 = xp.asarray(self.forces.f, copy=True)
+        gradf1[:, ~self.fixatoms_mask] = 0.0
+
         if step == 0:
-            gradf1 = dq1 = self.forces.f
+            dq1 = gradf1
 
             # Move direction for 1st conjugate gradient step
             dq1_unit = dq1 / xp.sqrt(gradf1.reshape(-1) @ gradf1.reshape(-1))
@@ -926,7 +814,6 @@ class CGOptimizer(DummyOptimizer):
         else:
             gradf0 = self.old_f
             dq0 = self.d
-            gradf1 = self.forces.f
             beta = ((gradf1 - gradf0).reshape(-1) @ gradf1.reshape(-1)) / (
                 gradf0.reshape(-1) @ gradf0.reshape(-1)
             )
@@ -937,10 +824,6 @@ class CGOptimizer(DummyOptimizer):
         # Store force and direction for next CG step
         self.d[:] = dq1
         self.old_f[:] = gradf1
-
-        if len(self.fixatoms_dof) > 0:
-            for dqb in dq1_unit:
-                dqb[self.fixatoms_dof] = 0.0
 
         self.lm.set_dir(self.beads.q, dq1_unit)
 

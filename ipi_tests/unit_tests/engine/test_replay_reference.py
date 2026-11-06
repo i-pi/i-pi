@@ -7,6 +7,7 @@ import pytest
 
 from ipi.engine.atoms import Atoms as IAtoms
 from ipi.engine.cell import Cell
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.io import print_file
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
@@ -29,7 +30,7 @@ def test_replay_reads_known_frames_in_bead_order(simulation, tmp_path, mode, sep
                 for bead in ([i] if separate else range(3)):
                     atoms = IAtoms(2)
                     atoms.names_[:] = ["H", "O"]
-                    atoms.q_[:] = q[frame, bead]
+                    atoms.q_[:] = xp.asarray(q[frame, bead])
                     print_file(
                         mode,
                         atoms,
@@ -50,7 +51,7 @@ def test_replay_reads_known_frames_in_bead_order(simulation, tmp_path, mode, sep
         system.motion.exit_on_convergence = False
         for frame in range(2):
             system.motion.step(frame)
-            np.testing.assert_allclose(system.beads.q, q[frame], atol=2e-3)
+            np.testing.assert_allclose(to_numpy(system.beads.q), q[frame], atol=2e-3)
         system.motion.step(2)
         assert system.motion.finished
         for stream in system.motion.rfile if separate else [system.motion.rfile]:

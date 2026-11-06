@@ -202,7 +202,7 @@ class InteractiveSimulation(Simulation):
             # initialize in the nm basis to handle PIMD mass scaling
             s.nm.pnm_[:] = (
                 self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
-                * np.sqrt(s.nm.dynm3)
+                * xp.sqrt(s.nm.dynm3)
                 * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
             )
 

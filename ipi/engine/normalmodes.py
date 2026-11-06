@@ -291,14 +291,14 @@ class NormalModes:
             name="nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_nmm,
-            dependencies=[self.nm_freqs_, self.mode_],
+            dependencies=[self.omegak_, self.nm_freqs_, self.mode_],
         )
         # add o_nm_factor for the dynamical mass in the case of open paths
         self.o_nm_factor_ = depend_array(
             name="nmm",
             value=np.zeros(self.nbeads, float),
             func=self.get_o_nmm,
-            dependencies=[self.nm_freqs_, self.mode_],
+            dependencies=[self.o_omegak_, self.nm_freqs_, self.mode_],
         )
         self.dynm3_ = depend_array(
             name="dynm3",

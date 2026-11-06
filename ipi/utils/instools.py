@@ -107,7 +107,9 @@ def sym_band(A):
     u = len(A) - 1
     lu = u
     M = A.shape[1]
-    newA = np.empty((u + lu + 1, M))
+    # the corners outside the band are not used, but must be finite for the
+    # checks of the scipy solvers
+    newA = np.zeros((u + lu + 1, M))
     newA[: u + 1] = A
     for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
@@ -329,15 +331,15 @@ class Fix(object):
             self.nbeads = nbeads
 
         self.fixatoms_dof = fixatoms_dof
-        if len(self.fixatoms_dof) > 0:
-            if np.mod(len(self.fixatoms_dof), 3) == 0:
-                self.fixatoms = np.unique(self.fixatoms_dof // 3)
-            else:
-                softexit.trigger(
-                    message="fixatoms_dof is not yet implemented. please use fixatoms",
-                )
-        else:
-            self.fixatoms = self.fixatoms_dof
+        # only whole atoms can be fixed
+        self.fixatoms = np.unique(np.asarray(self.fixatoms_dof, int) // 3)
+        whole = (3 * self.fixatoms[:, None] + np.arange(3)).ravel()
+        if not np.array_equal(np.sort(self.fixatoms_dof), whole):
+            softexit.trigger(
+                status="bad",
+                message="Instantons can only fix whole atoms: fixatoms_dof must hold "
+                "the three coordinates of each fixed atom",
+            )
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)
@@ -447,34 +449,17 @@ class Fix(object):
 
             return full_vector
         elif t == 4:
+            m = self.get_mask(1)
             full_vector = np.zeros(
                 (self.nbeads, 3 * self.natoms, 3 * self.natoms, 3 * self.natoms)
             )
-            ii = 0
-            jj = 0
-            kk = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    for k in self.get_mask(1):
-                        full_vector[:, i, j, k] = vector[
-                            :, ii, jj, kk
-                        ]  # Yes, this can be improved
-                        kk += 1
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m, m)] = vector
             return full_vector
 
         elif t == 5:
+            m = self.get_mask(1)
             full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms))
-            ii = 0
-            jj = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    full_vector[:, i, j] = vector[
-                        :, ii, jj
-                    ]  # Yes, this can be improved
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m)] = vector
             return full_vector
 
         else:

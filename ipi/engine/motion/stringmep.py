@@ -265,6 +265,8 @@ class StringMover(Motion):
         stage: flag denoting current stage: "endpoints", "string" or "climb", or "converged"
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,
@@ -351,6 +353,16 @@ class StringMover(Motion):
             raise scipy_exception
 
         super(StringMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
+            raise ValueError(
+                "All atoms are fixed, geometry won't change. Exiting simulation."
+            )
+
+        # the mappers hold the mask of the moving coordinates, used below
+        self.stringgm.bind(self)
+        self.climbgm.bind(self)
+
         # We check dimensionality of the Hessian in the beginning
         # and reduce it if needed, because someone may want to provide
         # existing Hessian of the full system.
@@ -418,14 +430,6 @@ class StringMover(Motion):
                     self.hessian = xp.eye(n_activedim)
                 else:
                     raise ValueError("Hessian size does not match system size.")
-
-        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            raise ValueError(
-                "All atoms are fixed, geometry won't change. Exiting simulation."
-            )
-
-        self.stringgm.bind(self)
-        self.climbgm.bind(self)
 
     def init_climb(self):
         """Operations to resize hessian for the climbing bead(s),
@@ -534,6 +538,7 @@ class StringMover(Motion):
                     fdf0=(self.stringpot, self.stringgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=fixatoms_mask,
                 )
                 info(" @STRING: after Damped_BFGS() call", vrb.debug)
 
@@ -962,6 +967,7 @@ class StringMover(Motion):
                 fdf0=(self.stringpot, self.stringgrad),
                 hessian=self.hessian,
                 big_step=self.big_step,
+                mask=self.climbgm.fixatoms_mask,
             )
             info(" @STRING_CLIMB: after Damped_BFGS() call", vrb.debug)
 
@@ -1034,7 +1040,8 @@ class StringMover(Motion):
         # so that recalculation won't be triggered after the step.
         tmp_f = xp.asarray(self.full_f, copy=True)
         tmp_v = xp.asarray(self.full_v, copy=True)
-        tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.stringgrad
+        # the physical forces of the climbing bead, not the climbing ones
+        tmp_f[self.cl_indx] = self.climbgm.rforces.f[0]
         tmp_v[self.cl_indx] = self.stringpot
         # Forcefield results are stored as numpy arrays
         self.forces.transfer_forces_manual(

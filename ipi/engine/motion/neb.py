@@ -328,6 +328,8 @@ class NEBMover(Motion):
             kappamin: min spring constant if varsprings is T *** NOT YET IMPLEMENTED ***
     """
 
+    jax_support = False
+
     def __init__(
         self,
         fixcom=False,
@@ -412,6 +414,16 @@ class NEBMover(Motion):
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         super(NEBMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
+            raise ValueError(
+                "All atoms are fixed, geometry won't change. Exiting simulation."
+            )
+
+        # the mappers hold the mask of the moving coordinates, used below
+        self.nebgm.bind(self)
+        self.climbgm.bind(self)
+
         # I check dimensionality of the hessian in the beginning
         # and reduce it if needed, because someone may want to provide
         # existing hessian of the full system.
@@ -479,14 +491,6 @@ class NEBMover(Motion):
                     self.hessian = xp.eye(n_activedim)
                 else:
                     raise ValueError("Hessian size does not match system size.")
-
-        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
-            raise ValueError(
-                "All atoms are fixed, geometry won't change. Exiting simulation."
-            )
-
-        self.nebgm.bind(self)
-        self.climbgm.bind(self)
 
     def init_climb(self):
         """Operations to resize hessian for the climbing bead(s),
@@ -663,6 +667,7 @@ class NEBMover(Motion):
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=self.nebgm.fixatoms_mask,
                 )
                 info(" @NEB: after Damped_BFGS() call", verbosity.debug)
 
@@ -868,6 +873,7 @@ class NEBMover(Motion):
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=self.hessian,
                     big_step=self.big_step,
+                    mask=self.climbgm.fixatoms_mask,
                 )
                 info(" @NEB_CLIMB: after Damped_BFGS() call", verbosity.debug)
 
@@ -932,7 +938,8 @@ class NEBMover(Motion):
             # so that recalculation won't be triggered after the step.
             tmp_f = xp.asarray(self.full_f, copy=True)
             tmp_v = xp.asarray(self.full_v, copy=True)
-            tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.nebgrad
+            # the physical forces of the climbing bead, not the climbing ones
+            tmp_f[self.cl_indx] = self.climbgm.rforces.f[0]
             tmp_v[self.cl_indx] = self.nebpot
             # Forcefield results are stored as numpy arrays
             self.forces.transfer_forces_manual(

@@ -392,10 +392,6 @@ class DummyIntegrator:
                 raise ValueError(
                     "Suzuki-Chin propagation assumes Trotter springs and cannot be used with mode='eco'."
                 )
-            # coefficients to get the (baseline) trotter to sc conversion
-            self.coeffsc = xp.ones((self.beads.nbeads, 3 * self.beads.natoms))
-            self.coeffsc[::2] /= -3.0
-            self.coeffsc[1::2] /= 3.0
 
         # check stress tensor
         self._stresscheck = True

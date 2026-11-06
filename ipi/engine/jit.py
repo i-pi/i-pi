@@ -16,9 +16,9 @@ Only the dynamics that are known to work in this way are replayed (see
 a graph changes.
 
 With JAX, the whole step is compiled, including the requests to direct
-forcefields whose driver works on the arrays of the backend (e.g. the `dummy`
-potential), which must then be written with JAX operations. The steps that
-need forces from other forcefields run eagerly.
+forcefields whose driver works on the arrays of the backend and can be traced
+by jax.jit (`jax_traceable`, e.g. the `dummy` potential). The steps that need
+forces from other forcefields run eagerly.
 """
 
 # This file is part of i-PI.
@@ -136,10 +136,12 @@ class GraphStep(GraphReplay):
 
     def split(self, bead):
         """Interrupts the recording to compute the forces on `bead` eagerly,
-        unless they are already computed, or only the calls to the driver of
-        its forcefield are eager."""
+        unless they are already computed (also the force, potential and virial
+        taken from the results of the forcefield, which are host values), or
+        only the calls to the driver of its forcefield are eager."""
 
-        if bead.ufvx_.tainted() and not _eager_driver(bead.ff):
+        computed = (bead.ufvx_, bead.f_, bead.pot_, bead.vir_)
+        if any(dep.tainted() for dep in computed) and not _eager_driver(bead.ff):
             self.interrupt(partial(_compute, self.components[bead]))
 
 
@@ -163,7 +165,11 @@ class JitStep(JitReplay):
 
     def split(self, bead):
         """The forces on `bead` are computed in the compiled step only if the
-        driver of its forcefield works on the arrays of the backend."""
+        driver of its forcefield works on the arrays of the backend, and can
+        be traced by jax.jit."""
 
-        if bead.ufvx_.tainted() and not _eager_driver(bead.ff):
-            self.cannot(f"the forces of the forcefield '{bead.ff.name}' are needed")
+        ff = bead.ff
+        if bead.ufvx_.tainted() and not (
+            _eager_driver(ff) and getattr(ff.driver, "jax_traceable", False)
+        ):
+            self.cannot(f"the forces of the forcefield '{ff.name}' are needed")

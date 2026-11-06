@@ -89,7 +89,6 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
             self.bath_parameters["eps2"] = eps2
             self.bath_parameters["deltaQ"] = deltaQ
             self.bath_parameters["w_c"] = w_c * invcm2au
-            self.bath_parameters["delta"] = self.delta
         # def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
 
         except:
@@ -109,8 +108,8 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
             self.ndof = np.size(pos)
             assert self.ndof % 2 == 0, "Sorry we need an even number of ndof"
             self.nbath = (self.ndof - 2) // 2
-            self.bath1 = Harmonic_Bath_explicit(self.nbath, self.bath_parameters)
-            self.bath2 = Harmonic_Bath_explicit(self.nbath, self.bath_parameters)
+            self.bath1 = Harmonic_Bath_explicit(self.nbath, **self.bath_parameters)
+            self.bath2 = Harmonic_Bath_explicit(self.nbath, **self.bath_parameters)
             self.init = True
 
         pot = 0
@@ -124,8 +123,8 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         fy = np.zeros(x.shape)
 
         # Harmonic bath
-        pot_x, fq1, fx = self.bath1(q1, x)
-        pot_y, fq2, fy = self.bath2(q2, y)
+        pot_x, fq1, fx = self.bath1.compute_structure(q1, x)
+        pot_y, fq2, fy = self.bath2.compute_structure(q2, y)
 
         pot = pot_x + pot_y
 
@@ -145,4 +144,4 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         vir = cell * 0.0  # makes a zero virial with same shape as cell
         extras = "empty"
 
-        return pot, force, vir, extras
+        return pot.item(), force, vir, extras

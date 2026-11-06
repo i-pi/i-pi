@@ -20,17 +20,11 @@ from ipi.engine.motion.dynamics import DummyIntegrator
 
 from ipi.utils.depend import *
 from ipi.utils.constrtools import *
+from ipi.utils.constrtools import spla  # scipy.linalg, or None without scipy
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 
 from ipi.utils.messages import verbosity, warning
-
-# tries to import scipy to do the cholesky decomposition solver,
-# but falls back on numpy if it's not there
-try:
-    import scipy.linalg as spla
-except ImportError:
-    spla = None
 
 
 class ConstrainedDynamics(Dynamics):
@@ -55,6 +49,8 @@ class ConstrainedDynamics(Dynamics):
             the system temperature as PIMD calculations are done at this
             effective classical temperature.
     """
+
+    jax_support = False
 
     def __init__(
         self,
@@ -150,7 +146,7 @@ class ConstrainedDynamics(Dynamics):
 
         if csolver is None:
             self.csolver = ConstraintSolver(
-                self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2
+                self.constraint_list, tolerance=0.0001, maxit=1000, norm_order=2
             )
         else:
             if csolver["norm_order"] == -1:
@@ -254,7 +250,7 @@ class ConstraintSolver(ConstraintSolverBase):
     """
 
     def __init__(
-        self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
+        self, constraint_list, dt=1.0, tolerance=0.0001, maxit=1000, norm_order=2
     ):
         """Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and

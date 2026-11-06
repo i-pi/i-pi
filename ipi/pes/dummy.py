@@ -20,6 +20,10 @@ class Dummy_driver(object):
     # only numpy arrays. Such inputs must not be modified, nor kept after the
     # call, as they may be overwritten (e.g. when replaying CUDA graphs).
     backend_arrays = False
+    # whether `compute` can be traced by jax.jit, i.e. computes the results of
+    # JAX arrays with JAX operations: the steps that need its forces are then
+    # compiled with `--jit` and the jax backend, and run eagerly otherwise
+    jax_traceable = False
 
     def __init__(self, verbose=False, *args, **kwargs):
         """Initialized dummy drivers"""
@@ -73,6 +77,7 @@ class Zero_driver(Dummy_driver):
     """
 
     backend_arrays = True
+    jax_traceable = True
 
     def compute_structure(self, cell, pos):
         """Evaluate a single structure, with a zero energy of the same kind as pos"""

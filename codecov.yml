@@ -1,12 +1,12 @@
-# Coverage is uploaded by 7 CI jobs (2 unit-test + 2 regression-test matrix
-# entries, and the MACE, metatomic and torch-backend jobs); waits for all of
-# them before computing statuses and commenting, so that partial uploads don't
-# trigger spurious low-coverage reports. NB: after_n_builds must be kept in sync
-# with the number of jobs that upload coverage in
-# .github/workflows/{unit_tests,regression_tests,mace,metatomic,torch}.yml
+# Coverage is uploaded by 8 CI jobs (2 unit-test + 2 regression-test matrix
+# entries, and the MACE, metatomic, torch-backend and PLUMED jobs); waits for
+# all of them before computing statuses and commenting, so that partial uploads
+# don't trigger spurious low-coverage reports. NB: after_n_builds must be kept in
+# sync with the number of jobs that upload coverage in
+# .github/workflows/{unit_tests,regression_tests,mace,metatomic,torch,plumed}.yml
 codecov:
   notify:
-    after_n_builds: 7
+    after_n_builds: 8
     wait_for_ci: true
 
 coverage:
@@ -15,6 +15,12 @@ coverage:
       default:
         target: auto
         threshold: 0.5%
+    # the coverage of the changed lines is reported, without failing the checks
+    patch:
+      default:
+        informational: true
 
 comment:
-  after_n_builds: 7
+  after_n_builds: 8
+  # comments only when the coverage changes
+  require_changes: true
