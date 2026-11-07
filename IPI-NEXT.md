@@ -436,6 +436,15 @@ bugs pass, and are no longer marked.
   with the request tensors written by the graph, and its tensor results are copied (`torch._foreach_copy_`)
   into those of the recorded call, which the next graph reads; the other items (extras) replace those of the
   recorded result lists, which the depend objects hold. Drivers must not keep their input arrays.
+  Drivers that set `traceable` (operations of the backend only: no host syncs, fixed shapes; `dummy`) are called
+  inside the recorded step, which is then a single graph; their extras are fixed at the recording, as with
+  jax.jit. Without threads, drivers that take backend arrays receive the positions and the cell of the system
+  rather than copies (they must not modify them, e.g. they convert units out of place).
+- The force components collect the results of the requests of all their beads at once
+  (`ForceComponent.results`: stacked potentials, forces and virials, and the extras), and the results of each
+  bead are taken from them when read: a compiled step computes three arrays per component rather than three per
+  bead. Forces are transferred between `Forces` objects (`dump_state`, `load_state`, `transfer_forces_manual`)
+  as these results.
 - The depend objects notify a recorder (`depend.set_recorder`) of reads, writes and taints while recording.
   Before a replay, the objects that a segment reads before modifying them are refreshed, tensor scalars that
   were replaced by new objects are copied into the ones read by the graph, and host values must be
@@ -499,7 +508,8 @@ bugs pass, and are no longer marked.
   atoms) to 2.4 / 1.09 / 0.79 (10976 atoms); PET-MAD-xs PIMD-4 with 96 atoms 16.4 / 14.75 / 14.50 ms (driver
   14.1), dominated by the model.
 - Kernel fusion: at ~100 atoms the replays are bound by the number of kernels (~1.9 us each on the H100).
-  `jit.compiled` compiles a function with torch.compile when the steps are compiled with torch (`--jit`, also
+  `jit.compiled` compiles a function with torch.compile (with Inductor's `combo_kernels`, which launches
+  independent kernels of the function as one) when the steps are compiled with torch (`--jit`, also
   in the eager steps before the recording; plain call otherwise, or if torch.compile is unavailable, e.g.
   torch 2.9 on Python 3.14, or for GPUs older than compute capability 7.0); its arguments should be
   arrays, as Python scalars are compiled in as constants (hence `ThermoLangevin.T`, `T2`, `S` are backend
@@ -570,7 +580,7 @@ bugs pass, and are no longer marked.
   `depend_immutable` notifies all the reads of its stored array (also those made by writes and views), and
   full assignments replace the stored array without reading it. Unlike CUDA graphs, a trace cannot be
   split: the driver calls marked with `eager` are traced, so only direct forcefields whose driver can be
-  traced (`jax_traceable`, only `dummy`) are compiled; other forcefields (also metatomic, which converts JAX
+  traced (`traceable`, only `dummy`) are compiled; other forcefields (also metatomic, which converts JAX
   arrays to torch tensors) leave the steps eager, with a warning (they would
   need `jax.pure_callback`, i.e. a host round trip). Same trajectories as eager JAX to ~1e-15, same keys:
   NVE, NVT Langevin/SVR, PIMD with PILE_L/PILE_G, NPT isotropic and flexible, PIMD-NPT, MTS, NST. CPU,
@@ -601,6 +611,45 @@ bugs pass, and are no longer marked.
   with either backend: CUDA graphs with torch on a CUDA device, jax.jit with JAX; with numpy, or torch on the
   CPU, it is an error (a usage error of `i-pi`). `InteractiveSimulation` raises if `device` or `jit` is given
   without `backend`, which it ignored.
+
+### Overhead with a fast model: q-TIP4P/F against pure torch/JAX PIMD
+- Reference: V. Kapil's qtip4pf-python (64 q-TIP4P/F waters, Ewald, Triton kernels, PILE_L PIMD with OBABO,
+  matrix normal modes, fixcom; pure torch: the whole step compiled with torch.compile and replayed as one CUDA
+  graph; pure JAX: one jitted step with donated state), and its `ffdirect` driver for i-PI (`batch_size=P`,
+  `safe_stride=100`, no outputs). kuma H100 (driver 560: CUDA 12.6 wheels, torch 2.10, JAX 0.10), 20 warm-up
+  and 5x100 timed steps. The kernels of this model are launch-bound (1.2-3 µs each): the time of a step is set
+  by the number of kernels (torch) and by the host work per step (JAX), not by the arithmetic.
+- µs/step (fp32 forces) at P = 1 / 8, same node, before -> after: i-PI torch `--jit` 452 / 686 -> 125 / 226
+  (pure torch 86 / 125), i-PI JAX `--jit` 174 / 275 -> 153 / 182 (pure JAX 103 / 121); fp64 forces are similar.
+  Tables and plots of each version in `results-current.md` and `results-history/` (not tracked).
+- What matters, by decreasing gain: traceable drivers recorded in the CUDA graph (rather than an eager driver
+  call between two segments, ~0.3 ms of Python and Inductor wrapper per call); the per-mode kinetic energy of
+  `_langevin_step` as row sums (a batched matrix product was a cuBLAS GEMV with a split-K reduction, ~17 µs
+  twice per step); the results of all the beads held by the force components (each output of a jitted call costs ~1.7 µs
+  on the host, each input ~0.5 µs: 3P per-bead outputs cost ~50 µs at P=8); no copies of the inputs of the
+  requests (3P small copies per step); the EXIT file looked for at most once per second (~10 µs per step on a
+  network filesystem); checkpoints that store JAX arrays as they are (no eager JAX operation every
+  `safe_stride` steps).
+- Tried and not kept: `jax.lax.optimization_barrier` around the Langevin noise and the COM sum, as in the pure
+  JAX code (+7 µs at P=1: JAX is bound by the host, not by the fused kernels), donating the inputs that the JAX
+  step overwrites (±2 µs), a `depend_array.update(func, *args)` with which a compiled function updates a depend
+  array in place, used for the COM removal and the energy exchanged with the ensemble (-10 µs with torch).
+  Comparisons of versions must be paired runs on the same GPU and CPU cores: JAX timings differ by 5-15%
+  between nodes, and between the GPUs of a node.
+- Compiler settings (paired runs, µs/step at P = 1 / 8, i-PI torch / pure torch), set for the whole process:
+  Inductor's `combo_kernels=True` -6 / -21 and -7 / -17, `split_reductions=False` -6 / -17 and -5 / -13, both
+  -11 / -23 and -13 / -18. Most of the gain at P=8 is in the compiled evaluator of the model (e.g. its per-bead
+  reductions), whose compilation is left to the driver. `jit.compiled` passes `combo_kernels=True` to its own
+  torch.compile calls: the two outputs of `_com_motion` take one kernel instead of two (72 / 117 kernels per
+  step instead of 76 / 121), -4 to -8 µs at all P, mixed and double (job 4780284). `split_reductions=False`
+  trades the parallelism of the reductions for fewer kernels, which suits small systems only. JAX:
+  `--xla_gpu_graph_min_graph_size=1` and preallocation change 0-4 µs; the platform allocator is 2-4x slower.
+- Where the rest goes. Torch is bound by the device (~15-30 µs of host work per step): 72 kernels per step
+  at P=1 against 48 (P=8: 117 against 60), of which 13 (26) come from the driver adapter (per-bead fp32 casts
+  and stacks, unit conversions, which the pure code merges in its compiled step), and most of the others from
+  depend-level operations (each kick, drift, thermostat output, COM removal or random draw is its own kernel).
+  JAX is bound by the host: the compiled call alone takes ~120 / ~137 µs (pure JAX's whole step ~105 / ~121),
+  the replay ~20-30 µs of Python, the simulation loop ~10 µs (including a checkpoint every 100 steps).
 
 ### Multiple systems and replica exchange
 - Systems are stepped in threads by default (`threading='true'`). With in-process forcefields this only adds
