@@ -219,12 +219,11 @@ class MetatomicDriver(Dummy_driver):
         # to ensure compatibility with single-device methods
         self.model = self.models[0]
         self.device = self.devices[0]
-        # one set of neighbor list calculators per device, as they are not
-        # thread-safe and keep state between calls
-        self._nl_calculators = [
-            vesin_metatomic.neighbor_lists_for_model("A", model, skin=self.skin)
-            for model in self.models
-        ]
+        # neighbor list calculators for each device (they are not thread-safe)
+        # and each structure in a batch (e.g. each bead or replica): they keep
+        # a Verlet list between calls, which can only be reused if they always
+        # see the same structure. They are created when first needed.
+        self._nl_calculators = [[] for _ in self.models]
 
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
@@ -306,7 +305,19 @@ class MetatomicDriver(Dummy_driver):
             outputs=outputs,
         )
 
-    def _prepare_system(self, cell, pos, device_idx=0):
+    def _neighbor_lists(self, device_idx, batch_idx):
+        """Neighbor list calculators for the structure at position `batch_idx`
+        in the batches evaluated on device `device_idx`."""
+        calculators = self._nl_calculators[device_idx]
+        while len(calculators) <= batch_idx:
+            calculators.append(
+                vesin_metatomic.neighbor_lists_for_model(
+                    "A", self.models[device_idx], skin=self.skin
+                )
+            )
+        return calculators[batch_idx]
+
+    def _prepare_system(self, cell, pos, device_idx=0, batch_idx=0):
         """Prepares a metatomic System object from cell and positions, given as
         numpy arrays or torch tensors."""
         device = self.devices[device_idx]
@@ -334,7 +345,7 @@ class MetatomicDriver(Dummy_driver):
         # holds the system (the threads of the executor start on device 0); the
         # index -1 of the systems on the CPU leaves the current device as it is
         with torch.cuda.device(positions.device.index if positions.is_cuda else -1):
-            for calculator in self._nl_calculators[device_idx]:
+            for calculator in self._neighbor_lists(device_idx, batch_idx):
                 calculator.add_neighbor_list(system)
 
         return system, strain
@@ -610,8 +621,8 @@ class MetatomicDriver(Dummy_driver):
         strain_batch = []
 
         # Prepare systems on the target device
-        for c, p in zip(cell_chunk, pos_chunk):
-            sy, st = self._prepare_system(c, p, device_idx=device_idx)
+        for i, (c, p) in enumerate(zip(cell_chunk, pos_chunk)):
+            sy, st = self._prepare_system(c, p, device_idx=device_idx, batch_idx=i)
             sys_batch.append(sy)
             strain_batch.append(st)
 
