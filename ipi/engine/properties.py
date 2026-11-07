@@ -15,6 +15,10 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.motion.driven_dynamics import DrivenDynamics
+from ipi.engine.motion.dynamics import (
+    NVEIntegratorWithFriction,
+    NVTIntegratorWithFriction,
+)
 from ipi.utils.softexit import softexit
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
@@ -473,6 +477,46 @@ class Properties:
                 "dimension": "energy",
                 "help": "The total spring potential energy between the beads of all the ring polymers in the system.",
                 "func": (lambda: self.nm.vspring / self.beads.nbeads),
+            },
+            "friction_energy_mf": {
+                "dimension": "energy",
+                "help": "The mean-field potential energy contributed by friction.",
+                # TODO: can this be managed nicer?
+                "func": (
+                    lambda: (
+                        self.motion.integrator.friction.energy_mf / self.beads.nbeads
+                        if isinstance(
+                            self.motion.integrator,
+                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
+                        )
+                        else 0.0
+                    )
+                ),
+            },
+            "friction_ediss": {
+                "dimension": "energy",
+                "help": "Cumulative energy dissipated to the bath (positive system->bath)",
+                # TODO: can this be managed nicer?
+                "func": (
+                    lambda: (
+                        self.motion.integrator.friction.ediss / self.beads.nbeads
+                        if isinstance(
+                            self.motion.integrator,
+                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
+                        )
+                        else 0.0
+                    )
+                ),
+            },
+            "friction_gamma_reconstruction_error": {
+                "dimension": "undefined",
+                "help": "Maximum relative error between driver Gamma and J^T J at the current step.",
+                "func": self.get_friction_gamma_reconstruction_error,
+            },
+            "friction_auxiliary_norm": {
+                "dimension": "undefined",
+                "help": "Euclidean norm of the non-Markovian auxiliary bath state.",
+                "func": self.get_friction_auxiliary_norm,
             },
             "kinetic_md": {
                 "dimension": "energy",
@@ -970,6 +1014,19 @@ class Properties:
                                see doi:10.1063/5.0008720.""",
             },
         }
+
+    def get_friction_gamma_reconstruction_error(self):
+        """Return the current maximum relative Gamma versus J^T J error."""
+        friction = self.motion.integrator.friction
+        _ = friction.gamma
+        return float(friction._gamma_reconstruction_error)
+
+    def get_friction_auxiliary_norm(self):
+        """Return the Euclidean norm of the current auxiliary bath state."""
+        friction = self.motion.integrator.friction
+        bath = getattr(friction, "bath", None)
+        state = None if bath is None else getattr(bath, "s", None)
+        return 0.0 if state is None else float(np.linalg.norm(to_numpy(state)))
 
     def bind(self, system):
         """Binds the necessary objects from the system to calculate the
@@ -3130,6 +3187,25 @@ class Trajectories:
                 "help": """The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See "extras". """,
                 "func": (lambda: self.system.ensemble.bias.extras),
             },
+            "friction_coupling_jacobian": {
+                "dimension": "undefined",
+                "help": """The canonical per-bead, channel-resolved coupling Jacobian used by friction dynamics.
+                      Written as a matrix block per step, one file per bead unless bead output is selected.""",
+                "func": self.get_friction_coupling_jacobian,
+            },
+            "friction_gamma_matrix": {
+                "dimension": "undefined",
+                "help": """The canonical per-bead friction matrix Gamma supplied by the driver and validated against J^T J.
+                      Written as a matrix block per step, one file per bead unless bead output is selected.""",
+                "func": self.get_friction_gamma_matrix,
+            },
+            "friction_gamma_active_matrix": {
+                "dimension": "undefined",
+                "help": """The canonical per-bead friction matrix Gamma restricted to the active
+                      Cartesian DOFs declared by the driver. Written as a compact matrix block per
+                      step, one file per bead.""",
+                "func": self.get_friction_gamma_active_matrix,
+            },
             "isotope_zetatd": {
                 "dimension": "undefined",
                 "help": """Thermodynamic isotope fractionation direct estimator in the form of ratios of partition functions. Takes two arguments, 'alpha' , which gives the
@@ -3336,6 +3412,61 @@ class Trajectories:
         zetasc[:, 2] = np.exp(-1.0 * beta * zetasc[:, 0])
 
         return zetasc.reshape(nat * 3)
+
+    def _get_motion_friction(self):
+        """Returns bound Friction object from the active integrator, if present."""
+        integ = getattr(self.system.motion, "integrator", None)
+        if integ is None or not hasattr(integ, "friction"):
+            raise ValueError(
+                "friction trajectory outputs require a friction-enabled integrator (nve-f or nvt-f)."
+            )
+        return integ.friction
+
+    def get_friction_coupling_jacobian(self):
+        """Return the coupling Jacobian as (nbeads, nchannels, ndof)."""
+        friction = self._get_motion_friction()
+        jacobian = np.asarray(to_numpy(friction.coupling_jacobian), dtype=float)
+        if jacobian.ndim == 0:
+            # Static scalar friction: make it printable in matrix form.
+            jacobian = jacobian.reshape((1, 1, 1))
+        elif jacobian.ndim == 2:
+            jacobian = jacobian.reshape((1,) + jacobian.shape)
+        elif jacobian.ndim != 3:
+            raise ValueError(
+                f"friction.coupling_jacobian has unsupported ndim={jacobian.ndim}, expected 0/2/3."
+            )
+        return jacobian
+
+    def get_friction_gamma_matrix(self):
+        """Returns Gamma matrix as (nbeads, ndof, ndof)."""
+        friction = self._get_motion_friction()
+        gamma = np.asarray(to_numpy(friction.gamma), dtype=float)
+        if gamma.ndim == 0:
+            gamma = gamma.reshape((1, 1, 1))
+        elif gamma.ndim == 2:
+            gamma = gamma.reshape((1,) + gamma.shape)
+        elif gamma.ndim != 3:
+            raise ValueError(
+                f"friction.gamma has unsupported ndim={gamma.ndim}, expected 0/2/3."
+            )
+        return gamma
+
+    def get_friction_gamma_active_matrix(self):
+        """Return Gamma restricted to the driver-declared active Cartesian DOFs."""
+        friction = self._get_motion_friction()
+        # Evaluating Gamma also validates J^T J and configures the active DOFs.
+        gamma = self.get_friction_gamma_matrix()
+        active = getattr(friction, "_friction_dof_idx", None)
+        if active is None:
+            if getattr(friction, "variable_friction", False):
+                raise ValueError(
+                    "Variable friction did not declare active Cartesian DOFs."
+                )
+            return gamma
+        active = np.asarray(active, dtype=int).reshape(-1)
+        if active.size == 0:
+            raise ValueError("Friction active Cartesian DOF list is empty.")
+        return gamma[:, active, :][:, :, active]
 
     def __getitem__(self, key):
         """Retrieves the item given by key.

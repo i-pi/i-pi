@@ -14,11 +14,12 @@ import numpy as np
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, to_numpy
 from ipi.utils.jit import compiled
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
+from ipi.engine.friction import Friction
 
 
 class Dynamics(Motion):
@@ -56,6 +57,7 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms_dof=None,
         nmts=None,
+        friction=None,
         efield=None,
         bec=None,
     ):
@@ -84,6 +86,11 @@ class Dynamics(Motion):
                 )
             self.thermostat = thermostat
 
+        if friction is None:
+            self.friction = Friction()
+        else:
+            self.friction = friction
+
         if nmts is None or len(nmts) == 0:
             self.nmts_ = depend_array(
                 name="nmts", value=np.asarray([1], int), host=True
@@ -98,10 +105,20 @@ class Dynamics(Motion):
         else:
             self.barostat = barostat
         self.enstype = mode
+        if splitting == "symmetric-gle" and mode != "nve-f":
+            raise ValueError(f"{splitting} splitting requires dynamics mode='nve-f'.")
         if self.enstype == "nve":
             self.integrator = NVEIntegrator()
+        elif self.enstype == "nve-f":
+            self.integrator = NVEIntegratorWithFriction(
+                friction=self.friction,
+            )
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator()
+        elif self.enstype == "nvt-f":
+            self.integrator = NVTIntegratorWithFriction(
+                friction=self.friction,
+            )
         elif self.enstype == "nvt-cc":
             self.integrator = NVTCCIntegrator()
         elif self.enstype == "npt":
@@ -198,6 +215,7 @@ class Dynamics(Motion):
 
         self.ensemble.add_econs(self.thermostat.ethermo_)
         self.ensemble.add_econs(self.barostat.ebaro_)
+        self.ensemble.add_econs(self.friction.energy_mf_)
 
         # adds the potential, kinetic energy and the cell Jacobian to the ensemble
         self.ensemble.add_xlpot(self.barostat.pot_)
@@ -279,13 +297,23 @@ class DummyIntegrator:
         return dtl
 
     def get_tdt(self):
-        if self.splitting == "obabo":
+        if self.splitting in ("obabo", "ofbabfo"):
             return self.dt * 0.5
-        elif self.splitting == "baoab":
+        elif self.splitting in ("baoab", "bafofab"):
             return self.dt
         else:
             raise ValueError(
                 "Invalid splitting requested. Only OBABO and BAOAB are supported."
+            )
+
+    def get_fdt(self):
+        if self.splitting in ("fbabf", "ofbabfo", "bafofab"):
+            return self.dt * 0.5
+        elif self.splitting in ("bafab",):
+            return self.dt
+        else:
+            raise ValueError(
+                "Invalid splitting requested. Only FBABF, BAFAB, OFBABFO and BAFOFAB are supported."
             )
 
     def bind(self, motion):
@@ -595,6 +623,159 @@ class NVEIntegrator(DummyIntegrator):
         self.mtsprop(0)
 
 
+class NVEIntegratorWithFriction(NVEIntegrator):
+    """
+    Integrator object for constant Number of particles, Volume, and Energy (NVE) simulations with friction.
+    """
+
+    def __init__(
+        self,
+        friction: Friction,
+    ):
+        assert friction is not None, "Friction must be provided to use nve-f integrator"
+        self.friction = friction
+        super().__init__()
+
+    def bind(self, motion):
+        super().bind(motion)
+        if self.splitting == "symmetric-gle":
+            self._validate_symmetric_gle()
+        self.friction.bind(motion)
+        if self.splitting == "symmetric-gle" and len(self.fixatoms_dof):
+            # Restricted substrate constraints: fixed coordinates cannot be bath-active.
+            if not self.friction.variable_friction:
+                raise ValueError(
+                    "Fixed substrate support requires variable friction with explicit active DOFs"
+                )
+            qfix = to_numpy(self.beads.q)[:, self.fixatoms_dof]
+            if not np.allclose(qfix, qfix[0], rtol=0, atol=1e-10):
+                raise ValueError("Fixed substrate ring polymers must be collapsed")
+            if not np.allclose(
+                to_numpy(self.beads.p)[:, self.fixatoms_dof], 0, atol=1e-12
+            ):
+                raise ValueError("Fixed substrate momenta must start at zero")
+            self._fixed_substrate_q = xp.asarray(qfix.copy())
+            self._fixed_bath_checked = False
+
+    def _meanfield_kick(self, dt):
+        if self.splitting == "symmetric-gle" and len(self.fixatoms_dof):
+            if self.friction.debug_mf_mode == "on":
+                self.beads.p_[:, self.activeatoms_mask] += (
+                    self.friction.force_mf[:, self.activeatoms_mask] * dt
+                )
+        else:
+            self.friction.mf_step(dt)
+
+    def _validate_symmetric_gle(self):
+        """Validate the supported closed-ring, single-timestep setup."""
+        if self.friction.bath_mode != "non-markovian":
+            raise ValueError("symmetric-gle requires a non-markovian friction bath.")
+        if len(self.nmts) != 1 or self.nmts[0] != 1:
+            raise ValueError(
+                "symmetric-gle requires a single force timestep (nmts=[1])."
+            )
+        if self.nm.mode != "rpmd" or self.nm.propagator != "exact":
+            raise ValueError(
+                "symmetric-gle requires normal_modes mode='rpmd', propagator='exact'."
+            )
+        if len(self.nm.open_paths) or len(self.nm.bosons):
+            raise ValueError(
+                "symmetric-gle requires closed, distinguishable-particle ring polymers."
+            )
+        if self.fixcom:
+            raise ValueError("symmetric-gle requires fixcom=False.")
+
+    def _step_symmetric_gle(self):
+        """Symmetric bath coupling around exact free-ring propagation."""
+        if (
+            self.splitting == "symmetric-gle"
+            and len(self.fixatoms_dof)
+            and not self._fixed_bath_checked
+        ):
+            # The first step runs after socket forcefields have been started.
+            jac = to_numpy(self.friction.coupling_jacobian)
+            active = self.friction._active_coupling_dofs(jac.shape[-1])
+            if np.intersect1d(active, self.fixatoms_dof).size:
+                raise ValueError("Fixed coordinates must not be bath-active")
+            self._fixed_bath_checked = True
+        halfdt = 0.5 * self.dt
+        bath = self.friction.bath
+        bath.os_step(halfdt)
+        self.pstep(0)
+        self._meanfield_kick(halfdt)
+        bath.bp_f_step(halfdt)
+
+        # The symmetric ordering brackets free propagation with the
+        # reciprocal auxiliary drive. A_omega and B_s do not commute for
+        # internal modes (or position-dependent factors).
+        bath.bs_step(halfdt)
+
+        # With nmts=[1], qdt (and nm.dt) is dt/2. Two exact half propagations
+        # implement A_omega(dt); qcstep handles the centroid separately.
+        for _ in range(2):
+            self.qcstep()
+            self.nm.free_qstep()
+
+        if len(self.fixatoms_dof):
+            # Remove roundoff from transforming collapsed, immobile bead coordinates.
+            # Refresh Cartesian buffers after normal-mode propagation before
+            # a partial write, preserving the newly propagated active coordinates.
+            _ = self.beads.q, self.beads.p
+            self.beads.q_[:, self.fixatoms_dof] = self._fixed_substrate_q
+            self.beads.p_[:, self.fixatoms_dof] = 0.0
+
+        # Direct bath calls do not enable the fixed-coordinate cache used by
+        # bath.step: the Jacobian is refreshed at the new bead coordinates.
+        bath.bs_step(halfdt)
+        bath.bp_f_step(halfdt)
+        self._meanfield_kick(halfdt)
+        self.pstep(0)
+        bath.os_step(halfdt)
+
+    def fstep(self):
+        """Velocity Verlet friction step"""
+
+        self.friction.step(self.get_fdt())
+
+    def step(self, step=None):
+        """Does one simulation time step.
+
+        a
+          is propagation of positions
+        b
+          is propagation of momenta with forces
+        f
+          is propagation of momenta with friction
+        """
+
+        if self.splitting == "symmetric-gle":
+            self._step_symmetric_gle()
+
+        elif self.splitting == "fbabf":
+            # friction is applied for dt/2
+            self.fstep()
+            self.pconstraints()
+
+            # forces are integerated for dt with MTS.
+            self.mtsprop(0)
+
+            # friction is applied for dt/2
+            self.fstep()
+            self.pconstraints()
+
+        elif self.splitting == "bafab":
+            self.mtsprop_ba(0)
+            # friction is applied for dt
+            self.fstep()
+            self.pconstraints()
+            self.mtsprop_ab(0)
+
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. NVE-f supports fbabf, bafab and symmetric-gle."
+            )
+
+
 class NVTIntegrator(NVEIntegrator):
     """Integrator object for constant temperature simulations.
 
@@ -632,6 +813,75 @@ class NVTIntegrator(NVEIntegrator):
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
+
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. Only OBABO and BAOAB are supported for NVT integrator."
+            )
+
+
+class NVTIntegratorWithFriction(NVTIntegrator):
+    """
+    Integrator object for constant Number of particles, Volume, and Temperature (NVT) simulations with friction.
+    """
+
+    def __init__(
+        self,
+        friction: Friction,
+    ):
+        assert friction is not None, "Friction must be provided to use nvt-f integrator"
+        self.friction = friction
+        super().__init__()
+
+    def bind(self, motion):
+        super().bind(motion)
+        self.friction.bind(motion)
+
+    def fstep(self):
+        """Velocity Verlet friction step"""
+
+        self.friction.step(self.get_fdt())
+
+    def step(self, step=None):
+        """Does one simulation time step.
+
+        a
+          is propagation of positions
+        b
+          is propagation of momenta with forces
+        f
+          is propagation of momenta with friction
+        o
+            is update of momenta with thermostat
+        """
+
+        if self.splitting == "ofbabfo":
+            # Thermostat and friction is applied for dt/2
+            self.tstep()
+            self.fstep()
+            self.pconstraints()
+
+            # forces are integerated for dt with MTS.
+            self.mtsprop(0)
+
+            # friction and thermostat is applied for dt/2
+            self.fstep()
+            self.tstep()
+            self.pconstraints()
+
+        elif self.splitting == "bafofab":
+            self.mtsprop_ba(0)
+            # friction and thermostat is applied for dt
+            self.fstep()
+            self.tstep()
+            self.fstep()
+            self.pconstraints()
+            self.mtsprop_ab(0)
+
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. Only OFBABFO and BAFOFAB are supported for NVT-f integrator."
+            )
 
 
 class NVTCCIntegrator(NVTIntegrator):

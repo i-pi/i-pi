@@ -1,8 +1,8 @@
-"""Harmonic potential"""
+"""Double-well potential with an exact, unscaled coupling and Jacobian."""
 
 try:
     from .doublewell import DoubleWell_driver
-except:
+except ImportError:
     from doublewell import DoubleWell_driver
 
 import numpy as np
@@ -27,16 +27,12 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_with_friction_driver(DoubleWell_driver):
-    r"""Adds to the double well potential the calculation of the friction tensor.
+    r"""Double well with coupling F(x) = x * SD(x) in each x channel.
 
-    friction(q) = eta0 [\partial sd(q) \partial q ]^2
-    with
-    q = position, and
-    sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
-
-    DW+fric driver expects 8 arguments.
-        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ
-        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1
+    SD(x) = 1 + eps1*exp(-x**2/(2*deltaQ**2)) + eps2*tanh(x/deltaQ).
+    Canonical extras contain dF/dQ and its Gram matrix. The bath parameters
+    carry the friction strength. Omit eta0 or set it to zero; nonzero values
+    are rejected. Zero is a compatibility placeholder, not a friction switch.
     """
 
     def __init__(
@@ -50,31 +46,31 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         delta=None,
         deltaQ=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
+        if eta0 is not None and float(eta0) != 0.0:
+            raise ValueError(
+                "eta0 no longer scales the double-well coupling. Omit eta0 or "
+                "set it to zero, and specify friction strength in the bath "
+                "spectrum/matrices (and mean-field coefficients), consistently. "
+                "eta0=0 does not disable the bath."
+            )
 
         try:
-            w_b = w_b * invcm2au
-            v0 = v0 * invcm2au
-            self.delta = delta * A2au
-            self.eta0 = eta0
-            self.eps1 = eps1
-            self.eps2 = eps2
-            self.deltaQ = deltaQ
-            self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
-            self.A = -0.5 * m * (w_b) ** 2
-            self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+            self.eps1 = float(eps1)
+            self.eps2 = float(eps2)
+            self.deltaQ = float(deltaQ)
 
         except:
             sys.exit(self.__doc__)
 
-        super().__init__(*args, **kwargs)
+        super().__init__(w_b=w_b, v0=v0, m=m, delta=delta, *args, **kwargs)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""
-        assert pos.shape == (1, 3), "We expect pos.shape (1,3), but we have {}".format(
-            pos.shape
-        )
+        assert (
+            pos.ndim == 2 and pos.shape[1] == 3
+        ), "We expect pos.shape (natoms,3), but we have {}".format(pos.shape)
 
     def SD(self, q):
         """Auxiliary function to compute friction tensor"""
@@ -91,15 +87,30 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         return dSD_dq
 
-    def get_friction_tensor(self, pos):
-        """Function that computes spatially dependent friction tensor"""
-
+    def get_diffusion_coefficient(self, pos):
+        """Function that computes the array of diffusion coefficients."""
         self.check_dimensions(pos)
-        x = pos[0, 0]
-        friction_tensor = np.zeros((3, 3))
+        natoms = pos.shape[0]
+        diffusion_coefficient = np.zeros((natoms, 3 * natoms))
+        for iatom, q in enumerate(pos[:, 0]):
 
-        friction_tensor[0, 0] = self.eta0 * self.dSD_dq(x) ** 2
-        return friction_tensor
+            # Bath parameters carry the friction strength; this factor is unscaled.
+            diffusion_coefficient[iatom, 3 * iatom] = self.dSD_dq(q)
+        return diffusion_coefficient
+
+    def get_friction_coupling(self, pos):
+        """Returns the separable coupling g(q)=q*SD(q) for each bath channel."""
+        self.check_dimensions(pos)
+        return np.asarray([q * self.SD(q) for q in pos[:, 0]], dtype=float)
+
+    def get_diffusion_and_friction(self, pos):
+        """Function that computes the vector of diffusion coefficients
+        and its outer product with itself, i.e., the static friction tensor.
+        """
+        diffusion_coefficient = self.get_diffusion_coefficient(pos)
+        friction_tensor = diffusion_coefficient.T @ diffusion_coefficient
+
+        return diffusion_coefficient, friction_tensor
 
     def compute_structure(self, cell, pos):
         """DoubleWell potential l"""
@@ -108,6 +119,25 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             DoubleWell_with_friction_driver, self
         ).compute_structure(cell, pos)
 
-        friction_tensor = self.get_friction_tensor(pos)
-        extras = json.dumps({"friction": friction_tensor.tolist()})
+        diffusion_coefficient, friction_tensor = self.get_diffusion_and_friction(pos)
+        friction_coupling = self.get_friction_coupling(pos)
+
+        extras = json.dumps(
+            {
+                "friction_coupling_jacobian": diffusion_coefficient.tolist(),
+                "friction_gamma": friction_tensor.tolist(),
+                "friction_meta": {
+                    "schema": "ipi_friction_v1",
+                    "active_atoms": list(range(pos.shape[0])),
+                    "channel_labels": [
+                        f"atom_{iatom}_x" for iatom in range(pos.shape[0])
+                    ],
+                    "jacobian_units": "ipi_internal_mass_scaled",
+                    "gamma_units": "ipi_internal_mass_scaled",
+                },
+                "friction": friction_tensor.tolist(),
+                "diffusion_coefficient": diffusion_coefficient.tolist(),
+                "friction_coupling": friction_coupling.tolist(),
+            }
+        )
         return pot, force, vir, extras
