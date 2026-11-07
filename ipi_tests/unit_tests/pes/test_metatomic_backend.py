@@ -26,13 +26,6 @@ LJ = Path(__file__).resolve().parents[3] / "examples" / "clients" / "metatomic" 
 devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
 
 
-@pytest.fixture
-def numpy_backend():
-    """Restores the numpy backend after the test."""
-    yield
-    ab.set_backend("numpy")
-
-
 def nickel():
     """Returns the cell (lattice vectors as columns) and the positions of the
     nickel structure, in atomic units."""
@@ -88,7 +81,7 @@ def write_input(nbeads, device, rotations=False):
     else:
         ff = ff.replace("name='lj'", "name='ff'")
     return f"""
-<simulation verbosity='quiet' threading='false'>
+<simulation verbosity='quiet' interleave='false'>
   {ff}
   <total_steps>10</total_steps>
   <output prefix='lj'/>
@@ -108,48 +101,38 @@ def write_input(nbeads, device, rotations=False):
 """
 
 
-def forces(xml, backend, device):
+def forces(simulation, xml, backend, device):
     """Returns forces, potentials and virial of the initial configuration."""
 
-    from ipi.scripting import InteractiveSimulation
-
-    sim = InteractiveSimulation(xml, backend=backend, device=device)
-    try:
+    with simulation(xml, backend=backend, device=device) as sim:
         f = sim.syslist[0].forces
         return [np.array(ab.to_numpy(x)) for x in (f.f, f.pots, f.vir)]
-    finally:
-        sim.stop()
 
 
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("nbeads", [1, 4])
-def test_forces_stay_on_device(
-    nbeads, device, numpy_backend, strict_torch, tmp_path, monkeypatch
-):
+def test_forces_stay_on_device(nbeads, device, simulation, strict_torch, monkeypatch):
     """With the torch backend, positions and forces are not converted to numpy"""
 
-    monkeypatch.chdir(tmp_path)
     xml = write_input(nbeads, device)
-    reference = forces(xml, "numpy", "cpu")
+    reference = forces(simulation, xml, "numpy", "cpu")
 
     def no_conversion(x):
         raise AssertionError("the request was converted to numpy")
 
     monkeypatch.setattr(forcefields, "to_numpy", no_conversion)
-    results = forces(xml, "torch", device)
+    results = forces(simulation, xml, "torch", device)
     for a, b in zip(reference, results):
         assert np.allclose(a, b, rtol=1e-12, atol=1e-14)
 
 
 @pytest.mark.parametrize("device", devices)
-def test_rotations_around_backend_forcefield(
-    device, numpy_backend, strict_torch, tmp_path, monkeypatch
-):
+def test_rotations_around_backend_forcefield(device, simulation, strict_torch):
     """The rotational average works on the results of a forcefield that works
     on the arrays of the backend, and leaves the LJ forces unchanged"""
 
-    monkeypatch.chdir(tmp_path)
-    reference = forces(write_input(2, device), "torch", device)
-    results = forces(write_input(2, device, rotations=True), "torch", device)
+    reference = forces(simulation, write_input(2, device), "torch", device)
+    xml = write_input(2, device, rotations=True)
+    results = forces(simulation, xml, "torch", device)
     for a, b in zip(reference, results):
         assert np.allclose(a, b, rtol=1e-10, atol=1e-12)

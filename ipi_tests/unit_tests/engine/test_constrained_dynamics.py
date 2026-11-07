@@ -4,11 +4,12 @@
 # i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 import ipi.utils.array_backend as ab
-from ipi.utils.prng import Random
 from ipi.utils.units import Elements, unit_to_internal
 
 try:
@@ -22,7 +23,7 @@ except ImportError:
 # initial geometry, bond and angle constraints with explicit values,
 # bond constraints only, and Eckart constraints
 XML = """
-<simulation verbosity='quiet' threading='false' safe_stride='100000000'>
+<simulation verbosity='quiet' interleave='false' safe_stride='100000000'>
   <ffdirect name='ff'><pes>harmonic</pes><parameters>{k1: 1e-2}</parameters></ffdirect>
   <total_steps>1000</total_steps>
   <output prefix='simulation'/>
@@ -76,18 +77,16 @@ def write_init():
     return unit_to_internal("length", "angstrom", 1.0) * pos
 
 
-def run(backend, device, nsteps=10):
+def run(simulation, backend, device, nsteps=10):
     """Runs nsteps of constrained dynamics, returning the positions (as an
     array of shape (natoms, 3)) and the conserved quantity at each step."""
 
-    from ipi.scripting import InteractiveSimulation
-
-    sim = InteractiveSimulation(XML, backend=backend, device=device)
     traj = []
-    for step in range(nsteps):
-        sim.run_step(step)
-        q = np.array(ab.to_numpy(sim.syslist[0].beads.q)).reshape(-1, 3)
-        traj.append((q, float(sim.properties("conserved"))))
+    with simulation(XML, backend=backend, device=device) as sim:
+        for step in range(nsteps):
+            sim.run_step(step)
+            q = np.array(ab.to_numpy(sim.syslist[0].beads.q)).reshape(-1, 3)
+            traj.append((q, float(sim.properties("conserved"))))
     return traj
 
 
@@ -96,19 +95,12 @@ def angle(q, i, j, k):
     return np.arccos(a @ b / np.linalg.norm(a) / np.linalg.norm(b))
 
 
-@pytest.fixture
-def numpy_backend(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    yield
-    ab.set_backend("numpy")
-
-
-def test_constraints_are_enforced(numpy_backend):
+def test_constraints_are_enforced(simulation):
     """Bond lengths and angles keep their target values"""
 
     q0 = write_init()
     angstrom = unit_to_internal("length", "angstrom", 1.0)
-    for q, _ in run("numpy", "cpu"):
+    for q, _ in run(simulation, "numpy", "cpu"):
         # targets taken from the initial geometry
         for i, j in [(0, 1), (0, 2), (6, 7), (6, 8)]:
             assert np.isclose(
@@ -124,18 +116,72 @@ def test_constraints_are_enforced(numpy_backend):
         assert np.allclose(m @ q[9:12] / m.sum(), m @ q0[9:12] / m.sum(), atol=1e-8)
 
 
+def test_infinity_norm_survives_a_restart(simulation):
+    """The infinity norm of the solver, given as norm_order -1, is stored as -1"""
+
+    write_init()
+    xml = XML.replace("<norm_order>2</norm_order>", "<norm_order>-1</norm_order>")
+    with simulation(xml) as sim:
+        sim.run(steps=1, write_outputs=False)
+    with simulation(Path("RESTART").read_text()) as sim:
+        assert sim.syslist[0].motion.csolver.norm_order == float("inf")
+
+
 @pytest.mark.parametrize("device", devices)
-def test_constrained_backend_equivalence(
-    device, numpy_backend, strict_torch, monkeypatch
-):
+def test_constrained_backend_equivalence(device, simulation, strict_torch, numpy_draws):
     """torch follows the numpy trajectory when it draws the same random numbers"""
 
-    def gvec(self, shape):
-        return ab.xp.asarray(self.gvec_serial(shape))
-
-    monkeypatch.setattr(Random, "gvec_torch", gvec)
     write_init()
-    reference = run("numpy", "cpu")
-    for (qr, cr), (q, c) in zip(reference, run("torch", device)):
+    reference = run(simulation, "numpy", "cpu")
+    for (qr, cr), (q, c) in zip(reference, run(simulation, "torch", device)):
         assert np.allclose(q, qr, rtol=1e-10, atol=1e-12)
         assert np.isclose(c, cr, rtol=1e-10)
+
+
+def bound_beads():
+    """Beads of four atoms, in a fixed random configuration."""
+
+    from ipi.engine.beads import Beads
+
+    beads = Beads(4, 1)
+    beads.m_[:] = np.array([16.0, 1.0, 1.0, 12.0])
+    beads.q_[:] = np.random.default_rng(3).normal(size=(1, 12))
+    return beads
+
+
+def test_eckart_atoms_in_any_order():
+    """The atoms of an Eckart constraint can be given in any order, with their
+    reference positions in the same order; repeated atoms are rejected"""
+
+    from ipi.utils.constrtools import EckartConstraint
+
+    beads = bound_beads()
+    reference = np.random.default_rng(5).normal(size=(4, 3))
+    ordered = EckartConstraint(np.array([0, 1, 3]), reference[[0, 1, 3]].ravel())
+    shuffled = EckartConstraint(np.array([3, 0, 1]), reference[[3, 0, 1]].ravel())
+    for constraint in (ordered, shuffled):
+        constraint.bind(beads)
+        constraint.q = beads.q[0, constraint.i3_unique]
+    # the rotational components vanish when the atoms are at the origin
+    assert np.abs(ordered.g[3:]).min() > 1e-2
+    np.testing.assert_allclose(shuffled.g, ordered.g, atol=1e-14)
+    np.testing.assert_allclose(shuffled.Dg, ordered.Dg, atol=1e-14)
+    with pytest.raises(ValueError, match="repeated"):
+        EckartConstraint(np.array([0, 1, 1]), [])
+
+
+def test_bond_jacobian_does_not_depend_on_the_targets():
+    """Changing the target of a bond leaves its Jacobian, and the factorization
+    of the Gram matrix, up to date"""
+
+    from ipi.utils.constrtools import RigidBondConstraint
+
+    constraint = RigidBondConstraint(np.array([[0, 1], [0, 2]]), [1.0, 1.2])
+    beads = bound_beads()
+    constraint.bind(beads)
+    constraint.qprev = beads.q[0, constraint.i3_unique]
+    constraint.GramChol
+    constraint.constraint_values = np.array([1.5, 1.1])
+    assert not constraint.Dg_.tainted()
+    assert not constraint.GramChol_.tainted()
+    assert constraint.g_.tainted()

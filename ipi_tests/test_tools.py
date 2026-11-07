@@ -13,6 +13,8 @@ import tempfile
 import time
 import glob
 
+import pytest
+
 from ipi.scripting import InteractiveSimulation
 from ipi.utils.softexit import softexit
 
@@ -20,6 +22,30 @@ from ipi.utils.softexit import softexit
 # --ipi-device pytest options (see ipi_tests/conftest.py)
 ipi_backend = "numpy"
 ipi_device = "cpu"
+# whether the MPI end-to-end tests run (--ipi-mpi)
+ipi_mpi = False
+
+
+def numpy_draws():
+    """The methods of `Random` that draw the Gaussian and Gamma arrays of the
+    torch and JAX backends, replaced by draws from the numpy generator, so that
+    runs with these backends follow the numpy random numbers. Returns them as a
+    dictionary {name: method}."""
+
+    from ipi.utils import array_backend
+    from ipi.utils.prng import Random
+
+    def gvec(self, shape):
+        return array_backend.xp.asarray(self.gvec_serial(shape))
+
+    def gammavec(self, k, shape):
+        return array_backend.xp.asarray(Random.gammavec(self, k, shape))
+
+    return {
+        f"{name}_{backend}": method
+        for name, method in [("gvec", gvec), ("gammavec", gammavec)]
+        for backend in ("torch", "jax")
+    }
 
 
 def _socket_ready(client):
@@ -122,7 +148,9 @@ def copy_tree(src, dst):  # emulates distutils copy_tree
 
 clean_all = False
 debug = False
-TIMEOUT = 30
+# time after which a regression test is considered hung: the runs under coverage,
+# which follows the switches of the greenlets, are about 1.5 times slower
+TIMEOUT = 60
 
 fortran_driver_models = [
     "dummy",
@@ -158,6 +186,33 @@ python_driver_models = [
     "rascal",
     "DoubleWell",
 ]
+
+
+# the features that the JAX backend does not support (see the getting-started
+# guide), by the folders of their regression and restart tests
+JAX_UNSUPPORTED = {
+    "CONSTRAINTS": "constrained dynamics",
+    "EXCHANGE": "bosonic exchange",
+    "GEOP": "geometry optimization",
+    "INSTANTON": "instantons",
+    "NEB": "NEB",
+    "OPEN": "open paths",
+    "PHONONS": "phonons",
+    "XTRA-JSON/DIPOLE": "the GLE thermostats",
+}
+
+
+def unsupported_marks(path):
+    """Marks a regression test in `path` as an expected failure if it needs a
+    feature that the backend of --ipi-backend does not support."""
+
+    if ipi_backend == "jax":
+        path = f"/{Path(path).as_posix()}/"
+        for folder, feature in JAX_UNSUPPORTED.items():
+            if f"/{folder}/" in path:
+                reason = f"the JAX backend does not support {feature}"
+                return [pytest.mark.xfail(reason=reason, strict=True)]
+    return []
 
 
 def get_test_list(parent, skip_noauto=True):

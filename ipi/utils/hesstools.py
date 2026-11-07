@@ -7,6 +7,7 @@
 import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils.array_backend import xp, xp_size, to_numpy
+from ipi.utils.phonontools import external_modes
 import os
 
 
@@ -43,8 +44,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
                  is returned or not
     OUT d      = non zero eigenvalues of the dynmatrix
         w      = eigenvectors without external modes
-
-    #Adapted from ipi/engine/motion/phonons.py apply_asr"""
+    """
 
     info(" @clean_hessian: asr = %s " % asr, verbosity.medium)
     # Set some useful things
@@ -61,56 +61,10 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     if asr == "none" or asr is None:
         hm = dynmat
     else:
-        # Computes the centre of mass.
-        com = (q.reshape((ii, 3)).T @ mm) / mm.sum()
-        qminuscom = q.reshape((ii, 3)) - com
-        ism = ism.reshape(-1)
-
-        if asr == "poly":
-            # Computes the moment of inertia tensor.
-            moi = xp.zeros((3, 3))
-            for k in range(ii):
-                moi -= (
-                    xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    @ xp.linalg.cross(qminuscom[k], xp.eye(3))
-                    * mm[k]
-                )
-
-            # moi is symmetric, so eigenvalues and eigenvectors are real
-            I, U = xp.linalg.eig(moi)
-            I, U = xp.real(I), xp.real(U)
-            R = qminuscom @ U
-            D = xp.zeros((6, 3 * ii))
-
-            # Computes the vectors along translations and rotations.
-            # Translations
-            D[0] = xp.asarray(np.tile([1, 0, 0], ii)) / ism
-            D[1] = xp.asarray(np.tile([0, 1, 0], ii)) / ism
-            D[2] = xp.asarray(np.tile([0, 0, 1], ii)) / ism
-            # Rotations, element (iatom, idof) goes to D[:, 3 * iatom + idof]
-            D[3] = (R[:, 1:2] * U[:, 2] - R[:, 2:3] * U[:, 1]).reshape(-1) / ism
-            D[4] = (R[:, 2:3] * U[:, 0] - R[:, 0:1] * U[:, 2]).reshape(-1) / ism
-            D[5] = (R[:, 0:1] * U[:, 1] - R[:, 1:2] * U[:, 0]).reshape(-1) / ism
-
-            for k in range(6):
-                D[k] = D[k] / xp.linalg.vector_norm(D[k])
-            # Computes the transformation matrix.
-            transfmatrix = xp.eye(3 * ii) - D.T @ D
-            hm = transfmatrix.T @ (dynmat @ transfmatrix)
-
-        elif asr == "crystal":
-            # Computes the vectors along translations.
-            # Translations
-            D = xp.zeros((3, 3 * ii))
-            D[0] = xp.asarray(np.tile([1, 0, 0], ii)) / ism
-            D[1] = xp.asarray(np.tile([0, 1, 0], ii)) / ism
-            D[2] = xp.asarray(np.tile([0, 0, 1], ii)) / ism
-
-            for k in range(3):
-                D[k] = D[k] / xp.linalg.vector_norm(D[k])
-            # Computes the transformation matrix.
-            transfmatrix = xp.eye(3 * ii) - D.T @ D
-            hm = transfmatrix.T @ (dynmat @ transfmatrix)
+        D, I = external_modes(q.reshape((ii, 3)), mm, asr)
+        # projector on the space orthogonal to the external modes
+        transfmatrix = xp.eye(3 * ii) - D.T @ D
+        hm = transfmatrix.T @ (dynmat @ transfmatrix)
 
     # Symmetrize to use linalg.eigh
     hmT = hm.T
@@ -189,7 +143,8 @@ def get_hessian(
            fixatoms_dof = indexes of fixed degrees of freedom
            d        = displacement
 
-    OUT    h        = physical hessian  (3*natoms-len(fixatoms_dof)  , nbeads*( 3*natoms-len(fixatoms_dof) ))
+    OUT    h        = physical hessian  (3*natoms, nbeads*3*natoms), with zero
+                      rows for the fixed degrees of freedom
     """
 
     info(" @get_hessian: Computing hessian", verbosity.low)

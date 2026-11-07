@@ -7,19 +7,31 @@ from ipi.utils.messages import warning, verbosity
 
 
 class Dummy_driver(object):
-    """Base class providing the structure of a PES for the python driver.
+    """Base class of the potentials of the Python driver and of the direct
+    forcefields. A potential implements `compute_structure(cell, pos)`, which
+    returns the energy, the forces, the virial and a string or dictionary of
+    extra quantities for one structure, and possibly `check_parameters`;
+    `compute` evaluates one structure, or lists of them.
 
-    Command line:
-        i-pi-py_driver -m dummy [...]
     Init arguments:
         :param verbose: bool to determine whether the PES should output verbose info.
     """
 
     # whether `compute` also accepts the arrays of the i-PI array backend (e.g.
     # torch tensors on a GPU), returning results of the same kind, rather than
-    # only numpy arrays. Such inputs must not be modified, nor kept after the
+    # only numpy arrays. Such inputs may be the arrays of the system rather
+    # than copies, so they must not be modified (e.g. units are converted out of
+    # place, `pos * factor` rather than `pos *= factor`), nor kept after the
     # call, as they may be overwritten (e.g. when replaying CUDA graphs).
     backend_arrays = False
+    # whether `compute` (with `backend_arrays`) can be part of the steps
+    # compiled with `--jit`: it computes the results with operations of the
+    # backend only, without synchronizing with the device or changing shapes,
+    # so it is traced by jax.jit with JAX, and recorded in the CUDA graphs with
+    # torch. Its other results (e.g. the extras) are then fixed in the
+    # compiled step. Otherwise the driver is called eagerly between the CUDA
+    # graphs, and the steps that need its forces are not compiled with JAX
+    traceable = False
 
     def __init__(self, verbose=False, *args, **kwargs):
         """Initialized dummy drivers"""
@@ -73,6 +85,7 @@ class Zero_driver(Dummy_driver):
     """
 
     backend_arrays = True
+    traceable = True
 
     def compute_structure(self, cell, pos):
         """Evaluate a single structure, with a zero energy of the same kind as pos"""

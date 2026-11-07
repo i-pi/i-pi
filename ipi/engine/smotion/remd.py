@@ -49,6 +49,27 @@ def gle_scale(sys, scale):
     motion_scale(sys.motion, scale)
 
 
+def cell_momentum_scale(system):
+    """Returns sqrt(m kB T) for the cell momentum of a system, or None if it
+    has no barostat with a momentum."""
+
+    try:
+        barostat = system.motion.barostat
+        return np.sqrt(float(barostat.m[0]) * float(barostat.temp))
+    except AttributeError:
+        return None
+
+
+def rescale_cell_momenta(systems, scales):
+    """Rescales the cell momenta of the systems so that p / sqrt(m kB T) is the
+    same as when sqrt(m kB T) was `scales`: the mass of the cell may depend on
+    the temperature."""
+
+    for system, scale in zip(systems, scales):
+        if scale is not None:
+            system.motion.barostat.p_ *= cell_momentum_scale(system) / scale
+
+
 class ReplicaExchange(Smotion):
     """Replica exchange routine.
 
@@ -123,6 +144,8 @@ class ReplicaExchange(Smotion):
                 t_eval += time.time()
 
                 t_swap -= time.time()
+                pair = (sl[i], sl[j])
+                cell_scales = [cell_momentum_scale(s) for s in pair]
                 ensemble_swap(
                     sl[i].ensemble, sl[j].ensemble
                 )  # tries to swap the ensembles!
@@ -130,16 +153,9 @@ class ReplicaExchange(Smotion):
                 # it is generally a good idea to rescale the kinetic energies,
                 # which means that the exchange is done only relative to the potential energy part.
                 if self.rescalekin:
-                    # also rescales the velocities -- should do the same with cell velocities
                     sl[i].beads.p_ *= np.sqrt(tj / ti)
                     sl[j].beads.p_ *= np.sqrt(ti / tj)
-                    try:  # if motion has a barostat, and barostat has a momentum, does the swap
-                        # also note that the barostat has a hidden T dependence inside the mass, so
-                        # as a matter of fact <p^2> \propto T^2
-                        sl[i].motion.barostat.p_ *= tj / ti
-                        sl[j].motion.barostat.p_ *= ti / tj
-                    except AttributeError:
-                        pass
+                    rescale_cell_momenta(pair, cell_scales)
 
                 try:  # if motion has a barostat, and the barostat has a reference cell, does the swap
                     # as that when there are very different pressures, the cell should reflect the
@@ -165,9 +181,9 @@ class ReplicaExchange(Smotion):
                         verbosity.high,
                     )
 
-                    # if we have GLE thermostats, we also have to exchange rescale the s!!!
-                    gle_scale(sl[i], (tj / ti))
-                    gle_scale(sl[j], (ti / tj))
+                    # the momenta of GLE thermostats are mass-scaled, with variance kB T
+                    gle_scale(sl[i], np.sqrt(tj / ti))
+                    gle_scale(sl[j], np.sqrt(ti / tj))
 
                     t_eval -= time.time()
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
@@ -183,17 +199,14 @@ class ReplicaExchange(Smotion):
                     fxc = True  # signal that an exchange has been made!
                 else:  # undoes the swap
                     t_swap -= time.time()
+                    cell_scales = [cell_momentum_scale(s) for s in pair]
                     ensemble_swap(sl[i].ensemble, sl[j].ensemble)
 
                     # undoes the kinetic scaling
                     if self.rescalekin:
                         sl[i].beads.p_ *= np.sqrt(ti / tj)
                         sl[j].beads.p_ *= np.sqrt(tj / ti)
-                        try:
-                            sl[i].motion.barostat.p_ *= ti / tj
-                            sl[j].motion.barostat.p_ *= tj / ti
-                        except AttributeError:
-                            pass
+                        rescale_cell_momenta(pair, cell_scales)
                     try:
                         bjh = xp.asarray(sl[j].motion.barostat.h0.h, copy=True)
                         sl[j].motion.barostat.h0.h_[:] = sl[i].motion.barostat.h0.h[:]

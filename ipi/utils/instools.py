@@ -26,38 +26,6 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
 
-    href = np.zeros((ndiag, ii))
-
-    # add physical part
-    for i in range(nbeads):
-        h_aux = h[
-            :, i * natoms * 3 : (i + 1) * natoms * 3
-        ]  # Peaks one physical hessian
-        for j in range(1, ndiag):
-            href[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = np.diag(
-                h_aux, ndiag - 1 - j
-            )
-
-    # add spring parts
-    if nbeads > 1:
-        # Diagonal
-        if masses:
-            d_corner = m3[0] * omega2
-        else:
-            d_corner = np.ones(m3[0].shape) * omega2
-
-        d_0 = np.array([[d_corner * 2]]).repeat(nbeads - 2, axis=0).flatten()
-        diag_sp = np.concatenate((d_corner, d_0, d_corner))
-        href[-1, :] += diag_sp
-
-        # Non-Diagonal
-        d_out = -d_corner
-        ndiag_sp = np.array([[d_out]]).repeat(nbeads - 1, axis=0).flatten()
-        href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
-
-    # Add safety shift value
-    href[-1, :] += shift
-
     # ------- new Discretization --------------
     hnew = np.zeros((ndiag, ii))
 
@@ -107,7 +75,9 @@ def sym_band(A):
     u = len(A) - 1
     lu = u
     M = A.shape[1]
-    newA = np.empty((u + lu + 1, M))
+    # the corners outside the band are not used, but must be finite for the
+    # checks of the scipy solvers
+    newA = np.zeros((u + lu + 1, M))
     newA[: u + 1] = A
     for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
@@ -135,15 +105,13 @@ def invmul_banded(A, B, posdef=False):
         u = len(A) - 1
         lu = u
         newA = sym_band(A)
-        # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
         # print linalg.eigvals_banded(A)
         # sys.exit(0)
         return xp.asarray(linalg.solve_banded((lu, u), newA, B))
 
 
 def diag_banded(A, n=2):
-    """A is in upper banded form.
-    Returns the smallest n eigenvalue and its corresponding eigenvector.
+    """Returns the n + 1 smallest eigenvalues of A, given in upper banded form.
     A and the eigenvalues are numpy arrays.
     """
     try:
@@ -151,7 +119,7 @@ def diag_banded(A, n=2):
 
         info("Import of scipy successful", verbosity.high)
     except ImportError:
-        raise ValueError(" ")
+        raise ValueError("The banded Hessians of instantons need scipy")
 
     d = eig_banded(
         A, select="i", select_range=(0, n), eigvals_only=True, check_finite=False
@@ -329,15 +297,15 @@ class Fix(object):
             self.nbeads = nbeads
 
         self.fixatoms_dof = fixatoms_dof
-        if len(self.fixatoms_dof) > 0:
-            if np.mod(len(self.fixatoms_dof), 3) == 0:
-                self.fixatoms = np.unique(self.fixatoms_dof // 3)
-            else:
-                softexit.trigger(
-                    message="fixatoms_dof is not yet implemented. please use fixatoms",
-                )
-        else:
-            self.fixatoms = self.fixatoms_dof
+        # only whole atoms can be fixed
+        self.fixatoms = np.unique(np.asarray(self.fixatoms_dof, int) // 3)
+        whole = (3 * self.fixatoms[:, None] + np.arange(3)).ravel()
+        if not np.array_equal(np.sort(self.fixatoms_dof), whole):
+            softexit.trigger(
+                status="bad",
+                message="Instantons can only fix whole atoms: fixatoms_dof must hold "
+                "the three coordinates of each fixed atom",
+            )
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)
@@ -447,34 +415,17 @@ class Fix(object):
 
             return full_vector
         elif t == 4:
+            m = self.get_mask(1)
             full_vector = np.zeros(
                 (self.nbeads, 3 * self.natoms, 3 * self.natoms, 3 * self.natoms)
             )
-            ii = 0
-            jj = 0
-            kk = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    for k in self.get_mask(1):
-                        full_vector[:, i, j, k] = vector[
-                            :, ii, jj, kk
-                        ]  # Yes, this can be improved
-                        kk += 1
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m, m)] = vector
             return full_vector
 
         elif t == 5:
+            m = self.get_mask(1)
             full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms))
-            ii = 0
-            jj = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    full_vector[:, i, j] = vector[
-                        :, ii, jj
-                    ]  # Yes, this can be improved
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m)] = vector
             return full_vector
 
         else:

@@ -243,7 +243,7 @@ at runtime, to the value of the other object. A typical usage pattern is
       def bind(self, factor):
 
          self.factor = factor # stores a reference to the object holding the value
-         self.scaled_ = depend_array(value=np.ones(4), name="vec",
+         self.scaled_ = depend_array(value=np.ones(4), name="scaled",
                                     func=self.get_scaled, dependencies=[self.vec_])
 
          # dependencies can also be added after object creation
@@ -308,7 +308,7 @@ as ``obj.x``:
        dependency graph (e.g. to bind a thermostat to some of the momenta)
      - ``obj.x_[i]``, ``obj.x_.flatten()``
    * - make an existing depend object computed from other ones
-     - ``dcompute(obj.x_, func, [other.y_])``, ``dpipe(other.y_, obj.x_)``
+     - ``dsetfunc(obj.x_, func, [other.y_])``, ``dpipe(other.y_, obj.x_)``
 
 Common pitfalls:
 
@@ -320,15 +320,25 @@ Common pitfalls:
   of it) instead.
 * A ``depend_value`` that holds an array is not protected: modifying the
   array in place does not update its dependants.
+* Computed objects cannot be written: ``obj.x = v``, ``obj.x_[i] = v`` and
+  in-place operators raise a ``NameError`` before changing anything, also
+  when they go through a view.
+* ``obj.x_.reshape(...)`` and ``obj.x_.flatten()`` give views, and raise if
+  the array cannot be reshaped without a copy, e.g. ``obj.x_[:, 1:].flatten()``,
+  as writing the copy would not change the array.
+* Deep copies (and pickles) of a depend object are independent of the
+  original: they have no dependants and are not synchronized. Views cannot be
+  copied: copy the array they belong to.
 * Depend objects are not arrays: use ``obj.x`` (or ``obj.x_.get()``) when
   the value is needed.
 * Functions that compute a value should not modify other depend objects:
   they are called at unpredictable times, whenever a stale value is read.
 
 Each read of ``obj.x`` checks whether the value is stale, and recomputes
-it if needed. Recomputation is protected by a lock, so values can be read
-from several threads, e.g. when the outputs of different systems are
-written in parallel. Reading an up-to-date value is cheap (a fraction of a
+it if needed. Depend objects are not thread-safe: the steps and the outputs
+of different systems run as tasks in a single thread (``ipi/utils/scheduler.py``),
+which switch to each other only while they wait for forces, and do not share
+depend objects. Reading an up-to-date value is cheap (a fraction of a
 microsecond), but in loops that do not modify it, it is still better to
 read the value once into a local variable.
 
@@ -350,12 +360,12 @@ share the temperature between the ensemble and the thermostats:
    myobj.scalar = 5
    print(thermo.temp) # prints `10`
 
-More generally, ``dcompute(dep, func, dependencies)`` makes an existing
+More generally, ``dsetfunc(dep, func, dependencies)`` makes an existing
 depend object computed, as if it had been created with ``func`` and
 ``dependencies``, which is useful when the function is only known when
 objects are bound together. Its current value is discarded, and it can no
 longer be written. ``dpipe(dfrom, dto)`` is the same as
-``dcompute(dto, dfrom.get, [dfrom])``, except that it can also make an object
+``dsetfunc(dto, dfrom.get, [dfrom])``, except that it can also make an object
 that already follows another one follow ``dfrom`` instead, and
 ``dpipe(dfrom, dto, item=i)`` makes ``dto`` follow ``dfrom[i]``.
 
@@ -366,7 +376,9 @@ one from the other. Writing one of the two marks the other as stale, and
 reading the stale one recomputes it from the one that was written last.
 When they are linked, the first object is taken to hold the current data.
 A view of a synchronized array (e.g. the positions of a single replica)
-is synchronized as well.
+is synchronized as well. Writing part of a stale array, or a view of it,
+first recomputes it from the other one, so that the elements that are not
+written are kept up to date.
 
 .. code-block:: python
 
@@ -387,6 +399,17 @@ is synchronized as well.
    print(length.feet) # prints [3.2808399 3.2808399 3.2808399]
    length.feet_[0] = 0.0
    print(length.meters) # prints [0. 1. 1.]
+
+The depend objects of a simulation, and the links between them, are drawn
+by ``i-pi-depend-graph input.xml -o graph.svg``, which loads the input
+without connecting to the clients, and writes the graph in the dot format of
+`Graphviz <https://graphviz.org>`_ (or renders it with ``dot``). Each object
+is named by its path from the simulation (e.g. ``syslist[0].beads.q``), and
+an arrow goes from each object to those computed from it. The full graph has
+hundreds of objects: ``--around syslist[0].forces.pot --depth 2`` keeps
+those within two links of the potential. From Python,
+``DependGraph(obj).dot()`` (``from ipi.utils.tools import DependGraph``)
+gives the graph of the depend objects that can be reached from ``obj``.
 
 Array backends
 ^^^^^^^^^^^^^^
@@ -420,8 +443,9 @@ must not be created at import time (module constants, default arguments).
   and files are converted with ``xp.asarray`` before being stored; outputs,
   checkpoints, sockets, forcefields and calls to scipy use ``to_numpy``,
   which may return a view of the stored data with numpy (copy it if it is
-  kept). Depend objects never convert their argument: writing a numpy array
-  into a torch-backed ``depend_array`` raises an error.
+  kept). Depend objects convert the initial value given to their constructor,
+  but never the values written into them: writing a numpy array into a
+  torch-backed ``depend_array`` raises an error.
 * Small arrays used for indexing or control on the host (atom names, index
   lists, the number of multiple-time-step sub-steps, the time scales of the
   normal-mode thermostats) are stored as numpy arrays with
@@ -429,24 +453,79 @@ must not be created at import time (module constants, default arguments).
 * With a GPU, ``float(x)``, ``bool(x)``, ``if x > 0`` and ``x.item()`` on a
   device array wait for all the queued operations to complete: avoid them in
   the MD step, and prefer array operations (e.g. ``xp.where``).
-* ``prng.gvec`` and ``prng.gfill`` produce backend arrays (drawn on the device
-  with torch), while scalar draws (``prng.u``, ``prng.g``, ``prng.gamma``, ...)
-  are Python or numpy numbers. ``prng.gfill`` is not available with JAX.
+* ``prng.gvec`` and ``prng.gammavec`` produce backend arrays (drawn on the
+  device with torch and JAX), while scalar draws (``prng.u``, ``prng.g``,
+  ``prng.gamma``, ...) are Python or numpy numbers.
 * JAX arrays cannot be modified in place. Depend objects hide this: with the
   ``jax`` backend, writes (``obj.x_[i] = v``, ``obj.x_ += v``, also through
   views such as ``obj.x_[i]``) replace the stored array. Other arrays must not
   be written in place: build them with whole-array operations (``xp.stack``,
   ``xp.concat``, ``xp.where``, ``@`` with a constant matrix) rather than by
-  filling an array created with ``xp.zeros``.
+  filling an array created with ``xp.zeros``. Motions that do not work with
+  JAX set the class attribute ``jax_support = False``, so that i-PI stops
+  with an error when they are used with JAX.
 
 The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
-check that the torch and JAX backends reproduce the numpy trajectories and
-that an MD step does not synchronize with the GPU. The regression tests and
-the examples can be run with another backend with ``pytest --ipi-backend torch
-[--ipi-device cuda]`` or ``--ipi-backend jax``. In these runs (and in the tests that use the
-``strict_torch`` fixture) implicit conversions of torch tensors to numpy
-arrays raise an error also on the CPU, as they do on GPUs, so that missing
-``to_numpy`` calls are detected without a GPU.
+check, for a table of dynamics (``CASES``), that the torch and JAX backends
+reproduce the numpy trajectories when they draw the same random numbers
+(``numpy_draws``), and that an MD step does not synchronize with the GPU. The
+unit tests select a backend with the ``select_backend`` fixture, which restores
+numpy afterwards, and the simulations of the ``simulation`` and
+``reference_system`` fixtures use the backend given with ``--ipi-backend``. The
+unit tests, the regression tests and the examples can be run with another
+backend with ``pytest --ipi-backend torch [--ipi-device cuda]`` or
+``--ipi-backend jax``; the CI runs the unit and regression tests with torch,
+and the regression tests with JAX (``tox -e backends``). The regression tests
+of the features that JAX does not support (``JAX_UNSUPPORTED`` in
+``ipi_tests/test_tools.py``) are expected to fail with JAX. In the torch runs
+(and in the tests that use the ``strict_torch`` fixture) implicit conversions
+of torch tensors to numpy arrays raise an error also on the CPU, as they do on
+GPUs, so that missing ``to_numpy`` calls are detected without a GPU.
+
+Compiled steps (``--jit``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With ``--jit``, the step of the integrator runs eagerly for the first steps,
+and is then compiled: recorded as CUDA graphs and replayed with torch, or
+traced with ``jax.jit`` with JAX (``ipi/engine/jit.py`` and
+``ipi/utils/jit.py``). The compiled step does not run the Python code: it is
+built from the operations on the depend objects made by one step, so the code
+of an MD step must follow a few rules.
+
+* Python scalars and host arrays read in the step (the time step, the number
+  of sub-steps, arrays created with ``host=True``) are fixed in the compiled
+  step, and i-PI stops with a ``JitError`` if they change. Parameters that can
+  change during a run are held as backend scalars instead (e.g. the
+  coefficients of the Langevin thermostats, which depend on the temperature),
+  and host arrays must not be written in a step.
+* Random numbers are drawn as arrays with ``prng.gvec`` and ``prng.gammavec``,
+  which are part of the compiled step: a scalar draw (``prng.u``, ``prng.g``)
+  would be fixed in it.
+* The points where a step must call outside code are marked with
+  ``jit.split(obj)``, e.g. the force evaluations: with CUDA graphs the
+  recording is interrupted there and the forces are computed eagerly between
+  the replays, while with JAX the step is compiled only if the forces can be
+  traced too. Functions that run eagerly between the replays (e.g. a driver)
+  are called with ``jit.eager(func, *args)``, and functions of arrays decorated
+  with ``jit.compiled`` are compiled with ``torch.compile``, which merges their
+  operations in fewer kernels. Without ``--jit`` these are plain calls.
+* Only the dynamics accepted by ``unsupported`` (``ipi/engine/jit.py``) are
+  compiled. A new thermostat, barostat or integrator is added there once it
+  follows these rules, and its compiled steps are tested against the eager ones
+  (``test_cuda_graphs.py``, ``test_jax_jit.py``).
+
+The potentials of direct forcefields (:ref:`ffdirect`) receive and return
+numpy arrays, unless their driver sets ``backend_arrays = True``: it then works
+on the arrays of the backend (e.g. torch tensors on a GPU). These are the
+arrays of the system rather than copies, so the driver must not
+modify them (e.g. it converts their units out of place, ``pos * factor`` rather
+than ``pos *= factor``), nor keep them after the call, as they may be
+overwritten when the steps are replayed. A driver that also sets
+``traceable = True`` computes its results with operations of the backend only,
+without synchronizing with the device or changing the shapes of the arrays: its
+calls are then part of the compiled steps, traced by ``jax.jit`` with JAX and
+recorded in the CUDA graphs with torch, and the other results it returns (e.g.
+the extras) are fixed in them.
 
 
 Licence and credits

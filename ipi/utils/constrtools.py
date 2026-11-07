@@ -158,6 +158,14 @@ class ConstraintBase:
             return spla.cho_factor(self.Gram)
         return xp.linalg.cholesky(self.Gram)
 
+    def solve_gram(self, b):
+        """Returns the solution x of Gram x = b, with the Cholesky factors of
+        the Gram matrix if they are computed with scipy."""
+
+        if use_cho_factor():
+            return spla.cho_solve(self.GramChol, b)
+        return xp.linalg.solve(self.Gram, b)
+
 
 dproperties(ConstraintBase, ["m3", "q", "g", "qprev", "Dg", "Gram", "GramChol"])
 
@@ -196,8 +204,8 @@ class ValueConstraintBase(ConstraintBase):
     def bind(self, beads):
         super(ValueConstraintBase, self).bind(beads)
 
+        # the constraint functions depend on the targets, their Jacobians do not
         ddeps(self.g_, [self.constraint_values_])
-        ddeps(self.Dg_, [self.constraint_values_])
 
 
 dproperties(ValueConstraintBase, ["constraint_values"])
@@ -325,15 +333,15 @@ class EckartConstraint(ConstraintBase):
     """
 
     def __init__(self, constrained_indices, constraint_values):
-        super(EckartConstraint, self).__init__(constrained_indices, 6)
-        self.constrained_indices = self.constrained_indices.reshape(-1)
-        self.constraint_values_ = depend_array(
-            name="constraint_values", value=np.zeros(self.ncons)
-        )
-
-        # Check that there are no repeats
-        if np.any(self.constrained_indices != self.i_unique):
+        # the atoms are kept in increasing order, as the unique atoms of the
+        # base class, together with their reference positions
+        indices = np.asarray(constrained_indices).reshape(-1)
+        if len(np.unique(indices)) != len(indices):
             raise ValueError("repeated atom indices in EckartConstraint")
+        order = np.argsort(indices)
+        if len(constraint_values) != 0:
+            constraint_values = np.reshape(constraint_values, (-1, 3))[order]
+        super(EckartConstraint, self).__init__(indices[order], 6)
         self.i3_indirect = self.i3_indirect.reshape((-1, 3))
         if len(constraint_values) == 0:
             self._calc_cons = True
@@ -351,8 +359,6 @@ class EckartConstraint(ConstraintBase):
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
             self.qref_[:] = beads.q[0][self.i3_unique].reshape((-1, 3))
-        ddeps(self.g_, [self.constraint_values_])
-        ddeps(self.Dg_, [self.constraint_values_])
 
         # Total mass of the group of atoms
         self.mtot_ = depend_value(
@@ -479,10 +485,10 @@ class ConstraintList(ConstraintBase):
         for ic, c in enumerate(self.constraint_list):
             c.bind(beads)
             # deal with constraint functions
-            dcompute(c.q_, make_qgetter(ic), [self.q_])
+            dsetfunc(c.q_, make_qgetter(ic), [self.q_])
             ddeps(self.g_, [c.g_])
             # ...and their gradients
-            dcompute(c.qprev_, make_qprevgetter(ic), [self.qprev_])
+            dsetfunc(c.qprev_, make_qprevgetter(ic), [self.qprev_])
             ddeps(self.Dg_, [c.Dg_])
 
     def gfunc(self):

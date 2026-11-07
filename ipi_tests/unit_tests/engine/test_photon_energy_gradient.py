@@ -8,6 +8,7 @@ import pytest
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFCavPhSocket, ForceField, PhotonDriver
+from ipi.utils import scheduler
 from ipi.utils.softexit import Softexit
 
 
@@ -115,19 +116,19 @@ def test_cavity_request_force_matches_energy(representation, apply, evaluate, su
     class PointChargeDriver(ForceField):
         """Analytic dipole surface for two fixed charges, with zero nuclear PES."""
 
-        def poll(self):
-            super().poll()
+        def poll(self, idle=False):
+            progress = super().poll(idle)
             for request in self.requests:
                 q = request["pos"].reshape(-1, 3)
                 request["result"][3].update(
                     dipole=q[0] - q[1],
                     dipole_derivative=np.array([np.eye(3), -np.eye(3)]).ravel(),
                 )
+            return progress
 
     transport = PointChargeDriver() if surface else ForceField()
     ff = FFCavPhSocket(
         interface=transport,
-        threaded=False,
         apply_photon=apply,
         evaluate_photon=evaluate,
         dipole_surface=surface,
@@ -146,8 +147,11 @@ def test_cavity_request_force_matches_energy(representation, apply, evaluate, su
     def calculate(pos):
         atoms.q_[:] = pos
         request = ff.queue(atoms, cell, reqid=4)
-        assert request["status"] == "Done"
+        assert request["status"] == "Running"
+        scheduler.wait(lambda: request["status"] == "Done")
         assert not ff.requests
+        ff.release(request)
+        assert not ff.cavity_requests
         return request["result"]
 
     energy, force, virial, _ = calculate(q)
@@ -178,35 +182,32 @@ def test_cavity_rejects_active_atoms_outside_system(active):
     assert not ff.requests
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=KeyError,
-    reason="Cavity dipole validation indexes missing extras before checking their presence",
-)
-def test_cavity_missing_dipole_data_reports_a_validation_error():
-
-    ff = FFCavPhSocket(interface=ForceField(), threaded=False, dipole_surface=True)
-    with pytest.raises(ValueError, match="[Dd]ipole"):
-        ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
-
-
-@pytest.mark.parametrize("where", ["dipole", "queue", "cancelled-request"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="Cavity error handling passes the error message as an invalid soft-exit status",
-)
-def test_cavity_invalid_or_cancelled_request_triggers_soft_exit(where, monkeypatch):
+@pytest.mark.parametrize("where", ["dipole", "queue", "missing-dipole-surface"])
+def test_cavity_invalid_request_triggers_soft_exit(where, monkeypatch):
 
     exit_state = Softexit()
     monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
-    transport = ForceField()
-    if where == "cancelled-request":
-        monkeypatch.setattr(transport, "poll", transport.stop)
-    ff = FFCavPhSocket(interface=transport, threaded=False, charge_array=np.ones(2))
+    ff = FFCavPhSocket(
+        interface=ForceField(),
+        charge_array=np.ones(2),
+        dipole_surface=where == "missing-dipole-surface",
+    )
     with pytest.raises(SystemExit):
         if where == "dipole":
             ff.calc_dipole_xyz_mm(np.zeros(3), 1, np.ones(2))
         else:
-            ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
+            # the photons are added once the forces on the atoms are computed
+            request = ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
+            scheduler.wait(lambda: request["status"] == "Done")
     assert exit_state.triggered
+
+
+def test_cavity_request_is_stopped_with_its_baths():
+
+    transport = ForceField()
+    ff = FFCavPhSocket(interface=transport, charge_array=np.ones(2))
+    request = ff.queue(Atoms(1 + ff.ph.n_photon), Cell(np.eye(3) * 10))
+    transport.stop()
+    ff.poll()
+    assert request["status"] == "Exit"
+    assert request["result"] is None

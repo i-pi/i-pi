@@ -8,15 +8,15 @@ Could probably be generalized to something more general.
 
 
 import pickle
-import threading
 import numpy as np
 from ipi.utils.array_backend import xp, to_numpy
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
 from ipi.engine.cell import Cell
+from ipi.utils import scheduler
 from ipi.utils.units import Constants
-import ipi.utils.io as io
+from ipi.utils.messages import info, warning, verbosity
 
 
 class AlKMC(Motion):
@@ -43,6 +43,8 @@ class AlKMC(Motion):
             the system temperature as PIMD calculations are done at this
             effective classical temperature.
     """
+
+    jax_support = False
 
     def __init__(
         self,
@@ -131,7 +133,7 @@ class AlKMC(Motion):
         self.dcell = Cell()
         self.dcell.h = xp.asarray(self.scell * self.ncell)
 
-        print("LATTICE PARAM ", self.a0)
+        info(f"Lattice parameter: {self.a0}", verbosity.medium)
         # this is the list of lattice sites, in 3D coordinates
         ix, iy, iz = np.meshgrid(
             list(range(self.ncell)),
@@ -142,26 +144,23 @@ class AlKMC(Motion):
         self.sites = np.dot(
             np.asarray([ix.flatten(), iy.flatten(), iz.flatten()]).T, self.scell.T
         )
-        print(len(self.sites), self.nsites, "###")
+        info(f"Lattice sites: {len(self.sites)}, {self.nsites}", verbosity.debug)
         # now we build list of nearest neighbors (fcc-lattice hardcoded!)
         self.neigh = np.zeros((self.nsites, 12), int)
         nneigh = np.zeros(self.nsites, int)
         # could be done in a more analytic way but whatever, I'm too lazy
         a02 = 1.01 * 0.5 * self.a0**2  # perhaps 1.01 it is not enough, must check!
+        # minimum-image displacements, computed on the host
+        h, ih = to_numpy(self.dcell.h), to_numpy(self.dcell.ih)
         for i in range(self.nsites):  # determines the connectivity of the lattice
-            rij = self.sites.copy().flatten()
-            for j in range(self.nsites):
-                rij[3 * j : 3 * j + 3] -= self.sites[i]
-            rij = xp.asarray(rij)
-            rij = self.dcell.array_pbc(rij)
-            rij = to_numpy(rij)
-            rij = rij.reshape(self.nsites, 3)
-            for j in range(i):
-                if np.dot(rij[j], rij[j]) < a02:  # found nearest neighbor
-                    self.neigh[i, nneigh[i]] = j
-                    self.neigh[j, nneigh[j]] = i
-                    nneigh[i] += 1
-                    nneigh[j] += 1
+            s = (self.sites[:i] - self.sites[i]) @ ih.T
+            rij = (s - np.round(s)) @ h.T
+            # the nearest neighbors among the previous sites
+            for j in np.flatnonzero((rij * rij).sum(axis=1) < a02):
+                self.neigh[i, nneigh[i]] = j
+                self.neigh[j, nneigh[j]] = i
+                nneigh[i] += 1
+                nneigh[j] += 1
 
         self.idx = idx
 
@@ -189,14 +188,12 @@ class AlKMC(Motion):
             ff = open(self.qcache_file, "rb")
             self.qcache = pickle.load(ff)
             ff.close()
-            print("Loaded %d cached energies" % (len(self.ecache)))
+            info("Loaded %d cached energies" % (len(self.ecache)), verbosity.low)
         except (OSError, ValueError, NameError):
-            print(
-                "Couldn't load cache files "
-                + self.ecache_file
-                + ","
-                + self.qcache_file
-                + " - resetting"
+            info(
+                f"Couldn't load cache files {self.ecache_file},{self.qcache_file}"
+                " - resetting",
+                verbosity.low,
             )
             self.ecache = collections.OrderedDict()
             self.qcache = collections.OrderedDict()
@@ -204,8 +201,6 @@ class AlKMC(Motion):
         self.ncache_stored = self.ncache
         self.struct_count = self.ncache
 
-        # no TS evaluation implemented yet
-        self.tscache = {}  # collections.OrderedDict()
         self.tottime = tottime
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
@@ -267,17 +262,19 @@ class AlKMC(Motion):
         self.ridx[self.idx] = list(range(self.nsites))
 
         self.state = np.asarray(list(state))
-        print("".join(self.state))
+        info("Initial state: " + "".join(self.state), verbosity.medium)
 
-        print("CHECKING INITIAL ASSIGNMENTS")
+        # checks the initial assignments
         for i in range(self.nsites):
             if self.ridx[i] < self.natoms:
-                print(self.beads.names[self.ridx[i]], self.state[i])
+                name = self.beads.names[self.ridx[i]]
             else:
-                print("V", self.state[i])
+                name = "V"
+            info(f"Site {i}: {name} {self.state[i]}", verbosity.debug)
             if self.idx[self.ridx[i]] != i:
-                print(
-                    "inconsistent site string for atom ", i, " and site ", self.ridx[i]
+                warning(
+                    f"Inconsistent site string for atom {i} and site {self.ridx[i]}",
+                    verbosity.low,
                 )
 
         if not f_restart:
@@ -316,125 +313,47 @@ class AlKMC(Motion):
                 omaker,
             )
         self.feval = np.ones(self.neval, int)
-        self._threadlock = threading.Lock()
 
-    # threaded geometry optimization
-    def geop_thread(self, ieval, nstr, nevent, ostr=None):
+    def geop_task(self, ieval, nstr, nevent):
+        """Optimizes the structure of the state `nstr` with the evaluator
+        `ieval`, caches its energy and stores it in `nevent`. Several run as
+        concurrent tasks, which switch while they wait for forces."""
+
         self.optimizer[ieval].reset()
-        ipot = self.dforces[ieval].pot
+        ipot = float(self.dforces[ieval].pot)
 
         for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.optimizer[ieval].step(i)
-        newq = xp.asarray(self.dbeads[ieval].q[0], copy=True)
-        newpot = self.dforces[ieval].pot
+        # the caches are saved with pickle, so they hold numpy arrays and floats
+        newq = np.array(to_numpy(self.dbeads[ieval].q[0]))
+        newpot = float(self.dforces[ieval].pot)
 
         # print "geop ", self.nstep, self.dforces[ieval].pot
-        with self._threadlock:
-            self.ecache[nstr] = newpot
-            self.qcache[nstr] = newq
-            if self.ncache == self.max_cache_len:
-                self.ecache.popitem(last=False)
-                self.qcache.popitem(last=False)
-            else:
-                self.ncache += 1
-            nevent[2] = self.ecache[nstr]
-            nevent[3] = self.qcache[nstr]
-            self.struct_count += 1
+        self.ecache[nstr] = newpot
+        self.qcache[nstr] = newq
+        if self.ncache == self.max_cache_len:
+            self.ecache.popitem(last=False)
+            self.qcache.popitem(last=False)
+        else:
+            self.ncache += 1
+        nevent[2] = self.ecache[nstr]
+        nevent[3] = self.qcache[nstr]
+        self.struct_count += 1
+        self.feval[ieval] = 1
 
-        # launches TS calculation
-        # if not ostr is None:
-        #    self.ts_thread(ieval, ostr, nstr, nevent)
-        # else:
-        #    with self._threadlock:
-        #        self.feval[ieval] = 1
-        with self._threadlock:
-            self.feval[ieval] = 1
-
-        with self._threadlock:
-            print("Finished ", nstr)
-            print("Energy, initial - TS - final: ", ipot, nevent[-1], newpot)
-
-    # threaded ts evaluation
-    def ts_thread(self, ieval, ostr, nstr, nevent, setfev=1):
-        # computes TS energy by linearly interpolating initial & final state
-        # interpolates between two structures considering PBCs
-        qstart = self.qcache[ostr]
-        # finds atom matching assuming initial and final states differ only by a vacancy swap and are based on unique_idx lists
-        midx = self.unique_idx_match(list(ostr), list(nstr))[0 : self.natoms]
-        qend = self.qcache[nstr].reshape(self.natoms, 3)[midx].reshape(3 * self.natoms)
-
-        qts = qend - qstart
-        qts = self.dcell.array_pbc(qts)  # use pbc!
-        qts *= 0.5
-        qts += qstart
-        self.dbeads[ieval].q_[0, :] = qts
-
-        tspot = self.dforces[ieval].pot
-        io.print_file(
-            "xyz",
-            self.beads[0],
-            self.dcell,
-            self.tslist,
-            title=("START  "),
-            key="positions",
-            dimension="length",
-            units="angstrom",
-            cell_units="angstrom",
+        info(f"Finished {nstr}", verbosity.debug)
+        info(
+            f"Energy, initial - TS - final: {ipot} {nevent[-1]} {newpot}",
+            verbosity.debug,
         )
-        io.print_file(
-            "xyz",
-            self.dbeads[ieval][0],
-            self.dcell,
-            self.tslist,
-            title=(
-                "TS: %s %s  Energy: %15.8e  %15.8e "
-                % (ostr, nstr, tspot, tspot - self.forces.pot)
-            ),
-            key="positions",
-            dimension="length",
-            units="angstrom",
-            cell_units="angstrom",
-        )
-        self.dbeads[ieval].q_[0] = qend
-        io.print_file(
-            "xyz",
-            self.dbeads[ieval][0],
-            self.dcell,
-            self.tslist,
-            title=("END  "),
-            key="positions",
-            dimension="length",
-            units="angstrom",
-            cell_units="angstrom",
-        )
-        # self.tslist.flush()
 
-        with self._threadlock:
-            # sets the tscache for both FW and BW transition (uses a dictionary to be super-safe and lazy, although of course this could be just a list)
-            self.tscache[ostr][nstr] = tspot
-            if nstr not in self.tscache:
-                self.tscache[nstr] = {}
-            self.tscache[nstr][ostr] = tspot
-            self.feval[ieval] = 1
-            nevent[4] = tspot
+    def find_eval(self):
+        """Takes the first free evaluator, waiting for one if all are busy."""
 
-    def find_eval(self, ethreads):
-        # finds first free evaluator
-        while (
-            self.feval.sum() == 0
-        ):  # if all evaluators are busy, wait for one to get free
-            for st in ethreads:
-                st.join(1e-2)
-                if st is None or not st.is_alive():
-                    break
-        with self._threadlock:
-            # finds free evaluator
-            for e in range(self.neval):
-                if self.feval[e] == 1:
-                    ieval = e
-                    self.feval[ieval] = 0
-                    break
+        scheduler.wait(lambda: self.feval.sum() > 0)
+        ieval = int(np.argmax(self.feval))
+        self.feval[ieval] = 0
         return ieval
 
     def unique_idx(self, state):
@@ -502,13 +421,12 @@ class AlKMC(Motion):
         ostr = "".join(
             self.state
         )  # this is a unique id string that charactrizes the current state
-        self.tscache[ostr] = {}
         if ostr not in self.ecache:
             self.dbeads[0].q_[0, :] = xp.asarray(
                 self.sites[self.unique_idx(self.state)].flatten()
             )
             rv = [0, 0, 0, 0, 0]
-            self.geop_thread(0, ostr, rv)
+            self.geop_task(0, ostr, rv)
             # self.beads.q[0,:] = self.dbeads[0].q[0,:] # also updates current position
             # self.forces.transfer_forces(self.dforces[0]) # forces have already been computed here...
 
@@ -516,7 +434,7 @@ class AlKMC(Motion):
 
         # enumerates possible reactive events (vacancy swaps)
         levents = []
-        ethreads = [None] * self.neval
+        tasks = []
         # loops over the vacancy
         for ivac in range(self.natoms, self.natoms + self.nvac):
             svac = self.idx[ivac]  # lattice site associated with this vacancy
@@ -551,7 +469,7 @@ class AlKMC(Motion):
                     ]  # gets index of atom associated with the neighboring site
                     nidx[ivac], nidx[ineigh] = self.idx[ineigh], self.idx[ivac]
 
-                    ieval = self.find_eval(ethreads)
+                    ieval = self.find_eval()
                     # launches evaluator
                     self.dbeads[ieval].q_[0, :] = xp.asarray(
                         self.sites[self.unique_idx(nstate)].flatten()
@@ -560,55 +478,29 @@ class AlKMC(Motion):
                     nevent = [svac, sneigh, 0.0, 0.0, 0.0]
 
                     # runs a geometry optimization
-                    # self.geop_thread(ieval=ieval, nstr=nstr, nevent=nevent)
-                    st = threading.Thread(
-                        target=self.geop_thread,
-                        name=str(ieval),
-                        kwargs={
-                            "ieval": ieval,
-                            "nstr": nstr,
-                            "nevent": nevent,
-                            "ostr": ostr,
-                        },
+                    tasks.append(
+                        scheduler.spawn(
+                            self.geop_task, ieval=ieval, nstr=nstr, nevent=nevent
+                        )
                     )
-                    st.daemon = True
-                    st.start()
-                    ethreads[ieval] = st
                 else:
-                    print(
-                        "Found state ",
-                        nstr,
-                        " retrieving cached energy ",
-                        self.ecache[nstr],
+                    info(
+                        f"Found state {nstr}, retrieving cached energy "
+                        f"{self.ecache[nstr]}",
+                        verbosity.debug,
                     )
 
                     # fetch energy from previous calculation
                     nevent = [svac, sneigh, self.ecache[nstr], self.qcache[nstr], 0.0]
-
-                    # EVALUATION OF TS ENERGY IS DISABLED FOR THE MOMENT...
-                    # we might still need to compute the TS energy!
-                    # if not nstr in self.tscache[ostr]:
-                    #   print "Computing TS"
-                    #   ieval = self.find_eval(ethreads)
-                    #    st = threading.Thread(target=self.ts_thread, name=str(ieval), kwargs={"ieval":ieval, "ostr": ostr, "nstr":nstr, "nevent" : nevent})
-                    #    st.daemon = True
-                    #    st.start()
-                    #    ethreads[ieval] = st
-                    # else:
-                    #    print "Found TS"
-                    #    nevent[3] = self.tscache[ostr][nstr]
                 nevent[-1] = self.state[sneigh]
                 levents.append(nevent)
         # wait for all evaluators to finish
-        for st in ethreads:
-            while st is not None and st.is_alive():
-                st.join(2)
+        scheduler.join(tasks)
 
-        print(
-            "Computed ",
-            len(levents),
-            " possible reactions. Cache len ",
-            len(self.ecache),
+        info(
+            f"Computed {len(levents)} possible reactions. "
+            f"Cache length {len(self.ecache)}",
+            verbosity.high,
         )
 
         # get list of rates
@@ -616,12 +508,13 @@ class AlKMC(Motion):
         crates = np.zeros(len(levents), float)
         cdf = 0.0
         for i in range(len(levents)):
-            # print ("Barrier, naive: %f, static: %f" % (0.5*(ecurr + levents[i][2]) + self.diffusion_barrier_al, levents[i][4]))
-
             ets = (
                 0.5 * (ecurr + levents[i][2]) + self.barriers[levents[i][-1]]
             )  # naive heuristic for the ts energy
-            print("Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2])
+            info(
+                f"Event {i} {levents[i][-1]} {ecurr} >> {ets} >> {levents[i][2]}",
+                verbosity.debug,
+            )
             rates[i] = self.prefactors[levents[i][-1]] * np.exp(
                 -float(ets - ecurr) / kT
             )
@@ -634,8 +527,8 @@ class AlKMC(Motion):
         while fpick > crates[isel]:
             isel += 1
         dt = -1.0 / cdf * np.log(1.0 - self.prng.u)
-        print(("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr, ecurr)))
-        print("Selected event ", isel, " with rate ", rates[isel], " / ", cdf)
+        info("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr, ecurr), verbosity.high)
+        info(f"Selected event {isel} with rate {rates[isel]} / {cdf}", verbosity.high)
 
         iev = levents[isel]  # levents[self.prng.randint(len(levents))]
         svac, sneigh = iev[0], iev[1]
@@ -653,7 +546,7 @@ class AlKMC(Motion):
         self.kmcfile.force_flush()
         self.tottime += dt
         self.ensemble.time += dt  # updates time counter
-        print("Finishing step at ", "".join(self.state))
+        info("Finishing step at " + "".join(self.state), verbosity.high)
 
         # updates the positions
         self.cell.h = self.dcell.h
@@ -665,7 +558,7 @@ class AlKMC(Motion):
         self.sites[self.unique_idx(self.state)]
         oldq = xp.asarray(self.beads.q[0], copy=True)
 
-        newq = xp.zeros(self.nsites * 3)
+        newq = np.zeros(self.nsites * 3)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
@@ -674,6 +567,6 @@ class AlKMC(Motion):
             # which atom sits in this site in the unique-mapped structure?
             iuid = ruidx[self.idx[i]]
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]
-        newq -= oldq
+        newq = xp.asarray(newq) - oldq
         newq = self.cell.array_pbc(newq)
         self.beads.q_[0] += newq

@@ -15,7 +15,7 @@ from ipi.utils.prng import Random
 )
 def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
     hessian = np.diag([1.0, 2.0, 6.0])
-    member = FFDebye(name="anisotropic", H=hessian, xref=np.zeros(3), threaded=True)
+    member = FFDebye(name="anisotropic", H=hessian, xref=np.zeros(3))
     ff = FFRotations(
         ffdirect=member,
         grid_mode=grid,
@@ -28,6 +28,7 @@ def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
     atoms = Atoms(1)
     atoms.q_[:] = [0.3, -0.2, 0.1]
     request = ff.queue(atoms, Cell(np.eye(3) * 10))
+    member.poll()
     ff.poll()
     assert request["status"] == "Done"
     energy, force, virial, extras = request["result"]
@@ -36,6 +37,27 @@ def test_rotation_average_matches_trace_of_hessian(grid, random, inversion):
     np.testing.assert_allclose(force, -k * atoms.q, atol=1e-12)
     np.testing.assert_array_equal(virial, np.zeros((3, 3)))
     assert not member.requests
+    assert not ff.requests
+
+
+def test_rotation_average_completes_all_ready_requests_in_one_poll():
+    """A single poll completes all the requests whose member results are ready"""
+    member = FFDebye(name="debye", H=np.eye(3), xref=np.zeros(3))
+    ff = FFRotations(
+        ffdirect=member,
+        grid_mode="lebedev",
+        grid_order=3,
+        prng=Random(seed=17),
+        dopbc=False,
+    )
+    requests = []
+    for i in range(4):
+        atoms = Atoms(1)
+        atoms.q_[:] = [0.1 * (i + 1), 0.0, 0.0]
+        requests.append(ff.queue(atoms, Cell(np.eye(3) * 10)))
+    member.poll()
+    ff.poll()
+    assert [r["status"] for r in requests] == ["Done"] * 4
     assert not ff.requests
 
 
@@ -60,7 +82,7 @@ def test_rotation_average_rejects_ambiguous_models(options, message):
 def test_rotation_average_waits_for_all_member_results():
     """Partial results must not be reported as a completed rotation average."""
 
-    member = ForceField(name="zero", threaded=True)
+    member = ForceField(name="zero")
     ff = FFRotations(ffsocket=member, grid_order=1, prng=Random(seed=19))
     ff.bind(None)
     request = ff.queue(Atoms(1), Cell(np.eye(3)))
@@ -75,8 +97,8 @@ def test_rotation_average_waits_for_all_member_results():
 
 
 def test_rotation_average_polled_while_queued(monkeypatch):
-    """The polling thread may see a request as soon as it is queued, possibly
-    with all its member results: it must complete it only once queued."""
+    """A poll may see a request while it is being queued, possibly with all
+    its member results: it must complete it only once queued."""
 
     queue = ForceField.queue
 
@@ -87,9 +109,10 @@ def test_rotation_average_polled_while_queued(monkeypatch):
         return request
 
     monkeypatch.setattr(ForceField, "queue", queue_and_poll)
-    member = FFDebye(name="isotropic", H=np.eye(3), xref=np.zeros(3), threaded=False)
+    member = FFDebye(name="isotropic", H=np.eye(3), xref=np.zeros(3))
     ff = FFRotations(ffdirect=member, random=True, prng=Random(seed=23), dopbc=False)
     request = ff.queue(Atoms(1), Cell(np.eye(3) * 10))
+    member.poll()
     ff.poll()
     assert request["status"] == "Done"
     assert not ff.requests

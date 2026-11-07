@@ -1,6 +1,35 @@
-import numpy as np
-
 from ipi.utils.array_backend import xp
+
+
+def external_modes(q, m, asr):
+    """Returns the orthonormal mass-scaled displacements along the
+    translations of points of masses `m` at positions `q` (one row per
+    point), and also along their rotations if `asr` is "poly", as the rows of
+    an array, and the principal moments of inertia ("poly") or None."""
+
+    if asr not in ("crystal", "poly"):
+        raise ValueError(f"Unknown acoustic sum rule '{asr}'")
+
+    sm = xp.sqrt(m)[:, None]
+    eye = xp.eye(3)
+    # translations
+    modes = [(sm * eye[k]).reshape(-1) for k in range(3)]
+    inertia = None
+    if asr == "poly":
+        r = q - (q.T @ m) / m.sum()
+        # the moment of inertia tensor, sum_k m_k (|r_k|^2 I - r_k r_k^T)
+        moi = eye * (m @ (r * r).sum(axis=1)) - (r.T * m) @ r
+        # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+        inertia, U = xp.linalg.eigh(moi)
+        R = r @ U
+        # rotations around the principal axes
+        modes += [
+            ((R[:, 1:2] * U[:, 2] - R[:, 2:3] * U[:, 1]) * sm).reshape(-1),
+            ((R[:, 2:3] * U[:, 0] - R[:, 0:1] * U[:, 2]) * sm).reshape(-1),
+            ((R[:, 0:1] * U[:, 1] - R[:, 1:2] * U[:, 0]) * sm).reshape(-1),
+        ]
+    D = xp.stack(modes)
+    return D / xp.linalg.vector_norm(D, axis=1)[:, None], inertia
 
 
 def apply_asr(asr, dm, beads, return_trans_matrix=False):
@@ -11,55 +40,8 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
     if asr == "none":
         return dm
 
-    ism = 1 / xp.sqrt(beads.m3[-1])
-    m = beads.m
-
-    # Computes the centre of mass.
-    com = (beads.q.reshape((beads.natoms, 3)).T @ m) / m.sum()
-    qminuscom = beads.q.reshape((beads.natoms, 3)) - com
-    # Computes the moment of inertia tensor.
-    moi = xp.zeros((3, 3))
-    for k in range(beads.natoms):
-        moi -= (
-            xp.linalg.cross(qminuscom[k], xp.eye(3))
-            @ xp.linalg.cross(qminuscom[k], xp.eye(3))
-            * m[k]
-        )
-
-    # moi is symmetric, so its eigenvectors are real
-    U = xp.real(xp.linalg.eig(moi)[1])
-    R = qminuscom @ U
-
-    if asr == "crystal":
-        D = xp.zeros((3, 3 * beads.natoms))
-
-        # Computes the vectors along rotations.
-        D[0] = xp.asarray(np.tile([1, 0, 0], beads.natoms)) / ism
-        D[1] = xp.asarray(np.tile([0, 1, 0], beads.natoms)) / ism
-        D[2] = xp.asarray(np.tile([0, 0, 1], beads.natoms)) / ism
-
-        # Computes unit vecs.
-        for k in range(3):
-            D[k] = D[k] / xp.linalg.vector_norm(D[k])
-
-    elif asr == "poly":
-        D = xp.zeros((6, 3 * beads.natoms))
-
-        # Computes the vectors along rotations.
-        D[0] = xp.asarray(np.tile([1, 0, 0], beads.natoms)) / ism
-        D[1] = xp.asarray(np.tile([0, 1, 0], beads.natoms)) / ism
-        D[2] = xp.asarray(np.tile([0, 0, 1], beads.natoms)) / ism
-
-        # element (iatom, idof) goes to D[:, 3 * iatom + idof]
-        D[3] = (R[:, 1:2] * U[:, 2] - R[:, 2:3] * U[:, 1]).reshape(-1) / ism
-        D[4] = (R[:, 2:3] * U[:, 0] - R[:, 0:1] * U[:, 2]).reshape(-1) / ism
-        D[5] = (R[:, 0:1] * U[:, 1] - R[:, 1:2] * U[:, 0]).reshape(-1) / ism
-
-        # Computes unit vecs.
-        for k in range(6):
-            D[k] = D[k] / xp.linalg.vector_norm(D[k])
-
-    # Computes the transformation matrix.
+    D = external_modes(beads.q.reshape((beads.natoms, 3)), beads.m, asr)[0]
+    # projector on the space orthogonal to the external modes
     transfmatrix = xp.eye(3 * beads.natoms) - D.T @ D
 
     if return_trans_matrix:

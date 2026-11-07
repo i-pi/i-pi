@@ -18,7 +18,8 @@ def get_ipi_path():
 
     path = os.getenv("IPI_ROOT")
     if path is None or path == "":
-        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../"))
+        # the folder above the ipi package, i.e. ipi/utils/setup.py/../../..
+        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../.."))
 
     return path
 
@@ -78,7 +79,7 @@ def install_driver(force_install=False, path=None):
         info(f"Temporary directory created: {temp_dir}", verbosity.medium)
 
         try:
-            subprocess.run(["git", "init"], cwd=temp_dir)
+            subprocess.run(["git", "init"], cwd=temp_dir, check=True)
             subprocess.run(
                 [
                     "git",
@@ -88,15 +89,20 @@ def install_driver(force_install=False, path=None):
                     "https://github.com/i-pi/i-pi.git",
                 ],
                 cwd=temp_dir,
+                check=True,
             )
             subprocess.run(
-                ["git", "config", "core.sparseCheckout", "true"], cwd=temp_dir
+                ["git", "config", "core.sparseCheckout", "true"],
+                cwd=temp_dir,
+                check=True,
             )
             with open(
                 os.path.join(temp_dir, ".git", "info", "sparse-checkout"), "w"
             ) as f:
                 f.write("drivers/f90\n")
-            subprocess.run(["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir)
+            subprocess.run(
+                ["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir, check=True
+            )
         except:
             warning(
                 "Failed to fetch the drivers folder from i-PI github repository",
@@ -108,7 +114,7 @@ def install_driver(force_install=False, path=None):
 
     # compiles the driver
     try:
-        subprocess.run(["make", "-j", "1", "driver.x"], cwd=build_dir)
+        subprocess.run(["make", "-j", "1", "driver.x"], cwd=build_dir, check=True)
     except:
         warning(
             "Failed to compile the FORTRAN driver. Make sure you have `gfortran` and `make` available",

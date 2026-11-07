@@ -4,9 +4,28 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import math
+
 import numpy as np
 
+from ipi.utils.array_backend import xp, xp_size
 from ipi.utils.depend import depend_value, dproperties
+
+
+def zeros_or_check(value, shape, name, default=None):
+    """Returns `value`, which must have the size of an array of shape `shape`,
+    or `default` (zeros of that shape if None) if it is empty, e.g. as it was
+    not given in the input.
+
+    Raises:
+        ValueError: if `value` has another size.
+    """
+
+    if xp_size(value) == math.prod(shape):
+        return value
+    if xp_size(value) == 0:
+        return xp.zeros(shape) if default is None else default
+    raise ValueError(f"{name} size does not match system size")
 
 
 class Motion:
@@ -24,10 +43,14 @@ class Motion:
             motion will be constrained or not.
         fixatoms_dof: A list of degrees of freedom  that should be held fixed to their
             initial positions.
+        jax_support: Whether the motion runs with the JAX backend, whose arrays
+            cannot be modified in place.
 
     Depend objects:
         none
     """
+
+    jax_support = True
 
     def __init__(self, fixcom=False, fixatoms_dof=None):
         """Initialises Motion object.

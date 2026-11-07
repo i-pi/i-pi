@@ -23,13 +23,11 @@ except ImportError:
 
 
 @pytest.fixture
-def torch_backend():
-    """Selects the torch backend on CPU, and restores numpy afterwards."""
+def torch_backend(select_backend):
+    """Selects the torch backend on CPU."""
 
-    torch = pytest.importorskip("torch")
-    ab.set_backend("torch")
-    yield torch
-    ab.set_backend("numpy")
+    select_backend("torch")
+    return pytest.importorskip("torch")
 
 
 def test_numpy_default():
@@ -52,7 +50,31 @@ def test_jit_requires_jax_or_torch_on_cuda():
         ab.set_backend("numpy", jit=True)
     with pytest.raises(ValueError):
         ab.set_backend("torch", device="cpu", jit=True)
-    assert ab.backend() == "numpy" and not ab.jit()
+    with pytest.raises(ValueError, match="Unknown array backend"):
+        ab.set_backend("unknown", jit=True)
+    assert ab.backend() == "numpy" and not ab.jit_enabled()
+
+
+def test_invalid_backend_options_are_usage_errors(tmp_path):
+    """i-pi reports invalid combinations of the backend options as usage
+    errors, rather than with a traceback"""
+
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    ipi = Path(__file__).resolve().parents[3] / "bin" / "i-pi"
+    xml = tmp_path / "input.xml"
+    xml.write_text("<simulation/>")
+    for options in (["--jit"], ["--device", "cuda"]):
+        result = subprocess.run(
+            [sys.executable, str(ipi), *options, str(xml)],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+        )
+        assert result.returncode == 2
+        assert "error:" in result.stderr and "Traceback" not in result.stderr
 
 
 def test_switch_updates_imported_namespace(torch_backend):
@@ -123,10 +145,10 @@ def test_depend_storage(torch_backend):
 
 
 @pytest.mark.skipif(not cuda_available, reason="CUDA not available")
-def test_cuda_device(torch_backend):
+def test_cuda_device(select_backend):
     """Arrays are allocated on the selected device"""
 
-    ab.set_backend("torch", device="cuda")
+    select_backend("torch", device="cuda")
     a = dp.depend_array(name="a", value=np.arange(3.0))
     assert a.get().device.type == "cuda"
     assert xp.zeros(2).device.type == "cuda"
@@ -134,13 +156,24 @@ def test_cuda_device(torch_backend):
 
 
 @pytest.fixture
-def jax_backend():
-    """Selects the JAX backend on CPU, and restores numpy afterwards."""
+def jax_backend(select_backend):
+    """Selects the JAX backend on CPU."""
 
-    jax = pytest.importorskip("jax")
-    ab.set_backend("jax")
-    yield jax
-    ab.set_backend("numpy")
+    select_backend("jax")
+    return pytest.importorskip("jax")
+
+
+def test_synchronize_waits_for_the_selected_device(monkeypatch):
+    """synchronize waits for the operations on the device of the arrays (e.g.
+    the second GPU), rather than on the current one"""
+
+    torch = pytest.importorskip("torch")
+    devices = []
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda d=None: devices.append(d))
+    monkeypatch.setitem(ab._current, "backend", "torch")
+    monkeypatch.setitem(ab._current, "device", "cuda:1")
+    ab.synchronize()
+    assert devices == ["cuda:1"]
 
 
 def test_jax_types_like_numpy(jax_backend):
@@ -169,6 +202,9 @@ def test_jax_depend_writes(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * np.ones(4))
     with pytest.raises(TypeError):
         a.get()[0] = 0.0
+    # views of a computed array cannot be written, as the array itself
+    with pytest.raises(NameError):
+        b[1:3][:] = 0.0
 
 
 def test_jax_views_follow_parent(jax_backend):
@@ -180,6 +216,9 @@ def test_jax_views_follow_parent(jax_backend):
         name="b", value=np.zeros((2, 3)), func=lambda: 2 * a.get(), dependencies=[a]
     )
     row, flat = a[1], a[1].flatten()
+    assert (
+        type(row) is dp.depend_immutable_view and type(flat) is dp.depend_immutable_view
+    )
     a += 1.0
     assert np.array_equal(ab.to_numpy(flat.get()), np.ones(3))
     row += 1.0
@@ -188,7 +227,7 @@ def test_jax_views_follow_parent(jax_backend):
     assert np.array_equal(ab.to_numpy(b.get()), 2 * ab.to_numpy(a.get()))
     # a view of one of two synchronized arrays
     c = dp.depend_array(name="c", value=np.zeros((2, 3)))
-    dp.dsynchro(c, a, lambda: 2 * a.get(), lambda: c.get() / 2)
+    dp.dsynchro(a, c, lambda: c.get() / 2, lambda: 2 * a.get())
     row[2] = 4.0
     assert np.array_equal(ab.to_numpy(c.get()[1]), [10.0, 4.0, 8.0])
     c.set(np.zeros((2, 3)))
@@ -209,7 +248,21 @@ def test_jax_depend_copies(jax_backend):
         a._value = xp.zeros(3)
 
 
-def test_jax_random_state(jax_backend):
+def test_torch_random_state_on_the_same_type_of_device(torch_backend, device_random):
+    """The state of the torch generator is restored also when the device is named
+    differently (e.g. "cuda" and "cuda:0")"""
+
+    from ipi.utils.prng import Random
+
+    prng = Random(seed=12345)
+    state = prng.get_state()
+    first = prng.gvec(6)
+    state["torch"]["device"] = "cpu:0"
+    prng.set_state(state)
+    assert torch_backend.equal(prng.gvec(6), first)
+
+
+def test_jax_random_state(jax_backend, device_random):
     """With JAX, Gaussian arrays are drawn with a JAX key, which is restored with
     the state of the generator"""
 

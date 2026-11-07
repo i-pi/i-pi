@@ -6,10 +6,10 @@ import time
 
 try:
     from ipi_tests.regression_tests.runstools import Runner_regression
-    from ipi_tests.test_tools import get_test_list
+    from ipi_tests.test_tools import get_test_list, unsupported_marks
 except ImportError:
     from runstools import Runner_regression
-    from ipi_tests.test_tools import get_test_list
+    from ipi_tests.test_tools import get_test_list, unsupported_marks
 
 
 """ Run regression test """
@@ -20,11 +20,29 @@ call_ipi = "i-pi input.xml"
 reg_tests = get_test_list(regtests_folder)
 
 
-@pytest.mark.parametrize("regtest", reg_tests)
+def plumed_unavailable():
+    """Returns why PLUMED cannot be used, or None if it can."""
+
+    try:
+        from plumed import Plumed
+
+        Plumed().finalize()
+    except (ImportError, RuntimeError) as err:
+        return f"PLUMED is not available: {err}"
+    return None
+
+
+@pytest.mark.parametrize(
+    "regtest", [pytest.param(test, marks=unsupported_marks(test)) for test in reg_tests]
+)
 def test_regtest(regtest):
     """Intermediate function to run the regression test (by calling Runner) and makes
     possible to parametrize the arguments
     """
+    if "<ffplumed" in (Path(regtest) / "input.xml").read_text():
+        reason = plumed_unavailable()
+        if reason is not None:
+            pytest.skip(reason)
     t0 = time.time()
     nid = reg_tests.index(regtest)
     runner = Runner_regression(Path("."), run_ipi_in_process=True)

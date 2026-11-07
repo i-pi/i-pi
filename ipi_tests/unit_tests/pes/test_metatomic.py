@@ -1,11 +1,11 @@
 """Metatomic driver checks with PET-MAD-xs: batching, derivatives, UQ, rotations.
 
-The exported model is read from ``IPI_METATOMIC_MODEL``; otherwise it is exported
-with ``upet``, and the module is skipped when neither is available.
+The exported model is read from the path given with ``--ipi-metatomic-model``;
+otherwise it is exported with ``upet``, and the module is skipped when neither is
+available.
 """
 
 import json
-import os
 from pathlib import Path
 
 import numpy as np
@@ -38,8 +38,8 @@ def ev_ang(x):
 
 
 @pytest.fixture(scope="module")
-def upet_model(tmp_path_factory):
-    path = os.environ.get("IPI_METATOMIC_MODEL")
+def upet_model(tmp_path_factory, request):
+    path = request.config.getoption("--ipi-metatomic-model")
     if path:
         return path
     upet = pytest.importorskip("upet")
@@ -218,7 +218,6 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
             name="pet",
             pes="metatomic",
             pars={"template": template, "model": upet_model},
-            threaded=False,
             batch_size=18,
         ),
         grid_mode="lebedev",
@@ -230,6 +229,7 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
     atoms = Atoms(len(pos))
     atoms.q_[:] = pos.flatten()
     request = ff.queue(atoms, Cell(cell))
+    ff.ff.poll()
     ff.poll()
     assert request["status"] == "Done"
     energy, force, virial, extras = request["result"]

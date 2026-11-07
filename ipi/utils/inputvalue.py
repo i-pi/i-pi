@@ -1123,8 +1123,14 @@ class InputValue(InputAttribute):
                 units
             )  # User can define in the code the units to be printed
 
+        factor = 1.0
         if self._dimension != "undefined":
-            self.value = value * unit_to_user(self._dimension, units, 1.0)
+            factor = unit_to_user(self._dimension, units, 1.0)
+        if array_api_compat.is_jax_array(value):
+            # JAX arrays cannot be modified, so they are stored as they are
+            self.value = value if factor == 1.0 else value * factor
+        elif self._dimension != "undefined":
+            self.value = value * factor
         elif _is_device_array(value):
             # a copy, as the array may then be modified in place
             self.value = xp.asarray(value, copy=True)
@@ -1247,11 +1253,15 @@ class InputArray(InputValue):
               in.
         """
 
-        if _is_device_array(value):
+        if array_api_compat.is_jax_array(value):
+            # stored with its shape, and flattened when written
+            flat = value
+        elif _is_device_array(value):
             flat = value.reshape(-1)
         else:
+            # a copy, of which flat is a view
             value = np.array(value, dtype=self.type)
-            flat = value.flatten()
+            flat = value.reshape(-1)
         super(InputArray, self).store(value=flat, units=units)
         self.shape.store(tuple(value.shape))
 
@@ -1270,11 +1280,12 @@ class InputArray(InputValue):
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
-            value = np.resize(value, 0).copy()
+            value = np.resize(value, 0)
         else:
-            value = value.reshape(self.shape.fetch()).copy()
+            value = value.reshape(self.shape.fetch())
 
-        return value
+        # a copy, with the type of the input also for stored device arrays
+        return np.array(value, dtype=self.type)
 
     def write(self, name="", indent=""):
         """Writes data in xml file format.
@@ -1293,7 +1304,7 @@ class InputArray(InputValue):
            A string giving the stored value in the appropriate xml format.
         """
 
-        value = to_numpy(self.value)
+        value = np.asarray(to_numpy(self.value), dtype=self.type).reshape(-1)
         rstr = ""
         if len(value) > ELPERLINE:
             rstr += "\n" + indent + " [ "

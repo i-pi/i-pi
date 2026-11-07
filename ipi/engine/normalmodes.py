@@ -181,9 +181,6 @@ class NormalModes:
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
 
-        # storage space for the propagator
-        self.pq_buffer = np.zeros((2, self.natoms * 3), float)
-
         self.bosons = self.resolve_bosons()
 
         # eco springs are only defined for closed, distinguishable paths
@@ -194,9 +191,6 @@ class NormalModes:
                 raise ValueError(
                     "ECO mode requires one frequency, the maximum physical frequency to be reproduced."
                 )
-
-        # stores a reference to the bound beads and ensemble objects
-        self.ensemble = ensemble
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
@@ -291,14 +285,14 @@ class NormalModes:
             name="nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_nmm,
-            dependencies=[self.nm_freqs_, self.mode_],
+            dependencies=[self.omegak_, self.nm_freqs_, self.mode_],
         )
         # add o_nm_factor for the dynamical mass in the case of open paths
         self.o_nm_factor_ = depend_array(
-            name="nmm",
+            name="o_nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_o_nmm,
-            dependencies=[self.nm_freqs_, self.mode_],
+            dependencies=[self.o_omegak_, self.nm_freqs_, self.mode_],
         )
         self.dynm3_ = depend_array(
             name="dynm3",
@@ -313,7 +307,6 @@ class NormalModes:
             dependencies=[self.nm_factor_, self.omegak_],
         )
 
-        self.dt_ = depend_value(name="dt", value=1.0)
         dpipe(self.motion.dt_, self.dt_)
 
         self.prop_pq_ = depend_array(
@@ -373,42 +366,33 @@ class NormalModes:
             dependencies=[self.pnm_, self.beads.sm3_, self.nm_factor_],
         )
 
-        self.vspring_and_fspring_ = depend_value(
-            name="v_and_fs",
-            value=[None, None],
-            func=self.get_vspring_and_fspring,
-            dependencies=[
-                self.qnm_,
-                self.omegak_,
-                self.o_omegak_,
-                self.beads.m3_,
-                self.beads.q_,
-            ],
-        )
-
+        spring_dependencies = [
+            self.qnm_,
+            self.omegak_,
+            self.o_omegak_,
+            self.beads.m3_,
+            self.beads.q_,
+        ]
         if len(self.bosons) > 0:
             self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
             self.exchange_potential.bind(self.beads, self.ensemble, self)
-            ddeps(
-                self.vspring_and_fspring_,
-                [self.exchange_potential.vspring_and_fspring_],
-            )
+            spring_dependencies.append(self.exchange_potential.vspring_and_fspring_)
         else:
             self.exchange_potential = None
 
-        # just return split potential and force for ease of access
+        # the spring energy and forces are computed separately, as the energy is
+        # read at every step and the forces only by some propagators
         self.vspring_ = depend_value(
             name="vspring",
             value=0.0,
-            func=lambda: self.vspring_and_fspring[0],
-            dependencies=[self.vspring_and_fspring_],
+            func=self.get_vspring,
+            dependencies=spring_dependencies,
         )
-
         self.fspring_ = depend_array(
             name="fspring",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func=lambda: self.vspring_and_fspring[1],
-            dependencies=[self.vspring_and_fspring_],
+            func=self.get_fspring,
+            dependencies=list(spring_dependencies),
         )
 
         if self.propagator == "cayley" and not bool(
@@ -600,10 +584,19 @@ class NormalModes:
         """Returns dynamical mass factors, i.e. the scaling of normal mode
         masses that determine the path dynamics (but not statics)."""
 
-        # also checks that the frequencies and the mode given in init are
-        # consistent with the beads and ensemble
+        return self._mass_factors(self.omegak)
 
-        omegak = to_numpy(self.omegak)
+    def get_o_nmm(self):
+        """Returns the dynamical mass factors of the atoms with open paths."""
+
+        return self._mass_factors(self.o_omegak)
+
+    def _mass_factors(self, omegak):
+        """Returns the dynamical mass factors for the normal-mode frequencies
+        `omegak`, and checks that the frequencies and the mode given in input
+        are consistent with the number of beads."""
+
+        omegak = to_numpy(omegak)
         dmf = np.ones(self.nbeads, float)
         if self.mode == "rpmd":
             if len(self.nm_freqs) > 0:
@@ -611,74 +604,6 @@ class NormalModes:
         elif self.mode == "eco":
             # eco changes the spring frequencies (statics), not the dynamical masses
             pass
-        elif self.mode == "manual":
-            if len(self.nm_freqs) != self.nbeads - 1:
-                raise ValueError(
-                    "Manual path mode requires (nbeads-1) frequencies, one for each internal mode of the path."
-                )
-            for b in range(1, self.nbeads):
-                sk = omegak[b] / self.nm_freqs[b - 1]
-                dmf[b] = sk**2
-        elif self.mode == "pa-cmd":
-            if len(self.nm_freqs) > 1:
-                warning(
-                    "Only the first element in nm.frequencies will be considered for PA-CMD mode.",
-                    verbosity.low,
-                )
-            if len(self.nm_freqs) == 0:
-                raise ValueError(
-                    "PA-CMD mode requires the target frequency of all the internal modes."
-                )
-            for b in range(1, self.nbeads):
-                sk = omegak[b] / self.nm_freqs[0]
-                info(
-                    " ".join(
-                        [
-                            "NM FACTOR",
-                            str(b),
-                            str(sk),
-                            str(omegak[b]),
-                            str(self.nm_freqs[0]),
-                        ]
-                    ),
-                    verbosity.medium,
-                )
-                dmf[b] = sk**2
-        elif self.mode == "wmax-cmd":
-            if len(self.nm_freqs) > 2:
-                warning(
-                    "Only the first two element in nm.frequencies will be considered for WMAX-CMD mode.",
-                    verbosity.low,
-                )
-            if len(self.nm_freqs) < 2:
-                raise ValueError(
-                    "WMAX-CMD mode requires [wmax, wtarget]. The normal modes will be scaled such that the first internal mode is at frequency wtarget and all the normal modes coincide at frequency wmax."
-                )
-            wmax = self.nm_freqs[0]
-            wt = self.nm_freqs[1]
-            for b in range(1, self.nbeads):
-                sk = 1.0 / np.sqrt(
-                    (wt) ** 2
-                    * (1 + (wmax / omegak[1]) ** 2)
-                    / (wmax**2 + (omegak[b]) ** 2)
-                )
-                dmf[b] = sk**2
-
-        return xp.asarray(dmf)
-
-    # define a function o_nm_factor so we have dynamical masses for the open case
-    def get_o_nmm(self):
-        """Returns dynamical mass factors, i.e. the scaling of normal mode
-        masses that determine the path dynamics (but not statics)."""
-
-        # also checks that the frequencies and the mode given in init are
-        # consistent with the beads and ensemble
-
-        omegak = to_numpy(self.o_omegak)
-        dmf = np.ones(self.nbeads, float)
-        if self.mode == "rpmd":
-            if len(self.nm_freqs) > 0:
-                warning("nm.frequencies will be ignored for RPMD mode.", verbosity.low)
         elif self.mode == "manual":
             if len(self.nm_freqs) != self.nbeads - 1:
                 raise ValueError(
@@ -746,13 +671,13 @@ class NormalModes:
             dm3[1:, opc] = m3[1:, opc] * self.o_nm_factor[1:, None]
         return dm3
 
-    def get_vspring_and_fspring(self):
-        """Returns the total spring energy and spring force."""
+    def get_vspring(self):
+        """Returns the total spring energy."""
 
         # classical simulation - do nothing!
-        vspring, fspring = 0.0, xp.zeros_like(self.qnm)
+        vspring = 0.0
         if self.nbeads == 1:
-            return vspring, fspring
+            return vspring
 
         if len(self.bosons) < self.natoms:
             # computes harmonic potential in normal-modes representation
@@ -761,10 +686,6 @@ class NormalModes:
             q2 = (sqnm**2).sum(axis=1)
 
             vspring += (self.omegak2 * q2).sum()
-            # spring forces (this is only the closed path version -
-            # open path correction is applied in the propagator)
-            # TODO make it happen here, it'd be probably cleaner
-            fspringnm = -self.beads.m3 * self.omegak[:, None] ** 2 * qnm
 
             # correction for open paths
             for j in self.open_paths:
@@ -772,45 +693,62 @@ class NormalModes:
                     self.beads.m[j]
                     * (self.o_omegak**2 - self.omegak**2)
                     * (
-                        self.qnm[:, 3 * j] ** 2
-                        + self.qnm[:, 3 * j + 1] ** 2
-                        + self.qnm[:, 3 * j + 2] ** 2
+                        qnm[:, 3 * j] ** 2
+                        + qnm[:, 3 * j + 1] ** 2
+                        + qnm[:, 3 * j + 2] ** 2
                     )
                 )
 
-                # overrides open path forces
+            # correction for bosons
+            for j in self.bosons:
+                vspring -= xp.sum(
+                    self.beads.m[j]
+                    * self.omegak**2
+                    * (
+                        qnm[:, 3 * j] ** 2
+                        + qnm[:, 3 * j + 1] ** 2
+                        + qnm[:, 3 * j + 2] ** 2
+                    )
+                )
+
+            vspring *= 0.5
+
+        if len(self.bosons) > 0:
+            vspring += self.exchange_potential.vspring_and_fspring[0]
+
+        return vspring
+
+    def get_fspring(self):
+        """Returns the spring forces."""
+
+        # classical simulation - do nothing!
+        fspring = xp.zeros_like(self.qnm)
+        if self.nbeads == 1:
+            return fspring
+
+        if len(self.bosons) < self.natoms:
+            # spring forces (this is only the closed path version -
+            # open path correction is applied in the propagator)
+            qnm = self.qnm
+            fspringnm = -self.beads.m3 * self.omegak[:, None] ** 2 * qnm
+
+            # overrides the forces of open paths
+            for j in self.open_paths:
                 fspringnm[:, 3 * j : 3 * (j + 1)] = (
                     -self.beads.m3[:, 3 * j : 3 * (j + 1)]
                     * self.o_omegak[:, None] ** 2
                     * qnm[:, 3 * j : 3 * (j + 1)]
                 )
 
-            # correction for bosons
-            if len(self.bosons) > 0:
-                for j in self.bosons:
-                    vspring -= xp.sum(
-                        self.beads.m[j]
-                        * self.omegak**2
-                        * (
-                            self.qnm[:, 3 * j] ** 2
-                            + self.qnm[:, 3 * j + 1] ** 2
-                            + self.qnm[:, 3 * j + 2] ** 2
-                        )
-                    )
-
-            vspring *= 0.5
             fspring += self.transform.nm2b(fspringnm)
 
         if len(self.bosons) > 0:
-            vspring_b, fspring_b = self.exchange_potential.vspring_and_fspring
-
-            vspring += vspring_b
             # overwrites the spring forces for the bosonic particles
             fspring = fspring.reshape(self.nbeads, self.natoms, 3)
-            fspring[:, self.bosons, :] = fspring_b
+            fspring[:, self.bosons, :] = self.exchange_potential.vspring_and_fspring[1]
             fspring = fspring.reshape(self.nbeads, 3 * self.natoms)
 
-        return vspring, fspring
+        return fspring
 
     def free_babstep(self):
         """
@@ -964,7 +902,6 @@ dproperties(
         "kin",
         "kstress",
         "vspring",
-        "vspring_and_fspring",
         "fspring",
     ],
 )

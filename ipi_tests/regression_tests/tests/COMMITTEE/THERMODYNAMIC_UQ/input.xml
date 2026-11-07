@@ -1,4 +1,4 @@
-<simulation verbosity='low' threading='false'>
+<simulation verbosity='low' interleave='false'>
   <output prefix='simulation'>
     <properties stride='2' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, pressure_md{bar}, volume ] </properties>
     <trajectory filename='pos' stride='2'> positions </trajectory>
@@ -38,7 +38,6 @@
           <thermostat mode='langevin'>
             <tau units='femtosecond'> 100</tau>
           </thermostat>
-          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
         </barostat>
         <timestep units='femtosecond'> 0.5 </timestep>
         <thermostat mode='svr'>

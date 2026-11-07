@@ -23,6 +23,23 @@ def pytest_addoption(parser):
         default="cpu",
         help="device used by the array backend (e.g. 'cuda')",
     )
+    parser.addoption(
+        "--ipi-mpi",
+        action="store_true",
+        help="run the end-to-end tests of the MPI transport, which need mpi4py, "
+        "an MPI runtime and the driver built with `make MPI=1`",
+    )
+    parser.addoption(
+        "--ipi-metatomic-model",
+        default="",
+        help="absolute path of the PET-MAD-xs v1.6.0 model of the metatomic tests "
+        "(by default, it is exported with upet)",
+    )
+    parser.addoption(
+        "--ipi-fetch-driver",
+        action="store_true",
+        help="test fetching the Fortran driver from GitHub and compiling it",
+    )
 
 
 def _no_implicit_numpy(self, *args, **kwargs):
@@ -37,34 +54,21 @@ def pytest_configure(config):
 
     test_tools.ipi_backend = config.getoption("--ipi-backend")
     test_tools.ipi_device = config.getoption("--ipi-device")
+    test_tools.ipi_mpi = config.getoption("--ipi-mpi")
 
     if test_tools.ipi_backend in ("torch", "jax"):
         # the reference outputs are generated with numpy: the Gaussian arrays
         # are drawn from the numpy generator also with torch and JAX, so that
         # runs in the same process follow the reference trajectories
-        from ipi.utils import array_backend
         from ipi.utils.prng import Random
 
-        def gvec(self, shape):
-            return array_backend.xp.asarray(self.gvec_serial(shape))
-
-        def gammavec(self, k, shape):
-            return array_backend.xp.asarray(Random.gammavec(self, k, shape))
+        for name, method in test_tools.numpy_draws().items():
+            if name.endswith(test_tools.ipi_backend):
+                _device_random[name] = getattr(Random, name)
+                setattr(Random, name, method)
 
     if test_tools.ipi_backend == "torch":
         import torch
-
-        def gfill(self, out):
-            out[...] = array_backend.xp.asarray(self.gvec_serial(tuple(out.shape)))
-
-        _device_random.update(
-            gvec_torch=Random.gvec_torch,
-            gfill_torch=Random.gfill_torch,
-            gammavec_torch=Random.gammavec_torch,
-        )
-        Random.gvec_torch = gvec
-        Random.gfill_torch = gfill
-        Random.gammavec_torch = gammavec
 
         # torch is slower than numpy for the small systems of the tests
         test_tools.TIMEOUT = 4 * test_tools.TIMEOUT
@@ -74,11 +78,6 @@ def pytest_configure(config):
         torch.Tensor.__array__ = _no_implicit_numpy
 
     if test_tools.ipi_backend == "jax":
-        _device_random.update(
-            gvec_jax=Random.gvec_jax, gammavec_jax=Random.gammavec_jax
-        )
-        Random.gvec_jax = gvec
-        Random.gammavec_jax = gammavec
         # eager JAX is much slower than numpy for the small systems of the tests
         test_tools.TIMEOUT = 10 * test_tools.TIMEOUT
 

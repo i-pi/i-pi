@@ -1,83 +1,132 @@
-"""Classes to deal with calls for a soft exit."""
+"""Soft exits: ending a simulation half way through, in a state from which it
+can be restarted.
+
+A soft exit is requested by a kill signal (SIGINT or SIGTERM), by a file
+named EXIT, when the wall-clock time runs out, or by the code (`request`). A
+request only records a message: the main thread makes the exit at its next
+`check`, which it calls between the steps and whenever it waits for forces.
+Making the exit runs the cleanup functions, which write RESTART, close the
+outputs and stop the forcefields, so that the waits for forces end. During a
+run, RESTART holds the state that was last stored (`rollback`), and the
+outputs written since then are truncated (`stored` starts a new record of
+their positions), so that a restart writes each of them once. A second
+signal interrupts the main thread at once.
+
+A watchdog thread deals with a main thread that does not reach `check`, e.g.
+because an in-process force evaluation hangs in native code, where Python
+does not even run its signal handlers. It learns of the signals through
+`signal.set_wakeup_fd`, and checks the EXIT file and the wall-clock time
+itself. When an exit is pending and the main thread has not checked for
+GRACE seconds, the watchdog writes the last stored checkpoint and ends the
+process. It does so only with `hard_exit`, i.e. when i-PI runs as a program.
+"""
 
 # This file is part of i-PI.
-# i-PI Copyright (C) 2014-2015 i-PI developers
+# i-PI Copyright (C) 2014-2026 i-PI developers
 # See the "licenses" directory for full license information.
 
 
 import atexit
-import sys
 import os
-import time
-import threading
+import select
 import signal
+import sys
+import threading
+import time
 
 from ipi.utils.messages import verbosity, warning
 
 __all__ = ["Softexit", "softexit"]
 
 
-SOFTEXITLATENCY = 1.0  # seconds to sleep between checking for soft exit
+# time between checks for an EXIT file and for the wall-clock time
+SOFTEXITLATENCY = 1.0
+# time after which the watchdog makes a pending exit, if the main thread has
+# not checked for requests meanwhile
+GRACE = 10.0
 
 
 class Softexit(object):
-    """Class to deal with stopping a simulation half way through.
-
-    Provides a mechanism to end a simulation from any thread that has
-    been properly registered, and to call a series of "emergency" functions
-    to try as hard as possible to produce a restartable snapshot of
-    the simulation.
-    Also, provides a loop to check for soft-exit requests and
-    trigger termination when necessary.
+    """Requests to stop a simulation half way through, and the functions that
+    make it restartable.
 
     Attributes:
-       flist: A list of callback functions used to clean up and exit gracefully.
-       tlist: A list of threads registered for monitoring
-       lock: Held while running the callback functions. The main thread can also
-          hold it to delay them until it has reached a consistent state: it must
-          then check if a soft exit was triggered, and stop if this is the case.
-          It is not reentrant, so the callbacks are delayed also when the soft
-          exit is requested by the thread holding it.
+       flist: The cleanup functions, as (function, args, kwargs), run once.
+       emergency: The functions that the watchdog runs when the main thread
+          does not respond. They must not use what the main thread may be
+          using, e.g. they write a checkpoint stored beforehand.
+       requested: The message of a pending request, or None.
+       triggered: Whether the exit has started.
+       exiting: True while the cleanup functions run.
+       rollback: Whether the exit goes back to the state that was last
+          stored, also truncating the outputs written since then.
+       nstored: The number of times the state has been stored.
        hard_exit: If True, the process is ended with os._exit() once the
           cleanup is complete, skipping the finalization of the interpreter.
+       timeout: The wall-clock time at which to exit, if positive.
     """
 
     def __init__(self):
         """Initializes SoftExit."""
 
         self.flist = []
-        self.tlist = []
-        self._kill = {}
-        self._thread = None
+        self.emergency = []
+        self.requested = None
         self.triggered = False
         self.exiting = False
-        self._doloop = [False]
-        # wakes up the monitoring thread when the threads are stopped
-        self._wake = threading.Event()
-        self._killed = False
-        self.lock = threading.Lock()
         self.hard_exit = False
+        self.timeout = -1.0
+        self.rollback = False
+        self.nstored = 0
+        self._started = False
+        self._signalled = False
+        self._kill = {}
+        # the last check of the main thread, and the next one of the files
+        self._beat = time.monotonic()
+        self._next_check = 0.0
+        # taken by whoever makes the exit: the main thread or the watchdog
+        self._lock = threading.Lock()
+        self._watchdog = None
 
     def register_function(self, func, *args, **kwargs):
-        """Adds another function to flist.
-
-        Args:
-           func: The function to be added to flist.
-        """
+        """Adds a cleanup function to flist."""
 
         self.flist.append((func, args, kwargs))
 
-    def register_thread(self, thread, loop_control=None):
-        """Adds a thread to the monitored list.
+    def register_emergency(self, func, *args, **kwargs):
+        """Adds a function for the watchdog to run if the main thread hangs."""
 
-        Args:
-           thread: The thread to be monitored.
-           loop_control: the variable that causes the thread to terminate.
-        """
+        self.emergency.append((func, args, kwargs))
 
-        self.tlist.append((thread, loop_control))
+    def request(self, message=""):
+        """Asks for a soft exit, which the main thread makes at its next
+        check. Can be called from any thread, and from signal handlers."""
 
-    def trigger(self, status="restartable", message=""):
+        if self.requested is None and not self.triggered:
+            self.requested = message
+
+    def check(self):
+        """Makes the exit that has been requested. Called by the main thread
+        between the steps and whenever it waits for forces, which also tells
+        the watchdog that it responds."""
+
+        now = time.monotonic()
+        self._beat = now
+        if self._started and now > self._next_check:
+            self._next_check = now + SOFTEXITLATENCY
+            message = self._expired()
+            if message is not None:
+                self.request(message)
+        if self.requested is not None and not self.exiting:
+            self.cleanup(message=self.requested)
+
+    def stored(self):
+        """Records that the state to go back to has been stored: the outputs
+        record their positions again, at their next write."""
+
+        self.nstored += 1
+
+    def trigger(self, *, status="restartable", message=""):
         """Halts the simulation.
 
         Prints out a warning message, then runs all the exit functions in flist
@@ -89,22 +138,16 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        self.cleanup(status, message)
+        self.cleanup(status=status, message=message)
         self.kill()
 
-    def cleanup(self, status="restartable", message=""):
-        """Runs registered cleanup functions without exiting the process.
+    def cleanup(self, *, status="restartable", message=""):
+        """Runs the cleanup functions, once, without exiting the process."""
 
-        The functions are called only once. If another thread holds the lock,
-        they are left pending, and run the next time this is called.
-        """
-
-        print(
-            " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
-            threading.currentThread(),
-            message,
-        )
-        if not self.triggered:  # avoid double calls from different threads
+        # reports the reason of a pending request
+        message = message or self.requested or ""
+        print(" @softexit.trigger:  SOFTEXIT CALLED", message)
+        if not self.triggered:
             self.triggered = True
 
             if status == "restartable":
@@ -122,44 +165,32 @@ class Softexit(object):
                 + "'. Cleaning up.",
                 verbosity.low,
             )
+        self.requested = None
 
-        if not self.lock.acquire(blocking=False):
+        if self.exiting:
             return
-        try:
+        # waits, if the watchdog is ending the process
+        with self._lock:
             self.exiting = True
-            # calls all the registered emergency softexit procedures
-            while self.flist:
-                f, a, ka = self.flist.pop(0)
-                try:
-                    f(*a, **ka)
-                except RuntimeError as err:
-                    print("Error running emergency softexit, ", err)
-        finally:
-            self.exiting = False  # emergency is over, signal we can be relaxed
-            self.lock.release()
-
-        for t, dl in self.tlist:  # set thread exit flag
-            dl[0] = False
-        self._wake.set()
-
-        # wait for all (other) threads to finish
-        for t, dl in self.tlist:
-            if not (
-                threading.currentThread() is self._thread
-                or threading.currentThread() is t
-            ):
-                t.join()
+            try:
+                # calls all the registered emergency softexit procedures
+                while self.flist:
+                    f, a, ka = self.flist.pop(0)
+                    try:
+                        f(*a, **ka)
+                    except RuntimeError as err:
+                        print("Error running emergency softexit, ", err)
+            finally:
+                self.exiting = False
 
     def kill(self):
-        """Terminates the current thread/process.
+        """Terminates the process, or unwinds the main thread.
 
-        With hard_exit set, and once the cleanup functions have run, the whole
-        process is terminated from whichever thread gets here. Outputs and
-        RESTART have been written at that point, so nothing is lost by skipping
-        the finalization of the interpreter, which can crash when extension
-        libraries (e.g. libtorch worker threads) release thread-local state.
-        This also stops the main thread from carrying on with a step that uses
-        force fields that have been shut down.
+        With hard_exit set, and once the cleanup functions have run, the
+        process is terminated. Outputs and RESTART have been written at that
+        point, so nothing is lost by skipping the finalization of the
+        interpreter, which can crash when extension libraries (e.g. libtorch
+        worker threads) release thread-local state.
         """
 
         if self.hard_exit and self.triggered and not (self.flist or self.exiting):
@@ -173,97 +204,175 @@ class Softexit(object):
         sys.exit()
 
     def reset(self):
-        """Resets the soft-exit state and restores intercepted signals."""
+        """Stops the watchdog, restores the intercepted signals, and forgets
+        the requests and the functions."""
 
+        self._stop_watchdog()
         for signum, handler in self._kill.items():
             signal.signal(signum, handler)
         self.__init__()
 
     def start(self, timeout=0.0):
-        """Starts the softexit monitoring loop.
+        """Starts watching for exit requests: kill signals, the EXIT file, and
+        the wall-clock time.
 
         Args:
-           timeout: Number of seconds to wait before softexit is triggered.
+           timeout: Number of seconds after which the exit is requested, if
+              positive.
         """
 
-        self._main = threading.currentThread()
         self.timeout = -1.0
         if timeout > 0.0:
             self.timeout = time.time() + timeout
-
-        self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
-        self._thread.daemon = True
-        self._doloop[0] = True
-        self._wake.clear()
+        self._started = True
+        self._beat = time.monotonic()
+        # an EXIT file that is there from the start is noticed at the end of
+        # a short first step, which the run then completes
+        self._next_check = self._beat + SOFTEXITLATENCY
+        # signals are handled by the main thread
+        if threading.current_thread() is not threading.main_thread():
+            return
         for signum in (signal.SIGINT, signal.SIGTERM):
             handler = signal.signal(signum, self._kill_handler)
             # keeps the original handler when started more than once
             self._kill.setdefault(signum, handler)
-        self._thread.start()
-        self.register_thread(self._thread, self._doloop)
+        if self._watchdog is None:
+            self._start_watchdog()
 
-    def _kill_handler(self, signal, frame):
-        """Deals with handling a kill call gracefully.
+    def _expired(self):
+        """Returns the message of an exit asked by an EXIT file or by the
+        wall-clock time, or None."""
 
-        Intercepts kill signals to trigger softexit.
-        Called when signals SIG_INT and SIG_TERM are received.
+        if os.path.exists("EXIT"):
+            return " @SOFTEXIT: EXIT file detected."
+        if 0.0 < self.timeout < time.time():
+            return " @SOFTEXIT: Maximum wallclock time elapsed."
+        return None
 
-        Args:
-           signal: An integer giving the signal number of the signal received
-              from the socket.
-           frame: Current stack frame.
+    def _kill_handler(self, signum, frame):
+        """Requests a soft exit on the first SIGINT or SIGTERM, and falls
+        back to the original handler on the second one.
+
+        Python runs this in the main thread, on top of whatever it was doing,
+        so the exit is left to the next check.
         """
 
         warning(
             " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
         )
 
-        if not self._killed:
-            # the handler runs on top of whatever the main thread was doing,
-            # so the soft exit is left to the monitoring thread
-            self._killed = True
-        elif callable(self._kill.get(signal)):
-            # a second signal falls back to the original handler
-            self._kill[signal](signal, frame)
+        if not self._signalled:
+            self._signalled = True
+            self.request(" @SOFTEXIT: Kill signal received")
+        elif callable(self._kill.get(signum)):
+            self._kill[signum](signum, frame)
         else:
             self.kill()
 
-    def _softexit_monitor(self):
-        """Keeps checking for soft exit conditions."""
+    def _start_watchdog(self):
+        """Starts the watchdog thread, and routes the signals to its pipe."""
 
-        while self._doloop[0]:
-            if self._wake.wait(SOFTEXITLATENCY):
-                break
-            if self._killed:
-                self.trigger(
-                    status="restartable", message=" @SOFTEXIT: Kill signal received"
-                )
-                break
+        read, write = os.pipe()
+        os.set_blocking(write, False)
+        # the signal handler at the C level writes the signal number to the
+        # pipe, even when the main thread is stuck in native code
+        previous = signal.set_wakeup_fd(write, warn_on_full_buffer=False)
+        stop = threading.Event()
+        thread = threading.Thread(
+            target=self._watch, args=(read, stop), name="softexit", daemon=True
+        )
+        self._watchdog = (thread, read, write, stop, previous)
+        thread.start()
 
-            if os.path.exists("EXIT"):
-                self.trigger(
-                    status="restartable", message=" @SOFTEXIT: EXIT file detected."
-                )
-                break
+    def _stop_watchdog(self):
+        """Stops the watchdog thread, and restores the signal wake-up."""
 
-            if self.timeout > 0 and self.timeout < time.time():
-                self.trigger(
-                    status="restartable",
-                    message=" @SOFTEXIT: Maximum wallclock time elapsed.",
-                )
-                break
+        if self._watchdog is None:
+            return
+        thread, read, write, stop, previous = self._watchdog
+        stop.set()
+        os.write(write, b"\0")  # wakes the thread up
+        thread.join()
+        if threading.current_thread() is threading.main_thread():
+            signal.set_wakeup_fd(previous)
+        os.close(read)
+        os.close(write)
+        self._watchdog = None
+
+    def _watch(self, read, stop):
+        """Waits for signals, checks the EXIT file and the wall-clock time,
+        and makes a pending exit if the main thread does not respond."""
+
+        while True:
+            ready, _, _ = select.select([read], [], [], SOFTEXITLATENCY)
+            if stop.is_set():
+                return
+            if ready:
+                signums = os.read(read, 512)
+                if signal.SIGINT in signums or signal.SIGTERM in signums:
+                    self.request(" @SOFTEXIT: Kill signal received")
+            if self._started:
+                message = self._expired()
+                if message is not None:
+                    self.request(message)
+            pending = self.requested is not None or (self.triggered and self.flist)
+            if (
+                pending
+                and self.hard_exit
+                and not self.exiting
+                and time.monotonic() - self._beat > GRACE
+                and self._lock.acquire(blocking=False)
+            ):
+                self._emergency()
+
+    def _emergency(self):
+        """Runs the emergency functions, and ends the process."""
+
+        sys.stderr.write(
+            " @SOFTEXIT: The main thread has not responded for %g s: writing the "
+            "stored checkpoint, and exiting.\n" % GRACE
+        )
+
+        def run():
+            for f, a, ka in self.emergency:
+                try:
+                    f(*a, **ka)
+                except Exception as err:
+                    sys.stderr.write("Error running emergency softexit, %s\n" % err)
+
+        # the checkpoint copies arrays from the device, which can be stuck
+        # with the main thread: the process ends also if it does not finish
+        writer = threading.Thread(target=run, daemon=True)
+        writer.start()
+        writer.join(GRACE)
+        if writer.is_alive():
+            sys.stderr.write(" @SOFTEXIT: The checkpoint could not be written.\n")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(1)
 
     def _finish(self):
         """Completes a soft exit before the interpreter terminates."""
 
-        if self.triggered:
-            with self.lock:  # waits for a cleanup in progress
-                pass
-            if self.flist:
-                self.cleanup()
-            if self.hard_exit:
-                self.kill()
+        if self.requested is not None or (self.triggered and self.flist):
+            self.cleanup(message=self.requested or "")
+        if self.triggered and self.hard_exit:
+            self.kill()
+
+    def _after_fork(self):
+        """Detaches a forked child (e.g. a driver) from the soft exit of the
+        parent, whose watchdog would otherwise receive its signals."""
+
+        if self._watchdog is not None:
+            signal.set_wakeup_fd(-1)
+            for fd in self._watchdog[1:3]:
+                os.close(fd)
+            self._watchdog = None
+        for signum, handler in self._kill.items():
+            signal.signal(signum, handler)
+        self._kill = {}
 
 
 softexit = Softexit()
 atexit.register(softexit._finish)
+os.register_at_fork(after_in_child=softexit._after_fork)

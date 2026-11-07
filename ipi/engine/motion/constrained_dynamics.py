@@ -25,13 +25,6 @@ from ipi.engine.barostats import Barostat
 
 from ipi.utils.messages import verbosity, warning
 
-# tries to import scipy to do the cholesky decomposition solver,
-# but falls back on numpy if it's not there
-try:
-    import scipy.linalg as spla
-except ImportError:
-    spla = None
-
 
 class ConstrainedDynamics(Dynamics):
     """Constrained molecular dynamics class.
@@ -55,6 +48,8 @@ class ConstrainedDynamics(Dynamics):
             the system temperature as PIMD calculations are done at this
             effective classical temperature.
     """
+
+    jax_support = False
 
     def __init__(
         self,
@@ -150,7 +145,7 @@ class ConstrainedDynamics(Dynamics):
 
         if csolver is None:
             self.csolver = ConstraintSolver(
-                self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2
+                self.constraint_list, tolerance=0.0001, maxit=1000, norm_order=2
             )
         else:
             if csolver["norm_order"] == -1:
@@ -254,7 +249,7 @@ class ConstraintSolver(ConstraintSolverBase):
     """
 
     def __init__(
-        self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
+        self, constraint_list, dt=1.0, tolerance=0.0001, maxit=1000, norm_order=2
     ):
         """Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and
@@ -279,13 +274,7 @@ class ConstraintSolver(ConstraintSolverBase):
             dg = constr.Dg
             ic = constr.i3_unique
             b = dg @ (p[ic] / constr.m3)
-
-            if use_cho_factor():
-                x = spla.cho_solve(constr.GramChol, b)
-            else:
-                x = xp.linalg.solve(constr.Gram, b)
-
-            p[ic] -= dg.T @ x
+            p[ic] -= dg.T @ constr.solve_gram(b)
         self.beads.p_[0] = p
 
     def proj_manifold(self):
@@ -301,12 +290,6 @@ class ConstraintSolver(ConstraintSolverBase):
 
         for constr in self.constraint_list:
             dg = constr.Dg
-
-            if use_cho_factor():
-                chol_gram = constr.GramChol
-            else:
-                gram = constr.Gram
-
             ic = constr.i3_unique
             constr.q = q[ic]
 
@@ -319,11 +302,8 @@ class ConstraintSolver(ConstraintSolverBase):
                 ):
                     break
 
-                if use_cho_factor():
-                    dlambda = spla.cho_solve(chol_gram, g)
-                else:
-                    dlambda = xp.linalg.solve(gram, g)
-                delta = dg.T @ dlambda
+                # the Gram matrix is that of the previous positions (qprev)
+                delta = dg.T @ constr.solve_gram(g)
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic]  # updates the constraint to recompute g
 
