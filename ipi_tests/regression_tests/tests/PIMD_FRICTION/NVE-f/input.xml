@@ -1,7 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ 
-      step, conserved, potential, kinetic_md, spring, friction_energy ] </properties>
+      step, conserved, potential, kinetic_md, spring, friction_energy_mf ] </properties>
     <trajectory filename='pos_c' stride='1'> x_centroid </trajectory>
     <trajectory filename='mom_c' stride='1'> p_centroid </trajectory>
   </output>
@@ -15,7 +15,6 @@
       w_b : 500.0,
       v0 : 2085,
       m : 1837.36223469,
-      eta0 : 5.0,
       eps1 : 0,
       eps2 : 0,
       delta : 0,
@@ -35,7 +34,8 @@
       <dynamics mode='nve-f' splitting='fbabf'>
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
-	  <debug_alpha_input mode='file' shape='(32, 2)' > alpha_ref.dat </debug_alpha_input>
+          <bath_mode>none</bath_mode>
+	  <debug_alpha_input mode='file' shape='(32, 2)' > alpha_scaled_ref.dat </debug_alpha_input>
 	</friction>
       </dynamics>
     </motion>

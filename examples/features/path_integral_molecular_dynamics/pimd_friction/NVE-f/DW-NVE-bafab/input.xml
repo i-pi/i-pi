@@ -1,7 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ 
-      step, temperature{kelvin}, conserved{electronvolt}, potential{electronvolt}, kinetic_md{electronvolt}, spring{electronvolt}, friction_energy{electronvolt} ] </properties>
+      step, temperature{kelvin}, conserved{electronvolt}, potential{electronvolt}, kinetic_md{electronvolt}, spring{electronvolt}, friction_energy_mf{electronvolt} ] </properties>
     <trajectory filename='pos_c' stride='1'> x_centroid </trajectory>
     <trajectory filename='frc_c' stride='1'> f_centroid </trajectory>
     <trajectory filename='vel_c' stride='1'> v_centroid </trajectory>
@@ -28,7 +28,8 @@
       <dynamics mode='nve-f' splitting='bafab'>
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
-	  <spectral_density mode='file' shape='(999, 2)' > fric_SD.dat </spectral_density>
+          <bath_mode>none</bath_mode>
+	  <Lambda mode='file' shape='(1000, 2)'> friction_lambda.dat </Lambda>
 	</friction>
       </dynamics>
     </motion>

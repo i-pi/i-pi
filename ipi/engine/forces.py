@@ -1555,19 +1555,12 @@ class Forces:
                 else:
                     # other extras are not touched, just accummulated. if there is a contraction, they are dropped because there is no meaningful way to do a contraction
                     if self.nbeads != self.mforces[k].nbeads:
-                        if self.mforces[k].nbeads == 1 and str(e).startswith("centroid_"):
-                            # Centroid-only extras are already intentionally
-                            # evaluated on the contracted one-bead centroid.
-                            # Preserve the single payload for consumers such
-                            # as variable-friction centroid coupling.
-                            re[e] = v
-                        else:
-                            warning(
-                                "Extra field '"
-                                + e
-                                + "' cannot be contracted unless interpreted as physical properties. Will just drop it",
-                                verbosity.high,
-                            )
+                        warning(
+                            "Extra field '"
+                            + e
+                            + "' cannot be contracted unless interpreted as physical properties. Will just drop it",
+                            verbosity.high,
+                        )
                     else:
                         if e == "raw":
                             # concatenates raw outputs

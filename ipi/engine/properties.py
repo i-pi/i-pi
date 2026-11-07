@@ -1026,7 +1026,7 @@ class Properties:
         friction = self.motion.integrator.friction
         bath = getattr(friction, "bath", None)
         state = None if bath is None else getattr(bath, "s", None)
-        return 0.0 if state is None else float(np.linalg.norm(np.asarray(state)))
+        return 0.0 if state is None else float(np.linalg.norm(to_numpy(state)))
 
     def bind(self, system):
         """Binds the necessary objects from the system to calculate the
@@ -3425,7 +3425,7 @@ class Trajectories:
     def get_friction_coupling_jacobian(self):
         """Return the coupling Jacobian as (nbeads, nchannels, ndof)."""
         friction = self._get_motion_friction()
-        jacobian = np.asarray(dstrip(friction.coupling_jacobian), dtype=float)
+        jacobian = np.asarray(to_numpy(friction.coupling_jacobian), dtype=float)
         if jacobian.ndim == 0:
             # Static scalar friction: make it printable in matrix form.
             jacobian = jacobian.reshape((1, 1, 1))
@@ -3440,7 +3440,7 @@ class Trajectories:
     def get_friction_gamma_matrix(self):
         """Returns Gamma matrix as (nbeads, ndof, ndof)."""
         friction = self._get_motion_friction()
-        gamma = np.asarray(dstrip(friction.gamma), dtype=float)
+        gamma = np.asarray(to_numpy(friction.gamma), dtype=float)
         if gamma.ndim == 0:
             gamma = gamma.reshape((1, 1, 1))
         elif gamma.ndim == 2:

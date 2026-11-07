@@ -1,7 +1,6 @@
 set -e -x
 
 #Define model parameters
-eta=1.5
 wb=500
 wc=500
 V0=2085
@@ -19,7 +18,7 @@ $ipi input.xml > i-pi.out &
 sleep 3
 
 #Launch driver
-arg="w_b=${wb},v0=${V0},m=${mass},delta=${delta},eta0=${eta},eps1=${eps1},eps2=${eps2},deltaQ=${deltaQ}"
+arg="w_b=${wb},v0=${V0},m=${mass},delta=${delta},eps1=${eps1},eps2=${eps2},deltaQ=${deltaQ}"
 i-pi-driver-py -m ${model} -o ${arg} -u -a ${address} > DW.out &
 
 wait

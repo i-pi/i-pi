@@ -74,8 +74,18 @@ class InputDynamics(InputDictionary):
             {
                 "dtype": str,
                 "default": "obabo",
-                "help": "The Louiville splitting used for sampling the target ensemble. ",
-                "options": ["obabo", "baoab", "fbabf", "bafab", "ofbabfo", "bafofab"],
+                "help": "The Liouville splitting used for propagation. "
+                "symmetric-gle uses half auxiliary-drive kicks before and after "
+                "the free ring propagation to obtain a symmetric splitting.",
+                "options": [
+                    "obabo",
+                    "baoab",
+                    "fbabf",
+                    "bafab",
+                    "ofbabfo",
+                    "bafofab",
+                    "symmetric-gle",
+                ],
             },
         ),
     }
