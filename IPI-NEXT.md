@@ -841,6 +841,25 @@ with one bead and 96 with eight (PILE_L or PIGLET from `examples/temp/lammps/h2o
 - Harness: scratchpad `kuma/nc/bench_nc.py` (one process per case; median of 3 blocks of 10-20 steps after 8
   warm-up steps; model time from the metatomic `compute`, synchronized).
 
+### pet-jax driver (`ipi/pes/petjax.py`)
+
+PET models (e.g. PET-MAD) run with [pet-jax](https://github.com/lab-cosmo/pet-jax), from checkpoints converted
+with `petjax-convert`; example in `examples/clients/petjax`.
+- `neighbors=vesin` (default): pet-jax's ASE calculator (vesin neighbor lists with a Verlet skin, overflow
+  retries), one calculator per structure of a batch so that each bead keeps its list. Any backend and size; the
+  steps are not compiled with `--jit`.
+- `neighbors=jax`: the neighbor lists are found inside JAX, from all the pairs over the cell images that the cutoff
+  reaches (positions wrapped into the cell, the wrap folded into the integer shifts), so the evaluation depends
+  only on the positions and the cell: `traceable`, and with `--backend jax --jit` the whole step, including the
+  model on all the beads (`vmap`), is one jitted call. The pair capacity and `k_sel` are fixed at the start from
+  the template (`pair_margin`, `extra_neighbors`); exceeding them, or a cell shrinking below the scanned images,
+  stops the run with an error raised from a `jax.debug.callback`. O(N^2 n_images) memory and time: up to a few
+  thousand atoms. Numpy or JAX backend only; the composition shifts are added in float64 outside the model.
+- Agreement on the water example (PET-MAD-xs v1.6, float32): `vesin` and `jax` to float32 rounding; with metatomic
+  0.002 meV/atom in energy and < 0.05 meV/A in forces, conservative and direct heads.
+- Tests: `ipi_tests/unit_tests/pes/test_petjax.py` (tiny random model; `--ipi-petjax-checkpoint` with
+  `--ipi-metatomic-model` adds the comparison with metatomic).
+
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
   at the force waits, in one thread (see the first section). Benchmarks with `ipi_tests/profiling/benchmark.py`
