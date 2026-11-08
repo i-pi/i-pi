@@ -848,13 +848,14 @@ with `petjax-convert`; example in `examples/clients/petjax`.
 - `neighbors=vesin` (default): pet-jax's ASE calculator (vesin neighbor lists with a Verlet skin, overflow
   retries), one calculator per structure of a batch so that each bead keeps its list. Any backend and size; the
   steps are not compiled with `--jit`.
-- `neighbors=jax`: the neighbor lists are found inside JAX, from all the pairs over the cell images that the cutoff
-  reaches (positions wrapped into the cell, the wrap folded into the integer shifts), so the evaluation depends
-  only on the positions and the cell: `traceable`, and with `--backend jax --jit` the whole step, including the
-  model on all the beads (`vmap`), is one jitted call. The pair capacity and `k_sel` are fixed at the start from
-  the template (`pair_margin`, `extra_neighbors`); exceeding them, or a cell shrinking below the scanned images,
-  stops the run with an error raised from a `jax.debug.callback`. O(N^2 n_images) memory and time: up to a few
-  thousand atoms. Numpy or JAX backend only; the composition shifts are added in float64 outside the model.
+- `neighbors=jax`: the neighbor lists are computed by vesin-jax inside JAX (pet-jax's `get_neighbor_list_fn`,
+  currently on the pet-jax `vesin-jax` branch), one list with its own Verlet cache (`skin`) per structure of a
+  batch, so the evaluation depends only on the positions and the cell: `traceable`, and with `--backend jax
+  --jit` the whole step, including the model on all the beads (`vmap`), is one jitted call. The pair capacity
+  and `k_sel` are fixed at the start from the template (`pair_margin`, `extra_neighbors`); exceeding them stops
+  the run with an error raised from a `jax.debug.callback`. Numpy or JAX backend only; the composition shifts
+  are added in float64 outside the model. (The first version found the pairs by brute force over the cell
+  images, O(N^2 n_images); see the timings below.)
 - Agreement on the water example (PET-MAD-xs v1.6, float32): `vesin` and `jax` to float32 rounding; with metatomic
   0.002 meV/atom in energy and < 0.05 meV/A in forces, conservative and direct heads.
 - Tests: `ipi_tests/unit_tests/pes/test_petjax.py` (tiny random model; `--ipi-petjax-checkpoint` with
@@ -873,7 +874,23 @@ with `petjax-convert`; example in `examples/clients/petjax`.
   metatomic with CUDA graphs. With `vesin` the beads are evaluated one at a time; the eager jax backend adds ~5
   ms of integrator per step. The direct calls of the `jax` option (13 ms for 8 beads) pay host transfers and
   eager indexing that the compiled step does not. Start-up: ~16 s for pet-jax `--jit` (compilation), ~60 s
-  for metatomic (torch.compile of the step functions).
+  for metatomic (torch.compile of the step functions). The `jax` row used the brute-force neighbor lists.
+- vesin-jax against the brute-force neighbor lists, H100 (kuma job 4861585, two passes agreeing to < 1%),
+  compiled step, ms/step:
+
+  | | brute force | vesin-jax, skin 0.5 | vesin-jax, skin 0 |
+  |---|---|---|---|
+  | 384 atoms, 1 bead | 5.63 | 5.94 | 5.86 |
+  | 96 atoms, 8 beads | 9.37 | 12.56 | 11.72 |
+  | 1536 atoms, 1 bead | 25.36 | 21.65 | 21.54 |
+
+  vesin-jax wins for large systems, and loses with many small structures: vesin-jax runs the structures of a
+  batch one at a time, and each call waits several times for the GPU (pair counts read on the host), ~0.4 ms
+  per bead. A single vesin-jax call for a whole batch would remove most of this. The skin does not help on the
+  GPU, where vesin synchronizes at every call anyway; it is kept as the default.
+- Installing: pet-jax's `vesin-jax` branch pulls vesin-jax from git, whose wheel requires `jax >=` the version
+  it was built with, so a build in an isolated environment can upgrade a pinned CUDA jax; build with
+  `VESIN_JAX_BUILD_WITH_JAX_VERSION=<installed jax version>` to avoid that.
 
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
