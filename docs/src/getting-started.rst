@@ -342,7 +342,8 @@ much slower than numpy, as JAX executes the operations one at a time. With
 steps, for the same dynamics that are replayed as CUDA graphs with torch, if
 the forces are computed by a direct forcefield whose potential can be
 compiled by JAX (``traceable``: ``dummy``, and ``petjax``, which evaluates PET models
-such as PET-MAD with pet-jax, with ``neighbors:jax``): the whole step, including the
+such as PET-MAD with pet-jax, with ``neighbors:jax``, which computes the neighbor
+lists with vesin-jax): the whole step, including the
 force evaluation, is then compiled, together with the steps of the other
 systems as with torch. Otherwise, the steps run as usual, as they do with
 ``ffrotations``, whose random rotations cannot be compiled by JAX. As

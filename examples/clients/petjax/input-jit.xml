@@ -9,9 +9,9 @@
   </prng>
 
   <!--
-      The same simulation, with the neighbor lists computed with JAX
-      (neighbors:jax), so that evaluating PET-MAD only takes the positions
-      and the cell. Run it with the jax backend and the jit option of i-PI
+      The same simulation, with the neighbor lists computed by vesin-jax
+      inside JAX (neighbors:jax), so that evaluating PET-MAD only takes the
+      positions and the cell. Run it with the jax backend and the jit option of i-PI
       (see the README): after a few steps,
       the whole MD step, including the evaluation of the model on the four
       beads (as one batch), is compiled by jax.jit into a single call. The
