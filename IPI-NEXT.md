@@ -814,6 +814,33 @@ bugs pass, and are no longer marked.
   JAX is bound by the host: the compiled call alone takes ~120 / ~137 µs (pure JAX's whole step ~105 / ~121),
   the replay ~20-30 µs of Python, the simulation loop ~10 µs (including a checkpoint every 100 steps).
 
+### GLE, MTS and rotations with PET-MAD (non-conservative forces)
+
+The workflow of `examples/clients/metatomic/input-rotations.xml` and of the cookbook's `pet-mad-nc` recipe: MTS
+`[1,8]` with the conservative forces outside (`[1,0]`) and the non-conservative ones inside (`[-1,1]`), the latter
+rotated by `ffrotations` (random rotation and inversion), and a GLE thermostat. PET-MAD-xs v1.6.0, water, 384 atoms
+with one bead and 96 with eight (PILE_L or PIGLET from `examples/temp/lammps/h2o-piglet.8`), torch on an H100
+(kuma jobs 4859427 and 4859688, same GPU), ms/step, `--jit` (eager in brackets), before -> after the GLE and
+`FFRotations` changes:
+
+| case | 1 bead | 8 beads |
+|---|---|---|
+| Langevin / PILE_L | 11.0 -> 11.0 | 25.1 -> 25.3 |
+| GLE / PIGLET | 12.2 -> 11.2 | 27.9 -> 25.1 (27.5 -> 26.1) |
+| `ffrotations` | 12.3 -> 11.1 | 42.3 -> 34.9 (42.8 -> 39.7) |
+| MTS `[1,8]` | 69.4 -> 69.5 | 152.0 -> 151.3 |
+| MTS + rotations + GLE | 113.9 -> 101.8 | 374.5 -> 320.7 (370.8 -> 348.5) |
+
+- The full workflow is now 10 CUDA graphs per step, with only the 9 model calls between them (it ran eagerly, as
+  GLE was not replayed). The host time outside the model calls went from 13.6 to 1.0 ms (1 bead) and from 72.8 to
+  2.6 ms (8 beads).
+- MTS costs ~0.1 ms per model call outside the model, also before these changes: nothing to fix there.
+- Left: with eight beads the model calls take ~16 ms more per step with `--jit` than eagerly (318 against 302 ms),
+  probably the device time of the replayed graphs, which they wait for (~1.6 ms per segment, more than expected
+  for the integrator and the rotations of 8 x 96 atoms). Not profiled yet.
+- Harness: scratchpad `kuma/nc/bench_nc.py` (one process per case; median of 3 blocks of 10-20 steps after 8
+  warm-up steps; model time from the metatomic `compute`, synchronized).
+
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
   at the force waits, in one thread (see the first section). Benchmarks with `ipi_tests/profiling/benchmark.py`
