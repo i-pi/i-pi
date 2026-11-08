@@ -859,6 +859,21 @@ with `petjax-convert`; example in `examples/clients/petjax`.
   0.002 meV/atom in energy and < 0.05 meV/A in forces, conservative and direct heads.
 - Tests: `ipi_tests/unit_tests/pes/test_petjax.py` (tiny random model; `--ipi-petjax-checkpoint` with
   `--ipi-metatomic-model` adds the comparison with metatomic).
+- H100 (kuma job 4860570), PET-MAD-xs v1.6 float32, water, NVT, ms/step (model alone, direct driver calls, in
+  brackets):
+
+  | | 384 atoms, 1 bead | 96 atoms, 8 beads |
+  |---|---|---|
+  | metatomic, torch `--jit` | 10.9 (11.2) | 25.0 (25.9) |
+  | pet-jax `vesin`, numpy backend | 8.7 (7.4) | 41.2 (33.7) |
+  | pet-jax `vesin`, jax backend (eager) | 15.3 (10.1) | 52.1 (26.5) |
+  | pet-jax `jax`, jax backend `--jit` | 5.6 | 9.3 |
+
+  With the whole step compiled, pet-jax is 1.9x (1 bead) and 2.7x (8 beads, one batched call) faster than
+  metatomic with CUDA graphs. With `vesin` the beads are evaluated one at a time; the eager jax backend adds ~5
+  ms of integrator per step. The direct calls of the `jax` option (13 ms for 8 beads) pay host transfers and
+  eager indexing that the compiled step does not. Start-up: ~16 s for pet-jax `--jit` (compilation), ~60 s
+  for metatomic (torch.compile of the step functions).
 
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
