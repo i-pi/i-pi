@@ -36,6 +36,12 @@ def pytest_addoption(parser):
         "(by default, it is exported with upet)",
     )
     parser.addoption(
+        "--ipi-petjax-checkpoint",
+        default="",
+        help="absolute path of the pet-jax checkpoint of PET-MAD-xs v1.6.0, which "
+        "the petjax tests compare with the metatomic model",
+    )
+    parser.addoption(
         "--ipi-fetch-driver",
         action="store_true",
         help="test fetching the Fortran driver from GitHub and compiling it",

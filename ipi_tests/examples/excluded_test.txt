@@ -22,6 +22,7 @@ clients/mace/single          # covered by .github/workflows/mace.yml
 clients/mace/batched  # covered by .github/workflows/mace.yml
 clients/mace/polar # covered by .github/workflows/mace.ym
 clients/metatomic  # covered by .github/workflows/metatomic.yml
+clients/petjax  # needs pet-jax and a converted model
 
 features/metadynamics/pimd_metadynamics_zundel
 features/metadynamics/remd_metadynamics_zundel
