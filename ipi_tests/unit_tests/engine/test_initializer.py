@@ -387,9 +387,9 @@ def test_whole_beads_cannot_be_initialized_from_manual_vector():
 
 @pytest.mark.parametrize("format", ["xyz", "pdb", "ase"])
 def test_file_formats_give_geometry_masses_and_cell(tmp_path, format):
-    # Historical CIAAW standard weights, https://ciaaw.org/pubs/TSAW-1997.pdf;
+    # IUPAC 2013 standard atomic weights, as in ase.data.atomic_masses;
     # CODATA 2022 unified atomic mass / electron mass = 1822.888486209.
-    expected_mass = np.array([1.00794, 4.002602]) * 1822.888486209
+    expected_mass = np.array([1.008, 4.002602]) * 1822.888486209
     q = np.array([[0.1, -0.2, 0.3], [0.4, 0.5, -0.6]])
     if format == "pdb":
         file = tmp_path / "start.pdb"
@@ -412,13 +412,8 @@ def test_file_formats_give_geometry_masses_and_cell(tmp_path, format):
     np.testing.assert_allclose(
         atoms[0].q, q.ravel() * ANGSTROM_TO_BOHR, rtol=UNIT_RTOL, atol=1e-12
     )
-    # ASE supplies its own modern element masses, so check it separately below.
-    if format != "ase":
-        np.testing.assert_allclose(atoms[0].m, expected_mass, rtol=UNIT_RTOL)
-    else:
-        np.testing.assert_allclose(
-            atoms[0].m, np.array([1.008, 4.002602]) * 1822.888486209, rtol=UNIT_RTOL
-        )
+    # i-PI's table and ASE's agree, so every format gives the same masses.
+    np.testing.assert_allclose(atoms[0].m, expected_mass, rtol=UNIT_RTOL)
     np.testing.assert_array_equal(atoms[0].names, ["H", "He"])
     if format != "ase":
         np.testing.assert_allclose(
