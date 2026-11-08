@@ -6,6 +6,7 @@ import pytest
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFDebye, FFRotations, ForceField, ForceRequest
+from ipi.utils.mathtools import random_rotation
 from ipi.utils.prng import Random
 
 
@@ -128,14 +129,67 @@ def test_rotation_average_polled_while_queued(monkeypatch):
 def test_rotation_average_preserves_extras_from_each_orientation(extras, expected):
 
     member = ForceField()
-    ff = FFRotations(ffdirect=member, grid_order=1, prng=Random(seed=19))
+    ff = FFRotations(
+        ffdirect=member, grid_order=1, inversion=True, prng=Random(seed=19)
+    )
     requests = [
         ForceRequest(result=[0.0, np.zeros(3), np.zeros((3, 3)), extra])
         for extra in extras
     ]
     request = ForceRequest(
-        pos=np.zeros(3), ff_handles=requests, rots=[(np.eye(3), 0.5), (-np.eye(3), 0.5)]
+        pos=np.zeros(3), ff_handles=requests, rots=np.stack([np.eye(3), -np.eye(3)])
     )
     ff.gather(request)
     for key, value in expected.items():
         assert request["result"][3][key] == value
+
+
+def test_random_rotations_are_uniform():
+    """Random rotations are orthogonal, improper half of the time, and their
+    proper part is uniform: its elements average to 0, their squares to 1/3"""
+
+    prng = Random(seed=11)
+    R = np.array([random_rotation(prng) for _ in range(4000)])
+    identity = np.broadcast_to(np.eye(3), R.shape)
+    np.testing.assert_allclose(R @ R.transpose(0, 2, 1), identity, atol=1e-12)
+    det = np.linalg.det(R)
+    assert abs((det < 0).mean() - 0.5) < 0.03
+    proper = R * det[:, None, None]
+    assert np.abs(proper.mean(axis=0)).max() < 0.04
+    np.testing.assert_allclose(
+        (proper**2).mean(axis=0), np.full((3, 3), 1 / 3), atol=0.03
+    )
+
+
+@pytest.mark.parametrize("inversion", [False, True])
+def test_rotation_average_of_backend_arrays(select_backend, inversion):
+    """With the torch backend, the averages are torch arrays, also when the
+    rotated structures are evaluated with numpy"""
+
+    select_backend("torch")
+    import torch
+
+    from ipi.utils.array_backend import xp
+
+    hessian = np.diag([1.0, 2.0, 6.0])
+    member = FFDebye(name="anisotropic", H=hessian, xref=np.zeros(3))
+    ff = FFRotations(
+        ffdirect=member,
+        grid_order=3,
+        random=True,
+        inversion=inversion,
+        prng=Random(seed=17),
+        dopbc=False,
+    )
+    atoms = Atoms(1)
+    atoms.q_[:] = xp.asarray([0.3, -0.2, 0.1])
+    request = ff.queue(atoms, Cell(xp.eye(3) * 10))
+    member.poll()
+    ff.poll()
+    energy, force, virial, extras = request["result"]
+    assert all(torch.is_tensor(x) for x in (energy, force, virial))
+    k = np.trace(hessian) / 3
+    q = atoms.q.numpy()
+    assert float(energy) == pytest.approx(k * np.dot(q, q) / 2, abs=1e-12)
+    np.testing.assert_allclose(force.numpy(), -k * q, atol=1e-12)
+    assert extras["o3grid_pots"].shape == (18 * (2 if inversion else 1),)

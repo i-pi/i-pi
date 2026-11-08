@@ -198,7 +198,6 @@ JAX_UNSUPPORTED = {
     "NEB": "NEB",
     "OPEN": "open paths",
     "PHONONS": "phonons",
-    "XTRA-JSON/DIPOLE": "the GLE thermostats",
 }
 
 

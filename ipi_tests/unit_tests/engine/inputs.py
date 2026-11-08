@@ -96,6 +96,14 @@ PILE_L = "<thermostat mode='pile_l'><tau units='femtosecond'>100</tau></thermost
 PILE_G = "<thermostat mode='pile_g'><tau units='femtosecond'>100</tau></thermostat>"
 GLE = """<thermostat mode='gle'><A shape='(3,3)'>
   [ 1e-3, 2e-3, 1e-4, -2e-3, 3e-3, 1e-4, -1e-4, -1e-4, 2e-3 ]</A></thermostat>"""
+# a GLE for each normal mode of four beads, with C from the temperature, or
+# given and with a global thermostat on the centroid
+NM_GLE_A = """<A shape='(4,2,2)'>[ 1e-3, 3e-4, -3e-4, 5e-4, 2e-3, 3e-4, -3e-4, 1e-3,
+  3e-3, 3e-4, -3e-4, 2e-3, 4e-3, 3e-4, -3e-4, 3e-3 ]</A>"""
+NM_GLE = f"<thermostat mode='nm_gle'>{NM_GLE_A}</thermostat>"
+NM_GLE_G = f"""<thermostat mode='nm_gle_g'>{NM_GLE_A}<C shape='(4,2,2)' units='kelvin'>
+  [ 300, 0, 0, 300, 400, 0, 0, 400, 500, 0, 0, 500, 600, 0, 0, 600 ]</C>
+  <tau units='femtosecond'>100</tau></thermostat>"""
 FFL = "<thermostat mode='ffl'><tau units='femtosecond'>100</tau></thermostat>"
 CL = """<thermostat mode='cl'><tau units='femtosecond'>100</tau>
   <intau units='femtosecond'>200</intau></thermostat>"""
@@ -154,6 +162,8 @@ CASES = {
     ),
     "pimd_nvt": (4, "nvt", PILE_L, ""),
     "pimd_pile_g": (4, "nvt", PILE_G, ""),
+    "pimd_nm_gle": (4, "nvt", NM_GLE, ""),
+    "pimd_nm_gle_g": (4, "nvt", NM_GLE_G, ""),
     "pimd_npt": (4, "npt", PILE_L, ISOTROPIC),
     "pimd_nvt_cc": (4, "nvt-cc", PILE_L, ""),
     "pimd_fixatoms": (
@@ -278,7 +288,19 @@ def nst_input(forcefield):
     )
 
 
-INPUTS = {"mts": mts_input, "nst": nst_input}
+def rotations_input(forcefield):
+    """PIMD with the forces of a direct forcefield averaged over a random
+    rotation and its inversion, at each evaluation."""
+
+    inner = forcefield[0].replace("name='ff'", "name='inner'")
+    return write_input("pimd_nvt", forcefield).replace(
+        forcefield[0],
+        f"<ffrotations name='ff' pbc='false'>{inner}<random>True</random>"
+        "<inversion>True</inversion><prng><seed>7</seed></prng></ffrotations>",
+    )
+
+
+INPUTS = {"mts": mts_input, "nst": nst_input, "rotations": rotations_input}
 
 DUMMY = ("<ffdirect name='ff'><pes>dummy</pes></ffdirect>", "<force forcefield='ff'/>")
 DUMMY_BATCHED = (

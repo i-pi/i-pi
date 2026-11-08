@@ -71,8 +71,6 @@ def test_backend_equivalence(case, backend, device, simulation, numpy_draws, req
     pytest.importorskip(backend)
     if backend == "torch":
         request.getfixturevalue("strict_torch")
-    if backend == "jax" and case in ("nvt_gle", "npt_gle_barostat"):
-        pytest.xfail("the GLE thermostat modifies its auxiliary momenta in place")
     xml = write_input(case, HARMONIC)
     expected = reference(simulation, xml, 10)
     result = trajectory(simulation, xml, backend, device, 10)

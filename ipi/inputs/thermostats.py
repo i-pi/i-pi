@@ -268,22 +268,19 @@ class InputThermoBase(Input):
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
-            thermo = ethermostats.ThermoGLE(A=self.A.fetch(), C=rC)
-            thermo.s = self.s.fetch()
+            thermo = ethermostats.ThermoGLE(A=self.A.fetch(), C=rC, s=self.s.fetch())
         elif self.mode.fetch() == "nm_gle":
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
-            thermo = ethermostats.ThermoNMGLE(A=self.A.fetch(), C=rC)
-            thermo.s = self.s.fetch()
+            thermo = ethermostats.ThermoNMGLE(A=self.A.fetch(), C=rC, s=self.s.fetch())
         elif self.mode.fetch() == "nm_gle_g":
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
             thermo = ethermostats.ThermoNMGLEG(
-                A=self.A.fetch(), C=rC, tau=self.tau.fetch()
+                A=self.A.fetch(), C=rC, tau=self.tau.fetch(), s=self.s.fetch()
             )
-            thermo.s = self.s.fetch()
         elif self.mode.fetch() == "cl":
             thermo = ethermostats.ThermoCL(
                 tau=self.tau.fetch(),

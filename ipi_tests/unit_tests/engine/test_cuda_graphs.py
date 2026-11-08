@@ -67,8 +67,14 @@ def eager_driver(monkeypatch):
         ("nvt_svr", HARMONIC, 2),
         ("pimd_nvt", DUMMY, 1),
         ("pimd_pile_g", HARMONIC, 2),
+        ("nvt_gle", HARMONIC, 2),
+        ("pimd_nm_gle", DUMMY, 1),
+        ("pimd_nm_gle_g", DUMMY, 1),
+        ("npt_gle_barostat", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 1),
         ("mts", HARMONIC, 2),
+        ("rotations", DUMMY, 1),
+        ("rotations", HARMONIC, 2),
         ("npt_isotropic", HARMONIC, 2),
         ("npt_flexible", HARMONIC, 2),
         ("pimd_npt", HARMONIC, 2),
@@ -92,6 +98,7 @@ EAGER_DRIVER_CASES = [
     ("pimd_nvt", DUMMY, 5),
     ("pimd_nvt", DUMMY_BATCHED, 2),
     ("mts", HARMONIC, 14),
+    ("rotations", DUMMY_BATCHED, 3),
 ]
 
 
@@ -210,7 +217,7 @@ def test_recording_in_a_new_thread(simulation, device_random):
 
 @cuda
 def test_unsupported_steps_are_eager(simulation, device_random):
-    with simulation(write_input("nvt_gle", HARMONIC), **CUDA, jit=True) as sim:
+    with simulation(write_input("nvt_ffl", HARMONIC), **CUDA, jit=True) as sim:
         assert graph_step(sim) is None
         sim.run_step(0)
 
@@ -292,12 +299,20 @@ def test_temperature_changes_are_replayed(case, simulation, device_random):
 
 
 @cuda
-@pytest.mark.parametrize("forcefield", [NO_FORCES, DUMMY_BATCHED])
-def test_replay_is_sync_free(forcefield, simulation, device_random):
+@pytest.mark.parametrize(
+    "case,forcefield",
+    [
+        ("pimd_nvt", NO_FORCES),
+        ("pimd_nvt", DUMMY_BATCHED),
+        ("pimd_nm_gle_g", DUMMY_BATCHED),
+        ("rotations", DUMMY_BATCHED),
+    ],
+)
+def test_replay_is_sync_free(case, forcefield, simulation, device_random):
     """A replayed step does not wait for the device, also with the forces of a
-    driver that does not wait for it"""
+    driver that does not wait for it, rotated by FFRotations"""
 
-    xml = write_input("pimd_nvt", forcefield)
+    xml = case_input(case, forcefield)
     with simulation(xml, **CUDA, jit=True) as sim:
         try:
             for step in range(4):
@@ -366,8 +381,14 @@ def fake_cuda(simulation, select_backend, monkeypatch):
         ("nvt_svr", HARMONIC, 2),
         ("pimd_nvt", DUMMY, 1),
         ("pimd_pile_g", HARMONIC, 2),
+        ("nvt_gle", HARMONIC, 2),
+        ("pimd_nm_gle", DUMMY, 1),
+        ("pimd_nm_gle_g", DUMMY, 1),
+        ("npt_gle_barostat", HARMONIC, 2),
         ("pimd_nvt", DUMMY_BATCHED, 1),
         ("mts", HARMONIC, 2),
+        ("rotations", DUMMY, 1),
+        ("rotations", HARMONIC, 2),
     ],
 )
 def test_recording_is_split_at_force_evaluations(

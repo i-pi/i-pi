@@ -32,7 +32,7 @@ def thermo_scale(thermo, scale):
         for t in thermo.tlist:
             thermo_scale(t, scale)
     if hasattr(thermo, "s"):  # scale the GLE degrees of freedom
-        thermo.s *= scale
+        thermo.s = thermo.s * scale
 
 
 def motion_scale(motion, scale):
