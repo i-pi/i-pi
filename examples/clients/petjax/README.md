@@ -16,7 +16,10 @@ python -m pip install pet-jax
 
 or, for the latest version, `python -m pip install "git+https://github.com/lab-cosmo/pet-jax"`.
 Install a CUDA-enabled version of JAX (e.g. `python -m pip install "jax[cuda12]"`)
-to run on a GPU.
+to run on a GPU. `input-jit.xml` needs a version of pet-jax that computes the
+neighbor lists with [vesin-jax](https://github.com/Luthaf/vesin), currently
+that of the `vesin-jax` branch, which also installs vesin-jax:
+`python -m pip install "git+https://github.com/lab-cosmo/pet-jax@vesin-jax"`.
 
 The model is not included in this folder. pet-jax reads its own checkpoints,
 converted from those of metatrain: the conversion needs some further packages
@@ -40,12 +43,11 @@ backend of i-PI, and for systems of any size.
 i-pi input.xml
 ```
 
-`input-jit.xml` uses `neighbors:jax`: the neighbor lists are computed with
-JAX, by checking all the pairs of atoms (with the periodic images that the
-cutoff reaches), so that evaluating the model only takes the positions and
-the cell. With the jax backend and `--jit`, i-PI then compiles the whole MD
-step, including the evaluation of the model on the four beads (as one batch),
-into a single call:
+`input-jit.xml` uses `neighbors:jax`: the neighbor lists are computed by
+vesin-jax inside JAX, with the same Verlet skin, so that evaluating the model
+only takes the positions and the cell. With the jax backend and `--jit`, i-PI
+then compiles the whole MD step, including the evaluation of the model on the
+four beads (as one batch), into a single call:
 
 ```bash
 i-pi --backend jax --device gpu --jit input-jit.xml
@@ -55,9 +57,7 @@ i-pi --backend jax --device gpu --jit input-jit.xml
 first few steps. The sizes of the neighbor lists are fixed at the start, from
 the template structure, with some margin (the `pair_margin` and
 `extra_neighbors` parameters): i-PI stops with an error if a simulation
-exceeds them. As the cost of finding the pairs grows with the square of the
-number of atoms, this option is meant for systems of up to a few thousand
-atoms.
+exceeds them.
 
 The other parameters of the driver are listed in its documentation
 (`ipi/pes/petjax.py`): `non_conservative:True` uses the forces and stress

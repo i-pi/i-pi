@@ -1,5 +1,5 @@
-"""The petjax driver, with neighbor lists from vesin or computed with JAX, on a
-small randomly initialised PET model."""
+"""The petjax driver, with neighbor lists from vesin or from vesin-jax inside
+JAX, on a small randomly initialised PET model."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2026 i-PI developers
@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 pytest.importorskip("petjax")
+pytest.importorskip("vesin_jax")
 
 import jax  # noqa: E402
 from ase import Atoms  # noqa: E402
@@ -113,8 +114,8 @@ def as_numpy(result):
 @pytest.mark.parametrize("non_conservative", [False, True])
 @pytest.mark.parametrize("name", list(STRUCTURES))
 def test_jax_neighbors_match_vesin(name, non_conservative, checkpoint, tmp_path):
-    """The neighbor lists computed with JAX give the same energy, forces and
-    virial as those of vesin, also for atoms outside the cell"""
+    """The neighbor lists computed by vesin-jax give the same energy, forces
+    and virial as those of vesin, also for atoms outside the cell"""
 
     xyz = template(tmp_path, name)
     options = dict(non_conservative=non_conservative)
@@ -130,6 +131,28 @@ def test_jax_neighbors_match_vesin(name, non_conservative, checkpoint, tmp_path)
     assert e2 == pytest.approx(e1, abs=1e-6)
     np.testing.assert_allclose(f2, f1, rtol=2e-5, atol=1e-6)
     np.testing.assert_allclose(v2, v1, rtol=2e-5, atol=1e-6)
+
+
+def test_lists_follow_the_atoms(checkpoint, tmp_path):
+    """The neighbor lists of each structure of a batch, cached with a Verlet
+    skin, follow atoms that move farther than the skin"""
+
+    xyz = template(tmp_path, "periodic")
+    vesin = PETJAX_driver(xyz, checkpoint, neighbors="vesin", skin=0.0)
+    jax_lists = PETJAX_driver(
+        xyz, checkpoint, neighbors="jax", skin=0.5, pair_margin=2.0
+    )
+    for step in range(3):
+        inputs = [
+            ipi_inputs(STRUCTURES["periodic"], 0.2 * step, seed) for seed in range(2)
+        ]
+        batch = jax_lists.compute([c for c, _ in inputs], [p for _, p in inputs])
+        for (cell, positions), result in zip(inputs, batch):
+            e1, f1, v1 = as_numpy(vesin.compute(cell, positions))
+            e2, f2, v2 = as_numpy(result)
+            assert e2 == pytest.approx(e1, abs=1e-6)
+            np.testing.assert_allclose(f2, f1, rtol=2e-5, atol=1e-6)
+            np.testing.assert_allclose(v2, v1, rtol=2e-5, atol=1e-6)
 
 
 def test_batches_match_single_structures(checkpoint, tmp_path):
@@ -178,7 +201,7 @@ def test_forces_and_virial_are_derivatives_of_the_energy(checkpoint, tmp_path):
 
 
 def test_exceeded_capacity_stops_the_evaluation(checkpoint, tmp_path):
-    """Neighbor lists computed with JAX that cannot hold all the pairs within
+    """Neighbor lists computed in JAX that cannot hold all the pairs within
     the cutoff stop the evaluation with an error"""
 
     driver = PETJAX_driver(
