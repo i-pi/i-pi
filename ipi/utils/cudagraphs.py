@@ -55,19 +55,20 @@ class GraphReplay(Replay):
 
     Attributes:
         func: The function.
-        generator: The torch generator used by the function, if any.
+        generators: The torch generators used by the function (None for the
+            generators that draw with numpy).
         segments: The recorded segments, or None until the whole function
             has been recorded.
     """
 
     method = "replayed as CUDA graphs"
 
-    def __init__(self, func, generator=None):
+    def __init__(self, func, generators=()):
         import torch
 
         super().__init__(func)
         self.torch = torch
-        self.generator = generator
+        self.generators = list(generators)
         self.stream = torch.cuda.Stream()
         self.ncalls = 0
         # whether the current thread has run eager calls
@@ -134,8 +135,9 @@ class GraphReplay(Replay):
         """Starts recording a segment."""
 
         self.graph = self.torch.cuda.CUDAGraph()
-        if self.generator is not None:
-            self.graph.register_generator_state(self.generator)
+        for generator in self.generators:
+            if generator is not None:
+                self.graph.register_generator_state(generator)
         self.stream.wait_stream(self.default)
         self.torch.cuda.set_stream(self.stream)
         # each graph has its own memory pool: in a shared one, the scalars that

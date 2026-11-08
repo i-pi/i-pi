@@ -359,6 +359,25 @@ or because they were approved explicitly:
   with `--jit`. With numpy the random numbers are the same as before (also in order); with torch and JAX they
   come from the device generator, so trajectories change for a given seed. The thermostat no longer skips the
   draws when the kinetic energy is zero.
+- The GLE thermostats keep their auxiliary momenta `s` in a depend array, and make their step in one `@compiled`
+  function (`_gle_step`). The normal-mode GLEs (`nm_gle`, `nm_gle_g`) apply the GLEs of all the modes at once,
+  with stacks of the matrices, instead of one thermostat per mode (one draw of the noise, and a single batched
+  product). With numpy the trajectories are the same as before (`q`, `p` and `s` bit-identical; the thermostat
+  energy changes at the level of rounding errors). The thermostat energy of `nm_gle` is no longer kept per mode
+  (a stored value goes to the single thermostat on restart), and the SVR thermostat of `nm_gle_g` adds its
+  energy to it. The GLE thermostats now run with JAX, and are replayed and compiled with `--jit` (also on the
+  barostat). The momenta given in the input or a restart are passed to the constructor (`s=`), as `s` exists
+  only once the thermostat is bound; replica exchange rescales them by assignment.
+- `FFRotations` rotates the structures and averages the results with arrays of the backend, and its results are
+  arrays of the backend (also when the forcefield it wraps returns numpy arrays). It no longer clones the atoms and
+  builds a cell for each rotation (the inverse of a rotated cell is `ih R^T`), nor copies results to the host (P400,
+  96 atoms, 8 beads, random rotation and inversion, dummy forces, `--jit`: 16.2 -> 2.7 ms/step; eager 17.9 -> 10.1).
+  The random rotation is drawn on the device, from five Gaussian numbers (the quaternion, and the sign of the fifth
+  for the improper rotations) instead of four Gaussian numbers and a uniform one on the host, so the rotations
+  change for a given seed. The `o3grid_pots` extra is an array of the backend, converted with `to_numpy` when
+  written (an exception to the extras being numpy, so that the step needs no sync). With `--jit`, the rotations are
+  recorded in the step when the forcefield that `FFRotations` wraps is in the step (see `jit._driver_in_step`), and
+  its generator is registered with the graphs; with JAX the steps that need its forces run eagerly.
 - Ensemble bias/Hamiltonian weights, PILE time scales, boson indices and cycle energies are stored on the host
   (`host=True`): same values, no device syncs.
 - Direct forcefields whose driver sets `backend_arrays` (the metatomic driver) receive positions and cell as
@@ -528,9 +547,8 @@ bugs pass, and are no longer marked.
 - Forcefields exchange numpy arrays, so positions and forces are copied to the host at each force evaluation,
   except for direct forcefields whose driver sets `backend_arrays` (the metatomic driver), which receive and
   return arrays of the backend. Other torch drivers (e.g. `_mace.py`) could opt in the same way.
-  `FFRotations` and `FFCommittee` convert the results of such forcefields to numpy, as they combine them with
-  numpy; `FFRotations` could be ported to `xp` (rotation matrices on the device), although rotational
-  averaging is also being moved into the models. `forces.transfer_forces_manual` could also convert its
+  `FFCommittee` converts the results of such forcefields to numpy, as it combines them with numpy
+  (`FFRotations` works with arrays of the backend). `forces.transfer_forces_manual` could also convert its
   arguments with `to_numpy` itself.
 - The metatomic driver synchronizes the device before each batched model call (`_compute_chunk`).
 - Storing the state for soft exits walks the whole input tree: ~0.3 ms per step with numpy, ~0.5-1.4 ms
@@ -604,13 +622,14 @@ bugs pass, and are no longer marked.
   objects have moved on (with JAX, the objects written by the traced call hold tracers): the following calls
   raise `JitError`. Recording again crashed the CUDA caching allocator (`capture_begin` after an aborted
   capture into the same pool).
-- Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR,
-  PILE_L or PILE_G thermostat, and the isotropic (BZP), flexible (MTK) or anisotropic (RGB) barostat with no
-  or a Langevin thermostat; not replayed (eager, with a warning): stochastic cell rescaling, GLE,
-  fixed atoms, open paths, bosons, multi-system motions other than replica exchange (see "Multiple systems
-  and replica exchange"). Under `--jit`, the systems are stepped one after the other. The barostats read the
-  temperature and the pressure as host values, so changing them stops a replayed run with `JitError`;
-  the external stress of the anisotropic barostat is a device array, and its changes are replayed.
+- Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR, PILE_L,
+  PILE_G or GLE thermostat (also `nm_gle` and `nm_gle_g`), and the isotropic (BZP), flexible (MTK) or anisotropic
+  (RGB) barostat with no, a Langevin or a GLE thermostat; not replayed (eager, with a warning): stochastic cell
+  rescaling, other thermostats (FFL, CL, multi), fixed atoms, open paths, bosons, multi-system motions other than
+  replica exchange (see "Multiple systems and replica exchange"). Under `--jit`, the systems are stepped one after
+  the other. The barostats read the temperature and the pressure as host values, so changing them stops a replayed
+  run with `JitError`; the external stress of the anisotropic barostat is a device array, and its changes are
+  replayed.
 - NPT without forces (ms/step at 100 / 1000 / 10000 atoms): H100 (job 4665979), eager -> replayed (numpy):
   isotropic 1.42 -> 0.30 / 0.32 / 0.35 (0.17 / 0.34 / 2.35), flexible 3.58 -> 0.81 / 0.75 / 0.75 (0.38 / 0.59
   / 2.69), PIMD-8 isotropic 3.21 -> 0.55 / 0.60 / 0.83 (0.62 / 2.71 / 23.9). The replays are bound by the
@@ -692,14 +711,14 @@ bugs pass, and are no longer marked.
   Equivalence with numpy (same Gaussian draws, 1e-10): NVE, NVT Langevin/SVR/FFL/CL/multi, MTS with a bias,
   NPT isotropic/flexible (also with SVR on the barostat), NST, PIMD NVT/NPT with PILE_L/PILE_G, NVT-CC, fixed
   atoms, contracted components, Suzuki-Chin NVT/NPT (centred and forward differences), and the
-  centroid-virial and gyration estimators; GLE xfails, also on the barostat (`stab_cholesky` and the
-  auxiliary momenta `s` are modified in place). Motions that write into plain arrays (geometry optimization,
-  NEB, string, phonons, IMF/VSCF, SCP, instantons, planetary, Al6xxx KMC, constrained dynamics) set
+  centroid-virial and gyration estimators, and the GLE thermostats (also on the barostat, and on the normal
+  modes). Motions that write into plain arrays (geometry optimization, NEB, string, phonons, IMF/VSCF, SCP,
+  instantons, planetary, Al6xxx KMC, constrained dynamics) set
   `jax_support = False`, and `System.bind` stops with a `ValueError` (also within `multi`); dynamics,
-  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 46 of 72 pass, with
-  the MD restart tests (PLUMED is skipped); 21 stop at bind (geometry optimizers, NEB, phonons, instantons,
-  constrained dynamics, and their restart tests), and the others at plain-array writes (bosonic exchange,
-  open paths, `stab_cholesky` of the GLE thermostats).
+  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 49 of 77 pass, with
+  the MD restart tests and the PIGLET test (PLUMED is skipped); the others stop at bind (geometry optimizers,
+  NEB, phonons, instantons, constrained dynamics, and their restart tests), or at plain-array writes
+  (bosonic exchange, open paths).
   Eager JAX is slow: ms/step without forces, CPU, numpy / torch / jax, 100 atoms: NVE 0.049 / 0.12 / 0.78,
   NVT 0.11 / 0.29 / 1.8, PIMD-4 0.56 / 1.4 / 11.8, NPT 0.29 / 0.98 / 6.3, NPT flexible 0.93 / 2.6 / 13.4; at
   10000 atoms PIMD-4 28.9 / 26.5 / 34.8. Each eager JAX operation costs 11-16 us (arithmetic), 26 us (reshape), 40-85 us (indexing), 70 us
@@ -900,6 +919,14 @@ bugs pass, and are no longer marked.
   are evaluated one after the other, in the root greenlet, also when they need forces (e.g. a bias).
 - Options left: a cheaper acceptance test of the exchanges; evaluating the forces of the exchange attempts
   together (as tasks).
+- With JAX, PIMD replicas are compiled only once two consecutive eager steps read the same depend objects
+  (`JaxReplay.warm`). An accepted exchange rescales the momenta of the beads (`beads.p`), while the PIMD
+  thermostats write those of the normal modes (`nm.pnm`), so a step reads either, depending on whether its
+  replica was exchanged before it: with exchanges at every step, the steps may never be compiled ("the depend
+  objects that the steps read change at every step"; PIMD with PILE_L is compiled in the tests because two
+  steps happen to agree, NM-GLE is not when batched). CUDA graphs are not affected. Comparing the
+  observations up to the synchronized peer is not enough, as the traced call must read the same peer as the
+  observed one; rescaling the peer that holds the data, in the exchange, would avoid it.
 
 ### Testing
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on

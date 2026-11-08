@@ -14,7 +14,7 @@ import json
 
 import numpy as np
 
-from ipi.engine.cell import GenericCell
+from ipi.engine.cell import Cell
 from ipi.utils import jit, scheduler
 from ipi.utils.prng import Random
 from ipi.utils.array_backend import to_numpy, xp
@@ -1625,10 +1625,58 @@ class FFCommittee(ForceField):
         return progress
 
 
+@jit.compiled
+def _rotate(R, q, h, ih):
+    """Returns the positions q and the cell (h, ih) rotated by each of the
+    matrices R (the inverse of R h is ih R^T)."""
+
+    RT = xp.matrix_transpose(R)
+    return (q.reshape(-1, 3) @ RT).reshape(R.shape[0], -1), R @ h, ih @ RT
+
+
+@jit.compiled
+def _average(R, w, pots, f, virs):
+    """Returns the averages, with the weights w, of the potentials, forces and
+    virials of the structures rotated by the matrices R, in the frame of the
+    structure."""
+
+    f = f.reshape(R.shape[0], -1, 3) @ R
+    virs = xp.matrix_transpose(R) @ virs @ R
+    return (
+        (pots * w).sum(),
+        (f * w[:, None, None]).sum(axis=0).reshape(-1),
+        (virs * w[:, None, None]).sum(axis=0),
+    )
+
+
+class _Rotated:
+    """The positions and the cell of a rotated structure, with the attributes
+    of the atoms and of the cell that `ForceField.queue` reads."""
+
+    array_pbc = Cell.array_pbc
+
+    def __init__(self, q, h, ih):
+        self.q = q
+        self.h = h
+        self.ih = ih
+
+
 class FFRotations(ForceField):
     """Forcefield to manipulate models that are not exactly rotationally equivariant.
     Can be used to evaluate a different random rotation at each evaluation, or to average
-    over a regular grid of Euler angles"""
+    over a regular grid of Euler angles.
+
+    The rotations, and the average of the results, are made with arrays of the
+    backend, so the results are arrays of the backend. When the forcefield it
+    wraps is evaluated in the steps compiled with `--jit` (see
+    `ipi.engine.jit`), so are the rotations, which draw random numbers from
+    the generator of this forcefield; with JAX, its key cannot be traced, so
+    the steps with rotations run eagerly."""
+
+    backend_arrays = True
+    # the requests are evaluated before the positions of the structure change
+    copy_inputs = False
+    traceable = False
 
     def __init__(
         self,
@@ -1680,6 +1728,15 @@ class FFRotations(ForceField):
             self._rotations = get_rotation_quadrature_legendre(self.grid_order)
         else:
             raise ValueError(f"Invalid quadrature {self.grid_mode}")
+        # the rotations of the grid, each followed by its inversion if
+        # required, and their weights, normalized
+        grid = np.array([R for R, _, _ in self._rotations])
+        weights = np.array([w for _, w, _ in self._rotations])
+        if self.inversion:
+            grid = np.stack([grid, -grid], axis=1).reshape(-1, 3, 3)
+            weights = np.repeat(weights, 2)
+        self._grid = xp.asarray(grid)
+        self._weights = xp.asarray(weights / weights.sum())
         info(
             f"""
 # Generating {self.grid_mode} rotation quadrature of order {self.grid_order}.
@@ -1697,43 +1754,23 @@ class FFRotations(ForceField):
         self.ff.start()
 
     def queue(self, atoms, cell, reqid=-1):
-        # launches requests for all of the rotations FF objects
-        ffh = []  # this is the list of "inner" FF requests
-        rots = []  # this is a list of tuples of (rotation matrix, weight)
+        # the rotations of the grid, after a random one
+        R = self._grid
         if self.random:
-            R_random = random_rotation(self.prng, improper=True)
-        else:
-            R_random = np.eye(3)
+            R = R @ random_rotation(self.prng, improper=True)
 
-        for R, w, _ in self._rotations:
-            R = R @ R_random
-            # the rotation matrix used on the positions and the cell
-            xR = xp.asarray(R)
-
-            rot_atoms = atoms.clone()
-            rot_cell = GenericCell(xR @ cell.h)  # NB we need generic cell orientation
-            rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
-
-            rots.append((R, w))
-            ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
-
-            if self.inversion:
-                # also add a "flipped rotation" to the evaluation list
-                R = R * -1
-                xR = xR * -1
-
-                rot_cell = GenericCell(xR @ cell.h)
-                rot_atoms = atoms.clone()
-                rot_atoms.q_[:] = (rot_atoms.q.reshape(-1, 3) @ xR.T).reshape(-1)
-
-                rots.append((R, w))
-                ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
+        # the rotated structures, as requests to the forcefield that evaluates them
+        qs, hs, ihs = (xp.unstack(x) for x in _rotate(R, atoms.q, cell.h, cell.ih))
+        ffh = []
+        for q, h, ih in zip(qs, hs, ihs):
+            rotated = _Rotated(q, h, ih)
+            ffh.append(self.ff.queue(rotated, rotated, reqid))
 
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
         # requests
         req = ForceField.queue(
-            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
+            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=R)
         )
         # `poll` completes the request once the rotated structures are evaluated
         req["t_dispatched"] = time.time()
@@ -1750,56 +1787,19 @@ class FFRotations(ForceField):
         return True
 
     def gather(self, r):
-        """Collects results from all sub-requests, and assemble the committee of models."""
+        """Collects the results of the rotated structures, rotates the forces
+        and the virials back into the frame of the structure, and averages
+        them with the weights of the quadrature."""
 
-        r["result"] = [
-            0.0,
-            np.zeros(len(r["pos"]), float),
-            np.zeros((3, 3), float),
-            "",
-        ]
-
-        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-        rot_handles = r["ff_handles"].copy()
-        rots = r["rots"].copy()
-        # the rotational average is evaluated with numpy
-        if self.ff.backend_arrays:
-            for ff_r in rot_handles:
-                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
-
-        # Gathers the forcefield energetics and extras
-        pots = []
-        frcs = []
-        virs = []
-        xtrs = []
-        quad_w = []
-        for ff_r, (R, w) in zip(rot_handles, rots):
-            pots.append(ff_r["result"][0])
-            # must rotate forces and virial back into the original reference frame
-            frcs.append((ff_r["result"][1].reshape(-1, 3) @ R).flatten())
-            virs.append((R.T @ ff_r["result"][2] @ R))
-            xtrs.append(ff_r["result"][3])
-            quad_w.append(w)
-
-        quad_w = np.array(quad_w)
-        pots = np.array(pots)
-        frcs = np.array(frcs).reshape(len(frcs), -1)
-        virs = np.array(virs).reshape(-1, 3, 3)
-
-        # Computes the mean energetics (using the quadrature weights)
-        mean_pot = np.sum(pots * quad_w, axis=0) / quad_w.sum()
-        mean_frc = np.sum(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.sum()
-        mean_vir = (
-            np.sum(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.sum()
-        )
-
-        # Sets the output of the committee model.
-        r["result"][0] = mean_pot
-        r["result"][1] = mean_frc
-        r["result"][2] = mean_vir
-        r["result"][3] = {
-            "o3grid_pots": pots
-        }  # this is the list of potentials on a grid, for monitoring
+        results = [ff_r["result"] for ff_r in r["ff_handles"]]
+        xtrs = [x[3] for x in results]
+        pots = xp.stack([xp.asarray(x[0]) for x in results])
+        frcs = xp.stack([xp.asarray(x[1]) for x in results])
+        virs = xp.stack([xp.asarray(x[2]) for x in results])
+        pot, f, vir = _average(r["rots"], self._weights, pots, frcs, virs)
+        # the potentials of the rotations (an array of the backend, as the
+        # results) are kept for monitoring
+        r["result"] = [pot, f, vir, {"o3grid_pots": pots}]
 
         # "dissolve" the extras dictionaries into a list
         if isinstance(xtrs[0], dict):

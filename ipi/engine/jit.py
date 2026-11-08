@@ -11,7 +11,9 @@ to the driver are eager: the preparation of the requests and the collection
 of the results are recorded, and the results of the driver are copied into
 those it returned while the step was recorded. The calls to drivers that are
 `traceable` (e.g. the `dummy` potential) are recorded too, so that the step
-is a single CUDA graph.
+is a single CUDA graph. The rotations of the structures and the averages of
+`FFRotations` are recorded when the forcefield it wraps is such a direct
+forcefield, and its random number generator is registered with the graphs.
 
 Only the dynamics that are known to work in this way are replayed (see
 `unsupported`), and a `JitError` stops the simulation if a host value read by
@@ -65,7 +67,10 @@ def unsupported(simulation, system):
     )
     from ipi.engine.smotion import Smotion, ReplicaExchange
     from ipi.engine.thermostats import (
+        ThermoGLE,
         ThermoLangevin,
+        ThermoNMGLE,
+        ThermoNMGLEG,
         ThermoPILE_G,
         ThermoPILE_L,
         ThermoSVR,
@@ -79,11 +84,12 @@ def unsupported(simulation, system):
     if type(motion.integrator) not in integrators:
         return f"the ensemble '{motion.enstype}'"
     thermostats = (Thermostat, ThermoLangevin, ThermoSVR, ThermoPILE_L, ThermoPILE_G)
+    thermostats += (ThermoGLE, ThermoNMGLE, ThermoNMGLEG)
     if type(motion.thermostat) not in thermostats:
         return f"the thermostat '{type(motion.thermostat).__name__}'"
     if type(motion.barostat) not in (Barostat, BaroBZP, BaroMTK, BaroRGB):
         return f"the barostat '{type(motion.barostat).__name__}'"
-    if type(motion.barostat.thermostat) not in (Thermostat, ThermoLangevin):
+    if type(motion.barostat.thermostat) not in (Thermostat, ThermoLangevin, ThermoGLE):
         name = type(motion.barostat.thermostat).__name__
         return f"the thermostat '{name}' of the barostat"
     if len(motion.fixatoms_dof) > 0:
@@ -192,28 +198,51 @@ class _Together:
 def _driver_in_step(ff):
     """Whether the requests to `ff` can be made in the compiled step: CUDA
     graphs record them, and call its driver eagerly unless it is `traceable`,
-    and jax.jit traces them if the driver is `traceable`."""
+    and jax.jit traces them if the driver is `traceable`. The rotations of
+    `FFRotations` are recorded too, if the forcefield it wraps is in the step."""
 
-    from ipi.engine.forcefields import FFDirect
+    from ipi.engine.forcefields import FFDirect, FFRotations
 
+    if type(ff) is FFRotations:
+        return _driver_in_step(ff.ff)
     return type(ff) is FFDirect and ff.backend_arrays
+
+
+def _prngs(systems):
+    """The random number generators used by the steps of `systems`: that of
+    the simulation, and those of the forcefields that rotate the structures."""
+
+    from ipi.engine.forcefields import FFRotations
+
+    prngs = [systems[0].prng]
+    for system in systems:
+        components = list(system.forces.mforces)
+        if system.ensemble.has_bias:
+            components += system.ensemble.bias.mforces
+        for component in components:
+            ff = component.ff
+            if type(ff) is FFRotations and all(ff.prng is not p for p in prngs):
+                prngs.append(ff.prng)
+    return prngs
 
 
 class GraphStep(GraphReplay):
     """The step of the integrators of some systems, which runs eagerly for the
     first steps, is recorded as CUDA graphs at the next one, and is replayed
     for all the following steps. The systems share the random number
-    generator of the simulation."""
+    generator of the simulation, and the forcefields that rotate the
+    structures have their own (see `_prngs`)."""
 
     def __init__(self, systems):
-        super().__init__(_integrators(systems), systems[0].prng.torch_generator)
-        self.prng = systems[0].prng
+        self.prngs = _prngs(systems)
+        generators = [prng.torch_generator for prng in self.prngs]
+        super().__init__(_integrators(systems), generators)
         self.together = len(systems) > 1
 
     def __call__(self, step=None):
-        if (
-            self.segments is not None
-            and self.prng.torch_generator is not self.generator
+        if self.segments is not None and any(
+            prng.torch_generator is not generator
+            for prng, generator in zip(self.prngs, self.generators)
         ):
             raise JitError("The random number generator has been replaced")
         super().__call__(step)

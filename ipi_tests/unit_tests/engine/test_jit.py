@@ -52,7 +52,10 @@ def compiled(sim):
         ("nve", None, None),
         ("nvt_svr", None, None),
         ("pimd_pile_g", None, None),
-        ("nvt_gle", None, "the thermostat 'ThermoGLE'"),
+        ("nvt_gle", None, None),
+        ("pimd_nm_gle_g", None, None),
+        ("npt_gle_barostat", None, None),
+        ("nvt_ffl", None, "the thermostat 'ThermoFFL'"),
         ("npt_flexible", None, None),
         (
             "npt_isotropic",
@@ -185,9 +188,9 @@ def record_batches(forcefield):
 
 @pytest.mark.parametrize("options", JIT)
 @pytest.mark.parametrize("batched", [False, True])
-@pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt"])
+@pytest.mark.parametrize("case", ["nvt_langevin", "pimd_nvt", "nvt_gle", "pimd_nm_gle"])
 def test_replica_exchange_is_compiled(
-    case, batched, options, simulation, device_random
+    case, batched, options, simulation, device_random, request
 ):
     """The steps of replicas whose temperatures are exchanged at every step,
     also before the steps are compiled, are compiled together, and follow the
@@ -197,6 +200,13 @@ def test_replica_exchange_is_compiled(
     from ipi.engine.jit import compiled_step
 
     pytest.importorskip(options["backend"])
+    if case == "pimd_nm_gle" and options["backend"] == "jax":
+        # the exchanges write the momenta of the beads, the thermostat those of
+        # the normal modes, so the steps read either, and are compiled only if
+        # two consecutive steps read the same, depending on the exchanges (see
+        # IPI-NEXT)
+        reason = "the steps read the momenta of the beads or of the normal modes"
+        request.node.add_marker(pytest.mark.xfail(reason=reason, strict=False))
     temperatures = [300, 330, 360, 400]
     nbatch = len(temperatures) * CASES[case][0] if batched else 1
     forcefield = (

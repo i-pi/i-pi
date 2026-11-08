@@ -54,6 +54,10 @@ def assert_same_state(a, b):
         ("nvt_svr", NO_FORCES),
         ("pimd_nvt", DUMMY),
         ("pimd_pile_g", DUMMY),
+        ("nvt_gle", DUMMY),
+        ("pimd_nm_gle", DUMMY),
+        ("pimd_nm_gle_g", DUMMY),
+        ("npt_gle_barostat", NO_FORCES),
         ("npt_isotropic", DUMMY),
         ("npt_flexible", NO_FORCES),
         ("pimd_npt", DUMMY),
@@ -96,6 +100,20 @@ def test_forces_of_untraceable_drivers_are_eager(driver, simulation, monkeypatch
         monkeypatch.setattr(Zero_driver, "compute_structure", untraceable)
         monkeypatch.setattr(Zero_driver, "traceable", False)
         xml = write_input("nvt_langevin", DUMMY)
+    with simulation(xml, **JAX) as eager, simulation(xml, **JAX, jit=True) as compiled:
+        for step in range(5):
+            eager.run_step(step)
+            compiled.run_step(step)
+        assert jit_step(compiled).compiled is None
+        assert "forcefield 'ff'" in jit_step(compiled).reason
+        assert_same_state(eager, compiled)
+
+
+def test_steps_with_rotations_are_eager(simulation):
+    """The steps that need the forces of FFRotations, whose random key cannot
+    be traced, run eagerly"""
+
+    xml = case_input("rotations", DUMMY)
     with simulation(xml, **JAX) as eager, simulation(xml, **JAX, jit=True) as compiled:
         for step in range(5):
             eager.run_step(step)

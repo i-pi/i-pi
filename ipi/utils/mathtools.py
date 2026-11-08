@@ -12,6 +12,7 @@ import numpy as np
 
 from ipi.utils.messages import verbosity, warning
 from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.jit import compiled
 
 __all__ = [
     "matrix_exp",
@@ -382,31 +383,28 @@ def LT_friction(freqs, spectral_density_over_w, forceit=False):
     return 2 * integral / np.pi
 
 
+@compiled
 def quat2rot(q):
     """
     Convert a normalized quaternion into a 3x3 rotation matrix.
 
     Args:
-    q : list or array-like
+    q : array
         A normalized quaternion [q1, q2, q3, q4] where q1 is the scalar part.
 
     Returns:
-    numpy.ndarray
-        The corresponding 3x3 rotation matrix.
+        The corresponding 3x3 rotation matrix, as an array of the backend.
     """
 
-    q1, q2, q3, q4 = q
+    q1, q2, q3, q4 = xp.unstack(q)
 
     # Compute the rotation matrix elements
-    R = np.array(
-        [
-            [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
-            [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
-            [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
-        ]
-    )
-
-    return R
+    rows = [
+        [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
+        [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
+        [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
+    ]
+    return xp.stack([xp.stack(row) for row in rows])
 
 
 def euler_zxz_to_matrix(theta, v, w):
@@ -493,16 +491,13 @@ def get_rotation_quadrature_lebedev(L):
 
 
 def random_rotation(prng, improper=True):
-    """Generates a (uniform) random rotation matrix"""
+    """Generates a (uniform) random rotation matrix, as an array of the backend,
+    which is improper with probability 1/2 if `improper`. The random numbers
+    are drawn on the device of the backend, without synchronizing with it."""
 
-    # the rotation is applied to the numpy positions sent to the forcefield
-    quaternion = np.array(to_numpy(prng.gvec(shape=(4,))))
-    quaternion /= np.sqrt((quaternion**2).sum())
-
-    rot = quat2rot(quaternion)
-
-    # randomly generate an improper rotation
-    if improper and prng.u < 0.5:
-        rot *= -1.0
-
+    g = prng.gvec((5,))
+    rot = quat2rot(g[:4] / xp.sqrt((g[:4] ** 2).sum()))
+    if improper:
+        # improper if the fifth Gaussian number is negative
+        rot = rot * (1.0 - 2.0 * (g[4] < 0))
     return rot

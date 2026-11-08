@@ -308,10 +308,13 @@ backend, such as ``metatomic``, only the potential is evaluated between the
 replays, while the requests and the collection of the results are part of the
 graphs, and potentials that can be recorded too (``traceable``, such as
 ``dummy``) are part of the graphs, so that the whole step is a single graph.
+The rotations of ``ffrotations`` are part of the graphs too when the
+forcefield it wraps is such a direct forcefield.
 The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
-integral and with multiple time stepping) with the Langevin, SVR, PILE-L and
-PILE-G thermostats and the isotropic, flexible and anisotropic barostats, with
-no thermostat or a Langevin one on the barostat. With ``interleave`` (the
+integral and with multiple time stepping) with the Langevin, SVR, PILE-L,
+PILE-G and GLE thermostats (also the normal-mode GLEs, such as PIGLET) and the
+isotropic, flexible and anisotropic barostats, with no thermostat, a Langevin
+or a GLE one on the barostat. With ``interleave`` (the
 default), the steps of several systems whose forces all come from such direct
 forcefields are recorded together, so that a batched forcefield
 (``batch_size``) evaluates the structures of all the systems at once, also in
@@ -332,7 +335,7 @@ restarted without ``--jit``).
 runs molecular dynamics, replays, ramps and Monte Carlo exchanges of atoms,
 but not yet constrained dynamics, geometry optimization, NEB, string methods,
 phonons, vibrational and SCP analyses, instantons, planetary models, kinetic
-Monte Carlo, bosonic exchange, open paths or the GLE thermostats (i-PI stops
+Monte Carlo, bosonic exchange or open paths (i-PI stops
 with an error at the start for the motions it cannot run), and it is
 much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
@@ -340,7 +343,8 @@ steps, for the same dynamics that are replayed as CUDA graphs with torch, if
 the forces are computed by a direct forcefield whose potential can be
 compiled by JAX (``traceable``, at present only ``dummy``): the whole step, including the
 force evaluation, is then compiled, together with the steps of the other
-systems as with torch. Otherwise, the steps run as usual. As
+systems as with torch. Otherwise, the steps run as usual, as they do with
+``ffrotations``, whose random rotations cannot be compiled by JAX. As
 with torch, the parameters that are fixed in the compiled step, such as the
 time step, cannot change, and i-PI stops with an error if a step cannot be
 compiled.

@@ -640,10 +640,14 @@ class TrajectoryOutput(BaseOutput):
                     try:
                         if key == "extras_component_raw":
                             # don't partition into beads as there might be a different number when contracting
-                            floatarray = np.asarray(data[extra], dtype=float).squeeze()
+                            floatarray = np.asarray(
+                                [to_numpy(x) for x in data[extra]], dtype=float
+                            ).squeeze()
                         else:
                             # picks up the desired bead
-                            floatarray = np.asarray(data[extra][b], dtype=float)
+                            floatarray = np.asarray(
+                                to_numpy(data[extra][b]), dtype=float
+                            )
                         data_list.append(floatarray)
                     except:
                         # non-numerical field, just write as a string on a separate line
