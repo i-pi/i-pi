@@ -8,6 +8,7 @@ request batching and the non-consolidated (per-request worker thread) path.
 """
 
 import importlib.util
+import json
 import multiprocessing as mp
 import os
 import socket as pysocket
@@ -59,7 +60,30 @@ def _client(mode, address, port):
     )
 
 
-def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto"):
+class ExtraHarmonic_driver(Harmonic_driver):
+    """Harmonic driver that proves per-request socket metadata was received."""
+
+    requires_extra = True
+
+    def compute_structure(self, cell, pos):
+        pot, force, vir, _ = super().compute_structure(cell, pos)
+        return pot, force, vir, json.dumps({"received_extra": self.extra})
+
+
+def _extra_client(mode, address, port):
+    """Driver subprocess entry point for the extra-data socket protocol."""
+    run_driver(
+        unix=(mode in ("unix", "shm")),
+        address=address,
+        port=port,
+        driver=ExtraHarmonic_driver(K),
+        shm=(mode == "shm"),
+    )
+
+
+def _exchange_one_force(
+    mode, consolidate=True, batch_size=1, match_mode="auto", extra=None
+):
     """Round-trips a single force evaluation through the chosen transport."""
     address = (
         "localhost"
@@ -83,7 +107,8 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto")
     # listen backlog until the poll thread starts and accepts it
     iface.open()
     ctx = mp.get_context("fork")
-    client = ctx.Process(target=_client, args=(mode, address, port), daemon=True)
+    client_target = _extra_client if extra is not None else _client
+    client = ctx.Process(target=client_target, args=(mode, address, port), daemon=True)
     client.start()
     ForceField.start(ff)
     try:
@@ -94,7 +119,8 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto")
         requests = []
         for index, position in enumerate(positions):
             atoms.q_[:] = position
-            requests.append(ff.queue(atoms, cell, reqid=index))
+            template = {} if extra is None else {"extra": extra}
+            requests.append(ff.queue(atoms, cell, reqid=index, template=template))
 
         deadline = time.time() + 30
         while any(req["status"] != "Done" for req in requests):
@@ -108,7 +134,8 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto")
         for req in requests:
             ff.release(req)
         assert not ff.requests
-        return potentials, forces, np.array(positions)
+        extras = [req["result"][3] for req in requests]
+        return potentials, forces, np.array(positions), extras
     finally:
         ff.stop()
         ff._thread.join(timeout=5)
@@ -123,7 +150,7 @@ def _exchange_one_force(mode, consolidate=True, batch_size=1, match_mode="auto")
 @pytest.mark.parametrize("mode", ["unix", "inet", "shm"])
 @pytest.mark.parametrize("match_mode", ["auto", "any"])
 def test_transport_roundtrip(mode, match_mode):
-    pot, force, q = _exchange_one_force(mode, match_mode=match_mode)
+    pot, force, q, _ = _exchange_one_force(mode, match_mode=match_mode)
     assert np.allclose(force, -K * q)
     np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
@@ -131,7 +158,7 @@ def test_transport_roundtrip(mode, match_mode):
 @fork_only
 def test_unix_batched():
     # batch_size>1 exercises the batched dispatch/receive path
-    pot, force, q = _exchange_one_force("unix", batch_size=4)
+    pot, force, q, _ = _exchange_one_force("unix", batch_size=4)
     assert np.allclose(force, -K * q)
     np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
@@ -139,7 +166,7 @@ def test_unix_batched():
 @fork_only
 def test_shm_batched():
     # batch_size>1 over shared memory exercises the SHM batched payload path
-    pot, force, q = _exchange_one_force("shm", batch_size=4)
+    pot, force, q, _ = _exchange_one_force("shm", batch_size=4)
     assert np.allclose(force, -K * q)
     np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
 
@@ -149,6 +176,23 @@ def test_shm_batched():
 @pytest.mark.parametrize("match_mode", ["auto", "any"])
 def test_threaded_dispatch(mode, match_mode):
     # consolidate_messages=False exercises the per-request worker-thread path
-    pot, force, q = _exchange_one_force(mode, consolidate=False, match_mode=match_mode)
+    pot, force, q, _ = _exchange_one_force(
+        mode, consolidate=False, match_mode=match_mode
+    )
     assert np.allclose(force, -K * q)
     np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
+
+
+@fork_only
+@pytest.mark.parametrize("mode", ["unix", "inet"])
+@pytest.mark.parametrize("consolidate", [False, True])
+def test_socket_extra_data_roundtrip(mode, consolidate):
+    # This protects the NEEDEXTRA/EXTRADATA handshake required by FFDielectric
+    # client force fields in both socket dispatch implementations.
+    extra = '{"electric_field": [0.0, 0.0, 1.0]}'
+    pot, force, q, extras = _exchange_one_force(
+        mode, consolidate=consolidate, extra=extra
+    )
+    assert np.allclose(force, -K * q)
+    np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
+    assert [item["received_extra"] for item in extras] == [json.loads(extra)] * len(q)

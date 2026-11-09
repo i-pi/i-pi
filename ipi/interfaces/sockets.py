@@ -56,6 +56,8 @@ MESSAGE = {
         "posdata",
         "getforce",
         "forceready",
+        "needextra",
+        "extradata",
     ]
 }
 
@@ -106,6 +108,7 @@ class Status(object):
     HasData = 8
     Busy = 16
     Timeout = 32
+    NeedExtra = 64
 
 
 class DriverSocket(socket.socket):
@@ -298,6 +301,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -338,6 +343,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -354,6 +361,14 @@ class Driver(DriverSocket):
             status = self._getstatus()
         self.status = status
         return status
+
+    def sendextra(self, extra: str):
+        """Send per-request metadata to a socket client that requested it."""
+        if not (self.status & Status.NeedExtra):
+            raise InvalidStatus("Status in sendextra was " + str(self.status))
+        payload = extra.encode("utf-8") if isinstance(extra, str) else b""
+        self.sendall(MESSAGE["extradata"] + np.int32(len(payload)).tobytes() + payload)
+        self.status = Status.Up | Status.Busy
 
     def initialize(self, rid, pars):
         """Sends the initialisation string to the driver.
@@ -524,6 +539,10 @@ class Driver(DriverSocket):
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
+        if self.status & Status.NeedExtra:
+            self.sendextra(r.get("extra", ""))
+            self.get_status()
+
         if not (self.status & Status.Ready):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
@@ -588,12 +607,15 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
+        if self.status & Status.NeedExtra:
+            self.sendextra(r.get("extra", ""))
+            self.get_status()
         if not (self.status & Status.Ready):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch_send! (II)",
@@ -1683,7 +1705,10 @@ class InterfaceSocket(object):
             return False
         if fc.status & Status.HasData:
             return False
-        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
+        if not (
+            fc.status
+            & (Status.Ready | Status.NeedsInit | Status.Busy | Status.NeedExtra)
+        ):
             warning(
                 " @SOCKET: Client "
                 + str(fc.peername)

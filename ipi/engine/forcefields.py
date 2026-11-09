@@ -2588,11 +2588,11 @@ class FFDielectric(ForceField):
         )  # how to read the piezoelectric tensor from the client code
         self.electric_fields = list(electric_fields)
         self.forcefield = forcefield
-        if self.forcefield.dopbc:
+        if self.forcefield.dopbc and self.where == "server":
             raise ValueError(
-                "FFDielectric does not support pbc='True' on its wrapped "
-                "forcefield because it must pass unwrapped coordinates to the "
-                "driver."
+                "Server-side FFDielectric does not support pbc='True' on its "
+                "wrapped forcefield because it must pass unwrapped coordinates "
+                "to the driver."
             )
         self.template = {}
         self._field_cache_lock = threading.Lock()

@@ -55,6 +55,8 @@ class ExtendedMACECalculator(BatchedMACE):
 class Extended_MACE_driver(MACE_driver):
     """MACE Python driver exposing fixed-E client coupling."""
 
+    requires_extra = True
+
     def check_parameters(self):
         self.batched_calculator = ExtendedMACECalculator(
             model_paths=self.model, device=self.device, **self.mace_kwargs

@@ -11,6 +11,7 @@ import threading
 import time
 from concurrent.futures import Future
 from multiprocessing import shared_memory
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -34,6 +35,7 @@ MESSAGE = {
         "ready",
         "needinit",
         "havedata",
+        "needextra",
         "init",
         "posdata",
         "getforce",
@@ -162,6 +164,29 @@ def run_pool(interface, requests, timeout=2.0):
 
 
 @pytest.mark.parametrize(
+    "status", [Status.Disconnected, Status.Up | Status.HasData, Status.Up]
+)
+def test_dispatch_free_client_rejects_unavailable_states(status):
+    """A disconnected, working, or unready client cannot receive a request."""
+    interface = sockets.InterfaceSocket()
+    client = SimpleNamespace(status=status, peername="test-client")
+    assert interface.dispatch_free_client(client) is False
+
+
+def test_dispatch_free_client_accepts_needextra_state(monkeypatch):
+    """A client requesting per-force metadata remains eligible for dispatch."""
+    interface = sockets.InterfaceSocket()
+    interface.prlist = []
+    warnings = []
+    monkeypatch.setattr(sockets, "warning", lambda *args: warnings.append(args))
+    client = SimpleNamespace(
+        status=Status.Up | Status.NeedExtra, peername="extra-client"
+    )
+    assert interface.dispatch_free_client(client) is False
+    assert warnings == []
+
+
+@pytest.mark.parametrize(
     "reply,status",
     [
         (READY, Status.Up | Status.Ready),
@@ -188,6 +213,14 @@ def test_status_wait_sends_a_single_request(connection, monkeypatch):
         assert driver.get_status() == Status.Up | Status.Ready
     finally:
         late_reply.join()
+    assert pending(peer) == STATUS
+
+
+def test_direct_status_recognizes_needextra(connection):
+    """The blocking status reader recognizes a metadata request."""
+    driver, peer = connection
+    peer.sendall(MESSAGE["needextra"])
+    assert driver._getstatus_direct() == Status.Up | Status.NeedExtra
     assert pending(peer) == STATUS
 
 
