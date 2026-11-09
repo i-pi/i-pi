@@ -35,6 +35,7 @@ MESSAGE = {
         "ready",
         "needinit",
         "havedata",
+        "needextra",
         "init",
         "posdata",
         "getforce",
@@ -212,6 +213,14 @@ def test_status_wait_sends_a_single_request(connection, monkeypatch):
         assert driver.get_status() == Status.Up | Status.Ready
     finally:
         late_reply.join()
+    assert pending(peer) == STATUS
+
+
+def test_direct_status_recognizes_needextra(connection):
+    """The blocking status reader recognizes a metadata request."""
+    driver, peer = connection
+    peer.sendall(MESSAGE["needextra"])
+    assert driver._getstatus_direct() == Status.Up | Status.NeedExtra
     assert pending(peer) == STATUS
 
 

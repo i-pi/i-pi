@@ -185,11 +185,14 @@ def test_threaded_dispatch(mode, match_mode):
 
 @fork_only
 @pytest.mark.parametrize("mode", ["unix", "inet"])
-def test_socket_extra_data_nonconsolidated(mode):
+@pytest.mark.parametrize("consolidate", [False, True])
+def test_socket_extra_data_roundtrip(mode, consolidate):
     # This protects the NEEDEXTRA/EXTRADATA handshake required by FFDielectric
-    # client force fields when the general worker-thread socket path is used.
+    # client force fields in both socket dispatch implementations.
     extra = '{"electric_field": [0.0, 0.0, 1.0]}'
-    pot, force, q, extras = _exchange_one_force(mode, consolidate=False, extra=extra)
+    pot, force, q, extras = _exchange_one_force(
+        mode, consolidate=consolidate, extra=extra
+    )
     assert np.allclose(force, -K * q)
     np.testing.assert_allclose(pot, 0.5 * K * (q**2).sum(axis=1))
     assert [item["received_extra"] for item in extras] == [json.loads(extra)] * len(q)
