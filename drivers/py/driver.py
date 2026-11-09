@@ -100,6 +100,8 @@ def run_driver(
     vir = np.zeros((3, 3), float)
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
+        if not header:
+            raise ConnectionResetError("i-PI has closed the connection")
         if f_verbose:
             print("Received ", header)
         if header == Message("STATUS"):
@@ -568,12 +570,16 @@ if __name__ == "__main__":
             mpi_id=args.mpi_id,
         )
     else:
-        run_driver(
-            unix=args.unix,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-            shm=args.shm,
-        )
+        try:
+            run_driver(
+                unix=args.unix,
+                address=args.address,
+                port=args.port,
+                driver=d_f,
+                f_verbose=args.verbose,
+                sockets_prefix=args.sockets_prefix,
+                shm=args.shm,
+            )
+        except (BrokenPipeError, ConnectionResetError):
+            # i-PI closes the connection when it exits during a calculation
+            print("i-PI has closed the connection. Bye bye!")
