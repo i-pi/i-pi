@@ -36,6 +36,8 @@ Functions:
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -122,7 +124,20 @@ Args:
    }
 
 
+#ifdef SIGPIPE
+   // writes to a socket closed by i-PI fail with EPIPE, rather than killing the driver
+   signal(SIGPIPE, SIG_IGN);
+#endif
    *psockfd=sockfd;
+}
+
+static void server_closed(void)
+/* Ends the driver when i-PI has closed the connection, as it does when it
+exits during a calculation. */
+
+{
+   printf("i-PI has closed the connection. Bye bye!\n");
+   exit(0);
 }
 
 void writebuffer(int *psockfd, const char *data, int* plen)
@@ -140,6 +155,7 @@ Args:
    int len=*plen;
 
    n = write(sockfd,data,len);
+   if (n < 0 && (errno == EPIPE || errno == ECONNRESET)) server_closed();
    if (n < 0) { perror("Error writing to socket: server has quit or connection broke"); exit(-1); }
 }
 
@@ -158,12 +174,16 @@ Args:
    int sockfd=*psockfd;
    int len=*plen;
 
-   n = nr = read(sockfd,data,len);
-
+   n = 0; nr = 1;
    while (nr>0 && n<len )
-   {  nr=read(sockfd,&data[n],len-n); n+=nr; }
+   {  nr=read(sockfd,&data[n],len-n); if (nr>0) n+=nr; }
 
-   if (n == 0) { perror("Error reading from socket: server has quit or connection broke"); exit(-1); }
+   if (n < len)
+   {
+      // nothing read: i-PI has closed the connection between two messages
+      if (n == 0 && (nr == 0 || errno == ECONNRESET)) server_closed();
+      perror("Error reading from socket: server has quit or connection broke"); exit(-1);
+   }
 }
 
 
