@@ -1705,7 +1705,10 @@ class InterfaceSocket(object):
             return False
         if fc.status & Status.HasData:
             return False
-        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
+        if not (
+            fc.status
+            & (Status.Ready | Status.NeedsInit | Status.Busy | Status.NeedExtra)
+        ):
             warning(
                 " @SOCKET: Client "
                 + str(fc.peername)

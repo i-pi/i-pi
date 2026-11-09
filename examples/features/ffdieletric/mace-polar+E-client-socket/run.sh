@@ -9,6 +9,22 @@ ipi_pid=$!
 sleep 1
 i-pi-py_driver -u -a mace-polar-static-extra -m extmace -o "template=${assets_dir}/start.extxyz,model=${assets_dir}/MACE-POLAR-1-M.model,device=cpu,mace_kwargs=${assets_dir}/mace_kwargs.json,requires_extra=true" > log.driver 2>&1 &
 driver_pid=$!
+
+cleanup() {
+  status=$?
+  trap - EXIT
+  if (( status != 0 )); then
+    echo "Socket FFDielectric example failed; i-PI log follows:" >&2
+    cat log.i-pi >&2 || true
+    echo "Socket FFDielectric example failed; driver log follows:" >&2
+    cat log.driver >&2 || true
+  fi
+  kill "${ipi_pid}" "${driver_pid}" 2>/dev/null || true
+  wait "${ipi_pid}" "${driver_pid}" 2>/dev/null || true
+  exit "${status}"
+}
+trap cleanup EXIT
+
 timeout 180s tail --pid="${ipi_pid}" -f /dev/null
 wait "${ipi_pid}"
 timeout 30s tail --pid="${driver_pid}" -f /dev/null
