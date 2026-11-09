@@ -11,6 +11,7 @@ import threading
 import time
 from concurrent.futures import Future
 from multiprocessing import shared_memory
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -159,6 +160,29 @@ def run_pool(interface, requests, timeout=2.0):
     while time.time() < deadline and not all(r._event_done.is_set() for r in requests):
         interface.pool_distribute()
     interface.pool_distribute()
+
+
+@pytest.mark.parametrize(
+    "status", [Status.Disconnected, Status.Up | Status.HasData, Status.Up]
+)
+def test_dispatch_free_client_rejects_unavailable_states(status):
+    """A disconnected, working, or unready client cannot receive a request."""
+    interface = sockets.InterfaceSocket()
+    client = SimpleNamespace(status=status, peername="test-client")
+    assert interface.dispatch_free_client(client) is False
+
+
+def test_dispatch_free_client_accepts_needextra_state(monkeypatch):
+    """A client requesting per-force metadata remains eligible for dispatch."""
+    interface = sockets.InterfaceSocket()
+    interface.prlist = []
+    warnings = []
+    monkeypatch.setattr(sockets, "warning", lambda *args: warnings.append(args))
+    client = SimpleNamespace(
+        status=Status.Up | Status.NeedExtra, peername="extra-client"
+    )
+    assert interface.dispatch_free_client(client) is False
+    assert warnings == []
 
 
 @pytest.mark.parametrize(
