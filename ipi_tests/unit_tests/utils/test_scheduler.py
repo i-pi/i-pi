@@ -2,6 +2,7 @@
 while they wait, and polls the forcefields meanwhile."""
 
 import contextvars
+import socket
 
 import numpy as np
 import pytest
@@ -229,3 +230,69 @@ def test_requests_of_all_tasks_are_evaluated_in_one_batch():
     # 6 requests: a full batch of 4 as soon as possible, and then the rest
     # once all the tasks wait
     assert calls == [4, 2]
+
+
+class Polled(Counter):
+    """A forcefield that cannot be waited on (e.g. MPI), polled every
+    `poll_interval`, whose request is done at its third idle poll. It may
+    also have sockets to wait on, which never get a reply."""
+
+    def __init__(self, interval, fds=()):
+        super().__init__(idle_only=True)
+        self.poll_interval = interval
+        self.sockets = list(fds)
+        self.idle_polls = 0
+
+    def poll(self, idle=False):
+        self.polls.append(idle)
+        if not idle:
+            return False
+        self.idle_polls += 1
+        if self.idle_polls % 3 and self.requests:
+            return False
+        return super().poll(idle)
+
+    def fds(self):
+        return self.sockets
+
+
+class RecordingPoller:
+    """Stands for select.poll(), recording the time-out of each call."""
+
+    def __init__(self, calls):
+        self.calls = calls
+
+    def register(self, fd, mask):
+        pass
+
+    def poll(self, timeout=None):
+        self.calls.append(timeout)
+        return []
+
+
+@pytest.mark.parametrize("with_socket", [False, True], ids=["no-socket", "socket"])
+@pytest.mark.parametrize("interval", [1e-4, 2e-3])
+def test_poll_intervals_are_not_rounded_to_milliseconds(
+    monkeypatch, interval, with_socket
+):
+    """select.poll counts in whole milliseconds and rounds up, so a shorter
+    `poll_interval` (the latency of MPI drivers, 1e-4 s by default) is
+    slept instead, after checking the sockets without waiting."""
+    sleeps, polls = [], []
+    monkeypatch.setattr(scheduler.time, "sleep", sleeps.append)
+    monkeypatch.setattr(scheduler.select, "poll", lambda: RecordingPoller(polls))
+    pair = socket.socketpair() if with_socket else ()
+    try:
+        ff = Polled(interval, fds=pair[:1])
+        request = ff.queue(0)
+        scheduler.wait(lambda: request["done"])
+    finally:
+        for s in pair:
+            s.close()
+    # two idle polls without progress, each followed by a wait
+    if not with_socket:
+        assert sleeps == [interval, interval] and polls == []
+    elif interval < scheduler.MINPOLL:
+        assert polls == [0, 0] and sleeps == [interval, interval]
+    else:
+        assert polls == pytest.approx([interval * 1e3] * 2) and sleeps == []
