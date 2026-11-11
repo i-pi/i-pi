@@ -6,6 +6,7 @@ the errors it raises, and the state of the force requests.
 """
 
 import contextlib
+import errno
 import gc
 import os
 import select
@@ -76,17 +77,16 @@ def request(rid=17, shift=0.0):
     )
 
 
-def pending(peer):
-    """Every byte the server has sent to `peer` so far."""
-    peer.setblocking(False)
+def pending(peer, quiet=0.05):
+    """Every byte the server has sent to `peer` so far: reads until nothing
+    more arrives for `quiet` seconds, as data sent over loopback TCP can reach
+    the peer a little after the send has returned (e.g. on macOS)."""
     data = b""
-    try:
-        while chunk := peer.recv(65536):
-            data += chunk
-    except BlockingIOError:
-        pass
-    finally:
-        peer.setblocking(True)
+    while select.select([peer], [], [], quiet)[0]:
+        chunk = peer.recv(65536)
+        if not chunk:
+            break
+        data += chunk
     return data
 
 
@@ -147,7 +147,12 @@ def server(request):
     """A listening interface (TCP unless another mode is requested) and a
     function that connects handshaken clients."""
     mode = getattr(request, "param", "inet")
-    directory = tempfile.TemporaryDirectory(prefix="ipi-socket-", dir="/tmp")
+    if mode != "inet" and not hasattr(socket, "AF_UNIX"):
+        pytest.skip("no unix sockets on this platform")
+    # a short folder, as the path of a unix socket is limited to ~100 bytes
+    directory = tempfile.TemporaryDirectory(
+        prefix="ipi-socket-", dir="/tmp" if os.path.isdir("/tmp") else None
+    )
     address = dict(address="127.0.0.1", port=0)
     if mode != "inet":
         address = dict(address="server", sockets_prefix=directory.name + "/")
@@ -162,6 +167,9 @@ def server(request):
         peer.settimeout(2)
         peer.connect(interface.server.getsockname())
         peers.append(peer)
+        # the listening socket may report the connection a little after
+        # connect() has returned (e.g. on macOS, for TCP on loopback)
+        wait_readable(interface.server)
         interface.poll()  # accepts the client, and asks for its status
         assert peer.recv(12) == STATUS
         peer.sendall(reply)
@@ -179,7 +187,8 @@ def server(request):
 
 
 def wait_readable(client, timeout=2.0):
-    """Waits until the reply of `client` can be read."""
+    """Waits until the reply of `client` can be read, or, for the listening
+    socket, until a connection can be accepted."""
     select.select([client], [], [], timeout)
 
 
@@ -441,6 +450,8 @@ def test_disconnected_handshake_is_not_accepted(server, closed):
         else:
             peer.shutdown(socket.SHUT_WR)
         deadline = time.time() + 2
+        # accepts the connection, rather than polling before it is listed
+        wait_readable(interface.server)
         interface.poll()
         while interface.clients and time.time() < deadline:
             interface.poll()
@@ -685,3 +696,163 @@ def test_closed_interface_stops_the_requests(server):
     assert interface.fds() == []
     assert interface.poll()
     assert r["status"] == "Exit"
+
+
+# -- large messages and failed connections ------------------------------------
+
+
+def _read_slowly(peer, nbytes, chunk=65536, pause=0.005):
+    """Reads `nbytes` from `peer` in chunks, pausing between them, so that
+    the whole transfer takes longer than the time-out of the sender, although
+    each chunk is read well within it. Returns the bytes read."""
+    data = bytearray()
+    while len(data) < nbytes:
+        part = peer.recv(min(chunk, nbytes - len(data)))
+        if not part:
+            break
+        data += part
+        time.sleep(pause)
+    return bytes(data)
+
+
+def _small_buffers(driver, peer, size=65536):
+    """Shrinks the socket buffers, whose default sizes depend on the platform
+    (8 KiB for unix sockets on macOS, ~200 KiB on Linux, and they can be
+    tuned to MiBs), and returns the number of bytes that a send can leave in
+    them without the peer reading: a message much larger than that needs
+    the peer to read while it is sent, everywhere."""
+    driver.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, size)
+    peer.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, size)
+    # the kernel may round the sizes (Linux doubles them)
+    return driver.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF) + peer.getsockopt(
+        socket.SOL_SOCKET, socket.SO_RCVBUF
+    )
+
+
+def test_send_waits_for_a_client_that_keeps_reading(connection):
+    """A message that takes longer than the time-out to cross is sent whole,
+    as long as the client keeps reading it."""
+    driver, peer = connection
+    buffered = _small_buffers(driver, peer)
+    nbytes = max(2**22, 16 * buffered)
+    message = np.arange(nbytes // 8, dtype=np.float64).tobytes()
+    received = []
+    reader = threading.Thread(
+        target=lambda: received.append(_read_slowly(peer, len(message)))
+    )
+    reader.start()
+    start = time.time()
+    driver.sendall(message)
+    elapsed = time.time() - start
+    reader.join(30)
+    # the transfer outlasted the time-out of the socket, and was not cut
+    assert elapsed > 2 * driver.gettimeout()
+    assert received == [message]
+
+
+def test_send_gives_up_on_a_client_that_stops_reading(connection, monkeypatch):
+    """A client that reads nothing for NTIMEOUT time-outs makes the send fail."""
+    monkeypatch.setattr(sockets, "NTIMEOUT", 2)
+    driver, peer = connection
+    buffered = _small_buffers(driver, peer)
+    start = time.time()
+    with pytest.raises(socket.timeout):
+        driver.sendall(b"x" * max(2**22, 16 * buffered))
+    # (NTIMEOUT + 1) time-outs, with a wide margin for slow machines
+    assert time.time() - start < 5.0
+
+
+def test_reply_that_keeps_arriving_is_read_whole(connection, monkeypatch):
+    """A reply that takes longer than NTIMEOUT time-outs to arrive, but keeps
+    arriving, is not cut."""
+    monkeypatch.setattr(sockets, "NTIMEOUT", 4)
+    driver, peer = connection
+    data = np.arange(8 * 512, dtype=np.float64)
+    raw = data.tobytes()
+
+    def write_slowly():
+        # 8 pieces, each after a pause longer than the time-out (0.05 s) of
+        # the driver but shorter than NTIMEOUT + 1 of them: more time-outs
+        # than NTIMEOUT in all, never as many in a row
+        for i in range(0, len(raw), 4096):
+            time.sleep(0.08)
+            peer.sendall(raw[i : i + 4096])
+
+    writer = threading.Thread(target=write_slowly)
+    writer.start()
+    received = driver.recvall(np.zeros_like(data))
+    writer.join(30)
+    np.testing.assert_array_equal(received, data)
+
+
+def test_positions_reach_a_client_that_reads_them_slowly(connection):
+    """POSDATA larger than the socket buffers is not cut by the time-out."""
+    driver, peer = connection
+    buffered = _small_buffers(driver, peer)
+    driver.status = Status.Up | Status.Ready
+    natoms = max(100000, 16 * buffered // 24)
+    r = ForceRequest(
+        id=3,
+        pars="",
+        pos=np.arange(3 * natoms, dtype=np.float64),
+        active=np.arange(3 * natoms),
+        cell=(np.eye(3), np.eye(3)),
+        result=None,
+        status="Queued",
+        start=-1,
+    )
+    nbytes = 12 + 2 * 72 + 4 + r["pos"].nbytes + 12
+    received = []
+    reader = threading.Thread(
+        target=lambda: received.append(_read_slowly(peer, nbytes))
+    )
+    reader.start()
+    driver.send_job([r])
+    reader.join(30)
+    assert driver.expect == "forces"
+    assert received[0][:12] == MESSAGE["posdata"]
+    assert received[0][-12 - r["pos"].nbytes : -12] == r["pos"].tobytes()
+    assert received[0][-12:] == MESSAGE["getforce"]
+
+
+@SERVER_MODES
+def test_client_without_an_address_is_dropped(server, monkeypatch):
+    """A client whose address cannot be read, as macOS reports (EINVAL) for
+    a unix client that has closed before it is accepted, is dropped rather
+    than ending the run. The error is forced here on every platform."""
+    interface, _ = server
+    monkeypatch.setattr(
+        sockets.DriverSocket,
+        "getpeername",
+        lambda self: (_ for _ in ()).throw(OSError(errno.EINVAL, "Invalid argument")),
+    )
+    peer = socket.socket(interface.server.family, socket.SOCK_STREAM)
+    peer.connect(interface.server.getsockname())
+    peer.close()
+    wait_readable(interface.server)
+    deadline = time.time() + 2
+    interface.poll()
+    while interface.clients and time.time() < deadline:
+        interface.poll()
+    assert not interface.clients
+
+
+def test_failed_accept_does_not_end_the_run(server, monkeypatch):
+    """An error of accept (e.g. a connection reset before it is accepted, or
+    no descriptors left) is reported, and the connection that waits is
+    accepted at a later poll."""
+    interface, _ = server
+    peer = socket.create_connection(interface.server.getsockname(), timeout=2)
+    wait_readable(interface.server)
+
+    def reset(self):
+        raise ConnectionAbortedError(errno.ECONNABORTED, "connection aborted")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(socket.socket, "accept", reset)
+        interface.poll()
+    assert interface.clients == []
+    interface.poll()
+    assert peer.recv(12) == STATUS
+    assert len(interface.clients) == 1
+    peer.close()

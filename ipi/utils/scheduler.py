@@ -44,6 +44,7 @@ one (`watch`). It takes part through three members:
 import contextvars
 import select
 import threading
+import time
 import weakref
 from collections import deque
 
@@ -56,6 +57,8 @@ __all__ = ["Task", "spawn", "join", "run", "wait", "watch", "unwatch"]
 # longest wait for a reply before polling again, so that the time-outs of
 # the drivers and the requests for a soft exit are noticed
 MAXWAIT = 0.1
+# shortest wait that poll() can make: it counts in milliseconds, rounding up
+MINPOLL = 1e-3
 
 
 class Task:
@@ -317,7 +320,16 @@ class Scheduler:
                 timeouts.append(forcefield.poll_interval)
         if nfds == 0 and not timeouts:
             return False
-        poller.poll(min(timeouts + [MAXWAIT]) * 1e3)
+        timeout = min(timeouts + [MAXWAIT])
+        if nfds == 0:
+            time.sleep(timeout)
+        elif timeout >= MINPOLL:
+            poller.poll(timeout * 1e3)
+        elif not poller.poll(0):
+            # poll() counts in whole milliseconds and rounds up, which would
+            # turn a shorter interval (e.g. the latency of MPI drivers) into
+            # one millisecond: checks the sockets, and sleeps instead
+            time.sleep(timeout)
         return True
 
     def _kill(self, task):

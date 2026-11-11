@@ -133,7 +133,39 @@ class DriverSocket(socket.socket):
         )
         self.settimeout(timeout)
         self._buf = np.zeros(0, np.byte)
-        self.peername = self.getpeername()
+        try:
+            self.peername = self.getpeername()
+        except OSError:
+            # a client that closed the connection before it was accepted (macOS
+            # raises EINVAL for unix sockets): its handshake fails, and drops it
+            self.peername = "disconnected client"
+
+    def sendall(self, data):
+        """Sends all of `data`, giving up only if the other end reads nothing
+        for NTIMEOUT consecutive time-outs of the socket.
+
+        `socket.sendall` bounds the total duration of the send by the
+        time-out: it would give up on a client that is still reading a message
+        too large to be sent within it (large systems, slow networks), and
+        leave part of the message on the socket.
+
+        Raises:
+           socket.timeout: If the other end reads nothing for NTIMEOUT
+              time-outs.
+        """
+
+        view = memoryview(data).cast("B")
+        ntimeout = 0
+        while len(view) > 0:
+            try:
+                sent = self.send(view)
+            except socket.timeout:
+                ntimeout += 1
+                if ntimeout > NTIMEOUT:
+                    raise
+                continue
+            ntimeout = 0
+            view = view[sent:]
 
     def send_msg(self, msg):
         """Sends the header `msg`."""
@@ -150,8 +182,8 @@ class DriverSocket(socket.socket):
         returns it (or its value, for a 0-dimensional array).
 
         Raises:
-           Disconnected: If the other end has closed the connection, or does
-              not send the data within NTIMEOUT time-outs.
+           Disconnected: If the other end has closed the connection, or sends
+              nothing for NTIMEOUT consecutive time-outs.
         """
 
         blen = dest.itemsize * dest.size
@@ -177,6 +209,8 @@ class DriverSocket(socket.socket):
                 raise Disconnected()
             if bpart == 0:
                 raise Disconnected()
+            # a reply that keeps arriving is not cut by the time-outs
+            ntimeout = 0
             bpos += bpart
 
         if dest.ndim > 0:
@@ -360,7 +394,9 @@ class Driver(DriverSocket):
             # made once the poll that is running here is over
             softexit.request("Client shutdown.")
         try:
-            self.send_msg("exit")
+            # a best effort, within one time-out: a client that is dropped
+            # because it stopped reading must not hold up the others
+            socket.socket.sendall(self, MESSAGE["exit"])
             self.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass  # the client is already gone
@@ -664,6 +700,15 @@ class InterfaceSocket(object):
                 client, address = self.server.accept()
             except (BlockingIOError, InterruptedError):
                 return  # the queue is empty
+            except OSError as err:
+                # e.g. a client that reset the connection before it was
+                # accepted, or no descriptors left: the others are accepted
+                # at a later poll, rather than ending the run
+                warning(
+                    " @SOCKET:   Could not accept a connection (%s)." % err,
+                    verbosity.low,
+                )
+                return
             client.settimeout(self.client_timeout)
             driver = SHMDriver(client) if self.mode == "shm" else Driver(client)
             driver.batch_size = self.batch_size
@@ -855,8 +900,9 @@ class InterfaceSocket(object):
             self.client_timeout *= 2
             self._drop(
                 c,
-                "did not receive the positions within the time-out: it is %f s "
-                "for the clients that connect later" % self.client_timeout,
+                "stopped reading the positions for %d time-outs: the time-out is "
+                "%f s for the clients that connect later"
+                % (NTIMEOUT + 1, self.client_timeout),
             )
             return False
         except OSError as err:
