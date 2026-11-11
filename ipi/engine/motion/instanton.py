@@ -1052,6 +1052,9 @@ class DummyOptimizer:
 
         tolerances = self.options["tolerances"]
         d_u = float(self.forces.pot - self.optarrays["old_u"].sum())
+        # change of energy per atom that can move: the fixed atoms do not count,
+        # in the test below and in the message alike
+        d_u_atom = abs(d_u / self.fix.fixbeads.natoms)
         # active_force = self.fix.get_active_vector(self.forces.f, 1) + self.im.f
 
         active_force = self.mapper.f
@@ -1059,7 +1062,7 @@ class DummyOptimizer:
 
         info(
             " @Exit step: Energy difference: {:4.2e}, (condition: {:4.2e})".format(
-                np.absolute(d_u / self.fix.fixbeads.natoms), tolerances["energy"]
+                d_u_atom, tolerances["energy"]
             ),
             verbosity.low,
         )
@@ -1077,7 +1080,7 @@ class DummyOptimizer:
         )
 
         if (
-            (np.absolute(d_u / self.mapper.sm.dbeads.natoms) <= tolerances["energy"])
+            (d_u_atom <= tolerances["energy"])
             and (
                 (f_max <= tolerances["force"])
                 or (

@@ -404,6 +404,37 @@ def test_string_resampling_of_straight_line(count):
     )
 
 
+@pytest.mark.parametrize("fixatoms", [None, [1]])
+@pytest.mark.parametrize("ratio,converged", [(0.9, True), (1.1, False)])
+def test_instanton_energy_tolerance_counts_the_free_atoms(
+    simulation, fixatoms, ratio, converged
+):
+    """The change of energy is compared to the tolerance per atom that can move:
+    with one of the two atoms fixed it is divided by one, not by two (the fixed
+    atom made the test looser than the logged condition)"""
+    options = ET.Element("instanton", mode="rate")
+    ET.SubElement(options, "opt").text = "nichols"
+    ET.SubElement(options, "hessian_asr").text = "none"
+    ET.SubElement(options, "energy_shift").text = "0"
+    ET.SubElement(options, "hessian", shape="(6,6)").text = str(
+        np.diag([-0.5, 0.5, 0.5, 0.5, 0.5, 0.5]).ravel().tolist()
+    )
+    root = motion_input("instanton", options)
+    if fixatoms is not None:
+        ET.SubElement(root.find("system/motion"), "fixatoms").text = str(fixatoms)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        s = sim.syslist[0]
+        optimizer = s.motion.optimizer
+        optimizer.initialize(0)
+        free = s.beads.natoms - (0 if fixatoms is None else len(fixatoms))
+        tolerance = optimizer.options["tolerances"]["energy"]
+        # same forces as in the previous step, and no displacement: only the
+        # change of energy decides
+        optimizer.optarrays["old_u"][:] = s.forces.pots - ratio * tolerance * free
+        optimizer.qtime = 0.0
+        assert optimizer.exitstep(0.0, 0) is converged
+
+
 def test_path_mapper_harmonic_gradient_and_tangent_projection(simulation):
     """The string mapper returns the energy of the inner beads, and the part of
     the gradient perpendicular to the path (here along x)"""

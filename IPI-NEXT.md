@@ -130,6 +130,10 @@ or because they were approved explicitly:
   were not reset; `get_imvector` error message raising TypeError instead of ValueError.
 - Phonons: NMFD/eNMFD refinement was overwritten by the unrefined matrix (water/qtip4pf: NMFD eigenvalues now
   match FD to 5e-7, were 75% off).
+- Instantons with fixed atoms (`fixatoms`): the convergence test divided the change of energy by the number
+  of all the atoms, the fixed ones included, while the log divided it by the free atoms, so a run could stop
+  when the logged energy condition was not met (one step earlier, with a fixed spectator atom out of two, in
+  a 32-bead double well). Both now use the free atoms. Also on main. New unit test.
 - IMF restart: `v0` was not set and the basis-size schedule differed from a fresh run.
 - SCP and VSCF with `nparallel > 1` failed at bind (a 1-bead system cloned to more beads). SCP now evaluates
   `nparallel` configurations per step on `nparallel` copies of the system; VSCF, which evaluates one
