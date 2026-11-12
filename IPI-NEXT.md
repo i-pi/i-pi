@@ -101,7 +101,9 @@ or because they were approved explicitly:
   since ece43207). Affects ring-polymer contraction combined with open paths.
 - Normal modes: the dynamical mass factors (`manual`, `pa-cmd` and `wmax-cmd` frequencies) did not depend
   on the frequencies of the free ring polymer, so they kept the values of the initial temperature when it
-  changed, e.g. with replica exchange. Also on main. New unit test.
+  changed, e.g. with replica exchange. Also on main. New unit test. Only these modes, with more than one
+  bead, depend on the temperature: the factors of `rpmd`, `eco` and classical systems are all ones, and a
+  change of temperature does not recompute them, nor the dynamical masses and kinetic energies.
 - Instantons: the symmetric band given to `scipy.linalg.solve_banded` (`instools.sym_band`) left the corners
   outside the band uninitialized, so the solver failed at random when they held infinities or NaNs, which
   it checks for. Also on main. New unit test.

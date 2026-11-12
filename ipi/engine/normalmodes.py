@@ -24,6 +24,11 @@ from ipi.utils.exchange import *
 
 __all__ = ["NormalModes"]
 
+# the modes whose dynamical mass factors are computed from the frequencies of
+# the free ring polymer, and so change with the temperature. The factors of the
+# other modes (rpmd, eco) are all ones
+SCALED_MASS_MODES = ("manual", "pa-cmd", "wmax-cmd")
+
 
 @compiled
 def _free_rp_step(pnm, qnm, prop_pq_ms):
@@ -75,7 +80,9 @@ class NormalModes:
           See J. Chem. Phys. 133, 124101 (2010). Depends on the bead masses
           and the timestep.
        nm_factor: An array of dynamical mass factors associated with each of
-          the normal modes. Depends on nm_freqs and mode.
+          the normal modes. Depends on nm_freqs and mode, and on omegak (so on
+          the temperature) for the manual, pa-cmd and wmax-cmd modes with
+          more than one bead: the factors of the other paths are all ones.
        dynm3: An array that gives the dynamical masses of individual atoms in the
           normal modes representation. Depends on nm_factor and beads.m3.
        dynomegak: The scaled vibrational frequencies. Depends on nm_factor and
@@ -280,19 +287,28 @@ class NormalModes:
             dependencies=[self.omegan_],
         )
 
-        # sets up "dynamical" masses -- mass-scalings to give the correct RPMD/CMD dynamics
+        # sets up "dynamical" masses -- mass-scalings to give the correct RPMD/CMD dynamics.
+        # Only the factors of the scaled-mass modes follow the frequencies of
+        # the free ring polymer, and so the temperature. The others are all
+        # ones, and do not depend on the frequencies, so that a change of
+        # temperature (e.g. a swap of temperatures in replica exchange) does not
+        # recompute the dynamical masses, the kinetic energies and stresses,
+        # and what depends on them.
+        self._scaled_masses = self.has_scaled_masses()
         self.nm_factor_ = depend_array(
             name="nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_nmm,
-            dependencies=[self.omegak_, self.nm_freqs_, self.mode_],
+            dependencies=([self.omegak_] if self._scaled_masses else [])
+            + [self.nm_freqs_, self.mode_],
         )
         # add o_nm_factor for the dynamical mass in the case of open paths
         self.o_nm_factor_ = depend_array(
             name="o_nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_o_nmm,
-            dependencies=[self.o_omegak_, self.nm_freqs_, self.mode_],
+            dependencies=([self.o_omegak_] if self._scaled_masses else [])
+            + [self.nm_freqs_, self.mode_],
         )
         self.dynm3_ = depend_array(
             name="dynm3",
@@ -591,11 +607,27 @@ class NormalModes:
 
         return self._mass_factors(self.o_omegak)
 
+    def has_scaled_masses(self):
+        """Returns True if the dynamical mass factors depend on the
+        frequencies of the free ring polymer (and so on the temperature): for
+        the manual, pa-cmd and wmax-cmd modes with more than one bead. The
+        factors are otherwise all ones."""
+
+        return self.nbeads > 1 and self.mode in SCALED_MASS_MODES
+
     def _mass_factors(self, omegak):
         """Returns the dynamical mass factors for the normal-mode frequencies
         `omegak`, and checks that the frequencies and the mode given in input
         are consistent with the number of beads."""
 
+        # whether the factors follow omegak is decided by the dependencies set
+        # in bind, which a change of mode afterwards would not update
+        if self.has_scaled_masses() != self._scaled_masses:
+            raise ValueError(
+                f"Cannot change the normal-mode mode to '{self.mode}' after binding: "
+                "the dependency of the dynamical mass factors on the temperature "
+                "is set when binding."
+            )
         omegak = to_numpy(omegak)
         dmf = np.ones(self.nbeads, float)
         if self.mode == "rpmd":
