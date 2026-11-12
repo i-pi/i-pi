@@ -86,6 +86,10 @@ class Softexit(object):
         self._next_check = 0.0
         # taken by whoever makes the exit: the main thread or the watchdog
         self._lock = threading.Lock()
+        # held by the main thread while it writes to the outputs or stores the
+        # state, and taken for good by the watchdog before it truncates them,
+        # so that nothing reaches the files after the truncation
+        self.io_lock = threading.RLock()
         self._watchdog = None
 
     def register_function(self, func, *args, **kwargs):
@@ -110,15 +114,21 @@ class Softexit(object):
         between the steps and whenever it waits for forces, which also tells
         the watchdog that it responds."""
 
+        self._beat = time.monotonic()
+        self.poll()
+        if self.requested is not None and not self.exiting:
+            self.cleanup(message=self.requested)
+
+    def poll(self, force=False):
+        """Requests an exit if there is an EXIT file or the wall-clock time
+        has run out, looking at most once per SOFTEXITLATENCY unless `force`."""
+
         now = time.monotonic()
-        self._beat = now
-        if self._started and now > self._next_check:
+        if self._started and (force or now > self._next_check):
             self._next_check = now + SOFTEXITLATENCY
             message = self._expired()
             if message is not None:
                 self.request(message)
-        if self.requested is not None and not self.exiting:
-            self.cleanup(message=self.requested)
 
     def stored(self):
         """Records that the state to go back to has been stored: the outputs
@@ -332,6 +342,13 @@ class Softexit(object):
             " @SOFTEXIT: The main thread has not responded for %g s: writing the "
             "stored checkpoint, and exiting.\n" % GRACE
         )
+
+        # waits for a write of the main thread in progress, then keeps the
+        # outputs to itself: the main thread blocks at its next write
+        if not self.io_lock.acquire(timeout=GRACE):
+            sys.stderr.write(" @SOFTEXIT: The outputs are busy: exiting as is.\n")
+            sys.stderr.flush()
+            os._exit(1)
 
         def run():
             for f, a, ka in self.emergency:
