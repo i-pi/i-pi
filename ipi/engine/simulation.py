@@ -348,9 +348,7 @@ class Simulation:
         self.store()
 
         steptime = 0.0
-        simtime = time.time()
-        # time of the last check for an EXIT file, made at most once per second
-        exitcheck = 0.0
+        first_step = True
 
         cstep = 0
         # tptime = 0.0
@@ -384,7 +382,12 @@ class Simulation:
                 break
 
             # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
-            if (self.step + 1) % self.safe_stride == 0:
+            # a checkpoint written at this step is also a state to go back to,
+            # so that the outputs are truncated consistently with it
+            if (self.step + 1) % self.safe_stride == 0 or any(
+                isinstance(o, eoutputs.CheckpointOutput) and o.active()
+                for o in self.outputs
+            ):
                 self.store(self.step + 1)
 
             steptime += time.time()
@@ -415,18 +418,16 @@ class Simulation:
                     for line in top_stats[0].traceback.format():
                         info(line)
 
-            if time.time() - exitcheck > 1.0:
-                exitcheck = time.time()
-                if os.path.exists("EXIT"):
-                    info(
-                        " @simulation.run: EXIT file detected! Bye bye!", verbosity.low
-                    )
-                    break
-
-            if (self.ttime > 0) and (time.time() - simtime > self.ttime):
-                info(
-                    " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
-                )
+            # the step and its outputs are complete: an exit requested
+            # meanwhile (signal, EXIT file, wall-clock time) is made here,
+            # from the current state, without going back to the stored one
+            # an EXIT file there from the start stops the run after one step
+            softexit.poll(force=first_step)
+            first_step = False
+            if softexit.requested is not None:
+                if self.step + 1 < self.tsteps:
+                    softexit.rollback = False
+                    softexit.cleanup()
                 break
 
         # if the run was not interrupted, the current state is the one to restart from
@@ -441,10 +442,11 @@ class Simulation:
            step: The step to restart from, if not the current one.
         """
 
-        self.chk.store()
-        if step is not None:
-            self.chk.status.step.store(step)
-        softexit.stored()
+        with softexit.io_lock:
+            self.chk.store()
+            if step is not None:
+                self.chk.status.step.store(step)
+            softexit.stored()
 
     def write_outputs(self):
         """Writes all the outputs that are active at this step.

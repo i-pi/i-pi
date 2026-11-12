@@ -205,9 +205,10 @@ class BaseOutput(object):
     def write(self, data):
         """Writes data to file"""
 
-        if self.out is not None:
-            self.mark(self.out)
-            return self.out.write(data)
+        with softexit.io_lock:
+            if self.out is not None:
+                self.mark(self.out)
+                return self.out.write(data)
 
     def active(self):
         """Whether we will output at this step"""
@@ -323,8 +324,9 @@ class PropertyOutput(BaseOutput):
 
         if not self.active():
             return
-        self.mark(self.out)
-        self.out.write("  ")
+        # the properties are evaluated first, as they may wait for forces;
+        # the row is then written in one go, under the lock of the outputs
+        row = ["  "]
         for what in self.outlist:
             try:
                 quantity, dimension, unit = self.system.properties[what]
@@ -334,17 +336,23 @@ class PropertyOutput(BaseOutput):
                 raise KeyError(what + " is not a recognized property")
             quantity = to_numpy(quantity)
             if quantity.ndim == 0:
-                self.out.write(write_type(float, quantity) + "   ")
+                row.append(write_type(float, quantity) + "   ")
             else:
                 for el in quantity:
-                    self.out.write(write_type(float, el) + " ")
+                    row.append(write_type(float, el) + " ")
+        row.append("\n")
 
-        self.out.write("\n")
+        with softexit.io_lock:
+            if self.out is None:
+                return
+            self.mark(self.out)
+            for piece in row:
+                self.out.write(piece)
 
-        self.nout += 1
-        if self.flush > 0 and self.nout >= self.flush:
-            self.force_flush()
-            self.nout = 0
+            self.nout += 1
+            if self.flush > 0 and self.nout >= self.flush:
+                self.force_flush()
+                self.nout = 0
 
 
 class TrajectoryOutput(BaseOutput):
@@ -564,7 +572,15 @@ class TrajectoryOutput(BaseOutput):
                 flush=doflush,
             )
 
-    def write_traj(
+    def write_traj(self, *args, **kwargs):
+        """Prints out a frame of a trajectory (see _write_traj), under the
+        lock of the outputs, so that a frame reaches the file whole or not
+        at all when the watchdog of the soft exit truncates the outputs."""
+
+        with softexit.io_lock:
+            return self._write_traj(*args, **kwargs)
+
+    def _write_traj(
         self,
         data,
         what,
