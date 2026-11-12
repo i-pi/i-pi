@@ -400,13 +400,11 @@ def test_exit_triggers_subprocess(run, reference, trigger):
         assert step >= 9
 
     # the wall-clock limit of RESTART would end the run again
-    edit = None
-    if trigger == "total_time":
+    def strip_total_time(text):
+        assert "<total_time>" in text
+        return re.sub(r"<total_time>.*?</total_time>", "", text, flags=re.S)
 
-        def edit(text):
-            assert "<total_time>" in text
-            return re.sub(r"<total_time>.*?</total_time>", "", text, flags=re.S)
-
+    edit = strip_total_time if trigger == "total_time" else None
     restart_and_finish(run, [address], edit=edit)
     run.assert_complete(nsteps, reference=reference(nsteps))
     # checked last, so that a wrong message does not hide the checks above
