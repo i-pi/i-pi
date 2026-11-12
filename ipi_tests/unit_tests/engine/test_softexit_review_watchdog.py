@@ -512,7 +512,8 @@ def test_mpi_exit(run):
     servers = [
         pid
         for pid, cmdline in run.descendants()
-        if "run_ipi.py" in cmdline and "mpirun" not in cmdline.split()[0]
+        if "run_ipi.py" in cmdline
+        and "mpirun" not in cmdline.split()[0]
         and "hydra" not in cmdline.split()[0]
         and "mpiexec" not in cmdline.split()[0]
     ]

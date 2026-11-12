@@ -11,7 +11,6 @@ choosing which properties to initialise, and which properties to output.
 # See the "licenses" directory for full license information.
 
 import tracemalloc
-import os
 import time
 from copy import deepcopy
 from functools import partial
