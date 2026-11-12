@@ -47,8 +47,8 @@ def mass_factors(style, freqs, spring):
     return factors
 
 
-def normal_mode_input(style, freqs, propagator):
-    root = ET.fromstring(harmonic_input(nbeads=4, timestep=0.1))
+def normal_mode_input(style, freqs, propagator, nbeads=4):
+    root = ET.fromstring(harmonic_input(nbeads=nbeads, timestep=0.1))
     # In atomic units P*kB*T/hbar = 4*0.2.
     temperature = root.find("system/ensemble/temperature")
     temperature.attrib.clear()
@@ -103,6 +103,52 @@ def test_mass_factors_follow_the_temperature(simulation, style, freqs):
                 rtol=1e-12,
                 atol=1e-14,
             )
+
+
+@pytest.mark.parametrize(
+    "style,freqs,nbeads,scaled",
+    [
+        ("rpmd", [], 4, False),
+        ("eco", [0.02], 4, False),
+        ("pa-cmd", [0.02], 1, False),
+        ("manual", [0.02, 0.03, 0.04], 4, True),
+        ("pa-cmd", [0.02], 4, True),
+        ("wmax-cmd", [0.1, 0.02], 4, True),
+    ],
+)
+def test_only_scaled_mass_factors_depend_on_the_temperature(
+    simulation, style, freqs, nbeads, scaled
+):
+    """A change of temperature recomputes the mass factors, the dynamical
+    masses and the kinetic energies only for scaled-mass paths: the factors of
+    the others (and of a single bead) are all ones, so with replica exchange
+    every exchange would recompute them for nothing"""
+    with simulation(normal_mode_input(style, freqs, "exact", nbeads)) as sim:
+        system = sim.syslist[0]
+        nm = system.nm
+        assert nm.has_scaled_masses() == scaled
+        factors = to_numpy(nm.nm_factor).copy()
+        followers = (nm.nm_factor_, nm.o_nm_factor_, nm.dynm3_, nm.kins_, nm.kstress_)
+        for d in followers:
+            d.get()
+        system.ensemble.temp = 0.4
+        assert nm.omegak_.tainted()
+        for d in followers:
+            assert d.tainted() == scaled, d.name
+        if not scaled:
+            np.testing.assert_array_equal(factors, np.ones(nbeads))
+            np.testing.assert_array_equal(to_numpy(nm.nm_factor), factors)
+
+
+def test_mode_cannot_change_the_mass_scaling_after_binding(simulation):
+    """The dependency of the mass factors on the temperature is set when
+    binding, so a later change of mode that would need another one is refused"""
+    with simulation(normal_mode_input("pa-cmd", [0.02], "exact")) as sim:
+        nm = sim.syslist[0].nm
+        nm.nm_factor_.get()
+        nm.mode = "rpmd"
+        with pytest.raises(ValueError, match="after binding"):
+            nm.nm_factor_.get()
 
 
 @pytest.mark.parametrize("style,freqs,propagator", PROPAGATOR_CASES)
