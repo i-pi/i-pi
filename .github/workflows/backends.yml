@@ -18,8 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toxenv: backends
-            name: Unit and regression tests with the torch and JAX backends (CPU)
+          - toxenv: backends-torch
+            name: Unit and regression tests with the torch backend (CPU)
+            coverage: true
+          - toxenv: backends-jax
+            name: Regression tests with the JAX backend (CPU)
+            coverage: true
           - toxenv: torch-examples
             name: Examples with the torch backend (CPU)
 
@@ -45,10 +49,10 @@ jobs:
         run: tox -e ${{ matrix.toxenv }}
         env:
           # the examples run i-PI in separate processes, which are not measured
-          COVERAGE_FLAGS: ${{ matrix.toxenv == 'backends' && '--cov=ipi --cov-append --cov-report=xml:coverage-backends.xml' || '' }}
+          COVERAGE_FLAGS: ${{ matrix.coverage && '--cov=ipi --cov-append --cov-report=xml:coverage-backends.xml' || '' }}
 
       - name: upload coverage
-        if: matrix.toxenv == 'backends'
+        if: matrix.coverage
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
