@@ -932,8 +932,9 @@ bugs pass, and are no longer marked.
 - CI has no GPU: the torch job runs on the CPU, with implicit tensor->numpy conversions made to fail (as on
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
-- The array-backend CI jobs run the unit tests and the regression tests with the torch backend, the regression
-  tests with JAX (`tox -e backends`, with the `jax` extra), and the examples with torch (`tox -e torch-examples`);
+- The array-backend CI jobs run the unit tests and the regression tests with the torch backend
+  (`tox -e backends-torch`, with the `jax` extra), the regression tests with JAX (`tox -e backends-jax`), and
+  the examples with torch (`tox -e torch-examples`);
   the unit tests use the backend of `--ipi-backend` for the simulations of the `simulation` and
   `reference_system` fixtures, the other tests select their backend (`select_backend`). With JAX, the
   regression tests of the features it does not support (`JAX_UNSUPPORTED` in `ipi_tests/test_tools.py`: they
