@@ -1,0 +1,18 @@
+<simulation verbosity="low" safe_stride="1000">
+  <output prefix="simulation">
+    <properties stride="10" filename="out">[ step, time{femtosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt} ]</properties>
+  </output>
+  <total_steps>500</total_steps>
+  <prng><seed>12345</seed></prng>
+  <ffsocket name="core" mode="unix" pbc="true"><address>metatomic-core</address></ffsocket>
+  <system>
+    <initialize nbeads="1">
+      <file mode="ase">argon.xyz</file>
+      <velocities mode="thermal" units="kelvin">120</velocities>
+    </initialize>
+    <forces><force forcefield="core"/></forces>
+    <motion mode="dynamics">
+      <dynamics mode="nve"><timestep units="femtosecond">2</timestep></dynamics>
+    </motion>
+  </system>
+</simulation>
