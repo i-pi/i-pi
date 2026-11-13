@@ -635,7 +635,8 @@ class InterfaceSocket(object):
             poller.register(c, select.POLLIN)
         deadline = time.time() + self.client_timeout
         while answering and time.time() < deadline:
-            for fd, _ in poller.poll((deadline - time.time()) * 1e3):
+            # a negative time-out would wait forever
+            for fd, _ in poller.poll(max(0.0, deadline - time.time()) * 1e3):
                 poller.unregister(fd)
                 try:
                     answering.pop(fd).read_status()
@@ -663,20 +664,21 @@ class InterfaceSocket(object):
             return []
         return [self.server] + [c for c in self.clients if c.expect is not None]
 
-    def poll(self):
+    def poll(self, idle=False):
         """Makes one round of progress without waiting for any client, and
         returns True if a request was completed or sent.
 
         The round accepts the new clients and reads the replies that have
         arrived, drops the clients that are late, and sends the queued
-        requests to the free clients."""
+        requests to the free clients: an incomplete batch only if no task can
+        queue more requests (`idle`)."""
 
         # closed by a soft exit: the requests will never be computed
         if self.server is None:
             return self._stop_requests()
         progress = self._receive()
         self._check_timeouts()
-        progress = self._dispatch() or progress
+        progress = self._dispatch(idle) or progress
         # forgets the clients dropped in this round
         self.clients = [c for c in self.clients if c.status != Status.Disconnected]
         return progress
@@ -751,7 +753,7 @@ class InterfaceSocket(object):
                 else:
                     self._read_job(c)
                     progress = True
-            except (Disconnected, InvalidSize, OSError) as err:
+            except (Disconnected, InvalidSize, OSError, UnicodeDecodeError) as err:
                 self._drop(c, "failed to reply (%s)" % (str(err) or type(err).__name__))
         return progress
 
@@ -818,11 +820,12 @@ class InterfaceSocket(object):
             c.job = None
         c.disconnect()
 
-    def _dispatch(self):
+    def _dispatch(self, idle):
         """Sends the queued requests to the free clients, and returns True if
         any was sent.
 
-        Batches go to the clients in order. Single requests are matched to
+        Batches go to the clients in order, and an incomplete batch only if
+        `idle`, as other requests may complete it. Single requests are matched to
         clients by passes of decreasing preference, set by `match_mode`:
         "match" pairs a request with the client that computed its id last
         (which may keep state for it, e.g. wavefunctions), "none" with a
@@ -836,6 +839,8 @@ class InterfaceSocket(object):
         sent = False
         if self.batch_size > 1:
             # batches are taken in order, regardless of the request ids
+            if not idle:
+                queued = queued[: len(queued) - len(queued) % self.batch_size]
             for c in free:
                 if not queued:
                     break

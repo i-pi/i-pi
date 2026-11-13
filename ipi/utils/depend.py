@@ -691,6 +691,9 @@ def _jax_take(value, index):
         return jaxindexing.reshape(value, index.shape)
     if _is_basic_index(index):
         return jaxindexing.take(value, index)
+    # JAX does not take lists as indices
+    if type(index) is list:
+        index = xp.asarray(index)
     return value[index]
 
 
@@ -701,6 +704,8 @@ def _jax_put(value, index, part):
         return jaxindexing.reshape(part, value.shape)
     if _is_basic_index(index):
         return jaxindexing.put(value, index, part)
+    if type(index) is list:
+        index = xp.asarray(index)
     return jaxindexing.put_eagerly(value, index, part)
 
 

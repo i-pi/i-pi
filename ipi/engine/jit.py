@@ -134,7 +134,7 @@ def compile_steps(simulation):
         len(systems) > 1
         and len(systems) == len(simulation.syslist)
         and simulation.interleave
-        and all(_driver_in_step(c.ff) for s in systems for c in s.forces.mforces)
+        and all(_driver_in_step(c.ff) for s in systems for c in _components(s))
     ):
         together = _Together(step(systems), len(systems))
         for index, system in enumerate(systems):
@@ -208,6 +208,18 @@ def _driver_in_step(ff):
     return type(ff) is FFDirect and ff.backend_arrays
 
 
+def _components(system):
+    """The force components of `system`, and those of its bias. The copies
+    of the physical forces in the bias (`ScaledForceComponent`, e.g. for the
+    weights of Hamiltonian replica exchange) are given as the components they
+    copy."""
+
+    components = list(system.forces.mforces)
+    if system.ensemble.has_bias:
+        components += [getattr(c, "bf", c) for c in system.ensemble.bias.mforces]
+    return components
+
+
 def _prngs(systems):
     """The random number generators used by the steps of `systems`: that of
     the simulation, and those of the forcefields that rotate the structures."""
@@ -216,10 +228,7 @@ def _prngs(systems):
 
     prngs = [systems[0].prng]
     for system in systems:
-        components = list(system.forces.mforces)
-        if system.ensemble.has_bias:
-            components += system.ensemble.bias.mforces
-        for component in components:
+        for component in _components(system):
             ff = component.ff
             if type(ff) is FFRotations and all(ff.prng is not p for p in prngs):
                 prngs.append(ff.prng)
