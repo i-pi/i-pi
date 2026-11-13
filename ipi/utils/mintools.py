@@ -31,14 +31,8 @@ Functions:
             new search directions. Minimizes the function using 'min_trm' function.
         L-BFGS: Uses the limited memory BFGS algorithm (L-BFGS) to
             compute new search directions. Minimizes using 'min_approx'
-        L-BFGS_nls: L-BFGS algorithm without line search
-            *** This function is less stable than L-BFGS and not any more efficient ***
-        bracket_neb: Modified 'bracket' routine to make
-            compatible with functions with unknown gradient
-        min_brent_neb: Modified 'min_brent' routine to make
-            compatible with functions with unknown gradient
 
-        bracket, bracket_neb, min_brent, min_brent_neb,and BFGS subroutines adapted from:
+        bracket, min_brent and BFGS subroutines adapted from:
             Press, W. H., Teukolsky, S. A., Vetterling, W. T., and Flannery, B. P. (1992).
             Numerical Recipes in C: The Art of Scientific Computing.
             Cambridge: Cambridge University Press
