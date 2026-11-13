@@ -348,7 +348,7 @@ class FFSocket(ForceField):
     def poll(self, idle=False):
         """Exchanges data with the clients, without blocking."""
 
-        return self.socket.poll()
+        return self.socket.poll(idle)
 
     def fds(self):
         """Returns the sockets on which a reply is expected."""

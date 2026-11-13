@@ -147,6 +147,18 @@ def test_advanced_index_inplace_operators(select_backend, backend, index):
     assert np.array_equal(ab.to_numpy(h.x), [2.0, 0.0, 2.0, 0.0])
 
 
+@pytest.mark.parametrize("backend", ["numpy", "torch", "jax"])
+@pytest.mark.parametrize("index", [[True, False, True, False], [0, 2]])
+def test_list_indices(select_backend, backend, index):
+    """Depend: a list of indices, or a mask given as a list, reads and writes
+    the elements it selects with every backend"""
+    select_backend(backend)
+    a = dp.depend_array(name="a", value=ab.xp.arange(4.0))
+    assert np.array_equal(ab.to_numpy(a[index]), [0.0, 2.0])
+    a[index] = ab.xp.asarray([5.0, 6.0])
+    assert np.array_equal(ab.to_numpy(a.get()), [5.0, 1.0, 6.0, 3.0])
+
+
 def test_depend_objects_are_read_up_to_date():
     """Depend: a depend object that is assigned or added to an array is
     recomputed first if it is out of date"""

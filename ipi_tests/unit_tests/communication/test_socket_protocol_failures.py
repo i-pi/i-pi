@@ -534,6 +534,20 @@ def test_poll_does_not_wait_for_clients(server):
     assert time.time() - start < 1.0
 
 
+def test_incomplete_batch_is_sent_when_idle(server):
+    """Full batches are sent at once, and an incomplete one only when no task
+    can queue more requests (`idle`), as they could complete it."""
+    interface, connect = server
+    interface.batch_size = 2
+    connect(), connect()
+    requests = [request(rid=i) for i in range(3)]
+    interface.requests[:] = requests
+    interface.poll()
+    assert [r["status"] for r in requests] == ["Running", "Running", "Queued"]
+    interface.poll(idle=True)
+    assert requests[2]["status"] == "Running"
+
+
 def test_pool_sends_each_request_to_one_client(server):
     interface, connect = server
     r = request()
@@ -572,16 +586,21 @@ def test_request_of_failed_client_is_completed_by_another(server, failure):
     assert_completed(r)
 
 
-def test_wrong_size_reply_requeues_request(server):
-    """A client that returns the forces of a different number of atoms is
-    removed, and its request queued again"""
+@pytest.mark.parametrize(
+    "reply",
+    [payload(natoms=2), payload(extra=b"\xff\xfe\xfa\xd1")],
+    ids=["wrong-size", "extra-not-utf8"],
+)
+def test_malformed_reply_requeues_request(server, reply):
+    """A client that returns the forces of a different number of atoms, or an
+    extra string that is not UTF-8, is removed, and its request queued again"""
     interface, connect = server
     interface.timeout = 0.0
     peer = connect()
     r = request()
     interface.requests[:] = [r]
     interface.poll()
-    peer.sendall(payload(natoms=2) + READY)
+    peer.sendall(reply + READY)
     deadline = time.time() + 2
     while interface.clients and time.time() < deadline:
         interface.poll()

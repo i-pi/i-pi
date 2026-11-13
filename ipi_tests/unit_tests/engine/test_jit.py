@@ -17,6 +17,7 @@ from ipi_tests.unit_tests.engine.inputs import (
     NO_FORCES,
     PROPERTIES,
     TOLERANCE,
+    rotations_input,
     write_input,
 )
 
@@ -237,23 +238,64 @@ def test_replica_exchange_is_compiled(
                 np.testing.assert_allclose(ab.to_numpy(y), ab.to_numpy(x), **TOLERANCE)
 
 
+def with_bias(xml):
+    """Adds to the systems of an input a bias from a forcefield whose forces
+    are not computed in the compiled steps."""
+
+    forcefield = (
+        "<fflj name='bias' pbc='False'><parameters>{eps: 1e-5, sigma: 1.0}"
+        "</parameters></fflj>"
+    )
+    xml = xml.replace("<total_steps>", forcefield + "<total_steps>")
+    return xml.replace(
+        "<ensemble>", "<ensemble><bias><force forcefield='bias'/></bias>"
+    )
+
+
 @pytest.mark.parametrize("options", JIT)
 @pytest.mark.parametrize(
-    "interleave,forcefield,together",
-    [("true", DUMMY, True), ("false", DUMMY, False), ("true", NO_FORCES, False)],
+    "interleave,forcefield,bias,together",
+    [
+        ("true", DUMMY, False, True),
+        ("false", DUMMY, False, False),
+        ("true", NO_FORCES, False, False),
+        ("true", DUMMY, True, False),
+    ],
 )
-def test_steps_compiled_together(interleave, forcefield, together, options, simulation):
+def test_steps_compiled_together(
+    interleave, forcefield, bias, together, options, simulation
+):
     """The steps of several systems are compiled together if the systems are
-    stepped as tasks, and all their forces are computed in the step"""
+    stepped as tasks, and all their forces, those of the bias included, are
+    computed in the step"""
 
     from ipi.engine.jit import compiled_step
 
     pytest.importorskip(options["backend"])
     xml = replicas(write_input("nvt_langevin", forcefield), [300, 310], "", interleave)
+    if bias:
+        xml = with_bias(xml)
     with simulation(xml, **options) as sim:
         steps = [compiled_step(s) for s in sim.syslist]
         assert all(step is not None for step in steps)
         assert (steps[0] is steps[1]) == together
+        if bias:
+            # the steps are recorded, or compiled, after the first ones, with
+            # the forces of the bias computed eagerly
+            sim.run(4)
+
+
+def test_random_generators_of_the_steps_with_a_bias(simulation):
+    """The random number generators of the steps are those of the simulation
+    and of the forcefields that rotate the structures, also when the bias
+    copies the physical forces"""
+
+    from ipi.engine.jit import _prngs
+
+    with simulation(with_bias(rotations_input(DUMMY))) as sim:
+        assert sim.syslist[0].ensemble.has_bias
+        prngs = _prngs(sim.syslist)
+        assert len(prngs) == 2 and prngs[1] is sim.fflist["ff"].prng
 
 
 @pytest.mark.parametrize("options", JIT)

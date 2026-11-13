@@ -283,6 +283,21 @@ def test_request_runs_callbacks_once(workdir):
     assert calls == [True]
 
 
+def test_cleanup_continues_after_a_failed_function(workdir):
+    """The cleanup functions run also after one of them fails, e.g. when the
+    checkpoint cannot be written, so that the forcefields are stopped."""
+
+    calls = []
+
+    def fail():
+        raise OSError("No space left on device")
+
+    softexit.register_function(fail)
+    softexit.register_function(lambda: calls.append(True))
+    softexit.cleanup()
+    assert calls == [True]
+
+
 def test_outputs_go_back_to_the_stored_state(workdir):
     """An exit that goes back to the stored state truncates the outputs
     written since then, and removes those that were empty."""

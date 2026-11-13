@@ -186,9 +186,11 @@ class Softexit(object):
                 # calls all the registered emergency softexit procedures
                 while self.flist:
                     f, a, ka = self.flist.pop(0)
+                    # the other functions run also if one fails (e.g. writing
+                    # the checkpoint on a full disk), so that the drivers exit
                     try:
                         f(*a, **ka)
-                    except RuntimeError as err:
+                    except Exception as err:
                         print("Error running emergency softexit, ", err)
             finally:
                 self.exiting = False
