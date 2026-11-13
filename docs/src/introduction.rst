@@ -475,7 +475,8 @@ numpy afterwards, and the simulations of the ``simulation`` and
 unit tests, the regression tests and the examples can be run with another
 backend with ``pytest --ipi-backend torch [--ipi-device cuda]`` or
 ``--ipi-backend jax``; the CI runs the unit and regression tests with torch
-(``tox -e backends-torch``), and the regression tests with JAX
+(``tox -e backends-torch-unit`` and ``tox -e backends-torch-regtests``), and
+the regression tests with JAX
 (``tox -e backends-jax``). The regression tests
 of the features that JAX does not support (``JAX_UNSUPPORTED`` in
 ``ipi_tests/test_tools.py``) are expected to fail with JAX. In the torch runs
