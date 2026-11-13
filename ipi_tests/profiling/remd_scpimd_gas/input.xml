@@ -1,4 +1,4 @@
-<simulation verbosity='low' threading='true' safe_stride='100'>
+<simulation verbosity='low' interleave='true' safe_stride='100'>
     <ffsocket mode='unix' name='dummy.1' pbc='false'>
          <latency>  1.00000000e-04</latency>
          <address> gas </address>
@@ -42,7 +42,6 @@
                   <thermostat mode='langevin'>
                     <tau> 1</tau>
                   </thermostat>
-                  <h0> [ 10, 0, 0, 0, 10, 0, 0, 0, 10 ]</h0>
                 </barostat>
                 <thermostat mode='langevin'>
                   <tau> 1 </tau>

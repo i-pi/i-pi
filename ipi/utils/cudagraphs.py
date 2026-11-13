@@ -1,0 +1,342 @@
+"""Recording of a function that operates on depend objects as CUDA graphs, and
+replay of the graphs instead of the function.
+
+With the torch backend on a CUDA device, a step of a simulation launches many
+small kernels, and its cost is set by the time the host takes to run the
+Python code and to launch them, rather than by the device. A CUDA graph
+records the kernels launched by the function, and replays all of them at once
+without running the Python code again.
+
+The function runs eagerly for the first calls, which fill the caches of the
+depend objects, and is recorded at the next one. The recording can be
+interrupted to run some parts of the function eagerly, e.g. those that
+communicate with external codes or synchronize with the device: the function
+is then recorded in segments, separated by eager functions that run between
+their replays. Code that is part of a recorded function marks these points
+with `split`, which lets the recording interrupt it (see `GraphReplay.split`),
+and `eager`, which calls a function eagerly also when the graphs are replayed,
+copying its results into those read by the graphs (see `ipi.utils.jit`, which
+also has the recording of the operations on the depend objects).
+
+As the Python code does not run during a replay, the depend objects are kept
+consistent by the replay:
+
+- before replaying a segment, the depend objects that it reads, as they were
+  before being modified by the segment, are brought up to date, and scalars
+  that have been replaced by new objects are copied into the ones read by the
+  graph. Host values (such as the time step), which are fixed in the graphs,
+  must be unchanged, which is checked before replaying the first segment;
+- after replaying a segment, the taint status of the depend objects and the
+  objects held by scalars are restored as they were at the end of the
+  recorded segment.
+
+A `JitError` is raised if a host value read by a graph changes, or if the
+function does something that cannot be recorded.
+"""
+
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2026 i-PI developers
+# See the "licenses" directory for full license information.
+
+import threading
+import warnings
+
+from ipi.utils import depend
+from ipi.utils.jit import WARMUP_CALLS, JitError, Replay, _changed, _Recorder, observe
+from ipi.utils.messages import info, verbosity
+
+__all__ = ["GraphReplay"]
+
+
+class GraphReplay(Replay):
+    """Runs a function eagerly for the first calls, records the next call as
+    CUDA graphs, and replays them at the following calls. The arguments of the
+    calls are only passed to the eager calls and to the recorded one.
+
+    Attributes:
+        func: The function.
+        generators: The torch generators used by the function (None for the
+            generators that draw with numpy).
+        segments: The recorded segments, or None until the whole function
+            has been recorded.
+    """
+
+    method = "replayed as CUDA graphs"
+
+    def __init__(self, func, generators=()):
+        import torch
+
+        super().__init__(func)
+        self.torch = torch
+        self.generators = list(generators)
+        self.stream = torch.cuda.Stream()
+        self.ncalls = 0
+        # whether the current thread has run eager calls
+        self.local = threading.local()
+
+    @property
+    def segments(self):
+        return self.compiled
+
+    def ready(self):
+        return self.ncalls >= WARMUP_CALLS and getattr(self.local, "warm", False)
+
+    def warm(self, *args):
+        """Calls the function eagerly, also to initialize the libraries on the
+        stream used by the recording, and in this thread (e.g. cuBLAS handles
+        are created per thread), and notes the computed objects it reads."""
+
+        default = self.torch.cuda.current_stream()
+        self.stream.wait_stream(default)
+        with self.torch.cuda.stream(self.stream):
+            self.note(observe(self.func, *args))
+        default.wait_stream(self.stream)
+        self.ncalls += 1
+        self.local.warm = True
+
+    def record(self, *args):
+        """Calls the function, recording its kernels as CUDA graphs."""
+
+        self.default = self.torch.cuda.current_stream()
+        self.recorded = []
+        self.capturing = False
+        self.recorder = _GraphRecorder(self)
+        depend.set_recorder(self.recorder)
+        try:
+            self.begin()
+            self.func(*args)
+            self.end(None)
+        except Exception as err:
+            if not self.capturing:
+                # raised outside a capture, e.g. by an eager call between two
+                # segments, or by the checks of a recorded segment
+                raise
+            try:
+                self.capture_end()
+            except Exception:
+                pass
+            raise self.failed(err)
+        finally:
+            depend.set_recorder(None)
+            self.torch.cuda.set_stream(self.default)
+        # the segments are replayed only once the whole step has been recorded
+        self.fixed = [item for segment in self.recorded for item in segment.fixed]
+        self.compiled = self.recorded
+        info(
+            f" @cudagraphs: step recorded in {len(self.compiled)} CUDA graphs",
+            verbosity.low,
+        )
+
+    def replay(self):
+        for segment in self.compiled:
+            segment.replay()
+
+    def begin(self):
+        """Starts recording a segment."""
+
+        self.graph = self.torch.cuda.CUDAGraph()
+        for generator in self.generators:
+            if generator is not None:
+                self.graph.register_generator_state(generator)
+        self.stream.wait_stream(self.default)
+        self.torch.cuda.set_stream(self.stream)
+        # each graph has its own memory pool: in a shared one, the scalars that
+        # a segment writes may take the memory of the temporaries of earlier
+        # segments, which overwrite them at the next step
+        self.graph.capture_begin(capture_error_mode="thread_local")
+        self.capturing = True
+        self.recorder.reset()
+
+    def capture_end(self):
+        """Ends the capture of the current segment."""
+
+        with warnings.catch_warnings():
+            # segments between two interruptions may be empty
+            warnings.filterwarnings("ignore", message=".*CUDA Graph is empty.*")
+            self.graph.capture_end()
+        self.capturing = False
+
+    def end(self, after):
+        """Stops recording a segment and replays it. The segment is followed
+        by the eager function `after`, if not None."""
+
+        self.capture_end()
+        self.torch.cuda.set_stream(self.default)
+        self.recorded.append(self.recorder.segment(self.graph, after))
+        self.graph.replay()
+
+    def interrupt(self, after):
+        """Interrupts the recording to run the function `after` eagerly, here
+        and after each replay of the segment recorded so far."""
+
+        self.end(after)
+        depend.set_recorder(None)
+        after()
+        depend.set_recorder(self.recorder)
+        self.begin()
+
+    def call(self, func, *args):
+        """Interrupts the recording to call `func(*args)` eagerly, and returns
+        the results."""
+
+        call = _Call(func, args)
+        self.interrupt(call)
+        self.recorder.add_eager_results(call.results)
+        return call.results
+
+
+class _Call:
+    """A function called eagerly after a segment. The graphs read the results
+    of the call made while recording, which are lists: the tensors returned
+    by the following calls are copied into them, the dictionaries updated, and
+    the other items replace theirs."""
+
+    def __init__(self, func, args):
+        import torch
+
+        self.copy = torch._foreach_copy_
+        self.func = func
+        self.args = args
+        self.results = None
+
+    def __call__(self):
+        results = self.func(*self.args)
+        if self.results is None:
+            self.results = results
+            return
+        targets, sources = [], []
+        _match(self.results, results, targets, sources)
+        if targets:
+            self.copy(targets, sources)
+
+
+def _match(recorded, new, targets, sources):
+    """Collects the tensors of the list `new` (and of the lists it contains)
+    to be copied into those of `recorded`, and puts its other items in
+    `recorded`."""
+
+    if not isinstance(new, list) or len(new) != len(recorded):
+        raise JitError("The results of an eager call have changed structure")
+    for i, (a, b) in enumerate(zip(recorded, new)):
+        if isinstance(a, list):
+            _match(a, b, targets, sources)
+        elif _is_cuda_tensor(a):
+            if not _is_cuda_tensor(b) or a.shape != b.shape or a.dtype != b.dtype:
+                raise JitError("The results of an eager call have changed shape")
+            targets.append(a)
+            sources.append(b)
+        elif isinstance(a, dict) and isinstance(b, dict):
+            # dictionaries (e.g. the extras) are updated in place, so that all
+            # the objects that hold them see the new values
+            a.clear()
+            a.update(b)
+        else:
+            recorded[i] = b
+
+
+class _Segment:
+    """A recorded segment, the state of the depend objects that it reads and
+    modifies, and the eager function that follows it."""
+
+    def __init__(self, graph, inputs, statuses, synchros, values, after):
+        self.graph = graph
+        # the inputs held on the host, whose values are fixed in the graph,
+        # and those on the device
+        self.fixed = [item for item in inputs if _is_fixed(*item)]
+        self.inputs = [item for item in inputs if not _is_fixed(*item)]
+        self.statuses = statuses
+        self.synchros = synchros
+        self.values = values
+        self.after = after
+
+    def replay(self):
+        for dep, value, data in self.inputs:
+            _stage(dep, value)
+        self.graph.replay()
+        for status, tainted in self.statuses:
+            status.tainted = tainted
+        for synchro, manual in self.synchros:
+            synchro.manual = manual
+        for dep, value in self.values:
+            dep._value = value
+        if self.after is not None:
+            self.after()
+
+
+def _is_fixed(dep, recorded, data):
+    """Whether the value of the input `dep`, recorded as the object `recorded`
+    (with the bytes `data` of its host array), is held on the host."""
+
+    if isinstance(dep, depend.depend_array):
+        return data is not None
+    return not _is_cuda_tensor(recorded)
+
+
+def _stage(dep, recorded):
+    """Brings `dep` up to date, and makes its value available to a graph that
+    reads the device array or scalar `recorded`."""
+
+    current = dep.get()
+    if isinstance(dep, depend.depend_array):
+        if dep._data is not recorded:
+            raise _changed(dep, "has been replaced")
+    elif current is not recorded:
+        if not _is_cuda_tensor(current):
+            recorded.fill_(float(current))
+        elif current.shape == recorded.shape:
+            recorded.copy_(current)
+        else:
+            raise _changed(dep, "has changed shape")
+
+
+def _is_cuda_tensor(value):
+    return getattr(value, "is_cuda", False)
+
+
+def _holds_cuda_tensors(value):
+    """Whether `value` is a CUDA tensor, or a list holding some (e.g. the
+    results of a driver recorded in the graphs), whose other items are then
+    fixed in the graphs."""
+
+    if isinstance(value, list):
+        return any(_holds_cuda_tensors(item) for item in value)
+    return _is_cuda_tensor(value)
+
+
+class _GraphRecorder(_Recorder):
+    """Recorder of a function replayed as CUDA graphs, which returns the
+    recorded segments."""
+
+    def __init__(self, replay):
+        super().__init__(replay)
+        # the lists returned by eager calls, which are kept up to date
+        self.eager_results = set()
+
+    def add_eager_results(self, results):
+        if isinstance(results, list):
+            self.eager_results.add(id(results))
+            for item in results:
+                self.add_eager_results(item)
+
+    def segment(self, graph, after):
+        """Returns the recorded segment, with the state of the depend objects
+        at its end."""
+
+        if self.host_writes:
+            raise JitError(f"The step modifies host arrays: {sorted(self.host_writes)}")
+        for dep in self.values:
+            if (
+                not _holds_cuda_tensors(dep._value)
+                and id(dep._value) not in self.eager_results
+            ):
+                raise JitError(f"The step modifies the host value <{dep._name}>")
+
+        statuses, synchros = self.final_state()
+        return _Segment(
+            graph,
+            list(self.inputs.values()),
+            statuses,
+            synchros,
+            [(dep, dep._value) for dep in self.values],
+            after,
+        )

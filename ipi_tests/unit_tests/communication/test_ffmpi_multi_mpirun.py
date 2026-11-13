@@ -1,13 +1,12 @@
 """End-to-end test for MULTIPLE ffmpi forcefields in one MPMD job.
 
 Needs mpi4py + a working MPI runtime, so skipped unless mpi4py is importable and
-IPI_TEST_MPI=1. Launches i-PI with two `<ffmpi>` forcefields, each served by its
+pytest runs with --ipi-mpi. Launches i-PI with two `<ffmpi>` forcefields, each served by its
 own driver tagged with --mpi-name, and checks the trajectory is bit-identical to
 the equivalent run with two in-process `<ffdirect>` harmonic forcefields (which
 confirms the driver ranks were routed to the right forcefield).
 """
 
-import os
 import shutil
 import subprocess
 import importlib.util
@@ -15,9 +14,11 @@ from pathlib import Path
 
 import pytest
 
+from ipi_tests import test_tools
+
 pytestmark = pytest.mark.skipif(
-    importlib.util.find_spec("mpi4py") is None or os.environ.get("IPI_TEST_MPI") != "1",
-    reason="set IPI_TEST_MPI=1 and install mpi4py to run the MPI end-to-end test",
+    importlib.util.find_spec("mpi4py") is None or not test_tools.ipi_mpi,
+    reason="run with --ipi-mpi and install mpi4py to run the MPI end-to-end test",
 )
 
 EXAMPLE = (

@@ -4,8 +4,6 @@ import numpy as np
 import sys
 import argparse
 from ipi.utils.io import read_file
-from ipi.utils.depend import *
-from ipi.utils.units import *
 from ipi.utils.messages import verbosity
 
 description = """Computes the Transient Anisotropic Gaussian (TAG) approximation
@@ -35,11 +33,11 @@ def main(prefix, lag):
         try:
             ret = read_file("xyz", ikin)
             tk = ret["atoms"]
-            kin = dstrip(tk.q)
+            kin = tk.q
             ret = read_file("xyz", ikod)
-            kod = dstrip(ret["atoms"].q)
+            kod = ret["atoms"].q
             if natoms == 0:  # initializes vectors
-                natoms = len(kin) / 3
+                natoms = len(kin) // 3
                 ktbuf = np.zeros(
                     (cbuf, natoms, 3, 3), float
                 )  # implement the buffer as a circular one so one doesn't need to re-allocate and storage is continuous

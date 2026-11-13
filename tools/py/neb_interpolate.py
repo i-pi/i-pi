@@ -24,6 +24,7 @@ Arguments:
 Output:
     Writes a file "init.xyz" with N beads.
 """
+
 # (c) Karen Fidanyan 2022
 
 import os
@@ -248,7 +249,7 @@ if __name__ == "__main__":
             natoms = inipos.natoms
             with open(input_ini, "r") as fd_ini:
                 rr = read_file_raw("xyz", fd_ini)
-                (_, units, cell_units) = auto_units(rr["comment"])
+                _, units, cell_units = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_ini))
             exit(-1)
@@ -337,7 +338,7 @@ if __name__ == "__main__":
             # Extract units information to write output with the same units as input
             with open(input_xyz, "r") as fd_xyz:
                 rr = read_file_raw("xyz", fd_xyz)
-                (_, units, cell_units) = auto_units(rr["comment"])
+                _, units, cell_units = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_xyz))
             exit(-1)
@@ -378,7 +379,7 @@ if __name__ == "__main__":
     # =================================================================
     print("Imported structures: %d geometries, %d atoms each." % (nbeads_old, natoms))
     print("Atomic masses:")
-    masses /= Constants.amu
+    masses = masses / Constants.amu
     for mm in masses:
         print(mm)
 
@@ -435,18 +436,18 @@ if __name__ == "__main__":
                 "therefore we keep fixed atoms in their original positions."
             )
         for i in range(nbeads_new):
-            # copy() is necessary, otherwise they all point to the same obj.
-            newpath.append(prototype.copy())
-            newpath[i].q[:] = q[i]
-            newpath[i].q[fixmask] = masked_new_q[i]
+            # clone() is necessary, otherwise they all point to the same obj.
+            newpath.append(prototype.clone())
+            newpath[i].q_[:] = q[i]
+            newpath[i].q_[fixmask] = masked_new_q[i]
     else:  # If nbeads changes, we put fixed atoms from the bead 0 to all beads.
         if activelist is not None:
             print(
                 "nbeads_new != nbeads_old, therefore we put fixed atoms from bead 0 to all beads."
             )
         for i in range(nbeads_new):
-            newpath.append(prototype.copy())
-            newpath[i].q[fixmask] = masked_new_q[i]
+            newpath.append(prototype.clone())
+            newpath[i].q_[fixmask] = masked_new_q[i]
 
     if args.units != "None":
         units = cell_units = args.units

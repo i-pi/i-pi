@@ -20,10 +20,12 @@ bad data types, and failure to input required fields.
 
 from copy import copy
 
+import array_api_compat
 import numpy as np
 
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.array_backend import to_numpy, xp
 
 __all__ = [
     "Input",
@@ -34,6 +36,17 @@ __all__ = [
     "InputArray",
     "input_default",
 ]
+
+
+def _is_device_array(value):
+    """True for the arrays of the array backend that are not numpy arrays (e.g.
+    torch tensors on a GPU). They are stored as copies in the same place, and
+    converted to numpy only when they are written or fetched, so that storing
+    the state of a simulation does not wait for the device."""
+
+    return array_api_compat.is_array_api_obj(
+        value
+    ) and not array_api_compat.is_numpy_array(value)
 
 
 class input_default(object):
@@ -1110,8 +1123,17 @@ class InputValue(InputAttribute):
                 units
             )  # User can define in the code the units to be printed
 
+        factor = 1.0
         if self._dimension != "undefined":
-            self.value = value * unit_to_user(self._dimension, units, 1.0)
+            factor = unit_to_user(self._dimension, units, 1.0)
+        if array_api_compat.is_jax_array(value):
+            # JAX arrays cannot be modified, so they are stored as they are
+            self.value = value if factor == 1.0 else value * factor
+        elif self._dimension != "undefined":
+            self.value = value * factor
+        elif _is_device_array(value):
+            # a copy, as the array may then be modified in place
+            self.value = xp.asarray(value, copy=True)
         else:
             self.value = value
 
@@ -1231,10 +1253,17 @@ class InputArray(InputValue):
               in.
         """
 
-        super(InputArray, self).store(
-            value=np.array(value, dtype=self.type).flatten().copy(), units=units
-        )
-        self.shape.store(value.shape)
+        if array_api_compat.is_jax_array(value):
+            # stored with its shape, and flattened when written
+            flat = value
+        elif _is_device_array(value):
+            flat = value.reshape(-1)
+        else:
+            # a copy, of which flat is a view
+            value = np.array(value, dtype=self.type)
+            flat = value.reshape(-1)
+        super(InputArray, self).store(value=flat, units=units)
+        self.shape.store(tuple(value.shape))
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
@@ -1247,15 +1276,16 @@ class InputArray(InputValue):
     def fetch(self):
         """Returns the stored data in the user defined units."""
 
-        value = super(InputArray, self).fetch()
+        value = to_numpy(super(InputArray, self).fetch())
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
-            value = np.resize(value, 0).copy()
+            value = np.resize(value, 0)
         else:
-            value = value.reshape(self.shape.fetch()).copy()
+            value = value.reshape(self.shape.fetch())
 
-        return value
+        # a copy, with the type of the input also for stored device arrays
+        return np.array(value, dtype=self.type)
 
     def write(self, name="", indent=""):
         """Writes data in xml file format.
@@ -1274,19 +1304,20 @@ class InputArray(InputValue):
            A string giving the stored value in the appropriate xml format.
         """
 
+        value = np.asarray(to_numpy(self.value), dtype=self.type).reshape(-1)
         rstr = ""
-        if len(self.value) > ELPERLINE:
+        if len(value) > ELPERLINE:
             rstr += "\n" + indent + " [ "
         else:
             rstr += " [ "  # inlines the array if it is small enough
 
-        for i, v in enumerate(self.value):
-            if len(self.value) > ELPERLINE and i > 0 and i % ELPERLINE == 0:
+        for i, v in enumerate(value):
+            if len(value) > ELPERLINE and i > 0 and i % ELPERLINE == 0:
                 rstr += "\n" + indent + "   "
             rstr += write_type(self.type, v) + ", "
 
         rstr = rstr.rstrip(", ")  # get rid of trailing commas
-        if len(self.value) > ELPERLINE:
+        if len(value) > ELPERLINE:
             rstr += " ]\n"
         else:
             rstr += " ] "

@@ -153,8 +153,8 @@ class InputNormalModes(Input):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "fft",
-                "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
+                "default": "matrix",
+                "help": "Specifies whether to calculate the normal mode transform using a matrix multiplication or a fast Fourier transform. The matrix multiplication is faster up to about a hundred beads on CPUs and on GPUs with fast double precision; the fast Fourier transform may be faster for many beads, or on GPUs with slow double precision.",
                 "options": ["fft", "matrix"],
             },
         ),

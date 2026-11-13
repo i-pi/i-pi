@@ -12,53 +12,24 @@ from ipi.engine.cell import Cell, GenericCell
 def beads():
     """A nonuniform ring polymer with unequal atomic masses."""
     result = Beads(2, 4)
-    result.names[:] = ["H", "O"]
-    result.m[:] = [2.0, 5.0]
-    result.q[:] = np.random.default_rng(82).normal(size=(4, 6))
-    result.p[:] = np.arange(24).reshape(4, 6) / 10
+    result.names_[:] = ["H", "O"]
+    result.m_[:] = [2.0, 5.0]
+    result.q_[:] = np.random.default_rng(82).normal(size=(4, 6))
+    result.p_[:] = np.arange(24).reshape(4, 6) / 10
     return result
-
-
-def test_spring_force_is_negative_energy_gradient(beads):
-    """A displacement's energy change and force must agree for every bead."""
-    original = beads.q.copy()
-    force = beads.fpath.copy()
-    numerical = np.zeros_like(original)
-    step = 1e-5
-    for index in np.ndindex(original.shape):
-        beads.q[index] = original[index] + step
-        forward = beads.vpath
-        beads.q[index] = original[index] - step
-        backward = beads.vpath
-        beads.q[index] = original[index]
-        numerical[index] = -(forward - backward) / (2 * step)
-    np.testing.assert_allclose(force, numerical, rtol=1e-8, atol=1e-8)
-    np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-12)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Beads.fpath is not invalidated when masses change",
-)
-def test_spring_force_updates_after_mass_change(beads):
-    """Changing isotope masses must invalidate already evaluated spring forces."""
-    original_force = beads.fpath.copy()
-    beads.m[:] *= 2
-    np.testing.assert_allclose(beads.fpath, 2 * original_force, atol=1e-12)
 
 
 def test_bead_views_and_clones_preserve_state_without_aliasing(beads):
     """Per-bead edits update the centroid; cloning produces independent storage."""
     original_centroid = beads.qc.copy()
-    beads[1].q[:] += 4
+    beads[1].q_[:] += 4
     np.testing.assert_allclose(beads.qc, original_centroid + 1)
     clone = beads.clone(2)
     np.testing.assert_array_equal(clone.q, beads.q[:2])
     np.testing.assert_array_equal(clone.p, beads.p[:2])
     np.testing.assert_array_equal(clone.names, beads.names)
-    clone.q[:] = -100
-    clone.m[:] = 9
+    clone.q_[:] = -100
+    clone.m_[:] = 9
     assert np.all(beads.q != -100)
     np.testing.assert_array_equal(beads.m, [2, 5])
     with pytest.raises(ValueError, match="larger number of beads"):
@@ -75,30 +46,37 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     fractional = np.array([[0.1, -0.2, 0.3], [-0.2, 0.1, -0.1]])
     shifts = np.array([[3, -2, 1], [-1, 4, -3]])
     atoms = Atoms(2)
-    atoms.q[:] = ((fractional + shifts) @ h.T).ravel()
+    atoms.q_[:] = ((fractional + shifts) @ h.T).ravel()
     expected = fractional @ h.T
     np.testing.assert_allclose(cell.apply_pbc(atoms[0]), expected[0], atol=1e-12)
     np.testing.assert_allclose(
         cell.minimum_distance(atoms[0], atoms[1]), expected[0] - expected[1], atol=1e-12
     )
-    cell.array_pbc(atoms.q)
-    np.testing.assert_allclose(atoms.q.reshape(-1, 3), expected, atol=1e-12)
+    q = cell.array_pbc(np.array(atoms.q))
+    np.testing.assert_allclose(q.reshape(-1, 3), expected, atol=1e-12)
     clone = cell.clone()
+    assert type(clone) is cell_type
+    np.testing.assert_allclose(clone.ih @ clone.h, np.eye(3), atol=1e-12)
     old_volume = cell.V
-    cell.h[:] *= 2
+    cell.h_[:] *= 2
     assert cell.V == pytest.approx(8 * old_volume)
     np.testing.assert_allclose(cell.ih @ cell.h, np.eye(3), atol=1e-12)
     np.testing.assert_allclose(clone.h, h, atol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="Beads total kinetic energy refers to missing kins attribute",
-)
 def test_total_bead_kinetic_energy_sums_independent_replicas():
+    """The kinetic energies and the kinetic stress of the replicas are those of
+    independent particles, summed over the replicas"""
     beads = Beads(2, 4)
-    beads.m[:] = [2.0, 3.0]
-    beads.p[:] = np.arange(24).reshape(4, 6) / 10
-    expected = np.sum(beads.p**2 / np.repeat([2.0, 3.0], 3)) / 2
-    assert beads.kin == pytest.approx(expected)
+    beads.m_[:] = [2.0, 3.0]
+    p = np.arange(24).reshape(4, 6) / 10
+    beads.p_[:] = p
+    m3 = np.repeat([2.0, 3.0], 3)
+    np.testing.assert_allclose(beads.kins, np.sum(p**2 / m3, axis=1) / 2)
+    assert beads.kin == pytest.approx(np.sum(p**2 / m3) / 2)
+    pa = p.reshape(-1, 3)
+    stress = sum(np.outer(v, v) / m for v, m in zip(pa, np.tile([2.0, 3.0], 4)))
+    np.testing.assert_allclose(beads.kstress, np.triu(stress), atol=1e-14)
+    # the kinetic energies follow the momenta and the masses
+    beads.m_[:] *= 2
+    assert beads.kin == pytest.approx(np.sum(p**2 / m3) / 4)

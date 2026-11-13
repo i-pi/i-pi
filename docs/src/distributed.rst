@@ -145,6 +145,20 @@ follows:
    The communication is *asynchronous* but we have omitted the 'waiting' blocks
    for simplicity.
 
+i-PI itself uses a compact form of this exchange, which takes fewer round
+trips and never waits for a single client. It asks for the status of a client
+when it connects, and again after each force evaluation. It then sends the
+initialization (if the client needs it), the positions and “GETFORCE” in a
+single message, without asking for the status in between. The client reads
+“GETFORCE” once it has computed the forces, and returns them as above. i-PI
+reads the replies of all its clients as they arrive. Clients written for the
+complete protocol work unchanged, as they answer each message as it comes:
+they are simply never asked for their status while they compute. A client
+that answers “HAVEDATA” to a status request, i.e. that has results i-PI has
+not asked for, is disconnected. If a client does not return its results within
+the ``timeout`` of the forcefield (when it is set), i-PI disconnects it, and
+sends its structures to another client.
+
 The description above is the *base* protocol. Two variants extend it: when
 ``batch_size`` is larger than one (see :ref:`batching`) the POSDATA and FORCEREADY
 messages carry several structures at once; and in the ``shm`` mode (see
@@ -185,6 +199,16 @@ client to each bead, is that if each client is run as an independent job
 in a queue (see :ref:`hpc`), i-PI can start performing PIMD as
 soon as a single job has started, and can carry on advancing the
 simulation even if one of the clients becomes unresponsive.
+
+i-PI does all this in a single thread, and never waits for one client: it
+waits for the replies of all the clients together, and sends a new
+structure to each client as soon as it returns its results. In simulations
+of several systems (e.g. replica exchange), the steps of the systems are
+interleaved (unless ``interleave="false"``): a system runs until it needs
+forces, and the others run while it waits for them. The clients thus compute
+the forces of all the systems in parallel, and in-process potentials
+(:ref:`ffdirect`) evaluate the structures of all the systems together, in
+batches of ``batch_size``.
 
 Especially for *ab initio* calculations, there is an advantage in
 running with :math:`m=n`. i-PI will always try to send the coordinates
@@ -310,18 +334,13 @@ per-message and per-request overhead, which is the dominant cost when the potent
 is inexpensive; for expensive potentials it makes little difference. If fewer than
 ``batch_size`` structures are queued, the socket transport pads the batch by
 replicating the last structure, so the run never stalls. The in-process
-``ffdirect`` backend does not pad; instead, when run with ``threaded='True'`` it
-flushes an incomplete final batch (evaluating fewer than ``batch_size`` structures)
-once its poll loop goes idle. Without threading there is no idle flush, so the
-number of structures evaluated must be a multiple of ``batch_size`` or the run
-hangs.
+``ffdirect`` backend does not pad: it evaluates full batches as soon as they are
+queued, and an incomplete batch (fewer than ``batch_size`` structures) once all the
+systems wait for forces. The structures requested by all the systems, e.g. the
+replicas of a replica-exchange run, are thus evaluated together.
 
-Batching requires ``consolidate_messages`` (the default) and is incompatible with
-``matching="lock"`` and with stateful clients that rely on receiving a continuous
-trajectory for a given replica. ``consolidate_messages`` itself fuses the
-STATUS/POSDATA/GETFORCE exchange into a single send and uses one thread to collect
-the replies, lowering latency; it assumes clients follow the protocol strictly, so
-turn it off only for clients that deviate from it.
+Batching is incompatible with ``matching="lock"`` and with stateful clients that
+rely on receiving a continuous trajectory for a given replica.
 
 Whether to use *many clients* or *one batched client* depends on the setup. Many
 independent clients give true parallelism and resilience — i-PI keeps advancing the

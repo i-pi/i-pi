@@ -40,7 +40,7 @@ class AtomSwap(Motion):
         self.names = names
         self.nxc = nxc
 
-        self._ealc = depend_value(name="ealc")
+        self.ealc_ = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -63,7 +63,11 @@ class AtomSwap(Motion):
         """
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(self._ealc)
+        # the change of spring energy is computed for closed, distinguishable paths
+        special = np.concatenate((self.nm.open_paths, self.nm.bosons))
+        if np.isin(self.AXlist(self.names), special).any():
+            raise ValueError("Atom swaps are not implemented for open paths or bosons.")
+        self.ensemble.add_econs(self.ealc_)
         self.dbeads = self.beads.clone()
         self.dcell = self.cell.clone()
         self.dforces = self.forces.clone(self.dbeads, self.dcell)
@@ -86,7 +90,6 @@ class AtomSwap(Motion):
             return
 
         """Does one round of alchemical exchanges."""
-        # record the spring energy (divided by mass) for each atom in the exchange chain
         nb = self.beads.nbeads
         # qswap = np.zeros((nb, 3))
         axlist = self.AXlist(self.names)
@@ -115,22 +118,32 @@ class AtomSwap(Motion):
 
             old_energy = self.forces.pot
             # swap the atom positions
-            self.dbeads.q[:] = self.beads.q[:]
-            self.dbeads.q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
-            self.dbeads.q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
+            self.dbeads.q_[:] = self.beads.q[:]
+            self.dbeads.q_[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
+            self.dbeads.q_[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
             new_energy = self.dforces.pot
-            pexchange = np.exp(-betaP * (new_energy - old_energy))
+            # the swapped atoms keep their masses, so the spring energy changes
+            difspring = (self._spring(i) - self._spring(j)) * float(
+                self.beads.m[j] - self.beads.m[i]
+            )
+            pexchange = np.exp(-betaP * (float(new_energy - old_energy) + difspring))
 
             # attemps the exchange, and actually propagate the exchange if something has happened
             if pexchange > self.prng.u:
                 nexch += 1
 
                 # copy the exchanged beads position
-                self.beads.q[:] = self.dbeads.q[:]
+                self.beads.q_[:] = self.dbeads.q[:]
                 # transfers the (already computed) status of the force, so we don't need to recompute
                 self.forces.transfer_forces(self.dforces)
 
-                self.ealc += -(new_energy - old_energy)
+                self.ealc += -(new_energy - old_energy) - difspring
+
+    def _spring(self, atom):
+        """Spring energy of the ring polymer of an atom, divided by its mass."""
+
+        qnm = self.nm.qnm[1:, 3 * atom : 3 * atom + 3]
+        return 0.5 * float((self.nm.omegak2[1:] @ qnm**2).sum())
 
 
 dproperties(AtomSwap, ["ealc"])

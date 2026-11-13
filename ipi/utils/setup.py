@@ -18,20 +18,29 @@ def get_ipi_path():
 
     path = os.getenv("IPI_ROOT")
     if path is None or path == "":
-        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../"))
+        # the folder above the ipi package, i.e. ipi/utils/setup.py/../../..
+        path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../.."))
 
     return path
 
 
-def install_driver(force_install=False):
+def install_driver(force_install=False, path=None):
     """
     This utility function fetches the FORTRAN driver folder from the ipi repo and installs it.
     Requires a system with git, gfortran and make.
+
+    Args:
+        force_install: Compiles and installs the driver even if `i-pi-driver` is
+            already available.
+        path: The file the driver is installed to. By default, `i-pi-driver` in a
+            writable script folder that is on PATH, or else in the current folder.
     """
 
     ipi_path = get_ipi_path()
     ipi_driver_path = None if force_install else shutil.which("i-pi-driver")
-    if ipi_driver_path is None:
+    if path is not None:
+        ipi_driver_path = str(path)
+    elif ipi_driver_path is None:
         import sysconfig
 
         # get potential installation locations for the driver
@@ -70,25 +79,30 @@ def install_driver(force_install=False):
         info(f"Temporary directory created: {temp_dir}", verbosity.medium)
 
         try:
-            subprocess.run(["git", "init"], cwd=temp_dir)
+            subprocess.run(["git", "init"], cwd=temp_dir, check=True)
             subprocess.run(
                 [
                     "git",
                     "remote",
                     "add",
                     "origin",
-                    "https://github.com/lab-cosmo/i-pi.git",
+                    "https://github.com/i-pi/i-pi.git",
                 ],
                 cwd=temp_dir,
+                check=True,
             )
             subprocess.run(
-                ["git", "config", "core.sparseCheckout", "true"], cwd=temp_dir
+                ["git", "config", "core.sparseCheckout", "true"],
+                cwd=temp_dir,
+                check=True,
             )
             with open(
                 os.path.join(temp_dir, ".git", "info", "sparse-checkout"), "w"
             ) as f:
                 f.write("drivers/f90\n")
-            subprocess.run(["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir)
+            subprocess.run(
+                ["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir, check=True
+            )
         except:
             warning(
                 "Failed to fetch the drivers folder from i-PI github repository",
@@ -100,7 +114,7 @@ def install_driver(force_install=False):
 
     # compiles the driver
     try:
-        subprocess.run(["make", "-j", "1", "driver.x"], cwd=build_dir)
+        subprocess.run(["make", "-j", "1", "driver.x"], cwd=build_dir, check=True)
     except:
         warning(
             "Failed to compile the FORTRAN driver. Make sure you have `gfortran` and `make` available",

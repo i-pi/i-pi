@@ -371,9 +371,8 @@ def test_setup_requires_driver_ranks():
 
 def test_interface_registers_name(monkeypatch):
     monkeypatch.setattr(mpi_mod, "_mpi_world_manager", None)
-    iface = InterfaceMPI(name="ffX", batch_size=2)
+    InterfaceMPI(name="ffX", batch_size=2)
     assert "ffX" in get_mpi_world_manager().registered_names
-    assert iface._mpi_lock is get_mpi_world_manager().mpi_lock
 
 
 class _ExitComm:
@@ -401,11 +400,6 @@ def test_interface_close_without_comm_is_noop(monkeypatch):
     iface = InterfaceMPI(name="ffX")
     iface.comm = None
     iface.close()  # must not raise
-
-
-def test_ffmpi_requires_threaded():
-    with pytest.raises(ValueError, match="threaded=True"):
-        FFMPI(name="mpi", threaded=False)
 
 
 def test_ffmpi_rejects_unknown_mode():
@@ -440,7 +434,8 @@ def test_input_ffmpi_parses_xml_parameters():
     assert fetched.interface.batch_size == 3
     assert fetched.latency == 0.2
     assert fetched.offset == 1.5
-    assert fetched.threaded
+    # the driver ranks are polled every `latency` seconds
+    assert fetched.poll_interval == 0.2
 
 
 def test_simulation_input_routes_ffmpi_xml():

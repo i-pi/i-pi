@@ -12,7 +12,7 @@ appropriate conserved energy quantity.
 import numpy as np
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dproperties, depend_value, dstrip
+from ipi.utils.depend import dproperties, depend_value
 from ipi.utils.units import Constants
 
 # __all__ = ['AlchemyMC']
@@ -44,7 +44,7 @@ class AlchemyMC(Motion):
         self.names = names
         self.nxc = nxc
 
-        self._ealc = depend_value(name="ealc")
+        self.ealc_ = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -67,7 +67,13 @@ class AlchemyMC(Motion):
         """
 
         super(AlchemyMC, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(self._ealc)
+        # the change of spring energy is computed for closed, distinguishable paths
+        special = np.concatenate((self.nm.open_paths, self.nm.bosons))
+        if np.isin(self.AXlist(self.names), special).any():
+            raise ValueError(
+                "Alchemical exchanges are not implemented for open paths or bosons."
+            )
+        self.ensemble.add_econs(self.ealc_)
 
     def AXlist(self, atomtype):
         """This compile a list of atoms ready for exchanges."""
@@ -88,14 +94,13 @@ class AlchemyMC(Motion):
 
         """Does one round of alchemical exchanges."""
         # record the spring energy (divided by mass) for each atom in the exchange chain
-        # q = dstrip(self.beads.q)
         nb = self.beads.nbeads
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)
         if lenlist == 0:
             raise ValueError("Atoms exchange list is empty in alchemical sampler.")
         atomspring = np.zeros(lenlist)
-        wk2 = dstrip(self.nm.omegak2)
+        wk2 = self.nm.omegak2
 
         i = 0
         for atomnum in axlist:
@@ -108,7 +113,7 @@ class AlchemyMC(Motion):
             spr *= 0.5
 
             # no mass here - just the massless spring term
-            atomspring[i] = spr
+            atomspring[i] = float(spr)
             i += 1
 
         # does the exchange
@@ -125,7 +130,7 @@ class AlchemyMC(Motion):
                 j = self.prng.integers(0, lenlist)  # makes sure we pick a real exchange
 
             # energy change due to the swap
-            difspring = (atomspring[i] - atomspring[j]) * (
+            difspring = (atomspring[i] - atomspring[j]) * float(
                 self.beads.m[axlist[j]] - self.beads.m[axlist[i]]
             )
             pexchange = np.exp(-betaP * difspring)
@@ -137,19 +142,19 @@ class AlchemyMC(Motion):
 
                 # swap names
                 nameswap = self.beads.names[axlist[i]]
-                self.beads.names[axlist[i]] = self.beads.names[axlist[j]]
-                self.beads.names[axlist[j]] = nameswap
+                self.beads.names_[axlist[i]] = self.beads.names[axlist[j]]
+                self.beads.names_[axlist[j]] = nameswap
 
                 # change masses
-                massratio = self.beads.m[axlist[i]] / self.beads.m[axlist[j]]
-                self.beads.m[axlist[i]] /= massratio
-                self.beads.m[axlist[j]] *= massratio
+                massratio = float(self.beads.m[axlist[i]] / self.beads.m[axlist[j]])
+                self.beads.m_[axlist[i]] /= massratio
+                self.beads.m_[axlist[j]] *= massratio
 
                 # adjust the (classical) momenta to conserve ke
-                self.beads.p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
+                self.beads.p_[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
                     massratio
                 )
-                self.beads.p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
+                self.beads.p_[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
                     massratio
                 )
 

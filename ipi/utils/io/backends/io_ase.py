@@ -10,6 +10,8 @@ using the Atomic Simulation Environment
 import sys
 import re
 import numpy as np
+
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.units import Constants
 
 try:
@@ -65,10 +67,10 @@ def print_ase(
 
     ase_atoms = Atoms(
         atoms.names,
-        cell=cell.h.T * cell_conv,
+        cell=to_numpy(cell.h).T * cell_conv,
         pbc=True,
     )
-    ase_atoms.arrays[quantity] = atoms.q.reshape((-1, 3)) * atoms_conv
+    ase_atoms.arrays[quantity] = to_numpy(atoms.q).reshape((-1, 3)) * atoms_conv
     ase_atoms.info["ipi_comment"] = title
     ase_atoms.write(filedesc, format="extxyz")
 
@@ -106,7 +108,7 @@ def read_ase(filedesc):
         _ase_open_files.pop(filedesc)
         raise EOFError()
 
-    # Issue #477 fix
+    # ASE reads custom masses only from a 'masses' array
     if "mass" in atoms.arrays and "masses" not in atoms.arrays:
         raise RuntimeError(
             "ASE reader found 'mass' array but will ignore it. "

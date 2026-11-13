@@ -1,4 +1,4 @@
-<simulation threading='false'>
+<simulation interleave='false'>
     <ffsocket mode='unix' name='driver'>
          <latency>  1.00000000e-03</latency>
          <address> gas </address>

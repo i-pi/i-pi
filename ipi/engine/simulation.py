@@ -11,20 +11,21 @@ choosing which properties to initialise, and which properties to output.
 # See the "licenses" directory for full license information.
 
 import tracemalloc
-import os
 import time
 from copy import deepcopy
+from functools import partial
 
+from ipi.utils import scheduler
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
+from ipi.utils.array_backend import jit_enabled
+from ipi.engine.jit import compile_steps
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 import threading
-
-from concurrent.futures import ThreadPoolExecutor
 
 __all__ = ["Simulation"]
 
@@ -48,11 +49,6 @@ class Simulation:
         outputs: A list of output objects that should be printed during the run
         paratemp: A helper object for parallel tempering simulations
         chk: A checkpoint object which is kept up-to-date in case of emergency exit
-        rollback: If set to true, the state of the simulation at the start
-            of the step will be output to a restart file rather than
-            the current state of the simulation. This is because we cannot
-            restart from half way through a step, only from the beginning of a
-            step, so this is necessary for the trajectory to be continuous.
         read_only: If set to true, it creates the simulation object but doesn't  initialize/open the sockets
 
     Depend objects:
@@ -78,7 +74,7 @@ class Simulation:
                 if verbosity is higher than 'quiet'.
             sockets_prefix (str): Use the specified prefix for all Unix domain sockets.
             read_only (bool): If set to true, it creates the simulation object but
-                doesn't initialize/open the sockets or start the output threads.
+                doesn't open the sockets or the outputs.
             post_init_hook (function): If provided, this function is called
                 after the simulation object is created, with the simulation object
                 as the only argument. This can be used to modify the simulation
@@ -156,7 +152,7 @@ class Simulation:
         step=0,
         tsteps=1000,
         ttime=0,
-        threads=False,
+        interleave=False,
         safe_stride=1,
         sockets_prefix="ipi_",
     ):
@@ -180,7 +176,7 @@ class Simulation:
         info(" @simulation: Initializing simulation object ", verbosity.low)
         self.prng = prng
         self.mode = mode
-        self.threading = threads
+        self.interleave = interleave
         self.safe_stride = safe_stride
         self.sockets_prefix = sockets_prefix
 
@@ -209,13 +205,14 @@ class Simulation:
 
         self.outtemplate = outputs
 
-        self._step = depend_value(name="step", value=step)
+        self.step_ = depend_value(name="step", value=step)
         self.tsteps = tsteps
         self.ttime = ttime
         self.smotion = smotion
 
         self.chk = None
-        self.rollback = True
+        # whether the steps are compiled (--jit), as set when the simulation is bound
+        self.jit = False
         self.finished = False
         self.exit_status = "success"
         self.exit_message = " @ SIMULATION: Exiting cleanly."
@@ -225,7 +222,7 @@ class Simulation:
 
         Args:
             read_only: If set to true, it creates the simulation object but
-                doesn't initialize/open the sockets or start the output threads.
+                doesn't open the sockets or the outputs.
         """
 
         if self.tsteps <= self.step:
@@ -249,8 +246,12 @@ class Simulation:
         if read_only:  # returns before we open the sockets
             return
 
+        self.jit = jit_enabled()
+        if self.jit:
+            compile_steps(self)
+
         # start forcefields here so we avoid having a shitload of files printed
-        # out only to find the socket is busy or whatever prevented starting the threads
+        # out only to find the socket is busy or whatever prevented starting them
         for k, f in self.fflist.items():
             f.bind(self.output_maker)
             f.start()
@@ -272,7 +273,7 @@ class Simulation:
             ):  # checkpoints are output per simulation
                 dco.bind(self)
                 dpipe(
-                    dco._step, o._step
+                    dco.step_, o.step_
                 )  # makes sure that the checkpoint step is updated also in the template
                 self.outputs.append(dco)
             else:  # properties and trajectories are output per system
@@ -293,9 +294,13 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
-        # registers the softexit routine
+        # registers the softexit routine, and the checkpoint that the
+        # watchdog writes if the main thread hangs
         softexit.register_function(self.softexit)
+        softexit.register_emergency(self.chk.write, store=False)
         softexit.start(self.ttime)
+        # until a run ends, an exit goes back to the state stored by chk.bind
+        softexit.rollback = True
 
         # starts tracemalloc to debug memory leaks
         if verbosity.debug:
@@ -310,7 +315,7 @@ class Simulation:
 
         if self.step < self.tsteps:
             self.step += 1
-        if not self.rollback:
+        if not softexit.rollback:
             info(
                 " @simulation.softexit: Saving the latest status at the end of the step"
             )
@@ -322,42 +327,27 @@ class Simulation:
         """Runs the simulation.
 
         Does all the simulation steps, and outputs data to the appropriate files
-        when necessary. Also deals with starting and cleaning up the threads used
-        in the communication between the driver and the PIMD code.
+        when necessary.
         """
 
-        # the thread pool lives for the duration of one run: workers are joined
-        # before returning, so that any thread-local state of external libraries
-        # (e.g. torch) is torn down while the interpreter is fully alive.
-        # threads that are cleaned up during interpreter shutdown can abort
-        # the process
-        if self.threading:
-            self.executor = ThreadPoolExecutor(
-                max_workers=max(len(self.syslist), len(self.outputs))
-            )
+        # an exit goes back to the last stored state until the run ends
+        softexit.rollback = True
         try:
-            self._run_loop(write_outputs)
-        finally:
-            if self.threading:
-                self.executor.shutdown(wait=True)
-
-    def _run_loop(self, write_outputs=True):
-        """Implements the main loop of `run`."""
-
-        # the soft exit procedures are held back while writing outputs
-        with softexit.lock:
             # prints inital configuration -- only if we are not restarting
             if self.step == 0 and write_outputs and not softexit.triggered:
                 self.step = -1
                 self.write_outputs()
                 self.step = 0
+        except SystemExit:
+            # raised by a soft exit made while waiting for forces
+            if not softexit.triggered:
+                raise
 
-            # saves the state to go back to if a step gets interrupted by a (soft) exit
-            self.chk.store()
-            self.rollback = True
+        # saves the state to go back to if a step gets interrupted by a (soft) exit
+        self.store()
 
         steptime = 0.0
-        simtime = time.time()
+        first_step = True
 
         cstep = 0
         # tptime = 0.0
@@ -371,25 +361,33 @@ class Simulation:
             # exit requests without screwing the trajectory
 
             steptime = -time.time()
+            # makes the exit requested meanwhile
+            softexit.check()
             if softexit.triggered or self.finished:
                 break
 
-            self.run_step(self.step)
-
-            # the soft exit procedures are held back until all the outputs for
-            # this step are written, and the matching state is saved
-            with softexit.lock:
+            try:
+                self.run_step(self.step)
                 if softexit.triggered or self.finished:
                     # Don't write if we are about to exit.
                     break
-
                 if write_outputs:
                     self.write_outputs()
+            except SystemExit:
+                # raised by a soft exit made while waiting for forces, which
+                # goes back to the stored state, outputs included
+                if not softexit.triggered:
+                    raise
+                break
 
-                # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
-                if (self.step + 1) % self.safe_stride == 0:
-                    self.chk.store()
-                    self.chk.status.step.store(self.step + 1)
+            # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
+            # a checkpoint written at this step is also a state to go back to,
+            # so that the outputs are truncated consistently with it
+            if (self.step + 1) % self.safe_stride == 0 or any(
+                isinstance(o, eoutputs.CheckpointOutput) and o.active()
+                for o in self.outputs
+            ):
+                self.store(self.step + 1)
 
             steptime += time.time()
             ttot += steptime
@@ -419,58 +417,78 @@ class Simulation:
                     for line in top_stats[0].traceback.format():
                         info(line)
 
-            if os.path.exists("EXIT"):
-                info(" @simulation.run: EXIT file detected! Bye bye!", verbosity.low)
-                break
-
-            if (self.ttime > 0) and (time.time() - simtime > self.ttime):
-                info(
-                    " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
-                )
+            # the step and its outputs are complete: an exit requested
+            # meanwhile (signal, EXIT file, wall-clock time) is made here,
+            # from the current state, without going back to the stored one
+            # an EXIT file there from the start stops the run after one step
+            softexit.poll(force=first_step)
+            first_step = False
+            if softexit.requested is not None:
+                if self.step + 1 < self.tsteps:
+                    softexit.rollback = False
+                    softexit.cleanup()
                 break
 
         # if the run was not interrupted, the current state is the one to restart from
-        self.rollback = softexit.triggered
+        softexit.rollback = softexit.triggered
+
+    def store(self, step=None):
+        """Stores the state that a soft exit goes back to if it interrupts
+        the next steps, at which the outputs start recording their positions
+        again, to be truncated with it.
+
+        Args:
+           step: The step to restart from, if not the current one.
+        """
+
+        with softexit.io_lock:
+            self.chk.store()
+            if step is not None:
+                self.chk.status.step.store(step)
+            softexit.stored()
 
     def write_outputs(self):
         """Writes all the outputs that are active at this step.
 
-        A soft exit requested by one of them does not stop the others, so
-        the outputs of the step are complete apart from the one that asked.
+        A soft exit made while they are written (e.g. while an estimator
+        waits for forces) truncates them to the last stored state. With
+        `interleave`, the outputs of each system are written in a task of
+        their own, so that the forces they need are computed together with
+        those of the other systems. The checkpoints, which read all the
+        systems, are written afterwards.
         """
 
-        if self.threading:
-            # must use multi-threading to avoid blocking in multi-system runs with WTE
-            writes = [
-                self.executor.submit(o.write).result for o in self.outputs if o.active()
+        def write(outputs):
+            for o in outputs:
+                o.write()
+
+        if self.interleave and len(self.syslist) > 1:
+            system_outputs = [
+                [o for o in self.outputs if getattr(o, "system", None) is s]
+                for s in self.syslist
             ]
+            scheduler.run([partial(write, outputs) for outputs in system_outputs])
+            write([o for o in self.outputs if getattr(o, "system", None) is None])
         else:
-            writes = [o.write for o in self.outputs]
-        for write in writes:
-            try:
-                write()
-            except SystemExit:
-                if not softexit.triggered:
-                    raise
+            write(self.outputs)
 
     def run_step(self, step):
-        if len(self.syslist) > 0 and self.threading:
-            stepthreads = []
-            # steps through all the systems
+        """Makes a step of all the systems, and then of the motion that
+        couples them. With `interleave`, each system makes its step in a task,
+        and the tasks run in turn while the others wait for forces, unless the
+        steps are compiled (`--jit`): the systems then make their steps one
+        after the other, and the first one makes the steps of all of them if
+        they are compiled together (see ipi.engine.jit)."""
+
+        if len(self.syslist) > 1 and self.interleave and not self.jit:
+            scheduler.run([partial(s.motion.step, step=step) for s in self.syslist])
+            if softexit.triggered:
+                return
             for s in self.syslist:
-                # creates separate threads for the different systems
-                st = self.executor.submit(s.motion.step, step=step)
-                stepthreads.append((st, s.motion))
-
-            for st, motion in stepthreads:
-                if softexit.triggered:
-                    return
-                st.result()
-                if motion.finished:
+                if s.motion.finished:
                     self.finished = True
-                    self.exit_status = motion.exit_status or "success"
-                    self.exit_message = motion.exit_message
-
+                    self.exit_status = s.motion.exit_status or "success"
+                    self.exit_message = s.motion.exit_message
             if self.finished:
                 return
         else:

@@ -11,8 +11,14 @@ from ipi.engine.thermostats import (
     ThermoGLE,
     ThermoLangevin,
     ThermoSVR,
+    _svr_step,
 )
 from ipi.utils.prng import Random
+
+
+def kinetic(atoms):
+    """Kinetic energy of the atoms."""
+    return 0.5 * float(np.sum(atoms.p**2 / atoms.m3))
 
 
 @pytest.mark.parametrize(
@@ -21,8 +27,8 @@ from ipi.utils.prng import Random
 def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
     """For an isolated thermostat step, kinetic energy plus bath energy is conserved."""
     atoms = Atoms(2)
-    atoms.m[:] = [2, 5]
-    atoms.p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
+    atoms.m_[:] = [2, 5]
+    atoms.p_[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
     options = dict(temp=300, dt=0.1, ethermo=1.25)
     if kind == "langevin":
         thermostat = ThermoLangevin(tau=0.5, **options)
@@ -33,10 +39,10 @@ def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
     else:
         thermostat = ThermoFFL(tau=0.5, flip=kind, **options)
     thermostat.bind(atoms=atoms, prng=Random(seed=19), fixdof=0)
-    original = atoms.kin + thermostat.ethermo
+    original = kinetic(atoms) + thermostat.ethermo
     for _ in range(5):
         thermostat.step()
-        assert atoms.kin + thermostat.ethermo == pytest.approx(
+        assert kinetic(atoms) + thermostat.ethermo == pytest.approx(
             original, rel=1e-12, abs=1e-12
         )
         assert np.isfinite(atoms.p).all()
@@ -45,8 +51,8 @@ def test_thermostat_accounts_for_exchanged_kinetic_energy(kind):
 def test_zero_temperature_langevin_is_exact_damping():
     """Without thermal noise, each momentum decays exponentially."""
     atoms = Atoms(1)
-    atoms.m[:] = 3
-    atoms.p[:] = [1, -2, 3]
+    atoms.m_[:] = 3
+    atoms.p_[:] = [1, -2, 3]
     original = atoms.p.copy()
     thermostat = ThermoLangevin(temp=0, dt=0.2, tau=0.5)
     thermostat.bind(atoms=atoms, prng=Random(seed=29))
@@ -70,12 +76,12 @@ def test_finite_temperature_langevin_matches_published_update(monkeypatch):
     draws = np.array([-1.0, 0.5, 2.0, 1.5, -0.25, 0.0])
     temperature, timestep, tau = 0.2, 0.2, 0.5
     atoms = Atoms(2)
-    atoms.m[:] = masses
-    atoms.p[:] = initial
+    atoms.m_[:] = masses
+    atoms.p_[:] = initial
     prng = Random(seed=37)
 
-    def fixed_gaussian_values(size):
-        assert size == draws.size
+    def fixed_gaussian_values(shape):
+        assert shape == draws.shape
         return draws.copy()
 
     monkeypatch.setattr(prng, "gvec", fixed_gaussian_values)
@@ -102,21 +108,25 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
     draws = np.array([0.5, -1.0, 0.25, 0.75, -0.5, 1.25])[: 3 * natoms]
     temperature, timestep, tau = 0.2, 0.2, 0.5
     atoms = Atoms(natoms)
-    atoms.m[:] = masses
-    atoms.p[:] = initial
+    atoms.m_[:] = masses
+    atoms.p_[:] = initial
 
     class FixedRandom:
         def __init__(self):
             self.values = iter(draws)
 
-        @property
-        def g(self):
-            return next(self.values)
+        def gvec(self, shape):
+            return np.array([next(self.values) for _ in range(shape)])
 
-        def gamma(self, shape):
-            # Gamma(shape, scale=1) = half a sum of 2*shape squared
-            # standard Gaussian variables, for the integer shapes used here.
-            return 0.5 * sum(next(self.values) ** 2 for _ in range(int(2 * shape)))
+        def gammavec(self, k, shape):
+            # Gamma(k, scale=1) = half a sum of 2*k squared standard
+            # Gaussian variables, for the integer values of 2*k used here.
+            return np.array(
+                [
+                    0.5 * sum(next(self.values) ** 2 for _ in range(int(2 * k)))
+                    for _ in range(shape)
+                ]
+            )
 
     # Atomic units: kB=1. The positive first draw gives a positive scale.
     kinetic = np.sum(initial**2 / (2 * np.repeat(masses, 3)))
@@ -134,13 +144,28 @@ def test_svr_rescaling_matches_published_update_with_fixed_draws(natoms):
     )
 
 
+@pytest.mark.parametrize("r1", [-1.5, -1.0, -0.5, 0.0, 0.5])
+def test_svr_with_one_degree_of_freedom_is_langevin(r1):
+    """With one degree of freedom, the SVR step is the Langevin propagator,
+    including the sign of the new momentum."""
+    # Bussi, Donadio and Parrinello, JCP 126, 014101 (2007), Eq. (A2), with
+    # x = p / sqrt(m kT): p' = sqrt(et) p + sqrt((1 - et) m kT) r1.
+    # With dt = tau, the momentum is reversed for r1 < -0.76.
+    p, m, temperature, et = 1.0, 2.0, 0.5, np.exp(-1.0)
+    alpha, _ = _svr_step(
+        np.array([p]), np.array([m]), 0.5 * temperature, et, np.array([r1]), np.zeros(1)
+    )
+    expected = np.sqrt(et) * p + np.sqrt((1 - et) * m * temperature) * r1
+    assert alpha * p == pytest.approx(expected, rel=1e-12)
+
+
 @pytest.mark.parametrize("intau,idtau", [(0.0, 0.0), (0.7, 0.0), (0.0, 0.7)])
 @pytest.mark.parametrize("adaptive", [False, True])
 def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
 
     atoms = Atoms(2)
-    atoms.m[:] = [2, 5]
-    atoms.p[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
+    atoms.m_[:] = [2, 5]
+    atoms.p_[:] = [0.1, -0.2, 0.3, -0.4, 0.5, 0.2]
     bath = ThermoCL(
         temp=0.2,
         dt=0.01,
@@ -150,10 +175,10 @@ def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
         apat=1.0 if adaptive else 0.0,
     )
     bath.bind(atoms=atoms, prng=Random(seed=71))
-    energy = atoms.kin + bath.ethermo
+    energy = kinetic(atoms) + bath.ethermo
     for _ in range(4):
         bath.step()
-        assert atoms.kin + bath.ethermo == pytest.approx(energy, abs=1e-12)
+        assert kinetic(atoms) + bath.ethermo == pytest.approx(energy, abs=1e-12)
         assert np.isfinite(atoms.p).all()
     if adaptive and intau:
         assert bath.intau > 0 and bath.intau != intau
@@ -164,16 +189,16 @@ def test_compensating_langevin_accounts_for_heat(intau, idtau, adaptive):
 def test_multiple_baths_compose_damping_and_sum_heat():
 
     atoms = Atoms(1)
-    atoms.m[:] = 2
-    atoms.p[:] = [0.2, -0.3, 0.4]
+    atoms.m_[:] = 2
+    atoms.p_[:] = [0.2, -0.3, 0.4]
     initial = atoms.p.copy()
     baths = [ThermoLangevin(tau=0.5), ThermoLangevin(tau=1.0)]
     combined = MultiThermo(temp=0.0, dt=0.2, thermolist=baths)
     combined.bind(atoms=atoms, prng=Random(seed=79))
-    energy = atoms.kin
+    energy = kinetic(atoms)
     combined.step()
     np.testing.assert_allclose(atoms.p, initial * np.exp(-0.2 * (2 + 1)), atol=1e-14)
-    assert atoms.kin + combined.ethermo == pytest.approx(energy)
+    assert kinetic(atoms) + combined.ethermo == pytest.approx(energy)
     combined.dt = 0.1
     combined.step()
     np.testing.assert_allclose(atoms.p, initial * np.exp(-0.3 * (2 + 1)), atol=1e-14)

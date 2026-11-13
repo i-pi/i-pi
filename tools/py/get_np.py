@@ -18,7 +18,6 @@ Syntax:
    trimsim.py inputfile.xml
 """
 
-
 import sys
 import numpy as np
 from ipi.inputs.simulation import InputSimulation

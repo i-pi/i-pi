@@ -10,21 +10,19 @@ layer for a driver that gets positions and returns forces (and energy).
 
 
 import time
-import threading
 import json
-import sys
-from contextlib import nullcontext
 
 import numpy as np
 
-from ipi.engine.cell import GenericCell
+from ipi.engine.cell import Cell
+from ipi.utils import jit, scheduler
 from ipi.utils.prng import Random
+from ipi.utils.array_backend import to_numpy, xp
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.interfaces.mpi import InterfaceMPI
 from ipi.interfaces.utils import parse_extra
-from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
@@ -39,21 +37,22 @@ plumed = None
 
 
 class ForceRequest(dict):
-    """An extension of the standard Python dict class which only has a == b
-    if a is b == True, rather than if the elements of a and b are identical.
+    """A request for the forces on one structure, as a dict.
 
-    Standard dicts are checked for equality if elements have the same value.
-    Here I only care if requests are instances of the very same object.
-    This is useful for the `in` operator, which uses equality to test membership.
+    A request is equal only to itself, rather than to any request with the
+    same contents, so that `in` and `remove` find this very request.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._event_done = threading.Event()
-
     def __eq__(self, y):
-        """Overwrites the standard equals function."""
         return self is y
+
+    def finish(self, result):
+        """Stores the result [pot, f, vir, extras], and marks the request
+        as done."""
+
+        self["result"] = result
+        self["t_finished"] = time.time()
+        self["status"] = "Done"
 
 
 class ForceField:
@@ -66,18 +65,30 @@ class ForceField:
         pars: A dictionary of the parameters needed to initialize the forcefield.
             Of the form {'name1': value1, 'name2': value2, ... }.
         name: The name of the forcefield.
-        latency: A float giving the number of seconds the socket will wait
-            before updating the client list.
+        latency: The time in seconds between polls of drivers that cannot be
+            waited on (MPI).
         offset: A float giving a constant value that is subtracted from the return
             value of the forcefield
         requests: A list of all the jobs to be given to the client codes.
         dopbc: A boolean giving whether or not to apply the periodic boundary
             conditions before sending the positions to the client code.
-        _thread: The thread on which the socket polling loop is being run.
-        _doloop: A list of booleans. Used to decide when to stop running the
-            polling loop.
-        _threadlock: Python handle used to lock the thread held in _thread.
+        backend_arrays: Whether requests carry, and results are, arrays of the
+            array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
+        virial_checked: Whether the symmetry of the virial returned by the
+            forcefield has been checked.
+        copy_inputs: Whether the requests hold copies of the positions and of
+            the cell, rather than the arrays of the system.
+        poll_interval: None if `poll` needs to be called only when a socket of
+            `fds()` can be read, otherwise the time between polls.
+
+    The requests are evaluated by `poll`, which the scheduler
+    (`ipi.utils.scheduler`) calls while forces are awaited.
     """
+
+    backend_arrays = False
+    virial_checked = False
+    copy_inputs = True
+    poll_interval = None
 
     def __init__(
         self,
@@ -87,13 +98,12 @@ class ForceField:
         pars=None,
         dopbc=False,
         active=np.array([-1]),
-        threaded=False,
     ):
         """Initialises ForceField.
 
         Args:
-            latency: The number of seconds the socket will wait before updating
-                the client list.
+            latency: The time in seconds between polls of drivers that cannot
+                be waited on (MPI).
             offset: A constant offset subtracted from the energy value given by the
                 client.
             name: The name of the forcefield.
@@ -116,10 +126,6 @@ class ForceField:
         self.dopbc = dopbc
         self.active = active
         self.iactive = None
-        self.threaded = threaded
-        self._thread = None
-        self._doloop = [False]
-        self._threadlock = threading.Lock()
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -161,7 +167,7 @@ class ForceField:
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = atoms.q
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -183,14 +189,27 @@ class ForceField:
 
             self.iactive = activehere
 
+        # the request holds the positions folded in the cell, or a copy of them
         if self.dopbc:
-            cell.array_pbc(pbcpos)
+            pbcpos = cell.array_pbc(pbcpos)
+        elif self.copy_inputs:
+            pbcpos = xp.asarray(pbcpos, copy=True)
 
+        # requests hold copies of the positions and of the cell, as numpy arrays
+        # or, for forcefields that work on them directly, as backend arrays
+        if self.backend_arrays:
+            pos = pbcpos
+            h, ih = cell.h, cell.ih
+            if self.copy_inputs:
+                h, ih = xp.asarray(h, copy=True), xp.asarray(ih, copy=True)
+        else:
+            pos = to_numpy(pbcpos)
+            h, ih = np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))
         fields = {
             "id": reqid,
-            "pos": pbcpos,
+            "pos": pos,
             "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+            "cell": (h, ih),
             "pars": par_str,
             "result": None,
             "status": "Queued",
@@ -205,99 +224,52 @@ class ForceField:
             template.update(fields)
             newreq = ForceRequest(template)
 
-        with self._threadlock:
-            self.requests.append(newreq)
-
-        if not self.threaded:
-            self.poll()
-
+        self.requests.append(newreq)
+        scheduler.watch(self)
         return newreq
 
-    def poll(self):
-        """Polls the forcefield object to check if it has finished."""
+    def poll(self, idle=False):
+        """Evaluates the queued requests, or makes all the progress possible
+        without blocking for those evaluated elsewhere, and returns True if
+        anything changed. `idle` is True when no task can run until some
+        request is done. The base class returns zero forces."""
 
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["t_dispatched"] = time.time()
-                    r["result"] = [
+        progress = False
+        for r in self.requests:
+            if r["status"] == "Queued":
+                r["t_dispatched"] = time.time()
+                r.finish(
+                    [
                         0.0 - self.offset,
                         np.zeros(len(r["pos"]), float),
                         np.zeros((3, 3), float),
                         {"raw": ""},
                     ]
-                    r["status"] = "Done"
-                    r._event_done.set()
-                    r["t_finished"] = time.time()
+                )
+                progress = True
+        return progress
 
-    def _poll_loop(self):
-        """Polling loop.
+    def fds(self):
+        """Returns the sockets on which a reply is expected."""
 
-        Loops over the different requests, checking to see when they have
-        finished.
-        """
+        return []
 
-        info(
-            f" @ForceField ({self.name}): Starting the polling thread main loop.",
-            verbosity.low,
-        )
-        while self._doloop[0]:
-            time.sleep(self.latency)
-            if len(self.requests) > 0:
-                self.poll()
+    def release(self, request):
+        """Removes a request from the evaluation queue."""
 
-    def release(self, request, lock=True):
-        """Removes a request from the evaluation queue.
-
-        Args:
-            request: The id of the job to release.
-            lock: whether we should apply a threadlock here
-        """
-
-        """Frees up a request."""
-
-        if "thread" in request:
-            request["thread"].join()
-
-        with self._threadlock if lock else nullcontext():
-            if request in self.requests:
-                try:
-                    self.requests.remove(request)
-                except ValueError:
-                    print("failed removing request", id(request), " ", end=" ")
-                    print(
-                        [id(r) for r in self.requests], "@", threading.currentThread()
-                    )
-                    raise
+        if request in self.requests:
+            self.requests.remove(request)
 
     def stop(self):
-        """Dummy stop method."""
+        """Marks the pending requests as stopped."""
 
-        self._doloop[0] = False
         for r in self.requests:
             r["status"] = "Exit"
+        scheduler.unwatch(self)
 
     def start(self):
-        """Spawns a new thread.
+        """Prepares the forcefield to receive requests."""
 
-        Splits the main program into two threads, one that runs the polling loop
-        which updates the client list, and one which gets the data.
-
-        Raises:
-            NameError: Raised if the polling thread already exists.
-        """
-
-        if self._thread is not None:
-            raise NameError("Polling thread already started")
-
-        if self.threaded:
-            self._doloop[0] = True
-            self._thread = threading.Thread(
-                target=self._poll_loop, name="poll_" + self.name
-            )
-            self._thread.daemon = True
-            self._thread.start()
-            softexit.register_thread(self._thread, self._doloop)
         softexit.register_function(self.softexit)
 
     def softexit(self):
@@ -332,14 +304,12 @@ class FFSocket(ForceField):
         pars=None,
         dopbc=True,
         active=np.array([-1]),
-        threaded=True,
         interface=None,
     ):
         """Initialises FFSocket.
 
         Args:
-           latency: The number of seconds the socket will wait before updating
-              the client list.
+           latency: Not used by sockets, which are waited on.
            name: The name of the forcefield.
            pars: A dictionary used to initialize the forcefield, if required.
               Of the form {'name1': value1, 'name2': value2, ... }.
@@ -350,83 +320,82 @@ class FFSocket(ForceField):
         """
 
         # a socket to the communication library is created or linked
-        super(FFSocket, self).__init__(
-            latency, offset, name, pars, dopbc, active, threaded
-        )
+        super(FFSocket, self).__init__(latency, offset, name, pars, dopbc, active)
         if interface is None:
             self.socket = InterfaceSocket()
         else:
             self.socket = interface
+        # the number of atoms of the requests, fixed by the first one
+        self.natoms = None
         self.socket.requests = self.requests
         self.socket.offset = self.offset
 
-    def poll(self):
-        """Function to check the status of the client calculations."""
+    def queue(self, atoms, cell, reqid=-1, template=None):
+        """Adds a request, after checking that all the requests to the socket
+        have the same number of atoms, which the clients are set up for."""
 
-        self.socket.poll()
+        natoms = len(atoms.q) // 3
+        if self.natoms is None:
+            self.natoms = natoms
+        elif natoms != self.natoms:
+            raise ValueError(
+                "Forcefield '%s' is used by systems with %d and %d atoms: a socket "
+                "forcefield can only serve systems of the same size"
+                % (self.name, self.natoms, natoms)
+            )
+        return super().queue(atoms, cell, reqid, template)
+
+    def poll(self, idle=False):
+        """Exchanges data with the clients, without blocking."""
+
+        return self.socket.poll(idle)
+
+    def fds(self):
+        """Returns the sockets on which a reply is expected."""
+
+        return self.socket.fds()
 
     def start(self):
-        """Spawns a new thread."""
+        """Opens the socket."""
 
-        if self.socket.batch_size > 1 and not self.socket.consolidate_messages:
-            raise ValueError(
-                "Batched socket evaluation (batch_size > 1) requires "
-                "consolidate_messages to be enabled."
-            )
         self.socket.open()
         super(FFSocket, self).start()
 
     def stop(self):
-        """Closes the socket and the thread."""
+        """Closes the socket."""
 
         super(FFSocket, self).stop()
-        if self._thread not in (None, threading.current_thread()):
-            # must wait until loop has ended before closing the socket
-            self._thread.join()
         self.socket.close()
 
 
 class FFEval(ForceField):
-    """General class for models that provide a self.evaluate(request)
-    to compute the potential, force and virial.
+    """General class for models that provide a self.evaluate(request), which
+    returns the potential, force, virial and extras of a request.
     """
 
-    def _eval_thread(self, request):
-        """Evaluates a single request and applies the offset."""
-        self.evaluate(request)
-        request["result"][0] -= self.offset
+    def poll(self, idle=False):
+        """Evaluates the queued requests."""
 
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # We have to be thread-safe, as in multi-system mode this might get
-        # called by many threads at once.
-        with self._threadlock:
-            new_requests = []
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    new_requests.append(r)
-
-        for r in new_requests:
-            if self.threaded:
-                r["thread"] = threading.Thread(target=self._eval_thread, args=(r,))
-                r["thread"].start()
-            else:
-                with self._threadlock:
-                    self._eval_thread(r)
+        progress = False
+        for r in self.requests:
+            if r["status"] == "Queued":
+                r["status"] = "Running"
+                r["t_dispatched"] = time.time()
+                result = self.evaluate(r)
+                result[0] -= self.offset
+                r.finish(result)
+                progress = True
+        return progress
 
     def evaluate(self, request):
-        request["result"] = [
+        """Returns [pot, f, vir, extras] for a request."""
+
+        return [
             0.0,
             np.zeros(len(request["pos"]), float),
             np.zeros((3, 3), float),
             {"raw": ""},
         ]
-        request["status"] = "Done"
-        request._event_done.set()
 
 
 class FFMPI(ForceField):
@@ -448,14 +417,11 @@ class FFMPI(ForceField):
         pars=None,
         dopbc=False,
         active=np.array([-1]),
-        threaded=True,
         mode="mpi",
         batch_size=1,
         interface=None,
     ):
-        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
-        if not threaded:
-            raise ValueError("FFMPI requires threaded=True to poll the driver ranks.")
+        super().__init__(latency, offset, name, pars, dopbc, active)
         if mode != "mpi":
             raise ValueError("Unknown ffmpi mode '%s'." % mode)
         self.mode = mode
@@ -466,28 +432,42 @@ class FFMPI(ForceField):
         self.interface.requests = self.requests
         self.interface.offset = self.offset
 
-    def poll(self):
-        """Function to check the status of the driver calculations."""
+    @property
+    def poll_interval(self):
+        """MPI messages cannot be waited on together with sockets, so the
+        driver ranks are polled every `latency` seconds."""
 
-        self.interface.poll()
+        return self.latency
+
+    def poll(self, idle=False):
+        """Dispatches requests to the driver ranks, and collects their results,
+        without blocking."""
+
+        return self.interface.poll()
 
     def start(self):
-        """Joins the shared MPI world and spawns the polling thread."""
+        """Joins the shared MPI world."""
 
         self.interface.open()
         super().start()
 
     def stop(self):
-        """Stops the poll thread and tells every driver root to exit."""
+        """Tells every driver root to exit."""
 
         super().stop()
-        if self._thread not in (None, threading.current_thread()):
-            # must wait until the poll loop has ended before signalling exit
-            self._thread.join()
         self.interface.close()
 
 
 class FFDirect(ForceField):
+    """Forcefield that evaluates a Python potential (`pes`, one of the drivers
+    in `ipi.pes`) in the i-PI process, rather than through a socket. The
+    structures can be evaluated in batches (`batch_size`), and drivers that set
+    `backend_arrays` receive and return the arrays of the array backend (e.g.
+    torch tensors on a GPU) rather than numpy arrays. Drivers that also set
+    `traceable` are evaluated within the steps compiled with `--jit`, other
+    drivers are called eagerly between the CUDA graphs (`jit.eager`).
+    """
+
     def __init__(
         self,
         latency=1e-4,
@@ -496,7 +476,6 @@ class FFDirect(ForceField):
         pars=None,
         dopbc=False,
         active=np.array([-1]),
-        threaded=False,
         pes="dummy",
         pes_path="",
         batch_size=1,
@@ -504,8 +483,7 @@ class FFDirect(ForceField):
         """Initialises FFDirect.
 
         Args:
-            latency: The number of seconds the socket will wait before updating
-                the client list.
+            latency: Not used.
             offset: A constant offset subtracted from the energy value given by the
                 client.
             name: The name of the forcefield.
@@ -515,14 +493,14 @@ class FFDirect(ForceField):
                 before sending the positions to the client code.
             active: Indexes of active atoms in this forcefield
             pes: The name of the potential-energy surface to be used
-            batch_size: The number of structures that should be combined and evaluated
-                at once in a single batch. NB: program will hang if the number of force
-                evaluations is not a multiple of batch_size, unless threaded is set to
-                True.
+            batch_size: The largest number of structures evaluated at once. The
+                requests queued by all the tasks (e.g. the systems of a replica
+                exchange run) are evaluated in batches of this size, and the
+                last, incomplete batch once all the tasks wait for forces.
 
         """
 
-        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
+        super().__init__(latency, offset, name, pars, dopbc, active)
 
         if pars is None:
             pars = {}  # defaults no pars
@@ -531,10 +509,6 @@ class FFDirect(ForceField):
         self.pes = pes
         self.pes_path = pes_path
         self.batch_size = batch_size
-        self.request_batch = []
-        self._batch_idle_cycles = 0
-        # wait longer to flush the queue if the batch size is large
-        self._batch_idle_threshold = self.batch_size
 
         try:
             if self.pes == "custom" and self.pes_path == "":
@@ -549,78 +523,79 @@ class FFDirect(ForceField):
             print(f"Error setting up PES mode {self.pes}")
             print("Error trace: ")
             raise err
-
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # We have to be thread-safe, as in multi-system mode this might get
-        # called by many threads at once.
-        # This is slightly different than for FFEval because of the batched evaluation
-        with self._threadlock:
-            new_requests = False
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-                    new_requests = True
-
-            # for batched evaluation, flush incomplete batches
-            # if the poll loop has been idle for a few cycles
-            if self.batch_size > 1 and len(self.request_batch) > 0:
-                if new_requests:
-                    self._batch_idle_cycles = 0
-                else:
-                    self._batch_idle_cycles += 1
-                if self._batch_idle_cycles >= self._batch_idle_threshold:
-                    self.launch_batch()
-
-    def _process_results(self, results, request):
-        # ensure shapes, apply the offset and parse the extra string
-        results[0] -= self.offset
-        results[1] = np.asarray(results[1]).reshape(-1)
-        results[2] = np.asarray(results[2]).reshape(3, 3)
-        results[3] = parse_extra(results[3])
-
-        request["result"] = results
-        request["status"] = "Done"
-        request._event_done.set()
-        request["t_finished"] = time.time()
-
-    def launch_batch(self):
-        """Dispatches the current batch for evaluation."""
-
-        info(
-            f"Launching batch evaluation, "
-            f"{len(self.request_batch)} / {self.batch_size}",
-            verbosity.high,
+        self.backend_arrays = getattr(self.driver, "backend_arrays", False)
+        self.traceable = self.backend_arrays and getattr(
+            self.driver, "traceable", False
         )
-        cell_batch = [r["cell"][0] for r in self.request_batch]
-        pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
-        results_batch = self.driver(cell_batch, pos_batch)
-        for results, request in zip(results_batch, self.request_batch):
-            self._process_results(list(results), request)
-        self.request_batch = []
-        self._batch_idle_cycles = 0
+        # the requests are evaluated while the task that queued them waits for
+        # them, before its positions or cell can change, so drivers that take
+        # backend arrays (and do not modify them) receive the arrays of the system
+        self.copy_inputs = not self.backend_arrays
 
-    def evaluate(self, request):
+    def poll(self, idle=False):
+        """Evaluates the queued requests in batches of `batch_size`, and the
+        last, incomplete batch only if no task can queue more (`idle`)."""
+
+        queued = [r for r in self.requests if r["status"] == "Queued"]
+        if not idle:
+            queued = queued[: len(queued) - len(queued) % self.batch_size]
+        now = time.time()
+        for r in queued:
+            r["status"] = "Running"
+            r["t_dispatched"] = now
         if self.batch_size == 1:
-            results = list(
-                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
-            )
-            self._process_results(results, request)
+            for r in queued:
+                r.finish(self._call_driver(r["cell"][0], r["pos"].reshape(-1, 3)))
         else:
-            self.request_batch.append(request)
-            if len(self.request_batch) >= self.batch_size:
-                self.launch_batch()
+            for i in range(0, len(queued), self.batch_size):
+                self.launch_batch(queued[i : i + self.batch_size])
+        return len(queued) > 0
+
+    def _call_driver(self, cell, pos):
+        """Returns the processed results of the driver: a traceable driver is
+        part of the compiled step, the others run eagerly between the CUDA
+        graphs."""
+
+        if self.traceable:
+            return self._results(cell, pos)
+        return jit.eager(self._results, cell, pos)
+
+    def _results(self, cell, pos):
+        """Evaluates the driver on a structure, or on lists of structures, and
+        returns the processed results."""
+
+        if isinstance(cell, list):
+            return [self._process_results(r) for r in self.driver(cell, pos)]
+        return self._process_results(self.driver(cell, pos))
+
+    def _process_results(self, results):
+        # ensure shapes, apply the offset and parse the extra string
+        asarray = xp.asarray if self.backend_arrays else np.asarray
+        results = list(results)
+        if self.offset != 0:
+            results[0] = results[0] - self.offset
+        results[1] = asarray(results[1]).reshape(-1)
+        results[2] = asarray(results[2]).reshape(3, 3)
+        results[3] = parse_extra(results[3])
+        return results
+
+    def launch_batch(self, requests):
+        """Evaluates a batch of requests with one call to the driver."""
+
+        if verbosity.high:
+            info(f"Launching batch evaluation, {len(requests)} / {self.batch_size}")
+        cell_batch = [r["cell"][0] for r in requests]
+        pos_batch = [r["pos"].reshape(-1, 3) for r in requests]
+        results_batch = self._call_driver(cell_batch, pos_batch)
+        for results, request in zip(results_batch, requests):
+            request.finish(results)
 
 
 class FFLennardJones(FFEval):
     """Basic fully pythonic force provider.
 
     Computes LJ interactions without minimum image convention, cutoffs or
-    neighbour lists. Parallel evaluation with threads.
+    neighbour lists.
 
     Attributes:
         parameters: A dictionary of the parameters used by the driver. Of the
@@ -640,7 +615,6 @@ class FFLennardJones(FFEval):
         pars=None,
         dopbc=True,
         active=np.array([-1]),
-        threaded=True,
         interface=None,
     ):
         """Initialises FFLennardJones.
@@ -657,7 +631,7 @@ class FFLennardJones(FFEval):
 
         # a socket to the communication library is created or linked
         super(FFLennardJones, self).__init__(
-            latency, offset, name, pars, dopbc=dopbc, threaded=threaded, active=active
+            latency, offset, name, pars, dopbc=dopbc, active=active
         )
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
@@ -686,9 +660,7 @@ class FFLennardJones(FFEval):
 
         v *= self.epsfour
 
-        r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
-        r["status"] = "Done"
-        r._event_done.set()
+        return [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
 
 
 class FFdmd(FFEval):
@@ -718,7 +690,6 @@ class FFdmd(FFEval):
         dmdstep=0,
         pars=None,
         dopbc=False,
-        threaded=False,
     ):
         """Initialises FFdmd.
 
@@ -727,9 +698,7 @@ class FFdmd(FFEval):
         """
 
         # a socket to the communication library is created or linked
-        super(FFdmd, self).__init__(
-            latency, offset, name, pars, dopbc=dopbc, threaded=threaded
-        )
+        super(FFdmd, self).__init__(latency, offset, name, pars, dopbc=dopbc)
 
         if coupling is None:
             raise ValueError("Must provide the couplings for DMD.")
@@ -787,9 +756,7 @@ class FFdmd(FFEval):
             # MR 2021: The virial looks correct and produces stable NPT simulations. It was not bullet-proof benchmarked, though.
             #          Because this is "out of equilibrium" I still did not find a good benchmark. Change cell and look at variation of energy only for this term?
 
-        r["result"] = [v, f.reshape(nat * 3), vir, ""]
-        r["status"] = "Done"
-        r._event_done.set()
+        return [v, f.reshape(nat * 3), vir, ""]
 
     def dmd_update(self):
         """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
@@ -821,7 +788,6 @@ class FFDebye(FFEval):
         vref=0.0,
         pars=None,
         dopbc=False,
-        threaded=False,
     ):
         """Initialises FFDebye.
 
@@ -863,15 +829,12 @@ class FFDebye(FFEval):
         d = q - self.xref
         mf = np.dot(self.H, d)
 
-        r["result"] = [
+        return [
             self.vref + 0.5 * np.dot(d, mf),
             -mf,
             np.zeros((3, 3), float),
             {"raw": ""},
         ]
-        r["status"] = "Done"
-        r._event_done.set()
-        r["t_finished"] = time.time()
 
 
 class FFPlumed(FFEval):
@@ -896,7 +859,6 @@ class FFPlumed(FFEval):
         name="",
         pars=None,
         dopbc=False,
-        threaded=False,
         init_file="",
         compute_work=True,
         plumed_dat="",
@@ -917,16 +879,7 @@ class FFPlumed(FFEval):
             raise ImportError(
                 "Cannot find plumed libraries to link to a FFPlumed object/"
             )
-        super(FFPlumed, self).__init__(
-            latency, offset, name, pars, dopbc=False, threaded=threaded
-        )
-
-        if self.threaded:
-            warning(
-                "PLUMED is not thread-safe, overriding threaded execution",
-                verbosity.low,
-            )
-            self.threaded = False
+        super(FFPlumed, self).__init__(latency, offset, name, pars, dopbc=False)
         self.plumed = plumed.Plumed()
         self.plumed_dat = plumed_dat
         self.plumed_step = plumed_step
@@ -939,8 +892,8 @@ class FFPlumed(FFEval):
             myframe = read_file(self.init_file.mode, infile)
             myatoms = myframe["atoms"]
             mycell = myframe["cell"]
-            myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
-            mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
+            myatoms.q_ *= unit_to_internal("length", self.init_file.units, 1.0)
+            mycell.h_ *= unit_to_internal("length", self.init_file.units, 1.0)
         else:
             raise ValueError(
                 "Unsupported init file format for FFPlumed: "
@@ -985,8 +938,9 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = dstrip(myatoms.q) * 0.0
-        self.masses = dstrip(myatoms.m)
+        # PLUMED keeps pointers to these, which must be writable numpy arrays
+        self.charges = np.zeros(self.natoms)
+        self.masses = np.array(to_numpy(myatoms.m))
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -995,6 +949,20 @@ class FFPlumed(FFEval):
         """Takes care of cleaning up upon softexit"""
 
         self.plumed.finalize()
+
+    def queue(self, atoms, cell, reqid=-1, template=None):
+        """Adds a request, with the energy, forces and virial of the system if
+        they are used as collective variables. They are read here, as reading
+        them may wait for their computation, which `evaluate` cannot do."""
+
+        if self.system_force is not None:
+            template = dict(template or {})
+            template["system_force"] = (
+                to_numpy(self.system_force.f).reshape((-1, 3)),
+                to_numpy(self.system_force.vir),
+                float(self.system_force.pot),
+            )
+        return super().queue(atoms, cell, reqid, template)
 
     def evaluate(self, r):
         """A wrapper function to call the PLUMED evaluation routines
@@ -1019,11 +987,13 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        if self.system_force is not None:
+        system_force = r.get("system_force")
+        if system_force is not None:
             # setup to use energy as CV
-            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
-            vir[:] = -dstrip(self.system_force.vir)
-            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
+            system_f, system_vir, system_pot = system_force
+            f[:] = system_f
+            vir[:] = -system_vir
+            self.plumed.cmd("setEnergy", system_pot)
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
@@ -1045,19 +1015,17 @@ class FFPlumed(FFEval):
         f = f.flatten()
         vir *= -1
 
-        if self.system_force is not None:
+        if system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= dstrip(self.system_force.f).flatten()
-            vir[:] -= -dstrip(self.system_force.vir)
+            f -= system_f.flatten()
+            vir -= system_vir
 
         extras = {"raw": ""}
         for x in self.plumed_data:
             extras[str(x)] = self.plumed_data[x].copy()
 
         # nb: the virial is a symmetric tensor, so we don't need to transpose
-        r["result"] = [v, f, vir, extras]
-        r["status"] = "Done"
-        r._event_done.set()
+        return [v, f, vir, extras]
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1069,6 +1037,7 @@ class FFPlumed(FFEval):
         # bias force is not "freshly computed"
 
         self.plumed_step += 1
+        pos, cell = to_numpy(pos), to_numpy(cell)
 
         bias_before = np.zeros(1, float)
         bias_after = np.zeros(1, float)
@@ -1084,8 +1053,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
-            self.evaluate(request)
+            self.evaluate(ForceRequest(pos=pos, cell=(cell, None), result=None))
 
         if self.compute_work:
             self.plumed.cmd("getBias", bias_before)
@@ -1112,7 +1080,6 @@ class FFYaff(FFEval):
         latency=1e-4,
         offset=0.0,
         name="",
-        threaded=False,
         yaffpara=None,
         yaffsys=None,
         yafflog="yaff.log",
@@ -1154,9 +1121,7 @@ class FFYaff(FFEval):
         import atexit
 
         # a socket to the communication library is created or linked
-        super(FFYaff, self).__init__(
-            latency, offset, name, pars, dopbc, threaded=threaded
-        )
+        super(FFYaff, self).__init__(latency, offset, name, pars, dopbc)
 
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.
@@ -1212,9 +1177,7 @@ class FFYaff(FFEval):
         vtens = np.zeros((3, 3))
         e = self.ff.compute(gpos, vtens)
 
-        r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
-        r["status"] = "Done"
-        r._event_done.set()
+        return [e, -gpos.ravel(), -vtens, {"raw": ""}]
 
 
 class FFsGDML(FFEval):
@@ -1229,7 +1192,6 @@ class FFsGDML(FFEval):
         latency=1e-4,
         offset=0.0,
         name="",
-        threaded=False,
         sGDML_model=None,
         pars=None,
         dopbc=False,
@@ -1249,9 +1211,7 @@ class FFsGDML(FFEval):
                 """)
 
         # a socket to the communication library is created or linked
-        super(FFsGDML, self).__init__(
-            latency, offset, name, pars, dopbc, threaded=threaded
-        )
+        super(FFsGDML, self).__init__(latency, offset, name, pars, dopbc)
 
         from ipi.utils.units import unit_to_user
 
@@ -1340,15 +1300,12 @@ class FFsGDML(FFEval):
 
         E, F = self.predictor.predict(r["pos"] * self.bohr_to_distanceUnits)
 
-        r["result"] = [
+        return [
             E[0] * self.energyUnits_to_hartree,
             F.flatten() * self.forceUnits_to_hartreebohr,
             np.zeros((3, 3), float),
             {"raw": ""},
         ]
-        r["status"] = "Done"
-        r._event_done.set()
-        r["t_finished"] = time.time()
 
 
 class FFCommittee(ForceField):
@@ -1364,7 +1321,6 @@ class FFCommittee(ForceField):
         pars=None,
         dopbc=True,
         active=np.array([-1]),
-        threaded=True,
         fflist=[],
         ffweights=[],
         alpha=1.0,
@@ -1374,7 +1330,6 @@ class FFCommittee(ForceField):
         active_out=None,
         parse_json=False,
     ):
-        # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
             latency=latency,
             offset=offset,
@@ -1382,7 +1337,6 @@ class FFCommittee(ForceField):
             pars=pars,
             dopbc=dopbc,
             active=active,
-            threaded=True,  # hardcoded, otherwise won't work!
         )
         if len(fflist) == 0:
             raise ValueError(
@@ -1460,6 +1414,10 @@ class FFCommittee(ForceField):
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         com_handles = r["ff_handles"].copy()
+        # the committee is evaluated with numpy
+        for ff, ff_r in zip(self.fflist, com_handles):
+            if ff.backend_arrays:
+                ff_r["result"][:3] = [to_numpy(x) for x in ff_r["result"][:3]]
         if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
@@ -1653,23 +1611,72 @@ class FFCommittee(ForceField):
         for ff, ff_r in zip(self.fflist, r["ff_handles"]):
             ff.release(ff_r)
 
-    def poll(self):
-        """Polls the forcefield object to check if it has finished."""
+    def poll(self, idle=False):
+        """Completes the requests whose members have all been evaluated (the
+        members are polled on their own)."""
 
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] != "Done" and self.check_finish(r):
-                    r["t_finished"] = time.time()
-                    self.gather(r)
-                    r["result"][0] -= self.offset
-                    r["status"] = "Done"
-                    r._event_done.set()
+        progress = False
+        for r in self.requests:
+            if r["status"] != "Done" and self.check_finish(r):
+                self.gather(r)
+                r["result"][0] -= self.offset
+                r.finish(r["result"])
+                progress = True
+        return progress
+
+
+@jit.compiled
+def _rotate(R, q, h, ih):
+    """Returns the positions q and the cell (h, ih) rotated by each of the
+    matrices R (the inverse of R h is ih R^T)."""
+
+    RT = xp.matrix_transpose(R)
+    return (q.reshape(-1, 3) @ RT).reshape(R.shape[0], -1), R @ h, ih @ RT
+
+
+@jit.compiled
+def _average(R, w, pots, f, virs):
+    """Returns the averages, with the weights w, of the potentials, forces and
+    virials of the structures rotated by the matrices R, in the frame of the
+    structure."""
+
+    f = f.reshape(R.shape[0], -1, 3) @ R
+    virs = xp.matrix_transpose(R) @ virs @ R
+    return (
+        (pots * w).sum(),
+        (f * w[:, None, None]).sum(axis=0).reshape(-1),
+        (virs * w[:, None, None]).sum(axis=0),
+    )
+
+
+class _Rotated:
+    """The positions and the cell of a rotated structure, with the attributes
+    of the atoms and of the cell that `ForceField.queue` reads."""
+
+    array_pbc = Cell.array_pbc
+
+    def __init__(self, q, h, ih):
+        self.q = q
+        self.h = h
+        self.ih = ih
 
 
 class FFRotations(ForceField):
     """Forcefield to manipulate models that are not exactly rotationally equivariant.
     Can be used to evaluate a different random rotation at each evaluation, or to average
-    over a regular grid of Euler angles"""
+    over a regular grid of Euler angles.
+
+    The rotations, and the average of the results, are made with arrays of the
+    backend, so the results are arrays of the backend. When the forcefield it
+    wraps is evaluated in the steps compiled with `--jit` (see
+    `ipi.engine.jit`), so are the rotations, which draw random numbers from
+    the generator of this forcefield; with JAX, its key cannot be traced, so
+    the steps with rotations run eagerly."""
+
+    backend_arrays = True
+    # the requests are evaluated before the positions of the structure change
+    copy_inputs = False
+    traceable = False
 
     def __init__(
         self,
@@ -1679,7 +1686,6 @@ class FFRotations(ForceField):
         pars=None,
         dopbc=True,
         active=np.array([-1]),
-        threaded=True,
         prng=None,
         ffsocket=None,
         ffdirect=None,
@@ -1688,11 +1694,7 @@ class FFRotations(ForceField):
         grid_order=1,
         grid_mode="lebedev",
     ):
-        super(
-            FFRotations, self
-        ).__init__(  # force threaded execution to handle sub-ffield
-            latency, offset, name, pars, dopbc, active, threaded=True
-        )
+        super(FFRotations, self).__init__(latency, offset, name, pars, dopbc, active)
 
         if prng is None:
             warning("No PRNG provided, will initialize one", verbosity.low)
@@ -1726,6 +1728,15 @@ class FFRotations(ForceField):
             self._rotations = get_rotation_quadrature_legendre(self.grid_order)
         else:
             raise ValueError(f"Invalid quadrature {self.grid_mode}")
+        # the rotations of the grid, each followed by its inversion if
+        # required, and their weights, normalized
+        grid = np.array([R for R, _, _ in self._rotations])
+        weights = np.array([w for _, w, _ in self._rotations])
+        if self.inversion:
+            grid = np.stack([grid, -grid], axis=1).reshape(-1, 3, 3)
+            weights = np.repeat(weights, 2)
+        self._grid = xp.asarray(grid)
+        self._weights = xp.asarray(weights / weights.sum())
         info(
             f"""
 # Generating {self.grid_mode} rotation quadrature of order {self.grid_order}.
@@ -1743,45 +1754,27 @@ class FFRotations(ForceField):
         self.ff.start()
 
     def queue(self, atoms, cell, reqid=-1):
-        # launches requests for all of the rotations FF objects
-        ffh = []  # this is the list of "inner" FF requests
-        rots = []  # this is a list of tuples of (rotation matrix, weight)
+        # the rotations of the grid, after a random one
+        R = self._grid
         if self.random:
-            R_random = random_rotation(self.prng, improper=True)
-        else:
-            R_random = np.eye(3)
+            R = R @ random_rotation(self.prng, improper=True)
 
-        for R, w, _ in self._rotations:
-            R = R @ R_random
-
-            rot_atoms = atoms.clone()
-            rot_cell = GenericCell(
-                R @ dstrip(cell.h).copy()
-            )  # NB we need generic cell orientation
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
-
-            rots.append((R, w))
-            ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
-
-            if self.inversion:
-                # also add a "flipped rotation" to the evaluation list
-                R = R * -1
-
-                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
-                rot_atoms = atoms.clone()
-                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
-
-                rots.append((R, w))
-                ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
+        # the rotated structures, as requests to the forcefield that evaluates them
+        qs, hs, ihs = (xp.unstack(x) for x in _rotate(R, atoms.q, cell.h, cell.ih))
+        ffh = []
+        for q, h, ih in zip(qs, hs, ihs):
+            rotated = _Rotated(q, h, ih)
+            ffh.append(self.ff.queue(rotated, rotated, reqid))
 
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
         # requests
         req = ForceField.queue(
-            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
+            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=R)
         )
-        req["status"] = "Running"
+        # `poll` completes the request once the rotated structures are evaluated
         req["t_dispatched"] = time.time()
+        req["status"] = "Running"
         return req
 
     def check_finish(self, r):
@@ -1794,52 +1787,19 @@ class FFRotations(ForceField):
         return True
 
     def gather(self, r):
-        """Collects results from all sub-requests, and assemble the committee of models."""
+        """Collects the results of the rotated structures, rotates the forces
+        and the virials back into the frame of the structure, and averages
+        them with the weights of the quadrature."""
 
-        r["result"] = [
-            0.0,
-            np.zeros(len(r["pos"]), float),
-            np.zeros((3, 3), float),
-            "",
-        ]
-
-        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-        rot_handles = r["ff_handles"].copy()
-        rots = r["rots"].copy()
-
-        # Gathers the forcefield energetics and extras
-        pots = []
-        frcs = []
-        virs = []
-        xtrs = []
-        quad_w = []
-        for ff_r, (R, w) in zip(rot_handles, rots):
-            pots.append(ff_r["result"][0])
-            # must rotate forces and virial back into the original reference frame
-            frcs.append((ff_r["result"][1].reshape(-1, 3) @ R).flatten())
-            virs.append((R.T @ ff_r["result"][2] @ R))
-            xtrs.append(ff_r["result"][3])
-            quad_w.append(w)
-
-        quad_w = np.array(quad_w)
-        pots = np.array(pots)
-        frcs = np.array(frcs).reshape(len(frcs), -1)
-        virs = np.array(virs).reshape(-1, 3, 3)
-
-        # Computes the mean energetics (using the quadrature weights)
-        mean_pot = np.sum(pots * quad_w, axis=0) / quad_w.sum()
-        mean_frc = np.sum(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.sum()
-        mean_vir = (
-            np.sum(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.sum()
-        )
-
-        # Sets the output of the committee model.
-        r["result"][0] = mean_pot
-        r["result"][1] = mean_frc
-        r["result"][2] = mean_vir
-        r["result"][3] = {
-            "o3grid_pots": pots
-        }  # this is the list of potentials on a grid, for monitoring
+        results = [ff_r["result"] for ff_r in r["ff_handles"]]
+        xtrs = [x[3] for x in results]
+        pots = xp.stack([xp.asarray(x[0]) for x in results])
+        frcs = xp.stack([xp.asarray(x[1]) for x in results])
+        virs = xp.stack([xp.asarray(x[2]) for x in results])
+        pot, f, vir = _average(r["rots"], self._weights, pots, frcs, virs)
+        # the potentials of the rotations (an array of the backend, as the
+        # results) are kept for monitoring
+        r["result"] = [pot, f, vir, {"o3grid_pots": pots}]
 
         # "dissolve" the extras dictionaries into a list
         if isinstance(xtrs[0], dict):
@@ -1859,18 +1819,20 @@ class FFRotations(ForceField):
         for ff_r in r["ff_handles"]:
             self.ff.release(ff_r)
 
-    def poll(self):
-        """Polls the forcefield object to check if it has finished."""
+    def poll(self, idle=False):
+        """Completes the requests whose rotated structures have all been
+        evaluated (the forcefield that evaluates them is polled on its own)."""
 
-        with self._threadlock:
-            for r in self.requests:
-                if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
-                    r["t_finished"] = time.time()
-                    self.gather(r)
-                    r["result"][0] -= self.offset
-                    r["status"] = "Done"
-                    r._event_done.set()
-                    self.release(r, lock=False)
+        progress = False
+        # a copy of the list, as the completed requests are removed from it
+        for r in list(self.requests):
+            if r["status"] == "Running" and self.check_finish(r):
+                self.gather(r)
+                r["result"][0] -= self.offset
+                r.finish(r["result"])
+                self.release(r)
+                progress = True
+        return progress
 
 
 class PhotonDriver:
@@ -2099,7 +2061,6 @@ class FFCavPhSocket(FFSocket):
         pars=None,
         dopbc=False,
         active=np.array([-1]),
-        threaded=True,
         interface=None,
         charge_array=None,
         apply_photon=True,
@@ -2137,7 +2098,7 @@ class FFCavPhSocket(FFSocket):
 
         # a socket to the communication library is created or linked
         super(FFCavPhSocket, self).__init__(
-            latency, offset, name, pars, dopbc, active, threaded, interface
+            latency, offset, name, pars, dopbc, active, interface
         )
 
         # definition of independent baths
@@ -2156,7 +2117,9 @@ class FFCavPhSocket(FFSocket):
             apply_photon=apply_photon, E0=E0, omega_c=omega_c, ph_rep=ph_rep
         )
 
-        self._getallcount = 0
+        # requests for the whole system, completed once those of their baths
+        # (in `requests`, evaluated by the clients) are done
+        self.cavity_requests = []
 
     def calc_dipole_xyz_mm(self, pos, n_bath, charge_array_bath):
         """
@@ -2179,9 +2142,10 @@ class FFCavPhSocket(FFSocket):
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 softexit.trigger(
-                    "The size of charge array = {}  does not match the size of atoms = {} ".format(
+                    status="bad",
+                    message="The size of charge array = {}  does not match the size of atoms = {} ".format(
                         np.size(charge_array_bath), np.size(pos_bath[::3])
-                    )
+                    ),
                 )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
@@ -2248,27 +2212,15 @@ class FFCavPhSocket(FFSocket):
         return combined
 
     def queue(self, atoms, cell, reqid=-1):
-        """Adds a request.
-
-        Note that the pars dictionary need to be sent as a string of a
-        standard format so that the initialisation of the driver can be done.
+        """Queues a request to the clients for each independent bath, and
+        returns a request for the whole system, which `poll` completes once
+        those of the baths are done.
 
         Args:
             atoms: An Atoms object giving the atom positions.
             cell: A Cell object giving the system box.
-            pars: An optional dictionary giving the parameters to be sent to the
-                driver for initialisation. Defaults to {}.
             reqid: An optional integer that identifies requests of the same type,
                e.g. the bead index
-
-        Returns:
-            A list giving the status of the request of the form {'pos': An array
-            giving the atom positions folded back into the unit cell,
-            'cell': Cell object giving the system box, 'pars': parameter string,
-            'result': holds the result as a list once the computation is done,
-            'status': a string labelling the status of the calculation,
-            'id': the id of the request, usually the bead number, 'start':
-            the starting time for the calculation, used to check for timeouts.}.
         """
 
         par_str = " "
@@ -2279,7 +2231,7 @@ class FFCavPhSocket(FFSocket):
         else:
             par_str = " "
 
-        pbcpos = dstrip(atoms.q).copy()
+        pbcpos = np.array(to_numpy(atoms.q))
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -2316,13 +2268,15 @@ class FFCavPhSocket(FFSocket):
             iactive_local = self.iactive[0:ndim_local]
             # Let's try to do PBC for the small regions
             if self.dopbc:
-                cell.array_pbc(pbcpos_local)
+                pbcpos_local = xp.asarray(pbcpos_local)
+                pbcpos_local = cell.array_pbc(pbcpos_local)
+                pbcpos_local = to_numpy(pbcpos_local)
             newreq_local = ForceRequest(
                 {
                     "id": int(reqid * self.n_independent_bath) + idx,
                     "pos": pbcpos_local,
                     "active": iactive_local,
-                    "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                    "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
                     "pars": par_str,
                     "result": None,
                     "status": "Queued",
@@ -2334,44 +2288,73 @@ class FFCavPhSocket(FFSocket):
             )
             newreq_lst.append(newreq_local)
 
-        with self._threadlock:
-            for newreq in newreq_lst:
-                self.requests.append(newreq)
-                self._getallcount += 1
+        for newreq in newreq_lst:
+            self.requests.append(newreq)
+        scheduler.watch(self)
 
-        if not self.threaded:
-            self.poll()
+        now = time.time()
+        request = ForceRequest(
+            {
+                "id": reqid,
+                "pos": pbcpos,
+                "active": self.iactive,
+                "cell": (np.array(to_numpy(cell.h)), np.array(to_numpy(cell.ih))),
+                "pars": par_str,
+                "result": None,
+                "status": "Running",
+                "start": -1,
+                "t_queued": now,
+                "t_dispatched": now,
+                "t_finished": 0,
+                "baths": newreq_lst,
+            }
+        )
+        self.cavity_requests.append(request)
+        return request
 
-        # sleeps until all the new requests have been evaluated
-        for self.request in newreq_lst:
-            while self.request["status"] != "Done":
-                if self.request["status"] == "Exit" or softexit.triggered:
-                    # now, this is tricky. we are stuck here and we cannot return meaningful results.
-                    # if we return, we may as well output wrong numbers, or mess up things.
-                    # so we can only call soft-exit and wait until that is done. then kill the thread
-                    # we are in.
-                    softexit.trigger(" @ FORCES : cannot return so will die off here")
-                    while softexit.exiting:
-                        time.sleep(self.latency)
-                    sys.exit()
-                self.request._event_done.wait(timeout=1.0)
+    def poll(self, idle=False):
+        """Exchanges data with the clients, and completes the requests whose
+        baths have all been evaluated, or stops those with a stopped bath."""
 
-            """
-            with self._threadlock:
-                self._getallcount -= 1
+        progress = super().poll(idle)
+        for request in self.cavity_requests:
+            if request["status"] != "Running":
+                continue
+            statuses = [r["status"] for r in request["baths"]]
+            if "Exit" in statuses:
+                request["status"] = "Exit"
+                progress = True
+            elif all(status == "Done" for status in statuses):
+                request.finish(self._combine(request))
+                progress = True
+        return progress
 
-            # releases just once, but wait for all requests to be complete
-            if self._getallcount == 0:
-                self.release(self.request)
-                self.request = None
-            else:
-                while self._getallcount > 0:
-                    time.sleep(self.latency)
-            """
-            self.release(self.request)
-            self.request = None
+    def release(self, request):
+        """Removes a request for the whole system, or for one of its baths."""
 
-        # ...atomic forces have been calculated at this point
+        if request in self.cavity_requests:
+            self.cavity_requests.remove(request)
+        else:
+            super().release(request)
+
+    def stop(self):
+        """Marks all the pending requests as stopped, and closes the socket."""
+
+        for r in self.cavity_requests:
+            r["status"] = "Exit"
+        super().stop()
+
+    def _combine(self, request):
+        """Returns the results for the whole system, from those of its baths
+        and the contributions of the photons."""
+
+        newreq_lst = request["baths"]
+        for newreq in newreq_lst:
+            self.release(newreq)
+        pbcpos = request["pos"]
+        pbcpos_atoms, pbcpos_phs = self.ph.split_atom_ph_coord(pbcpos)
+        ndim_tot = np.size(pbcpos_atoms)
+        ndim_local = int(ndim_tot // self.n_independent_bath)
 
         # 3. At this moment, we combine the small requests to a big mega request (updated results)
         result_tot = [0.0, np.zeros(len(pbcpos), float), np.zeros((3, 3), float), {}]
@@ -2400,16 +2383,21 @@ class FFCavPhSocket(FFSocket):
                     has_dipole_der = ("dipole" in extra) and (
                         "dipole_derivative" in extra
                     )
-                    check_dipole_der = (len(extra["dipole"]) == 3) and (
-                        len(extra["dipole_derivative"])
-                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    check_dipole_der = (
+                        has_dipole_der
+                        and (len(extra["dipole"]) == 3)
+                        and (
+                            len(extra["dipole_derivative"])
+                            == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                        )
                     )
                     if not has_dipole_der or not check_dipole_der:
                         softexit.trigger(
-                            "Dipole surface is turned on, but the required dipole information is not provided in extras. \
+                            status="bad",
+                            message="Dipole surface is turned on, but the required dipole information is not provided in extras. \
                             Please check if the driver provides the dipole and its derivative information in extras, \
                             and make sure the size of dipole and dipole derivative information matches the number of atoms. \
-                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`.",
                         )
 
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
@@ -2428,7 +2416,8 @@ class FFCavPhSocket(FFSocket):
                         != int(len(pbcpos) // 3)
                     ):
                         softexit.trigger(
-                            "Total number of photons + molecules does not match total number of particles"
+                            status="bad",
+                            message="Total number of photons + molecules does not match total number of particles",
                         )
                     # 4. calculate total dipole moment array for N baths
                     dx_array, dy_array, _ = self.calc_dipole_xyz_mm(
@@ -2467,22 +2456,4 @@ class FFCavPhSocket(FFSocket):
             result_tot[1][ndim_tot:] = f_ph
 
         result_tot[0] -= self.offset
-
-        # At this moment, we have sucessfully gathered the CavMD forces
-        newreq = ForceRequest(
-            {
-                "id": reqid,
-                "pos": pbcpos,
-                "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
-                "pars": par_str,
-                "result": result_tot,
-                "status": newreq_lst[-1]["status"],
-                "start": newreq_lst[0]["start"],
-                "t_queued": newreq_lst[0]["t_queued"],
-                "t_dispatched": newreq_lst[0]["t_dispatched"],
-                "t_finished": newreq_lst[-1]["t_finished"],
-            }
-        )
-
-        return newreq
+        return result_tot

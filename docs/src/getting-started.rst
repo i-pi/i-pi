@@ -14,9 +14,10 @@ compiled and installed. The ``i-pi`` file in the ``bin`` directory of
 the distribution is the main (executable) script, and can be run as long
 as the system has installed:
 
--  Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
-   compatible)
--  The Python numerical library NumPy
+-  Python version 3.10 or greater
+-  The Python numerical library NumPy, and ``array-api-compat``
+-  ``greenlet``, with which i-PI runs several systems, and waits for several
+   clients, in a single thread
 
 See :ref:`runningsimulations` for more details on how to launch i-PI.
 
@@ -248,6 +249,105 @@ until at least one client code has connected to the server before
 running any dynamics. Note that until this has happened the code is
 essentially idle, the only action that it performs is to periodically
 poll for incoming connections.
+
+.. _array-backends:
+
+Array backends and GPUs
+^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, i-PI stores positions, momenta, forces and all the other arrays
+of the simulation as numpy arrays. They can instead be stored as
+`PyTorch <https://pytorch.org>`_ tensors, on the CPU or on a GPU, by
+selecting the array backend when launching i-PI:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda input_file.xml
+
+``--backend`` is ``numpy`` (the default), ``torch`` or ``jax`` (experimental,
+see below), and ``--device`` is a device name understood by the library, e.g.
+``cpu``, ``cuda`` or ``cuda:1`` with PyTorch (the numpy backend only supports
+``cpu``). PyTorch and JAX are optional dependencies, that can be installed
+together with i-PI as ``pip install ipi[torch]`` and ``pip install ipi[jax]``
+(JAX for the CPU: for a GPU, follow the instructions of JAX).
+
+The backend is chosen at run time and is not part of the input: the same
+input and checkpoint files can be used with either backend, and the
+simulation results are the same up to rounding errors. The only exception
+is the stream of random numbers: with the torch and jax backends, the
+Gaussian noise used by the thermostats and to draw the initial velocities is
+generated directly on the device, by a PyTorch generator or from a JAX random
+key, so the trajectories differ from those obtained with numpy. The state of
+the generator, or the key, is stored in the checkpoint files, so restarts are
+reproducible on the same type of device; restarting on another type of device,
+or from a checkpoint written with another backend, re-initializes it from the
+seed (with a warning).
+
+Forcefields exchange numpy arrays with the client codes (and with most of the
+Python potentials of :ref:`ffdirect`), so with a GPU backend the positions and
+the forces are copied between host and device at each force evaluation. The
+potentials that work with the arrays of the backend, such as ``metatomic``,
+avoid these copies. The torch backend therefore pays off for large systems,
+when the cost of the integrator (normal-mode transformations, thermostats,
+barostats) becomes significant. For small systems the overhead of launching
+many small operations on the GPU (or of PyTorch on the CPU) makes the numpy
+backend faster.
+
+This overhead is reduced by ``--jit``, with which i-PI records the
+operations of an MD step as CUDA graphs after the first few steps, and then
+replays them, running the integrator several times faster:
+
+.. code-block::
+
+    > i-pi --backend torch --device cuda --jit input_file.xml
+
+The forces are still computed as usual, between the replays of the parts of
+the step that precede and follow each force evaluation, so any forcefield can
+be used. For direct forcefields whose potential works with the arrays of the
+backend, such as ``metatomic``, only the potential is evaluated between the
+replays, while the requests and the collection of the results are part of the
+graphs, and potentials that can be recorded too (``traceable``, such as
+``dummy``) are part of the graphs, so that the whole step is a single graph.
+The rotations of ``ffrotations`` are part of the graphs too when the
+forcefield it wraps is such a direct forcefield.
+The steps are replayed for NVE, NVT, NPT and NST dynamics (also path
+integral and with multiple time stepping) with the Langevin, SVR, PILE-L,
+PILE-G and GLE thermostats (also the normal-mode GLEs, such as PIGLET) and the
+isotropic, flexible and anisotropic barostats, with no thermostat, a Langevin
+or a GLE one on the barostat. With ``interleave`` (the
+default), the steps of several systems whose forces all come from such direct
+forcefields are recorded together, so that a batched forcefield
+(``batch_size``) evaluates the structures of all the systems at once, also in
+the replays; otherwise the systems are stepped one after the other. Replica
+exchange is supported, unless the replicas have a barostat or different
+weights of the forces, which are fixed in the graphs. The other simulations
+run as usual, with a warning: other motions, thermostats or barostats, fixed
+atoms, open paths, bosons, and other motions of several systems. ``--jit``
+needs the torch backend on a CUDA device, or the jax backend: with numpy, or
+torch on the CPU, i-PI stops with an error. The parameters that are fixed in the recorded
+graphs, such as the time step, or the temperature and the pressure with a
+barostat, cannot change while the steps are replayed: i-PI stops with an error
+if they do, or if a step cannot be recorded (the simulation can then be
+restarted without ``--jit``).
+
+``--backend jax`` (experimental) stores the arrays as
+`JAX <https://docs.jax.dev>`_ arrays, with ``--device cpu`` or ``gpu``. It
+runs molecular dynamics, replays, ramps and Monte Carlo exchanges of atoms,
+but not yet constrained dynamics, geometry optimization, NEB, string methods,
+phonons, vibrational and SCP analyses, instantons, planetary models, kinetic
+Monte Carlo, bosonic exchange or open paths (i-PI stops
+with an error at the start for the motions it cannot run), and it is
+much slower than numpy, as JAX executes the operations one at a time. With
+``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few
+steps, for the same dynamics that are replayed as CUDA graphs with torch, if
+the forces are computed by a direct forcefield whose potential can be
+compiled by JAX (``traceable``, at present only ``dummy``): the whole step, including the
+force evaluation, is then compiled, together with the steps of the other
+systems as with torch. Otherwise, the steps run as usual, as they do with
+``ffrotations``, whose random rotations cannot be compiled by JAX. As
+with torch, the parameters that are fixed in the compiled step, such as the
+time step, cannot change, and i-PI stops with an error if a step cannot be
+compiled.
 
 .. _runningclients:
 

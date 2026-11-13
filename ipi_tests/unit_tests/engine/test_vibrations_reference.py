@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from ipi.engine.motion.vscf import IMF
+from ipi.engine.motion.vscf import IMF, _coupling_on_grid
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.tools.instanton_postproc import cm2au, instanton_compute
 from ipi_tests.unit_tests.engine.inputs import motion_input
 
@@ -63,8 +64,10 @@ def test_independent_modes_recover_exact_harmonic_free_energy(simulation, reuse_
             )
 
 
-@pytest.mark.parametrize("reuse_map", [False, True])
-def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(simulation, reuse_map):
+@pytest.mark.parametrize("reuse_map,nparallel", [(False, 1), (True, 1), (False, 2)])
+def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(
+    simulation, reuse_map, nparallel
+):
     options = ET.Element("normalmodes", mode="vscf")
     for key, value in {
         "nint": 51,
@@ -72,6 +75,7 @@ def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(simulation, reuse_map
         "nevib": 8,
         "grid": "False",
         "solve": "False",
+        "nparallel": nparallel,
     }.items():
         ET.SubElement(options, key).text = str(value)
     masses = np.repeat([2.0, 3.0], 3)
@@ -103,6 +107,8 @@ def test_vscf_pair_mapping_has_zero_harmonic_mode_coupling(simulation, reuse_map
 
 
 def test_vscf_solver_with_exact_uncoupled_maps(simulation):
+    """The free energies per primitive cell include the energy of the minimum
+    per primitive cell once"""
     options = ET.Element("normalmodes", mode="vscf")
     for key, value in {
         "nint": 101,
@@ -110,6 +116,7 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
         "nevib": 20,
         "grid": "True",
         "solve": "True",
+        "nprim": 2,
     }.items():
         ET.SubElement(options, key).text = str(value)
     masses = np.repeat([2.0, 3.0], 3)
@@ -118,6 +125,8 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
     )
     root = motion_input("normalmodes", options)
     root.find("system/beads/q").text = str([0.0] * 6)
+    # the energy of the minimum is 0.7
+    ET.SubElement(root.find("ffdirect"), "offset").text = "-0.7"
     temp = root.find("system/ensemble/temperature")
     temp.attrib.clear()
     temp.text = ".2"
@@ -136,6 +145,10 @@ def test_vscf_solver_with_exact_uncoupled_maps(simulation):
         np.testing.assert_allclose(calc.evals_vscf, expected, atol=1e-11)
         np.testing.assert_allclose(calc.rho_grids.sum(axis=1), 1, atol=1e-12)
         assert sim.syslist[0].motion.finished
+        omega = np.sqrt(0.5 / masses)
+        free = np.sum(omega / 2 + 0.2 * np.log1p(-np.exp(-omega / 0.2)))
+        assert calc.total_imf_free_energy == pytest.approx((0.7 + free) / 2, abs=1e-8)
+        assert calc.total_vscf_free_energy == pytest.approx((0.7 + free) / 2, abs=1e-8)
 
 
 def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
@@ -163,23 +176,7 @@ def test_reactant_postprocessing_recovers_harmonic_frequencies(simulation):
     )
 
 
-@pytest.mark.parametrize(
-    "mode",
-    [
-        "fd",
-        *[
-            pytest.param(
-                mode,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="NMFD transform discards the refined matrix and restores the input matrix",
-                ),
-            )
-            for mode in ("nmfd", "enmfd")
-        ],
-    ],
-)
+@pytest.mark.parametrize("mode", ["fd", "nmfd", "enmfd"])
 def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
     options = ET.Element("vibrations", mode=mode)
     masses = np.repeat([2.0, 3.0], 3)
@@ -194,5 +191,165 @@ def test_phonon_refinement_recovers_harmonic_force_constants(simulation, mode):
         motion.exit_on_convergence = False
         sim.run(steps=7, write_outputs=False)
         np.testing.assert_allclose(
-            motion.refdynmatrix, np.diag(0.5 / masses), atol=1e-10
+            to_numpy(motion.refdynmatrix), np.diag(0.5 / masses), atol=1e-10
         )
+
+
+class SeparableMorse:
+    """Driver for U = sum_k D (1 - exp(-a_k x_k))^2 + c x_i^2 x_j^2 over the
+    Cartesian coordinates, with curvatures k = 2 D a_k^2 at the minimum."""
+
+    def __init__(self, depth, curvatures, coupling=0.0, pair=(0, 1)):
+        self.depth = depth
+        self.a = np.sqrt(np.asarray(curvatures) / (2 * depth))
+        self.coupling, self.pair = coupling, pair
+
+    def __call__(self, cell, positions):
+        x = positions.reshape(-1)
+        e = np.exp(-self.a * x)
+        energy = np.sum(self.depth * (1 - e) ** 2)
+        force = -2 * self.depth * self.a * e * (1 - e)
+        i, j = self.pair
+        energy += self.coupling * x[i] ** 2 * x[j] ** 2
+        force[i] -= 2 * self.coupling * x[i] * x[j] ** 2
+        force[j] -= 2 * self.coupling * x[j] * x[i] ** 2
+        return energy, force.reshape(positions.shape), np.zeros((3, 3)), ""
+
+
+MASSES = np.repeat([2.0, 3.0], 3)
+CURVATURES = np.array([0.5, 0.62, 0.74, 0.86, 0.98, 1.1])
+
+
+def morse_levels(omega, depth):
+    """Bound levels of a Morse oscillator of frequency omega and depth D (hbar = 1)."""
+    n = np.arange(int(2 * depth / omega - 0.5) + 1)
+    return omega * (n + 0.5) - (omega * (n + 0.5)) ** 2 / (4 * depth)
+
+
+def thermal(levels, temperature):
+    """Free and internal energy of a set of levels."""
+    weights = np.exp(-(levels - levels[0]) / temperature)
+    free = levels[0] - temperature * np.log(weights.sum())
+    return free, np.sum(levels * weights) / weights.sum()
+
+
+def coupled_morse_levels(depth, k, m, coupling, npts=160, nstates=30):
+    """Levels of two Morse oscillators (curvatures k, masses m) coupled by
+    c x_1^2 x_2^2, diagonalised in the product of their lowest eigenstates,
+    computed with a sinc-DVR in mass-weighted coordinates."""
+    states, x2 = [], []
+    for ki, mi in zip(k, m):
+        a = np.sqrt(ki / (2 * depth * mi))
+        q = np.linspace(-3 / a / 2, 12 / a / 2, npts)
+        dq = q[1] - q[0]
+        n = np.arange(npts)
+        diff = n[:, None] - n[None, :]
+        kinetic = np.where(
+            diff == 0, np.pi**2 / 3, 2.0 * (-1.0) ** diff / np.where(diff, diff, 1) ** 2
+        ) / (2 * dq**2)
+        levels, vectors = np.linalg.eigh(
+            kinetic + np.diag(depth * (1 - np.exp(-a * q)) ** 2)
+        )
+        vectors = vectors[:, :nstates]
+        states.append(levels[:nstates])
+        x2.append(vectors.T @ np.diag(q**2 / mi) @ vectors)
+    hamiltonian = np.diag(np.add.outer(*states).ravel()) + coupling * np.kron(*x2)
+    return np.linalg.eigvalsh(hamiltonian)
+
+
+def morse_input(mode, temperature, options):
+    root = ET.Element("normalmodes", mode=mode)
+    for key, value in options.items():
+        ET.SubElement(root, key).text = str(value)
+    ET.SubElement(root, "dynmat", shape="(6,6)").text = str(
+        np.diag(CURVATURES / MASSES).ravel().tolist()
+    )
+    root = motion_input("normalmodes", root)
+    root.find("system/beads/q").text = str([0.0] * 6)
+    temp = root.find("system/ensemble/temperature")
+    temp.attrib.clear()
+    temp.text = str(temperature)
+    return ET.tostring(root, encoding="unicode")
+
+
+@pytest.mark.parametrize("temperature", [0.2, 2e-4])
+def test_independent_modes_are_exact_for_separable_morse_potentials(
+    simulation, temperature
+):
+    """IMF is exact for a potential that is a sum of Morse potentials along the
+    normal modes, also at temperatures at which the Boltzmann factors underflow"""
+
+    depth = 20.0
+    options = {"nint": 301, "nbasis": 16, "nevib": 40, "athresh": 1e-9}
+    with simulation(morse_input("imf", temperature, options)) as sim:
+        sim.syslist[0].forces.ff["harmonic"].driver = SeparableMorse(depth, CURVATURES)
+        sim.run(steps=7, write_outputs=False)
+        calc = sim.syslist[0].motion.calc
+        exact = np.sum(
+            [
+                thermal(morse_levels(omega, depth), temperature)
+                for omega in np.sqrt(CURVATURES / MASSES)
+            ],
+            axis=0,
+        )
+        assert calc.total_anhar_free_energy == pytest.approx(exact[0], abs=2e-6)
+        assert calc.total_anhar_internal_energy == pytest.approx(exact[1], abs=2e-6)
+
+
+@pytest.mark.parametrize("alpha", [1.0, 0.5])
+def test_vscf_free_energy_of_coupled_morse_modes(simulation, alpha):
+    """The VSCF correction to the free energy of two coupled Morse modes is an
+    upper bound to the exact one, larger by a term of second order in the
+    coupling (it would be twice as large if the pair coupling were counted twice).
+    Only the modes in modes.dat are treated, and the mixing of the mean field
+    (alpha) does not change the result"""
+
+    depth, coupling, temperature = 40.0, 1e-3, 0.5
+    # coordinates 1 and 4 are modes 2 and 3; mode 0 (coordinate 0) is left out
+    pair = (1, 4)
+    options = {
+        "nint": 201,
+        "nbasis": 30,
+        "nevib": 40,
+        "athresh": 1e-9,
+        "alpha": alpha,
+        "grid": "True",
+        "solve": "True",
+    }
+    # the modes to treat are read when the motion is bound
+    np.savetxt("i-pi.modes.dat", [[1, 2, 3, 4, 5]], fmt="%d")
+    with simulation(morse_input("vscf", temperature, options)) as sim:
+        sim.syslist[0].forces.ff["harmonic"].driver = SeparableMorse(
+            depth, CURVATURES, coupling, pair
+        )
+        sim.run(steps=200, write_outputs=False)
+        assert sim.syslist[0].motion.finished
+        calc = sim.syslist[0].motion.calc
+        assert calc.inms == [1, 2, 3, 4, 5]
+        omega = np.sqrt(CURVATURES / MASSES)
+        uncoupled = [
+            thermal(morse_levels(omega[k], depth), temperature)[0] for k in pair
+        ]
+        coupled = coupled_morse_levels(
+            depth, CURVATURES[list(pair)], MASSES[list(pair)], coupling
+        )
+        exact = thermal(coupled, temperature)[0] - sum(uncoupled)
+        # the corrections to the uncoupled free energy are compared, as the VSCF
+        # solver uses a fixed basis for the one-dimensional problems
+        correction = calc.total_vscf_free_energy - calc.total_imf_free_energy
+        assert correction - exact > -2e-7
+        assert correction - exact < 1e-2 * exact
+
+
+def test_pair_coupling_of_a_polynomial_potential():
+    """The pair coupling V(qi, qj) - V(qi, 0) - V(0, qj) + V(0, 0) is extracted
+    exactly from a cubic polynomial sampled on a grid, indexed as [j, i]"""
+
+    qi, qj = np.linspace(-1.2, 1.5, 10), np.linspace(-0.8, 1.1, 8)
+    x, y = qi[:, None], qj[None, :]
+    v = 0.2 + 1.3 * x**2 + 0.7 * y**2 + 0.4 * x * y + 0.05 * x**3 - 0.1 * x * y**2
+    igrid, jgrid = np.linspace(-1.2, 1.5, 7), np.linspace(-0.8, 1.1, 5)
+    expected = 0.4 * np.outer(jgrid, igrid) - 0.1 * np.outer(jgrid**2, igrid)
+    np.testing.assert_allclose(
+        _coupling_on_grid(qi, qj, v.ravel(), igrid, jgrid), expected, atol=1e-12
+    )

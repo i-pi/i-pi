@@ -20,9 +20,7 @@ from ipi.engine.outputs import OutputMaker
 
 def evaluate(ff, q, h):
     request = ForceRequest(pos=q.ravel().copy(), cell=(h, np.linalg.inv(h)))
-    ff.evaluate(request)
-    assert request["status"] == "Done" and request._event_done.is_set()
-    return request["result"]
+    return ff.evaluate(request)
 
 
 @pytest.mark.parametrize("kind", ["lj", "debye", "dmd"])
@@ -30,9 +28,7 @@ def test_forcefield_gradient_and_translation_properties(kind):
     q = np.array([[0.1, 0.2, 0.3], [1.4, 0.3, 0.2], [0.3, 1.7, -0.1]])
     h = np.eye(3) * 10
     if kind == "lj":
-        ff = FFLennardJones(
-            pars={"eps": 0.7, "sigma": 1.1}, dopbc=False, threaded=False
-        )
+        ff = FFLennardJones(pars={"eps": 0.7, "sigma": 1.1}, dopbc=False)
     elif kind == "debye":
         ff = FFDebye(H=np.diag(np.linspace(0.5, 1.3, 9)), xref=np.zeros(9), vref=0.2)
     else:
@@ -91,10 +87,10 @@ def test_committee_force_differentiates_combined_energy(baseline):
     )
     cell = Cell(np.eye(3) * 10)
     atoms = Atoms(1)
-    atoms.m[:] = 1
+    atoms.m_[:] = 1
 
     def compute(q):
-        atoms.q[:] = q
+        atoms.q_[:] = q
         request = ff.queue(atoms, cell)
         for member in members:
             member.poll()
@@ -227,16 +223,19 @@ def test_committee_saves_uncertain_structures(tmp_path):
     ff.bind(OutputMaker())
     try:
         atoms = Atoms(1)
-        atoms.q[:] = [1, 0, 0]
+        atoms.q_[:] = [1, 0, 0]
         request = ff.queue(atoms, Cell(np.eye(3) * 10))
+        for member in members:
+            member.poll()
         ff.poll()
         ff.active_file.force_flush()
         saved = json.loads((tmp_path / "uncertain.json").read_text())
         assert saved["position"] == [1, 0, 0]
         assert saved["cell"] == (np.eye(3) * 10).ravel().tolist()
         assert saved["uncertainty"] == pytest.approx(np.sqrt(0.5))
-        assert request._event_done.is_set()
+        assert request["status"] == "Done"
         assert all(not member.requests for member in members)
+        ff.release(request)
     finally:
         ff.active_file.close_stream()
 
@@ -257,16 +256,16 @@ def test_dmd_rejects_wrong_number_of_pair_couplings():
 
 def test_committee_waits_for_every_member():
 
-    members = [ForceField(threaded=True), ForceField(threaded=True)]
+    members = [ForceField(), ForceField()]
     ff = FFCommittee(fflist=members)
     request = ff.queue(Atoms(1), Cell(np.eye(3)))
     members[0].poll()
     ff.poll()
     assert request["result"] is None
-    assert not request._event_done.is_set()
+    assert request["status"] != "Done"
     members[1].poll()
     ff.poll()
-    assert request._event_done.is_set()
+    assert request["status"] == "Done"
     assert request["result"][0] == 0
     assert request["result"][3]["committee_uncertainty"] == 0
     assert all(not member.requests for member in members)

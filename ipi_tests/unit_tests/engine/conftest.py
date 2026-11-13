@@ -1,48 +1,15 @@
 """Shared simulation fixtures for engine tests."""
 
-import io
 import xml.etree.ElementTree as ET
-from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from ipi.engine.simulation import Simulation
-from ipi.scripting import InteractiveSimulation
-from ipi.utils.softexit import softexit
+from ipi.utils.array_backend import xp
+from ipi_tests import test_tools
 from ipi_tests.unit_tests.engine.inputs import PrescribedPolynomial, harmonic_input
-
-
-@pytest.fixture
-def simulation(tmp_path, monkeypatch):
-    """Isolate output and close force services even when an assertion fails."""
-    monkeypatch.chdir(tmp_path)
-    # The soft-exit monitor polls at this interval; joining it otherwise takes ~1 s.
-    monkeypatch.setattr("ipi.utils.softexit.SOFTEXITLATENCY", 0.01)
-
-    @contextmanager
-    def create(xml):
-        softexit.reset()
-        sim = None
-        try:
-            sim = InteractiveSimulation(io.StringIO(xml))
-            yield sim
-        finally:
-            if sim is not None:
-                sim.stop()
-            # Stop monitors before reset replaces the shared loop controls.
-            for thread, loop_control in softexit.tlist:
-                if loop_control is not None:
-                    loop_control[0] = False
-            for thread, _ in softexit.tlist:
-                thread.join()
-            softexit.reset()
-
-    try:
-        yield create
-    finally:
-        softexit.reset()
 
 
 @pytest.fixture
@@ -66,8 +33,10 @@ def restart_states(simulation):
 
 
 @pytest.fixture
-def reference_system():
-    """Bound read-only system with a quartic potential, nonuniform path and triclinic cell."""
+def reference_system(select_backend):
+    """Bound read-only system with a quartic potential, nonuniform path and triclinic
+    cell, with the backend of --ipi-backend."""
+    select_backend(test_tools.ipi_backend, test_tools.ipi_device)
 
     def create(count=6, alpha=0.3, style="rpmd", frequencies=()):
         root = ET.fromstring(harmonic_input(nbeads=count))
@@ -92,10 +61,10 @@ def reference_system():
         )
         masses = np.array([2.0, 3.0])
         h = np.array([[6.0, 1.0, 0.5], [0.0, 5.0, 0.7], [0.0, 0.0, 4.0]])
-        s.beads.q[:] = q
-        s.beads.p[:] = p
-        s.beads.m[:] = masses
-        s.cell.h[:] = h
+        s.beads.q_[:] = xp.asarray(q)
+        s.beads.p_[:] = xp.asarray(p)
+        s.beads.m_[:] = xp.asarray(masses)
+        s.cell.h_[:] = xp.asarray(h)
         s.forces.alpha = alpha
         return s, SimpleNamespace(
             q=q,

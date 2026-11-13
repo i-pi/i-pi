@@ -14,7 +14,6 @@ from copy import copy
 import numpy as np
 
 import ipi.engine.thermostats as ethermostats
-from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 
 __all__ = ["InputThermo"]
@@ -120,7 +119,7 @@ class InputThermoBase(Input):
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "The covariance matrix for GLE thermostats.",
+                "help": "The covariance matrix for GLE thermostats. If it is not given, it is the identity times the temperature of the ensemble, which gives canonical sampling. A C that is not diagonal (as in quantum thermostats, e.g. PIGLET) breaks equipartition, and makes methods that assume the classical Boltzmann distribution, such as metadynamics, atom swaps and replica exchange, biased.",
                 "dimension": "temperature",
             },
         ),
@@ -205,20 +204,20 @@ class InputThermoBase(Input):
         elif type(thermo) is ethermostats.ThermoGLE:
             self.mode.store("gle")
             self.A.store(thermo.A)
-            if thermo._C._func is None:
+            if thermo.C_._status.func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoNMGLE:
             self.mode.store("nm_gle")
             self.A.store(thermo.A)
-            if thermo._C._func is None:
+            if thermo.C_._status.func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoNMGLEG:
             self.mode.store("nm_gle_g")
             self.A.store(thermo.A)
             self.tau.store(thermo.tau)
-            if thermo._C._func is None:
+            if thermo.C_._status.func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoCL:
@@ -269,22 +268,19 @@ class InputThermoBase(Input):
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
-            thermo = ethermostats.ThermoGLE(A=self.A.fetch(), C=rC)
-            thermo.s = self.s.fetch()
+            thermo = ethermostats.ThermoGLE(A=self.A.fetch(), C=rC, s=self.s.fetch())
         elif self.mode.fetch() == "nm_gle":
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
-            thermo = ethermostats.ThermoNMGLE(A=self.A.fetch(), C=rC)
-            thermo.s = self.s.fetch()
+            thermo = ethermostats.ThermoNMGLE(A=self.A.fetch(), C=rC, s=self.s.fetch())
         elif self.mode.fetch() == "nm_gle_g":
             rC = self.C.fetch()
             if len(rC) == 0:
                 rC = None
             thermo = ethermostats.ThermoNMGLEG(
-                A=self.A.fetch(), C=rC, tau=self.tau.fetch()
+                A=self.A.fetch(), C=rC, tau=self.tau.fetch(), s=self.s.fetch()
             )
-            thermo.s = self.s.fetch()
         elif self.mode.fetch() == "cl":
             thermo = ethermostats.ThermoCL(
                 tau=self.tau.fetch(),

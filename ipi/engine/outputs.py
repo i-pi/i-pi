@@ -16,6 +16,7 @@ from ipi.utils.messages import verbosity, warning
 from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit
 from ipi.utils.depend import *
+from ipi.utils.array_backend import xp, to_numpy
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
@@ -104,7 +105,15 @@ class OutputMaker:
 
 
 class BaseOutput(object):
-    """Base class for outputs. Deals with flushing upon close and little more"""
+    """Base class for outputs. Deals with flushing upon close, and with the
+    soft exits that go back to the last stored state.
+
+    Attributes:
+       marks: The file name and the position of each stream at its first
+          write since the state was last stored, or None for streams that
+          are not files.
+       nstored: The value of `softexit.nstored` when `marks` were recorded.
+    """
 
     def __init__(self, filename="out", stride=1):
         """Initializes the class"""
@@ -112,12 +121,51 @@ class BaseOutput(object):
         self.stride = stride
         self.filename = filename
         self.out = None
+        self.marks = {}
+        self.nstored = -1
 
     def softexit(self):
         """Emergency call when i-pi must exit quickly"""
 
+        if softexit.rollback:
+            self.rollback()
         self.close_stream()
         self.out = None  # anything written later is discarded
+
+    def mark(self, stream):
+        """Records the position of `stream` at its first write since the
+        state was last stored: a soft exit that goes back to that state
+        truncates the file there."""
+
+        if self.nstored != softexit.nstored:
+            self.nstored = softexit.nstored
+            self.marks = {}
+        if stream not in self.marks:
+            try:
+                self.marks[stream] = (os.path.abspath(stream.name), stream.tell())
+            except (AttributeError, OSError):
+                # e.g. a pipe, which cannot be truncated
+                self.marks[stream] = None
+
+    def rollback(self, flush=True):
+        """Removes what was written since the state was last stored. A file
+        that was empty then is removed. Without `flush`, only the data that
+        has reached the files is removed (e.g. by the watchdog of the soft
+        exit, which must not use the streams)."""
+
+        if self.nstored != softexit.nstored:
+            return
+        for stream, mark in self.marks.items():
+            if mark is None:
+                continue
+            name, position = mark
+            if flush and not stream.closed:
+                stream.flush()
+            if position == 0:
+                os.remove(name)
+            elif os.path.getsize(name) > position:
+                os.truncate(name, position)
+        self.marks = {}
 
     def close_stream(self):
         """Closes the output stream"""
@@ -138,6 +186,7 @@ class BaseOutput(object):
         self.system = system
         self.open_stream(mode)
         softexit.register_function(self.softexit)
+        softexit.register_emergency(self.rollback, flush=False)
 
     def force_flush(self):
         """Tries hard to flush the output stream"""
@@ -156,8 +205,10 @@ class BaseOutput(object):
     def write(self, data):
         """Writes data to file"""
 
-        if self.out is not None:
-            return self.out.write(data)
+        with softexit.io_lock:
+            if self.out is not None:
+                self.mark(self.out)
+                return self.out.write(data)
 
     def active(self):
         """Whether we will output at this step"""
@@ -273,7 +324,9 @@ class PropertyOutput(BaseOutput):
 
         if not self.active():
             return
-        self.out.write("  ")
+        # the properties are evaluated first, as they may wait for forces;
+        # the row is then written in one go, under the lock of the outputs
+        row = ["  "]
         for what in self.outlist:
             try:
                 quantity, dimension, unit = self.system.properties[what]
@@ -281,18 +334,25 @@ class PropertyOutput(BaseOutput):
                     quantity = unit_to_user(dimension, unit, quantity)
             except KeyError:
                 raise KeyError(what + " is not a recognized property")
-            if not hasattr(quantity, "__len__"):
-                self.out.write(write_type(float, quantity) + "   ")
+            quantity = to_numpy(quantity)
+            if quantity.ndim == 0:
+                row.append(write_type(float, quantity) + "   ")
             else:
                 for el in quantity:
-                    self.out.write(write_type(float, el) + " ")
+                    row.append(write_type(float, el) + " ")
+        row.append("\n")
 
-        self.out.write("\n")
+        with softexit.io_lock:
+            if self.out is None:
+                return
+            self.mark(self.out)
+            for piece in row:
+                self.out.write(piece)
 
-        self.nout += 1
-        if self.flush > 0 and self.nout >= self.flush:
-            self.force_flush()
-            self.nout = 0
+            self.nout += 1
+            if self.flush > 0 and self.nout >= self.flush:
+                self.force_flush()
+                self.nout = 0
 
 
 class TrajectoryOutput(BaseOutput):
@@ -512,7 +572,15 @@ class TrajectoryOutput(BaseOutput):
                 flush=doflush,
             )
 
-    def write_traj(
+    def write_traj(self, *args, **kwargs):
+        """Prints out a frame of a trajectory (see _write_traj), under the
+        lock of the outputs, so that a frame reaches the file whole or not
+        at all when the watchdog of the soft exit truncates the outputs."""
+
+        with softexit.io_lock:
+            return self._write_traj(*args, **kwargs)
+
+    def _write_traj(
         self,
         data,
         what,
@@ -536,6 +604,7 @@ class TrajectoryOutput(BaseOutput):
               after each write to file or not.
         """
 
+        self.mark(stream)
         key = getkey(what)
         if key in ["extras", "extras_component_raw", "extras_bias"]:
             if key == "extras_component_raw":
@@ -571,10 +640,14 @@ class TrajectoryOutput(BaseOutput):
                     try:
                         if key == "extras_component_raw":
                             # don't partition into beads as there might be a different number when contracting
-                            floatarray = np.asarray(data[extra], dtype=float).squeeze()
+                            floatarray = np.asarray(
+                                [to_numpy(x) for x in data[extra]], dtype=float
+                            ).squeeze()
                         else:
                             # picks up the desired bead
-                            floatarray = np.asarray(data[extra][b], dtype=float)
+                            floatarray = np.asarray(
+                                to_numpy(data[extra][b]), dtype=float
+                            )
                         data_list.append(floatarray)
                     except:
                         # non-numerical field, just write as a string on a separate line
@@ -625,12 +698,12 @@ class TrajectoryOutput(BaseOutput):
             "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data[b]
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data[b])
         else:
             fatom = Atoms(self.system.beads.natoms)
-            fatom.names[:] = self.system.beads.names
-            fatom.q[:] = data
+            fatom.names_[:] = self.system.beads.names
+            fatom.q_[:] = xp.asarray(data)
 
         fcell = Cell()
         fcell.h = self.system.cell.h
@@ -687,7 +760,7 @@ class CheckpointOutput:
 
         self.filename = filename
         self.stride = stride
-        self._step = depend_value(name="step", value=step)
+        self.step_ = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._continued = False
 

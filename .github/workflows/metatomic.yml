@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - next
 
 concurrency:
   group: metatomic-${{ github.ref }}
@@ -17,7 +18,6 @@ jobs:
     env:
       COVERAGE_FILE: ${{ github.workspace }}/.coverage-metatomic
       COVERAGE_RCFILE: ${{ github.workspace }}/pyproject.toml
-      IPI_METATOMIC_MODEL: ${{ github.workspace }}/examples/clients/metatomic/pet-mad-xs-v1.6.0.pt
 
     steps:
       - uses: actions/checkout@v4
@@ -51,8 +51,10 @@ jobs:
       - name: Run metatomic unit tests
         run: |
           python -m coverage run -p --source=ipi -m pytest -v -ra \
+            --ipi-metatomic-model "$GITHUB_WORKSPACE/examples/clients/metatomic/pet-mad-xs-v1.6.0.pt" \
             ipi_tests/unit_tests/pes/test_metatomic.py \
-            ipi_tests/unit_tests/pes/test_metatomic_reference.py
+            ipi_tests/unit_tests/pes/test_metatomic_reference.py \
+            ipi_tests/unit_tests/pes/test_metatomic_backend.py
 
       - name: Run PET-MAD batched ffdirect example
         working-directory: examples/clients/metatomic
