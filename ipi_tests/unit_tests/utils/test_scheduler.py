@@ -44,6 +44,15 @@ class Counter:
         return []
 
 
+@pytest.fixture(autouse=True)
+def fresh_scheduler(monkeypatch):
+    """Each test gets its own scheduler: one whose tasks are stopped leaves
+    their requests queued, and the forcefield watched."""
+    monkeypatch.setattr(
+        scheduler._local, "scheduler", scheduler.Scheduler(), raising=False
+    )
+
+
 def test_wait_in_the_root_polls_without_tasks():
     ff = Counter()
     requests = [ff.queue(i) for i in range(3)]
