@@ -13,7 +13,7 @@ overwrite data given elsewhere.
 
 import numpy as np
 
-from ipi.utils.array_backend import xp
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.ensembles import Ensemble
@@ -119,7 +119,6 @@ def init_file(
        a Cell object as read from the final pdb frame.
     """
 
-    rfile = open(filename, "r")
     ratoms = []
 
     info(
@@ -127,16 +126,19 @@ def init_file(
         % (filename, dimension, units, cell_units),
         verbosity.low,
     )
-    while True:
-        # while loop, so that more than one configuration can be given
-        # so multiple beads can be initialized at once.
-        try:
-            ret = read_file(
-                mode, rfile, dimension=dimension, units=units, cell_units=cell_units
-            )
-        except EOFError:
-            break
-        ratoms.append(ret["atoms"])
+    with open(filename, "r") as rfile:
+        while True:
+            # while loop, so that more than one configuration can be given
+            # so multiple beads can be initialized at once.
+            try:
+                ret = read_file(
+                    mode, rfile, dimension=dimension, units=units, cell_units=cell_units
+                )
+            except EOFError:
+                break
+            ratoms.append(ret["atoms"])
+    if not ratoms:
+        raise ValueError(f"Empty initialization file {filename}")
     return ratoms, ret["cell"]  # if multiple frames, the last cell is returned
 
 
@@ -229,7 +231,7 @@ def init_vector(
         ):  # if there is a bead specifier then we return a single bead slice
             nbeads = 1
         natoms = len(rq) // (nbeads * 3)
-        rq.shape = (nbeads, 3 * natoms)
+        rq = rq.reshape(nbeads, 3 * natoms)
 
     return rq
 
@@ -383,7 +385,7 @@ class Initializer:
 
                 simul.cell.h = xp.asarray(rh)
                 if simul.cell.V == 0.0:
-                    ValueError("Cell provided has zero volume")
+                    raise ValueError("Cell provided has zero volume")
 
                 fcell = True
             elif k == "masses":
@@ -611,22 +613,21 @@ class Initializer:
 
             if k == "gle":
                 # read thermostat parameters from file
-                if not (hasattr(simul.ensemble, "thermostat")):
-                    raise ValueError(
-                        "Ensemble does not have a thermostat to initialize"
-                    )
-                if not (hasattr(simul.ensemble.thermostat, "s")):
+                thermostat = getattr(simul.motion, "thermostat", None)
+                if thermostat is None:
+                    raise ValueError("Motion does not have a thermostat to initialize")
+                if not (hasattr(thermostat, "s")):
                     raise ValueError(
                         "There is nothing to initialize in non-GLE thermostats"
                     )
-                ssimul = simul.ensemble.thermostat.s
+                ssimul = thermostat.s
                 if v.mode == "manual":
                     sinput = v.value.copy()
-                    if sinput.size() != ssimul.size():
+                    if sinput.size != xp_size(ssimul):
                         raise ValueError(
                             "Size mismatch in thermostat initialization data"
                         )
-                    sinput.shape = ssimul.shape
+                    sinput = sinput.reshape(tuple(ssimul.shape))
                 elif v.mode == "chk":
                     rmotion = init_chk(v.value)[2]
                     if not hasattr(rmotion, "thermostat") or not hasattr(
@@ -635,11 +636,11 @@ class Initializer:
                         raise ValueError(
                             "Checkpoint file does not contain usable thermostat data"
                         )
-                    sinput = rmotion.thermostat.s.copy()
-                    if sinput.shape != ssimul.shape:
+                    sinput = to_numpy(rmotion.thermostat.s).copy()
+                    if sinput.shape != tuple(ssimul.shape):
                         raise ValueError(
                             "Shape mismatch in thermostat initialization data"
                         )
 
                 # if all the preliminary checks are good, we can initialize the s's
-                ssimul[:] = xp.asarray(sinput)
+                thermostat.s = xp.asarray(sinput)

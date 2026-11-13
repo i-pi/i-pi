@@ -141,8 +141,8 @@ class Random(object):
 
         Should only be used with states generated from another similar random
         number generator, such as one from a previous run. If the state of the
-        torch generator is missing, or refers to a different device, the torch
-        generator keeps the state obtained from the seed.
+        torch generator is missing, or refers to a different type of device, the
+        torch generator keeps the state obtained from the seed.
         """
 
         torch_state = jax_state = None
@@ -165,11 +165,13 @@ class Random(object):
                     verbosity.low,
                 )
         if self._torch_rng is not None:
-            if torch_state is not None and torch_state["device"] == str(
-                self._torch_rng.device
-            ):
-                import torch
+            import torch
 
+            # compares the types, as e.g. "cuda" and "cuda:0" name the same device,
+            # and the states of the generators do not depend on the device index
+            if torch_state is not None and (
+                torch.device(torch_state["device"]).type == self._torch_rng.device.type
+            ):
                 self._torch_rng.set_state(
                     torch.tensor(torch_state["state"], dtype=torch.uint8)
                 )

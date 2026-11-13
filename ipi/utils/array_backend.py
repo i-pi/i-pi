@@ -99,6 +99,8 @@ def set_backend(name="numpy", device="cpu", jit=False):
             backend (see `ipi.engine.jit`).
     """
 
+    if name not in ("numpy", "torch", "jax"):
+        raise ValueError(f"Unknown array backend '{name}'")
     if jit and name != "jax" and (name != "torch" or not device.startswith("cuda")):
         raise ValueError(
             "jit requires the jax backend, or the torch backend on a CUDA device"
@@ -133,8 +135,6 @@ def set_backend(name="numpy", device="cpu", jit=False):
         jax.config.update("jax_default_device", jax_device)
         members = dict(vars(namespace))
         members.update(_creation_functions(namespace, jax_device, namespace.float64))
-    else:
-        raise ValueError(f"Unknown array backend '{name}'")
 
     xp.__dict__.clear()
     xp.__dict__.update(members)
@@ -169,7 +169,7 @@ def to_numpy(x):
         return x
     if array_api_compat.is_torch_array(x):
         # explicit conversion, which does not go through Tensor.__array__
-        return x.cpu().numpy()
+        return x.detach().cpu().numpy()
     if array_api_compat.is_jax_array(x):
         return np.asarray(x)
     if array_api_compat.is_array_api_obj(x):
@@ -183,7 +183,7 @@ def synchronize():
     if _current["backend"] == "torch" and _current["device"] != "cpu":
         import torch
 
-        torch.cuda.synchronize()
+        torch.cuda.synchronize(_current["device"])
     elif _current["backend"] == "jax":
         # the operations of a device run in order, so waiting for a new one
         # waits for all

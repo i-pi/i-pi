@@ -12,7 +12,6 @@ layer for a driver that gets positions and returns forces (and energy).
 import time
 import threading
 import json
-import sys
 from contextlib import nullcontext
 
 import numpy as np
@@ -80,9 +79,12 @@ class ForceField:
         _threadlock: Python handle used to lock the thread held in _thread.
         backend_arrays: Whether requests carry, and results are, arrays of the
             array backend (e.g. torch tensors on a GPU) rather than numpy arrays.
+        virial_checked: Whether the symmetry of the virial returned by the
+            forcefield has been checked.
     """
 
     backend_arrays = False
+    virial_checked = False
 
     def __init__(
         self,
@@ -1013,8 +1015,9 @@ class FFPlumed(FFEval):
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
             self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
 
-        self.charges = myatoms.q * 0.0
-        self.masses = myatoms.m
+        # PLUMED keeps pointers to these, which must be writable numpy arrays
+        self.charges = np.zeros(self.natoms)
+        self.masses = np.array(to_numpy(myatoms.m))
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
         softexit.register_function(self.softexit)
@@ -1049,9 +1052,11 @@ class FFPlumed(FFEval):
         # these instead are set properly. units conversion is done on the PLUMED side
         if self.system_force is not None:
             # setup to use energy as CV
-            f[:] = self.system_force.f.reshape((-1, 3))
-            vir[:] = -self.system_force.vir
-            self.plumed.cmd("setEnergy", self.system_force.pot)
+            system_f = to_numpy(self.system_force.f).reshape((-1, 3))
+            system_vir = to_numpy(self.system_force.vir)
+            f[:] = system_f
+            vir[:] = -system_vir
+            self.plumed.cmd("setEnergy", float(self.system_force.pot))
 
         # must hold a copy of cell and positions because plumed stores a pointer!
         # there is potential for memory corruption if these are overwritten before
@@ -1075,8 +1080,8 @@ class FFPlumed(FFEval):
 
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
-            f[:] -= self.system_force.f.flatten()
-            vir[:] -= -self.system_force.vir
+            f -= system_f.flatten()
+            vir -= system_vir
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1097,6 +1102,7 @@ class FFPlumed(FFEval):
         # bias force is not "freshly computed"
 
         self.plumed_step += 1
+        pos, cell = to_numpy(pos), to_numpy(cell)
 
         bias_before = np.zeros(1, float)
         bias_after = np.zeros(1, float)
@@ -1112,8 +1118,7 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": pos, "cell": (cell, None), "result": None}
-            self.evaluate(request)
+            self.evaluate(ForceRequest(pos=pos, cell=(cell, None), result=None))
 
         if self.compute_work:
             self.plumed.cmd("getBias", bias_before)
@@ -1901,7 +1906,8 @@ class FFRotations(ForceField):
         """Polls the forcefield object to check if it has finished."""
 
         with self._threadlock:
-            for r in self.requests:
+            # a copy of the list, as the completed requests are removed from it
+            for r in list(self.requests):
                 if r["status"] == "Running" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
@@ -2217,9 +2223,10 @@ class FFCavPhSocket(FFSocket):
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 softexit.trigger(
-                    "The size of charge array = {}  does not match the size of atoms = {} ".format(
+                    status="bad",
+                    message="The size of charge array = {}  does not match the size of atoms = {} ".format(
                         np.size(charge_array_bath), np.size(pos_bath[::3])
-                    )
+                    ),
                 )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
@@ -2390,10 +2397,10 @@ class FFCavPhSocket(FFSocket):
                     # if we return, we may as well output wrong numbers, or mess up things.
                     # so we can only call soft-exit and wait until that is done. then kill the thread
                     # we are in.
-                    softexit.trigger(" @ FORCES : cannot return so will die off here")
-                    while softexit.exiting:
-                        time.sleep(self.latency)
-                    sys.exit()
+                    softexit.trigger(
+                        status="bad",
+                        message=" @ FORCES : cannot return so will die off here",
+                    )
                 self.request._event_done.wait(timeout=1.0)
 
             """
@@ -2440,16 +2447,21 @@ class FFCavPhSocket(FFSocket):
                     has_dipole_der = ("dipole" in extra) and (
                         "dipole_derivative" in extra
                     )
-                    check_dipole_der = (len(extra["dipole"]) == 3) and (
-                        len(extra["dipole_derivative"])
-                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    check_dipole_der = (
+                        has_dipole_der
+                        and (len(extra["dipole"]) == 3)
+                        and (
+                            len(extra["dipole_derivative"])
+                            == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                        )
                     )
                     if not has_dipole_der or not check_dipole_der:
                         softexit.trigger(
-                            "Dipole surface is turned on, but the required dipole information is not provided in extras. \
+                            status="bad",
+                            message="Dipole surface is turned on, but the required dipole information is not provided in extras. \
                             Please check if the driver provides the dipole and its derivative information in extras, \
                             and make sure the size of dipole and dipole derivative information matches the number of atoms. \
-                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`."
+                            If you do not want to include dipole surface contribution, please set `dipole_surface = False`.",
                         )
 
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
@@ -2468,7 +2480,8 @@ class FFCavPhSocket(FFSocket):
                         != int(len(pbcpos) // 3)
                     ):
                         softexit.trigger(
-                            "Total number of photons + molecules does not match total number of particles"
+                            status="bad",
+                            message="Total number of photons + molecules does not match total number of particles",
                         )
                     # 4. calculate total dipole moment array for N baths
                     dx_array, dy_array, _ = self.calc_dipole_xyz_mm(

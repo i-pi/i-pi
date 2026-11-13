@@ -1125,8 +1125,8 @@ class InputValue(InputAttribute):
 
         if self._dimension != "undefined":
             self.value = value * unit_to_user(self._dimension, units, 1.0)
-        elif _is_device_array(value):
-            # a copy, as the array may then be modified in place
+        elif _is_device_array(value) and not array_api_compat.is_jax_array(value):
+            # a copy, as the array may then be modified in place (JAX arrays cannot)
             self.value = xp.asarray(value, copy=True)
         else:
             self.value = value
@@ -1270,11 +1270,12 @@ class InputArray(InputValue):
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
-            value = np.resize(value, 0).copy()
+            value = np.resize(value, 0)
         else:
-            value = value.reshape(self.shape.fetch()).copy()
+            value = value.reshape(self.shape.fetch())
 
-        return value
+        # a copy, with the type of the input also for stored device arrays
+        return np.array(value, dtype=self.type)
 
     def write(self, name="", indent=""):
         """Writes data in xml file format.
@@ -1293,7 +1294,7 @@ class InputArray(InputValue):
            A string giving the stored value in the appropriate xml format.
         """
 
-        value = to_numpy(self.value)
+        value = np.asarray(to_numpy(self.value), dtype=self.type)
         rstr = ""
         if len(value) > ELPERLINE:
             rstr += "\n" + indent + " [ "

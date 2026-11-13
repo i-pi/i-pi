@@ -873,7 +873,17 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
 
 # Damped BFGS to use in NEB. Has no line search and no TRM.
-def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
+def _max_atomic_displacement(dx, mask):
+    """Largest displacement of an atom, given the displacements of the free
+    coordinates (`mask`) of each bead."""
+
+    dx = dx.reshape(-1, int(mask.sum()))
+    full = xp.zeros((dx.shape[0], len(mask)), dtype=dx.dtype)
+    full[:, xp.asarray(mask)] = dx
+    return xp.max(xp.linalg.vector_norm(full.reshape(-1, 3), axis=1))
+
+
+def Damped_BFGS(x0, fdf, fdf0, hessian, big_step, mask):
     """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
     The purpose is mostly using it for NEB optimization, but it is capable of
     plain geometry optimization also.
@@ -897,6 +907,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
       hessian: approximate Hessian for the BFGS algorithm
       big_step: limit on step length. It is defined differently
                   compared to other optimization algorithms, take care.
+      mask: the free coordinates of each bead, which x0 holds
 
     Returns:
       quality: minus cosine of the (gradient, dx) angle.
@@ -906,6 +917,12 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     info(" @DampedBFGS: Started.", verbosity.debug)
     _, g0 = fdf0
     g0 = g0.reshape(-1)
+
+    # at a stationary point there is no step to take, nor curvature to learn
+    if xp.all(g0 == 0):
+        info(" @DampedBFGS: zero gradient, no step.", verbosity.debug)
+        fdf(x0)
+        return 1.0
 
     # Nocedal's notation
     B = hessian
@@ -930,7 +947,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
 
     # I use maximal cartesian atomic displacement as a measure of step length
-    maxdispl = xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))
+    maxdispl = _max_atomic_displacement(sk, mask)
     info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
     if maxdispl > big_step:
         info(
@@ -941,7 +958,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     info(
         " @DampedBFGS: maxdispl:                %.6f bohr"
-        % (xp.max(xp.linalg.vector_norm(sk.reshape(-1, 3), axis=1))),
+        % _max_atomic_displacement(sk, mask),
         verbosity.debug,
     )
 
@@ -986,7 +1003,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     # add small positive numbers. Somewhat dirty solution,
     # but it increased stability in some tests.
     # 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
-    eigvals = xp.real(xp.linalg.eigvals(B))
+    eigvals = xp.linalg.eigvalsh(B)
     if xp.any(eigvals < 1e-1):
         info(" @DampedBFGS: stabilizing the diagonal of the Hessian.", verbosity.debug)
         B += 1e-2 * xp.eye(len(B))
@@ -1062,7 +1079,10 @@ def FIRE(
         N_dn = 0
         N_up += 1
         if N_up > Nmax:
-            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
+            softexit.trigger(
+                status="bad",
+                message="@FIRE is stuck for %d steps. We stop here." % N_up,
+            )
         dt = max(dt * fdec, dtmin)
         a = astart
         # correct uphill motion

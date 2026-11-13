@@ -6,15 +6,17 @@ depend objects, and is then replaced by a compiled version: CUDA graphs with
 the torch backend on a CUDA device (see `ipi.utils.cudagraphs`), or a function
 compiled with jax.jit with the jax backend (see `ipi.utils.jaxjit`). Both find
 what the function reads and writes by recording the operations on the depend
-objects while it runs (`_Recorder`, see `depend.set_recorder`).
+objects while it runs (`_Recorder`, see `depend.set_recorder`), and share the
+calls of the function and of its compiled version (`Replay`).
 
 Code that is part of a compiled function marks with `split` the points where
 the recording may be interrupted, and calls with `eager` the functions that
 must run eagerly. Functions of arrays decorated with `compiled` are compiled
-with torch.compile when the steps are replayed as CUDA graphs.
+with torch.compile when the steps are compiled with the torch backend.
 
 A `JitError` is raised if the function cannot be compiled, or if a value that
-is fixed in the compiled function changes.
+is fixed in the compiled function changes. A failed compilation leaves the
+depend objects inconsistent, so all the following calls raise a `JitError`.
 """
 
 # This file is part of i-PI.
@@ -29,7 +31,7 @@ from ipi.utils import depend
 from ipi.utils.array_backend import backend, device, jit
 from ipi.utils.messages import verbosity, warning
 
-__all__ = ["JitError", "split", "eager", "compiled"]
+__all__ = ["JitError", "Replay", "split", "eager", "compiled"]
 
 # eager calls before the recording, which fill the caches of the depend objects
 WARMUP_CALLS = 2
@@ -41,7 +43,7 @@ class JitError(RuntimeError):
 
 def split(obj):
     """Allows the recording of a function, if any, to be interrupted at this
-    point, which is described by `obj` (see `GraphReplay.split`)."""
+    point, which is described by `obj` (see `Replay.split`)."""
 
     if depend._recorder is not None:
         depend._recorder.split(obj)
@@ -60,9 +62,10 @@ def eager(func, *args):
 
 def compiled(func):
     """Decorates a function of arrays, which is compiled with torch.compile when
-    the steps are replayed as CUDA graphs: its operations are then merged in
-    fewer kernels, which are faster to replay. It is called as it is otherwise,
-    or if torch.compile is not available for the Python version or the GPU.
+    the steps are compiled with the torch backend (also in the eager steps):
+    its operations are then merged in fewer kernels, which are faster to
+    replay as CUDA graphs. It is called as it is otherwise, or if
+    torch.compile is not available for the Python version or the GPU.
     As the compiled function is specific to the values of the Python scalars it
     is given, its arguments should be arrays."""
 
@@ -91,10 +94,129 @@ def _compiled(func):
         )
         return func
     try:
-        return torch.compile(func, fullgraph=True, dynamic=False)
+        compiled = torch.compile(func, fullgraph=True, dynamic=False)
     except RuntimeError as err:
         warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
         return func
+
+    @functools.wraps(func)
+    def call(*args):
+        nonlocal compiled
+        if compiled is not func:
+            # the function is compiled at the first call with new arguments
+            try:
+                return compiled(*args)
+            except Exception as err:
+                if depend._recorder is not None:
+                    # also invalidates the CUDA graph being captured
+                    raise
+                warning(f"{func.__name__} is not compiled: {err}", verbosity.low)
+                compiled = func
+        return func(*args)
+
+    return call
+
+
+class Replay:
+    """Runs a function that operates on depend objects eagerly for the first
+    calls, compiles it at the next call, and replays the compiled function at
+    the following calls. The values that are fixed in the compiled function
+    are checked before each replay. A failed compilation is final.
+
+    The subclasses implement `ready`, `warm`, `record` and `replay`, and
+    `call` and `split`, which are called while the function is recorded.
+
+    Attributes:
+        func: The function.
+        compiled: The compiled function, or None before the compilation.
+        fixed: The inputs of the compiled function that are fixed in it, as
+            (depend object, value, copy of a host array).
+    """
+
+    # how the function is compiled, for the error messages
+    method = "compiled"
+
+    def __init__(self, func):
+        self.func = func
+        self.compiled = None
+        self.fixed = []
+        # the error raised by the compilation, if it failed
+        self.error = None
+
+    def __call__(self, *args):
+        if self.compiled is not None:
+            # the values fixed in the compiled function are checked before it runs
+            for dep, value, copy in self.fixed:
+                _check(dep, value, copy)
+            self.replay()
+        elif self.error is not None:
+            raise JitError("The compilation of the step has failed") from self.error
+        elif not self.ready():
+            self.warm(*args)
+        else:
+            try:
+                self.record(*args)
+            except Exception as err:
+                # the depend objects are left inconsistent
+                self.compiled = None
+                self.error = err
+                raise
+
+    def failed(self, err):
+        """Returns the error raised when the compilation fails with `err`."""
+
+        if isinstance(err, JitError):
+            return err
+        error = JitError(f"The step cannot be {self.method}: run i-PI without --jit")
+        error.__cause__ = err
+        return error
+
+    def split(self, obj):
+        """Called by `split(obj)` while the function is recorded, if the point
+        described by `obj` may have to run eagerly: does nothing, and is
+        overridden by the classes that compile specific functions."""
+
+
+def _input(dep, value):
+    """An input of a compiled function, as recorded: the depend object, the
+    value it holds, and a copy of the value if it is a host array."""
+
+    return dep, value, value.copy() if isinstance(value, np.ndarray) else None
+
+
+def _check(dep, recorded, copy):
+    """Checks that the value of the input `dep`, which is fixed in a compiled
+    function that read the object `recorded` (with a copy `copy` of its host
+    array), is unchanged."""
+
+    current = dep.get()
+    if isinstance(dep, depend.depend_array) and dep._data is not recorded:
+        raise _changed(dep, "has been replaced")
+    if copy is not None:
+        if not np.array_equal(current, copy):
+            raise _changed(dep, "has changed")
+    elif current is not recorded and not _equal(current, recorded):
+        raise _changed(dep, "has changed")
+
+
+def _changed(dep, what):
+    return JitError(
+        f"The value of <{dep._name}>, which is fixed in the compiled step, "
+        f"{what}: the parameters of the simulation that are fixed in the "
+        "compiled step (e.g. the time step) cannot change when running with --jit"
+    )
+
+
+def _equal(a, b):
+    """Whether two values are equal: values that cannot be compared count as
+    different."""
+
+    if a is b:
+        return True
+    try:
+        return bool(np.array_equal(a, b))
+    except Exception:
+        return False
 
 
 class _Recorder:
@@ -124,9 +246,8 @@ class _Recorder:
         if status in self.written or status in self.inputs:
             return
         dep = dep._root()
-        value = dep._wvalue if isinstance(dep, depend.depend_array) else dep._value
-        copy = value.copy() if isinstance(value, np.ndarray) else None
-        self.inputs[status] = (dep, value, copy)
+        value = dep._data if isinstance(dep, depend.depend_array) else dep._value
+        self.inputs[status] = _input(dep, value)
 
     def tainted(self, dep, taintme):
         self.statuses.add(dep._status)
@@ -134,7 +255,7 @@ class _Recorder:
             self.written.add(dep._status)
             if isinstance(dep, depend.depend_value):
                 self.values[dep] = None
-            elif isinstance(dep._root()._wvalue, np.ndarray):
+            elif isinstance(dep._root()._data, np.ndarray):
                 self.host_writes.add(dep._name)
 
     def synchronized(self, synchro):

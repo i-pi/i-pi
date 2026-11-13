@@ -14,8 +14,10 @@ import pytest
 import ipi.utils.array_backend as ab
 from ipi_tests.unit_tests.engine.test_backend_equivalence import (
     HARMONIC,
+    INPUTS,
     ISOTROPIC,
     NO_FORCES,
+    mts_input,
     write_input,
 )
 
@@ -31,49 +33,6 @@ PROPERTIES = ["kinetic_md", "potential", "conserved", "temperature"]
 # replays match eager steps to rounding errors, as the functions compiled for
 # the replays (see ipi.utils.jit.compiled) may sum in a different order
 TOLERANCE = dict(rtol=1e-12, atol=1e-14)
-
-
-def mts_input():
-    """PIMD with two forcefields applied at two levels of multiple time stepping."""
-
-    xml = write_input("pimd_nvt", HARMONIC)
-    return (
-        xml.replace(
-            HARMONIC[0],
-            HARMONIC[0] + "<ffdirect name='ff2'><pes>dummy</pes></ffdirect>",
-        )
-        .replace(
-            "<force forcefield='ff'/>",
-            "<force forcefield='ff'><mts_weights>[1,0]</mts_weights></force>"
-            "<force forcefield='ff2'><mts_weights>[0,1]</mts_weights></force>",
-        )
-        .replace(
-            "<timestep units='femtosecond'>0.5</timestep>",
-            "<timestep units='femtosecond'>0.5</timestep><nmts>[1,3]</nmts>",
-        )
-    )
-
-
-def nst_input():
-    """Classical dynamics at constant stress, with the anisotropic barostat."""
-
-    box = (8 / 0.05) ** (1.0 / 3.0)  # the box of write_input, in angstrom
-    return (
-        write_input("npt_isotropic", HARMONIC)
-        .replace(
-            "<pressure units='bar'>1</pressure>",
-            "<stress units='bar'>[1, 0, 0, 0, 1, 0, 0, 0, 1]</stress>",
-        )
-        .replace("mode='npt'", "mode='nst'")
-        .replace(
-            "<barostat mode='isotropic'>",
-            "<barostat mode='anisotropic'><h0 units='angstrom'>"
-            f"[{box}, 0, 0, 0, {box}, 0, 0, 0, {box}]</h0>",
-        )
-    )
-
-
-INPUTS = {"mts": mts_input, "nst": nst_input}
 
 
 def simulation(xml, jit):
@@ -117,7 +76,7 @@ def test_replay_matches_eager_steps(
     forcefields)"""
 
     monkeypatch.chdir(tmp_path)
-    xml = INPUTS[case]() if case in INPUTS else write_input(case, forcefield)
+    xml = INPUTS[case](HARMONIC) if case in INPUTS else write_input(case, forcefield)
     try:
         eager, graph = simulation(xml, False), simulation(xml, True)
         for step in range(8):
@@ -132,6 +91,83 @@ def test_replay_matches_eager_steps(
             torch.testing.assert_close(b.beads.p, a.beads.p, **TOLERANCE)
             torch.testing.assert_close(b.cell.h, a.cell.h, **TOLERANCE)
         assert len(graph_step(graph).segments) == nsegments
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
+def test_momenta_written_between_replays(tmp_path, monkeypatch):
+    """Momenta written through the normal modes between replayed steps (as by
+    InteractiveSimulation.thermalize_momenta) are used by the next replays"""
+
+    monkeypatch.chdir(tmp_path)
+    xml = write_input("nve", HARMONIC)
+    try:
+        eager, graph = simulation(xml, False), simulation(xml, True)
+        for sim in (eager, graph):
+            for step in range(6):
+                sim.run_step(step)
+            sim.syslist[0].nm.pnm_[:] = 0.0
+            for step in range(6, 9):
+                sim.run_step(step)
+        a, b = eager.syslist[0].beads, graph.syslist[0].beads
+        torch.testing.assert_close(b.q, a.q, **TOLERANCE)
+        torch.testing.assert_close(b.p, a.p, **TOLERANCE)
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
+@pytest.mark.parametrize("step", [1, 2])
+@pytest.mark.parametrize("case", ["pimd_nvt", "npt_isotropic"])
+def test_state_written_during_the_eager_steps(
+    case, step, tmp_path, monkeypatch, device_random
+):
+    """Momenta and positions written between the eager steps, which change the
+    objects that the recorded step reads and where it is split, do not change
+    the replayed steps"""
+
+    monkeypatch.chdir(tmp_path)
+    xml = write_input(case, HARMONIC)
+    try:
+        eager, graph = simulation(xml, False), simulation(xml, True)
+        for sim in (eager, graph):
+            for i in range(8):
+                if i == step:
+                    sim.thermalize_momenta()
+                    sim.syslist[0].beads.q = sim.syslist[0].beads.q * 1.001
+                sim.run_step(i)
+        assert graph_step(graph).segments is not None
+        a, b = eager.syslist[0], graph.syslist[0]
+        torch.testing.assert_close(b.beads.q, a.beads.q, **TOLERANCE)
+        torch.testing.assert_close(b.beads.p, a.beads.p, **TOLERANCE)
+        torch.testing.assert_close(b.cell.h, a.cell.h, **TOLERANCE)
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
+def test_forces_converted_in_part_before_the_recording(
+    tmp_path, monkeypatch, device_random
+):
+    """The results of a forcefield computed before the recorded step, but only
+    in part converted to device arrays (here the potential), are converted
+    eagerly when the step is recorded"""
+
+    monkeypatch.chdir(tmp_path)
+    xml = write_input("nvt_langevin", HARMONIC)
+    try:
+        eager, graph = simulation(xml, False), simulation(xml, True)
+        for sim in (eager, graph):
+            for i in range(6):
+                if i == 2:
+                    sim.syslist[0].beads.q = sim.syslist[0].beads.q * 1.001
+                    sim.properties("potential")
+                sim.run_step(i)
+        assert graph_step(graph).segments is not None
+        a, b = eager.syslist[0].beads, graph.syslist[0].beads
+        torch.testing.assert_close(b.q, a.q, **TOLERANCE)
+        torch.testing.assert_close(b.p, a.p, **TOLERANCE)
     finally:
         ab.set_backend("numpy")
 
@@ -195,6 +231,42 @@ def test_changed_parameters_stop_the_replay(
         setattr(obj, name, getattr(obj, name) * 1.1)
         with pytest.raises(JitError, match="cannot change"):
             sim.run_step(4)
+    finally:
+        ab.set_backend("numpy")
+
+
+@cuda
+@pytest.mark.parametrize("segment", [1, 2])
+def test_failed_recording_stops_the_replay(
+    segment, tmp_path, monkeypatch, device_random
+):
+    """An error raised while recording the first or the last segment (both
+    apply the thermostat) stops the steps, also at the following calls"""
+
+    from ipi.engine.thermostats import ThermoLangevin
+    from ipi.utils import depend
+    from ipi.utils.jit import JitError
+
+    step, calls = ThermoLangevin.step, []
+
+    def failing(self):
+        if depend._recorder is not None:
+            calls.append(None)
+            if len(calls) == segment:
+                raise RuntimeError("recording failed")
+        step(self)
+
+    monkeypatch.setattr(ThermoLangevin, "step", failing)
+    monkeypatch.chdir(tmp_path)
+    try:
+        sim = simulation(write_input("nvt_langevin", HARMONIC), True)
+        for i in range(2):
+            sim.run_step(i)
+        with pytest.raises(JitError, match="cannot be replayed"):
+            sim.run_step(2)
+        for i in range(3, 5):
+            with pytest.raises(JitError, match="has failed"):
+                sim.run_step(i)
     finally:
         ab.set_backend("numpy")
 
@@ -309,7 +381,6 @@ def fake_cuda(monkeypatch):
     monkeypatch.setattr(torch.cuda, "current_stream", FakeStream)
     monkeypatch.setattr(torch.cuda, "set_stream", lambda stream: None)
     monkeypatch.setattr(torch.cuda, "stream", lambda stream: contextlib.nullcontext())
-    monkeypatch.setattr(torch.cuda, "graph_pool_handle", lambda: None)
     monkeypatch.setattr(torch.cuda, "CUDAGraph", FakeGraph)
     monkeypatch.setattr(cudagraphs, "_is_cuda_tensor", torch.is_tensor)
     monkeypatch.setattr(jit, "_compiled", lambda func: func)
@@ -344,7 +415,7 @@ def test_recording_is_split_at_force_evaluations(
     (of a force component, or only of the driver for direct forcefields)"""
 
     monkeypatch.chdir(tmp_path)
-    xml = mts_input() if case == "mts" else write_input(case, forcefield)
+    xml = mts_input(HARMONIC) if case == "mts" else write_input(case, forcefield)
     sim = fake_simulation(xml)
     for step in range(4):
         sim.run_step(step)
@@ -438,6 +509,33 @@ def test_inputs_of_a_segment(fake_cuda):
     assert [dep._name for dep, _, _ in replay.segments[0].inputs] == ["read"]
 
 
+def test_updated_objects_are_inputs_of_a_segment(fake_cuda):
+    """The depend objects that a segment updates in place, or of which it
+    assigns a part (also by writing a view), are inputs that are brought up to
+    date before its replays"""
+
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.depend import depend_array
+
+    added = depend_array(name="added", value=torch.zeros(3))
+    assigned = depend_array(name="assigned", value=torch.zeros(3))
+    replaced = depend_array(name="replaced", value=torch.zeros(3))
+    viewed = depend_array(name="viewed", value=torch.zeros(3))
+    view = viewed[1:]
+
+    def func():
+        added.__iadd__(1.0)
+        assigned[0] = 1.0
+        replaced[...] = 1.0
+        view.set(torch.ones(2))
+
+    replay = GraphReplay(func)
+    for _ in range(3):
+        replay()
+    inputs = sorted(dep._name for dep, _, _ in replay.segments[0].inputs)
+    assert inputs == ["added", "assigned", "viewed"]
+
+
 @pytest.mark.parametrize("kind", ["array", "value"])
 def test_host_writes_cannot_be_recorded(kind, fake_cuda):
     from ipi.utils.cudagraphs import GraphReplay
@@ -452,14 +550,103 @@ def test_host_writes_cannot_be_recorded(kind, fake_cuda):
         replay = GraphReplay(lambda: dep.set(2.0))
     replay()
     replay()
-    with pytest.raises(JitError, match="cannot be replayed") as info:
+    with pytest.raises(JitError, match="host"):
         replay()
-    assert "host" in str(info.value.__cause__)
+    assert replay.segments is None
 
 
-def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
+@pytest.mark.parametrize("kind", ["capture", "eager"])
+def test_failed_recording_is_final(kind, fake_cuda):
+    """A function whose recording fails, during a capture or in an eager call
+    between two segments, is not called again, as the kernels of the segment
+    being recorded have not run: the following calls raise a JitError"""
+
+    from ipi.utils import depend, jit
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.jit import JitError
+
+    calls = []
+
+    def fail():
+        if len(calls) > jit.WARMUP_CALLS:
+            raise RuntimeError("recording failed")
+        return []
+
+    def func():
+        calls.append(None)
+        if kind == "eager":
+            jit.eager(fail)
+        elif depend._recorder is not None:
+            fail()
+
+    replay = GraphReplay(func)
+    replay()
+    replay()
+    with pytest.raises(Exception, match="recording failed|cannot be replayed"):
+        replay()
+    for _ in range(2):
+        with pytest.raises(JitError, match="has failed"):
+            replay()
+    assert replay.segments is None and len(calls) == 3
+
+
+@pytest.mark.parametrize("end_fails", [False, True])
+@pytest.mark.parametrize("kind", ["other", "jit"])
+def test_errors_during_a_capture(kind, end_fails, fake_cuda, monkeypatch):
+    """An error raised while a segment is captured ends the capture, also when
+    ending it fails, and is raised as a JitError; JitErrors are raised as they
+    are"""
+
+    from ipi.utils import depend
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.jit import JitError
+
+    def failing_end(graph):
+        raise RuntimeError("the capture cannot be ended")
+
+    if end_fails:
+        monkeypatch.setattr(FakeGraph, "capture_end", failing_end)
+    error = JitError("raised in the step") if kind == "jit" else ValueError()
+
+    def func():
+        if depend._recorder is not None:
+            raise error
+
+    replay = GraphReplay(func)
+    replay()
+    replay()
+    message = "raised in the step" if kind == "jit" else "cannot be replayed"
+    with pytest.raises(JitError, match=message):
+        replay()
+    assert replay.segments is None
+
+
+def test_errors_of_eager_calls_are_raised_as_they_are(fake_cuda):
+    """An error raised by a function called eagerly between two recorded
+    segments (e.g. by the driver of a forcefield) is raised as it is"""
+
+    from ipi.utils import jit
+    from ipi.utils.cudagraphs import GraphReplay
+
+    calls = []
+
+    def driver():
+        calls.append(None)
+        if len(calls) > jit.WARMUP_CALLS:
+            raise ValueError("driver failed")
+        return [torch.zeros(1)]
+
+    replay = GraphReplay(lambda: jit.eager(driver))
+    replay()
+    replay()
+    with pytest.raises(ValueError, match="driver failed"):
+        replay()
+    assert replay.segments is None
+
+
+def test_staging_updates_the_inputs_of_a_graph(fake_cuda):
     """Before a replay, scalars replaced by new objects are copied into those
-    read by the graph, and the values fixed in the graph must be unchanged"""
+    read by the graph"""
 
     from ipi.utils.cudagraphs import _stage
     from ipi.utils.jit import JitError
@@ -468,36 +655,74 @@ def test_staging_updates_or_checks_the_inputs_of_a_graph(fake_cuda):
     recorded = torch.tensor(1.0, dtype=torch.float64)
     scalar = depend_value(name="scalar", value=recorded)
     scalar.set(torch.tensor(2.0, dtype=torch.float64))
-    _stage(scalar, recorded, None)
+    _stage(scalar, recorded)
     scalar.set(3.0)
-    _stage(scalar, recorded, None)
+    _stage(scalar, recorded)
     assert float(recorded) == 3.0
     scalar.set(torch.zeros(2, dtype=torch.float64))
     with pytest.raises(JitError, match="changed shape"):
-        _stage(scalar, recorded, None)
+        _stage(scalar, recorded)
+
+    array = depend_array(name="array", value=torch.zeros(3, dtype=torch.float64))
+    _stage(array, array._data)
+    with pytest.raises(JitError, match="has been replaced"):
+        _stage(array, torch.zeros(3, dtype=torch.float64))
+
+
+def test_values_fixed_in_a_graph_are_checked(fake_cuda):
+    """Before a replay, the host values fixed in the graphs must be unchanged"""
+
+    from ipi.utils.jit import JitError, _check
+    from ipi.utils.depend import depend_array, depend_value
 
     host = depend_value(name="host", value=[1.0, 2.0])
-    _stage(host, [1.0, 2.0], None)
+    _check(host, [1.0, 2.0], None)
     for value in [[1.0, 3.0], [1.0, 2.0, 3.0]]:
         host.set(value)
         with pytest.raises(JitError, match="has changed"):
-            _stage(host, [1.0, 2.0], None)
+            _check(host, [1.0, 2.0], None)
+    single = depend_value(name="single", value=[2.0, 2.0])
+    with pytest.raises(JitError, match="has changed"):
+        _check(single, [2.0], None)
     held = np.zeros(2)
     host.set(held)
     copy = held.copy()
     held[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _stage(host, held, copy)
+        _check(host, held, copy)
 
-    array = depend_array(name="array", value=torch.zeros(3, dtype=torch.float64))
-    _stage(array, array._wvalue, None)
-    with pytest.raises(JitError, match="has been replaced"):
-        _stage(array, torch.zeros(3, dtype=torch.float64), None)
     names = depend_array(name="names", value=np.zeros(3), host=True)
-    copy = names._wvalue.copy()
+    copy = names._data.copy()
     names[0] = 1.0
     with pytest.raises(JitError, match="has changed"):
-        _stage(names, names._wvalue, copy)
+        _check(names, names._data, copy)
+
+
+def test_fixed_values_are_checked_before_the_replay(fake_cuda):
+    """A change of a value fixed in a later segment stops the replay before
+    any segment runs, rather than after a part of the step"""
+
+    from ipi.utils import jit
+    from ipi.utils.cudagraphs import GraphReplay
+    from ipi.utils.depend import depend_value
+    from ipi.utils.jit import JitError
+
+    calls = []
+    dt = depend_value(name="dt", value=1.0)
+    y = depend_value(name="y", value=torch.zeros(1))
+
+    def func():
+        jit.eager(lambda: calls.append(None) or [])
+        y.set(y.get() + dt.get())
+
+    replay = GraphReplay(func)
+    for _ in range(4):
+        replay()
+    assert len(replay.segments) == 2
+    dt.set(2.0)
+    with pytest.raises(JitError, match="cannot change"):
+        replay()
+    assert len(calls) == 4
 
 
 @pytest.mark.parametrize("capability,is_compiled", [((6, 1), False), ((9, 0), True)])
@@ -505,18 +730,88 @@ def test_functions_are_compiled_on_recent_gpus(capability, is_compiled, monkeypa
     from ipi.utils.jit import _compiled
 
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: capability)
-    monkeypatch.setattr(torch, "compile", lambda func, **kwargs: "compiled")
+    monkeypatch.setattr(torch, "compile", lambda func, **kwargs: lambda x: "compiled")
 
     def func(x):
         return x
 
-    assert (_compiled(func) == "compiled") == is_compiled
+    assert (_compiled(func)(1) == "compiled") == is_compiled
+
+
+@pytest.mark.parametrize("stage", ["wrapping", "first call"])
+def test_functions_that_fail_to_compile_are_called_as_they_are(stage, monkeypatch):
+    """Compilation errors, raised by torch.compile when it wraps the function
+    or at the first call of the compiled function, make the function run as it
+    is from then on"""
+
+    from ipi.utils.jit import _compiled
+
+    attempts = []
+
+    def failing(*args):
+        attempts.append(None)
+        raise RuntimeError("compilation failed")
+
+    def compile(func, **kwargs):
+        if stage == "wrapping":
+            failing()
+        return failing
+
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: (9, 0))
+    monkeypatch.setattr(torch, "compile", compile)
+
+    def func(x):
+        return 2 * x
+
+    call = _compiled(func)
+    assert call(1) == 2 and call(2) == 4
+    assert len(attempts) == 1
+
+
+def test_compilation_errors_during_a_recording_are_raised(monkeypatch):
+    """A function first compiled while a step is recorded as CUDA graphs, whose
+    capture the error has invalidated, is not called as it is"""
+
+    from ipi.utils import depend
+    from ipi.utils.jit import _compiled
+
+    def failing(*args):
+        raise RuntimeError("compilation failed")
+
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda d: (9, 0))
+    monkeypatch.setattr(torch, "compile", lambda func, **kwargs: failing)
+    monkeypatch.setattr(depend, "_recorder", object())
+
+    def func(x):
+        return 2 * x
+
+    with pytest.raises(RuntimeError, match="compilation failed"):
+        _compiled(func)(1)
 
 
 def test_only_cuda_tensors_are_device_values():
     from ipi.utils.cudagraphs import _is_cuda_tensor
 
     assert not _is_cuda_tensor(torch.zeros(1)) and not _is_cuda_tensor(1.0)
+
+
+def test_values_that_cannot_be_compared_are_different():
+    """Values that cannot be converted to arrays, or whose comparison raises,
+    count as changed"""
+
+    from ipi.utils.jit import _equal
+
+    class Unconvertible:
+        def __array__(self, dtype=None, copy=None):
+            raise TypeError("cannot be converted")
+
+    class Incomparable:
+        def __eq__(self, other):
+            raise TypeError("cannot be compared")
+
+    assert _equal([1.0, 2.0], [1.0, 2.0]) and not _equal([1.0], [1.0, 1.0])
+    assert not _equal(Unconvertible(), 1.0)
+    assert not _equal(Incomparable(), Incomparable())
 
 
 def test_eager_call_results_are_copied_into_the_recorded_ones(fake_cuda):

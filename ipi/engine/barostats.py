@@ -105,7 +105,6 @@ class Barostat:
        ebaro: The conserved quantity associated with the barostat.
        pot: The potential energy associated with the barostat.
        kstress: The system kinetic stress tensor.
-       stress: The system stress tensor.
        press: The system pressure.
     """
 
@@ -198,17 +197,6 @@ class Barostat:
         self.bias = bias
         self.nm = nm
 
-        self.kstress_ = depend_value(
-            name="kstress",
-            func=self.get_kstress,
-            dependencies=[beads.q_, beads.qc_, beads.pc_, forces.f_],
-        )
-        self.stress_ = depend_value(
-            name="stress",
-            func=self.get_stress,
-            dependencies=[self.kstress_, cell.V_, forces.vir_],
-        )
-
         self.pot_ = depend_value(name="pot", value=0.0)
 
         self.kin_ = depend_value(name="kin", value=0.0)
@@ -250,74 +238,22 @@ class Barostat:
         self.tdt_ = depend_value(name="tdt", value=self.dt)
         dpipe(self.tdt_, self.thermostat.dt_)
 
-    # THESE SHOULD NOT BE USED ANYMORE
-    def get_kstress(self):
-        """Calculates the quantum centroid virial kinetic stress tensor
-        estimator.
-        """
-
-        kst = xp.zeros((3, 3))
-        q = self.beads.q
-        qc = self.beads.qc
-        pc = self.beads.pc
-        m = self.beads.m
-        na3 = 3 * self.beads.natoms
-        fall = self.forces.f
-        if self.bias is None:
-            ball = fall * 0.00
-        else:
-            ball = self.bias.f
-
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ (
-                        fall[b, j:na3:3] + ball[b, j:na3:3]
-                    )
-
-        # NOTE: In order to have a well-defined conserved quantity, the Nf kT term in the
-        # diagonal stress estimator must be taken from the centroid kinetic energy.
-        for i in range(3):
-            kst[i, i] += (pc[i:na3:3] @ (pc[i:na3:3] / m)) * self.beads.nbeads
-
-        return kst
-
     def kstress_mts_sc(self, level):
         """Calculates the Suzuki-Chin quantum centroid virial kinetic stress tensor
         associated with the forces at a MTS level.
         """
 
-        kst = xp.zeros((3, 3))
-        q = self.beads.q
-        qc = self.beads.qc
-        pc = self.beads.pc
-        m = self.beads.m
-        na3 = 3 * self.beads.natoms
-        fall = self.forces.mts_forces[level].f * (1 + self.forces.coeffsc_part_1)
-        if self.bias is None or level != 0:
-            ball = fall * 0.00
-        else:
-            ball = self.bias.f
+        return xp.triu(self.kstress_mts(level, sc=True))
 
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ (
-                        fall[b, j:na3:3] + ball[b, j:na3:3]
-                    )
-
-        if level == self.nmtslevels - 1:
-            for i in range(3):
-                kst[i, i] += (pc[i:na3:3] @ (pc[i:na3:3] / m)) * self.beads.nbeads
-
-        return kst
-
-    def kstress_mts(self, level):
+    def kstress_mts(self, level, sc=False):
         """Calculates the quantum centroid virial kinetic stress tensor
         associated with the forces at a MTS level.
         """
 
         fall = self.forces.mts_forces[level].f
+        if sc:
+            # adds the +- 1/3 Suzuki-Chin correction to the physical force
+            fall = fall * (1 + self.forces.coeffsc_part_1)
         if level == 0 and self.bias is not None:
             # adds the bias. NB: don't += we don't want to overwrite the force
             fall = fall + self.bias.f
@@ -348,26 +284,8 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        kst = xp.zeros((3, 3))
-        q = self.beads.q
-        qc = self.beads.qc
-        na3 = 3 * self.beads.natoms
-        fall = self.forces.fsc_part_2
-
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= (q[b, i:na3:3] - qc[i:na3:3]) @ fall[b, j:na3:3]
-        return kst
-
-    def get_stress(self):
-        """Calculates the internal stress tensor."""
-
-        bvir = xp.zeros((3, 3))
-        if self.bias is not None:
-            bvir[:] = self.bias.vir
-
-        return (self.kstress + self.forces.virs + bvir) / self.cell.V
+        qqc = (self.beads.q - self.beads.qc).reshape(-1, 3)
+        return xp.triu(-(qqc.T @ self.forces.fsc_part_2.reshape(-1, 3)))
 
     def get_stress_sc(self):
         """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
@@ -378,18 +296,14 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        bvir = xp.zeros((3, 3))
+        stress = self.kstress_mts_sc(level) + (
+            self.forces.mts_forces[level].virs
+            * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1))
+        ).sum(axis=0)
         if self.bias is not None and level == 0:
-            bvir[:] = self.bias.vir
+            stress = stress + self.bias.vir
 
-        return (
-            self.kstress_mts_sc(level)
-            + (
-                self.forces.mts_forces[level].virs
-                * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1))
-            ).sum(axis=0)
-            + bvir
-        ) / self.cell.V
+        return stress / self.cell.V
 
     def stress_mts(self, level):
         """Calculates the internal stress tensor
@@ -422,8 +336,6 @@ dproperties(
         "ebaro",
         "pext",
         "stressext",
-        "kstress",
-        "stress",
         "pot",
         "kin",
         "cell_jacobian",

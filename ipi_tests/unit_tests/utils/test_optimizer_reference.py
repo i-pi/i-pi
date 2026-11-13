@@ -3,7 +3,31 @@
 import numpy as np
 import pytest
 
-from ipi.utils.mintools import L_BFGS_nls, min_brent_neb, min_trm, nichols, Powell
+from ipi.utils.array_backend import xp
+from ipi.utils.mintools import (
+    Damped_BFGS,
+    FIRE,
+    L_BFGS_nls,
+    _max_atomic_displacement,
+    min_brent_neb,
+    min_trm,
+    nichols,
+    Powell,
+)
+from ipi.utils.softexit import softexit
+
+
+def test_stuck_fire_requests_a_soft_exit():
+    """FIRE stops with a soft exit when it has gone uphill for more than Nmax steps"""
+
+    softexit.reset()
+    try:
+        # the force opposes the velocity for more than Nmax steps
+        with pytest.raises(SystemExit):
+            FIRE(xp.zeros(3), None, (0.0, xp.ones(3)), v=xp.ones(3), N_up=5, Nmax=5)
+        assert softexit.triggered
+    finally:
+        softexit.reset()
 
 
 @pytest.mark.parametrize("radius", [0.1, 10.0])
@@ -86,3 +110,34 @@ def test_lbfgs_without_line_search_on_quadratic():
         )
         assert value == pytest.approx(objective(x)[0])
     np.testing.assert_allclose(x, 0, atol=1e-6)
+
+
+def test_damped_bfgs_step_is_measured_on_atoms():
+    """With fixed coordinates, the step of Damped_BFGS is limited by the
+    displacements of the atoms, not of triplets of free coordinates, also
+    with the free coordinates of several beads"""
+
+    # z of the first atom, x and y of the second
+    mask = np.array([False, False, True, True, True, False])
+    assert _max_atomic_displacement(np.array([3.0, 4.0, 0.0]), mask) == 4.0
+    assert _max_atomic_displacement(np.array([3.0, 4.0, 0.0]), np.ones(3, bool)) == 5.0
+    dx = np.array([3.0, 4.0, 0.0, 1.0, 0.0, 2.0])
+    assert _max_atomic_displacement(dx, mask) == 4.0
+
+
+def test_damped_bfgs_at_a_stationary_point():
+    """At a zero gradient, Damped_BFGS stays at the same point and leaves the
+    Hessian unchanged (instead of making it NaN)"""
+
+    positions = []
+
+    def fdf(x):
+        positions.append(np.array(x))
+        return 0.0, np.zeros(3)
+
+    x0 = np.array([[0.1, 0.2, 0.3]])
+    hessian = 2 * np.eye(3)
+    quality = Damped_BFGS(x0, fdf, (0.0, np.zeros(3)), hessian, 0.5, np.ones(3, bool))
+    assert np.isfinite(quality)
+    np.testing.assert_array_equal(hessian, 2 * np.eye(3))
+    np.testing.assert_array_equal(positions[-1], x0)

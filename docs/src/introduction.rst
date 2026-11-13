@@ -308,7 +308,7 @@ as ``obj.x``:
        dependency graph (e.g. to bind a thermostat to some of the momenta)
      - ``obj.x_[i]``, ``obj.x_.flatten()``
    * - make an existing depend object computed from other ones
-     - ``dcompute(obj.x_, func, [other.y_])``, ``dpipe(other.y_, obj.x_)``
+     - ``dsetfunc(obj.x_, func, [other.y_])``, ``dpipe(other.y_, obj.x_)``
 
 Common pitfalls:
 
@@ -320,6 +320,15 @@ Common pitfalls:
   of it) instead.
 * A ``depend_value`` that holds an array is not protected: modifying the
   array in place does not update its dependants.
+* Computed objects cannot be written: ``obj.x = v``, ``obj.x_[i] = v`` and
+  in-place operators raise a ``NameError`` before changing anything, also
+  when they go through a view.
+* ``obj.x_.reshape(...)`` and ``obj.x_.flatten()`` give views, and raise if
+  the array cannot be reshaped without a copy, e.g. ``obj.x_[:, 1:].flatten()``,
+  as writing the copy would not change the array.
+* Deep copies (and pickles) of a depend object are independent of the
+  original: they have no dependants and are not synchronized. Views cannot be
+  copied: copy the array they belong to.
 * Depend objects are not arrays: use ``obj.x`` (or ``obj.x_.get()``) when
   the value is needed.
 * Functions that compute a value should not modify other depend objects:
@@ -350,12 +359,12 @@ share the temperature between the ensemble and the thermostats:
    myobj.scalar = 5
    print(thermo.temp) # prints `10`
 
-More generally, ``dcompute(dep, func, dependencies)`` makes an existing
+More generally, ``dsetfunc(dep, func, dependencies)`` makes an existing
 depend object computed, as if it had been created with ``func`` and
 ``dependencies``, which is useful when the function is only known when
 objects are bound together. Its current value is discarded, and it can no
 longer be written. ``dpipe(dfrom, dto)`` is the same as
-``dcompute(dto, dfrom.get, [dfrom])``, except that it can also make an object
+``dsetfunc(dto, dfrom.get, [dfrom])``, except that it can also make an object
 that already follows another one follow ``dfrom`` instead, and
 ``dpipe(dfrom, dto, item=i)`` makes ``dto`` follow ``dfrom[i]``.
 
@@ -366,7 +375,9 @@ one from the other. Writing one of the two marks the other as stale, and
 reading the stale one recomputes it from the one that was written last.
 When they are linked, the first object is taken to hold the current data.
 A view of a synchronized array (e.g. the positions of a single replica)
-is synchronized as well.
+is synchronized as well. Writing part of a stale array, or a view of it,
+first recomputes it from the other one, so that the elements that are not
+written are kept up to date.
 
 .. code-block:: python
 
@@ -387,6 +398,17 @@ is synchronized as well.
    print(length.feet) # prints [3.2808399 3.2808399 3.2808399]
    length.feet_[0] = 0.0
    print(length.meters) # prints [0. 1. 1.]
+
+The depend objects of a simulation, and the links between them, are drawn
+by ``i-pi-depend-graph input.xml -o graph.svg``, which loads the input
+without connecting to the clients, and writes the graph in the dot format of
+`Graphviz <https://graphviz.org>`_ (or renders it with ``dot``). Each object
+is named by its path from the simulation (e.g. ``syslist[0].beads.q``), and
+an arrow goes from each object to those computed from it. The full graph has
+hundreds of objects: ``--around syslist[0].forces.pot --depth 2`` keeps
+those within two links of the potential. From Python,
+``DependGraph(obj).dot()`` (``from ipi.utils.tools import DependGraph``)
+gives the graph of the depend objects that can be reached from ``obj``.
 
 Array backends
 ^^^^^^^^^^^^^^
@@ -437,7 +459,9 @@ must not be created at import time (module constants, default arguments).
   views such as ``obj.x_[i]``) replace the stored array. Other arrays must not
   be written in place: build them with whole-array operations (``xp.stack``,
   ``xp.concat``, ``xp.where``, ``@`` with a constant matrix) rather than by
-  filling an array created with ``xp.zeros``.
+  filling an array created with ``xp.zeros``. Motions that do not work with
+  JAX set the class attribute ``jax_support = False``, so that i-PI stops
+  with an error when they are used with JAX.
 
 The tests in ``ipi_tests/unit_tests/engine/test_backend_equivalence.py``
 check that the torch and JAX backends reproduce the numpy trajectories and

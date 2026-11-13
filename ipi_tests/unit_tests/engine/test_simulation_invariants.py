@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from ipi.engine.simulation import Simulation
+from ipi.utils.array_backend import to_numpy, xp
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 
 
@@ -16,7 +17,7 @@ def test_nve_tracks_exact_harmonic_motion(simulation, threading):
     """Velocity Verlet agrees with the analytic oscillator at a finite time."""
     with simulation(harmonic_input(threading=threading, timestep=0.01)) as sim:
         beads = sim.syslist[0].beads
-        q0, p0, masses = beads.q.copy(), beads.p.copy(), beads.m3.copy()
+        q0, p0, masses = [to_numpy(x).copy() for x in (beads.q, beads.p, beads.m3)]
         frequency = np.sqrt(0.5 / masses)
         sim.run(steps=20, write_outputs=False)
         time = 0.2
@@ -26,10 +27,10 @@ def test_nve_tracks_exact_harmonic_motion(simulation, threading):
         expected_p = p0 * np.cos(frequency * time) - masses * frequency * q0 * np.sin(
             frequency * time
         )
-        np.testing.assert_allclose(beads.q, expected_q, rtol=0, atol=5e-7)
-        np.testing.assert_allclose(beads.p, expected_p, rtol=0, atol=5e-7)
+        np.testing.assert_allclose(to_numpy(beads.q), expected_q, rtol=0, atol=5e-7)
+        np.testing.assert_allclose(to_numpy(beads.p), expected_p, rtol=0, atol=5e-7)
         assert sim.step == 20
-        assert sim.syslist[0].ensemble.time == pytest.approx(time)
+        assert float(sim.syslist[0].ensemble.time) == pytest.approx(time)
 
 
 def test_nve_with_fixed_atoms_tracks_harmonic_motion(simulation):
@@ -39,15 +40,16 @@ def test_nve_with_fixed_atoms_tracks_harmonic_motion(simulation):
     )
     with simulation(xml) as sim:
         beads = sim.syslist[0].beads
-        q0, p0, masses = beads.q.copy(), beads.p.copy(), beads.m3.copy()
+        q0, p0, masses = [to_numpy(x).copy() for x in (beads.q, beads.p, beads.m3)]
         frequency = np.sqrt(0.5 / masses)
         sim.run(steps=20, write_outputs=False)
         time = 0.2
         expected_q = q0 * np.cos(frequency * time) + p0 / (masses * frequency) * np.sin(
             frequency * time
         )
-        np.testing.assert_allclose(beads.q[:, :3], expected_q[:, :3], atol=5e-7)
-        np.testing.assert_array_equal(beads.q[:, 3:], q0[:, 3:])
+        q = to_numpy(beads.q)
+        np.testing.assert_allclose(q[:, :3], expected_q[:, :3], atol=5e-7)
+        np.testing.assert_array_equal(q[:, 3:], q0[:, 3:])
 
 
 def test_integrator_constants_follow_parameters(simulation):
@@ -56,13 +58,17 @@ def test_integrator_constants_follow_parameters(simulation):
     with simulation(harmonic_input()) as sim:
         motion, beads = sim.syslist[0].motion, sim.syslist[0].beads
         integrator = motion.integrator
-        qdt = integrator.qdt
-        np.testing.assert_allclose(integrator.qdt_on_m, qdt / beads.m3[0])
+        qdt = float(integrator.qdt)
+        np.testing.assert_allclose(
+            to_numpy(integrator.qdt_on_m), qdt / to_numpy(beads.m3[0])
+        )
         motion.dt = 2 * motion.dt
         beads.m = 3 * beads.m
-        np.testing.assert_allclose(integrator.qdt_on_m, 2 * qdt / beads.m3[0])
+        np.testing.assert_allclose(
+            to_numpy(integrator.qdt_on_m), 2 * qdt / to_numpy(beads.m3[0])
+        )
         motion.nmts = [2]
-        assert integrator.inmts == 2 and integrator.qdt == pytest.approx(qdt)
+        assert integrator.inmts == 2 and float(integrator.qdt) == pytest.approx(qdt)
 
 
 @pytest.mark.parametrize("nbeads", [1, 4])
@@ -70,12 +76,12 @@ def test_nve_time_reversal(simulation, nbeads):
     """Reversing momenta retraces classical and ring-polymer trajectories."""
     with simulation(harmonic_input(nbeads=nbeads)) as sim:
         beads = sim.syslist[0].beads
-        q0, p0 = beads.q.copy(), beads.p.copy()
+        q0, p0 = to_numpy(beads.q).copy(), to_numpy(beads.p).copy()
         sim.run(steps=7, write_outputs=False)
         beads.p_[:] *= -1
         sim.run(steps=7, write_outputs=False)
-        np.testing.assert_allclose(beads.q, q0, rtol=1e-12, atol=1e-12)
-        np.testing.assert_allclose(beads.p, -p0, rtol=1e-12, atol=1e-12)
+        np.testing.assert_allclose(to_numpy(beads.q), q0, rtol=1e-12, atol=1e-12)
+        np.testing.assert_allclose(to_numpy(beads.p), -p0, rtol=1e-12, atol=1e-12)
 
 
 def test_com_removal_from_beads_or_normal_modes(simulation):
@@ -84,7 +90,7 @@ def test_com_removal_from_beads_or_normal_modes(simulation):
     xml = harmonic_input(nbeads=4).replace("<fixcom>False", "<fixcom>True")
     with simulation(xml) as sim:
         s = sim.syslist[0]
-        p = np.random.default_rng(0).normal(size=s.beads.p.shape)
+        p = xp.asarray(np.random.default_rng(0).normal(size=tuple(s.beads.p.shape)))
         results = []
         for in_normal_modes in (False, True):
             if in_normal_modes:
@@ -94,7 +100,7 @@ def test_com_removal_from_beads_or_normal_modes(simulation):
             assert s.beads.p_.tainted() == in_normal_modes
             eens = s.ensemble.eens
             s.motion.integrator.pconstraints()
-            results.append((s.beads.p.copy(), s.ensemble.eens - eens))
+            results.append((to_numpy(s.beads.p).copy(), float(s.ensemble.eens - eens)))
         np.testing.assert_allclose(results[1][0], results[0][0], atol=1e-14)
         assert results[1][1] == pytest.approx(results[0][1], rel=1e-12)
         np.testing.assert_allclose(
@@ -118,8 +124,8 @@ def test_output_stride_matches_completed_steps(simulation, threading):
                 sim.run(steps=2)
             expected_energies.append(
                 [
-                    0.25 * np.sum(system.beads.q**2),
-                    np.sum(system.beads.p**2 / (2 * system.beads.m3)),
+                    0.25 * np.sum(to_numpy(system.beads.q) ** 2),
+                    np.sum(to_numpy(system.beads.p**2 / (2 * system.beads.m3))),
                 ]
             )
     rows = np.loadtxt("sample.properties")
@@ -127,11 +133,6 @@ def test_output_stride_matches_completed_steps(simulation, threading):
     np.testing.assert_allclose(rows[:, 1:], expected_energies, rtol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="BUG: GLE state initialization uses ensemble.thermostat instead of motion.thermostat",
-)
 def test_gle_auxiliary_momenta_initialized_from_input(simulation):
     xml = harmonic_input(thermostat="gle").replace(
         "<tau>0.5</tau>", "<A shape='(2,2)'>[1,0,0,1]</A>"
@@ -142,7 +143,7 @@ def test_gle_auxiliary_momenta_initialized_from_input(simulation):
     )
     with simulation(xml) as sim:
         np.testing.assert_array_equal(
-            sim.syslist[0].motion.thermostat.s.ravel(), np.arange(1, 13)
+            to_numpy(sim.syslist[0].motion.thermostat.s).ravel(), np.arange(1, 13)
         )
 
 
@@ -203,10 +204,10 @@ def test_multiple_systems_have_independent_state_and_outputs(simulation):
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         first, second = sim.syslist
         assert first.beads is not second.beads
-        assert first.forces.pot == pytest.approx(0.25 * 0.43)
-        assert second.forces.pot == pytest.approx(1.5)
+        assert float(first.forces.pot) == pytest.approx(0.25 * 0.43)
+        assert float(second.forces.pot) == pytest.approx(1.5)
         first.beads.q_[:] = 0
-        np.testing.assert_array_equal(second.beads.q, 1)
+        np.testing.assert_array_equal(to_numpy(second.beads.q), 1)
         assert {out.filename for out in sim.outputs} == {
             "first_initial.energy",
             "second_initial.energy",

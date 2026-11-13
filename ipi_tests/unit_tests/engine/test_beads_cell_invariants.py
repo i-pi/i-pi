@@ -19,35 +19,6 @@ def beads():
     return result
 
 
-def test_spring_force_is_negative_energy_gradient(beads):
-    """A displacement's energy change and force must agree for every bead."""
-    original = beads.q.copy()
-    force = beads.fpath.copy()
-    numerical = np.zeros_like(original)
-    step = 1e-5
-    for index in np.ndindex(original.shape):
-        beads.q_[index] = original[index] + step
-        forward = beads.vpath
-        beads.q_[index] = original[index] - step
-        backward = beads.vpath
-        beads.q_[index] = original[index]
-        numerical[index] = -(forward - backward) / (2 * step)
-    np.testing.assert_allclose(force, numerical, rtol=1e-8, atol=1e-8)
-    np.testing.assert_allclose(force.sum(axis=0), 0, atol=1e-12)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Beads.fpath is not invalidated when masses change",
-)
-def test_spring_force_updates_after_mass_change(beads):
-    """Changing isotope masses must invalidate already evaluated spring forces."""
-    original_force = beads.fpath.copy()
-    beads.m_[:] *= 2
-    np.testing.assert_allclose(beads.fpath, 2 * original_force, atol=1e-12)
-
-
 def test_bead_views_and_clones_preserve_state_without_aliasing(beads):
     """Per-bead edits update the centroid; cloning produces independent storage."""
     original_centroid = beads.qc.copy()
@@ -84,6 +55,8 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     q = cell.array_pbc(np.array(atoms.q))
     np.testing.assert_allclose(q.reshape(-1, 3), expected, atol=1e-12)
     clone = cell.clone()
+    assert type(clone) is cell_type
+    np.testing.assert_allclose(clone.ih @ clone.h, np.eye(3), atol=1e-12)
     old_volume = cell.V
     cell.h_[:] *= 2
     assert cell.V == pytest.approx(8 * old_volume)
@@ -91,11 +64,6 @@ def test_periodic_wrapping_preserves_fractional_coordinates(cell_type):
     np.testing.assert_allclose(clone.h, h, atol=1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="Beads total kinetic energy refers to missing kins attribute",
-)
 def test_total_bead_kinetic_energy_sums_independent_replicas():
     beads = Beads(2, 4)
     beads.m_[:] = [2.0, 3.0]

@@ -76,9 +76,8 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
                     * mm[k]
                 )
 
-            # moi is symmetric, so eigenvalues and eigenvectors are real
-            I, U = xp.linalg.eig(moi)
-            I, U = xp.real(I), xp.real(U)
+            # eigh gives orthonormal eigenvectors, also for equal moments of inertia
+            I, U = xp.linalg.eigh(moi)
             R = qminuscom @ U
             D = xp.zeros((6, 3 * ii))
 
@@ -189,7 +188,8 @@ def get_hessian(
            fixatoms_dof = indexes of fixed degrees of freedom
            d        = displacement
 
-    OUT    h        = physical hessian  (3*natoms-len(fixatoms_dof)  , nbeads*( 3*natoms-len(fixatoms_dof) ))
+    OUT    h        = physical hessian  (3*natoms, nbeads*3*natoms), with zero
+                      rows for the fixed degrees of freedom
     """
 
     info(" @get_hessian: Computing hessian", verbosity.low)
