@@ -18,8 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toxenv: backends-torch
-            name: Unit and regression tests with the torch backend (CPU)
+          - toxenv: backends-torch-unit
+            name: Unit tests with the torch backend (CPU)
+            coverage: true
+          - toxenv: backends-torch-regtests
+            name: Regression tests with the torch backend (CPU)
             coverage: true
           - toxenv: backends-jax
             name: Regression tests with the JAX backend (CPU)

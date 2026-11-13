@@ -937,7 +937,8 @@ bugs pass, and are no longer marked.
   GPUs). The sync-free CUDA test and CUDA runs must be done by hand on a GPU machine
   (`pytest --ipi-backend torch --ipi-device cuda`).
 - The array-backend CI jobs run the unit tests and the regression tests with the torch backend
-  (`tox -e backends-torch`, with the `jax` extra), the regression tests with JAX (`tox -e backends-jax`), and
+  (`tox -e backends-torch-unit`, with the `jax` extra, and `tox -e backends-torch-regtests`), the regression
+  tests with JAX (`tox -e backends-jax`), and
   the examples with torch (`tox -e torch-examples`);
   the unit tests use the backend of `--ipi-backend` for the simulations of the `simulation` and
   `reference_system` fixtures, the other tests select their backend (`select_backend`). With JAX, the
