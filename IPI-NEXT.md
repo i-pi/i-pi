@@ -851,9 +851,11 @@ with `petjax-convert`; example in `examples/clients/petjax`.
 - `neighbors=jax`: the neighbor lists are computed by vesin-jax inside JAX (pet-jax's `get_neighbor_list_fn`,
   currently on the pet-jax `vesin-jax` branch), one list with its own Verlet cache (`skin`) per structure of a
   batch, so the evaluation depends only on the positions and the cell: `traceable`, and with `--backend jax
-  --jit` the whole step, including the model on all the beads (`vmap`), is one jitted call. The pair capacity
-  and `k_sel` are fixed at the start from the template (`pair_margin`, `extra_neighbors`); exceeding them stops
-  the run with an error raised from a `jax.debug.callback`. Numpy or JAX backend only; the composition shifts
+  --jit` the whole step, including the model on all the beads (`vmap`), is one jitted call. The pairs per atom
+  (`padded_to` of vesin-jax 0.6.2: the largest number in the template times `pair_margin`) and `k_sel`
+  (`extra_neighbors`) are fixed at the start from the template; exceeding them stops the run with an error,
+  raised by vesin-jax for the pairs and from a `jax.debug.callback` for `k_sel`. vesin-jax needs the 64-bit
+  mode of JAX, which the driver enables (the model stays in `dtype`). Numpy or JAX backend only; the composition shifts
   are added in float64 outside the model. (The first version found the pairs by brute force over the cell
   images, O(N^2 n_images); see the timings below.)
 - Agreement on the water example (PET-MAD-xs v1.6, float32): `vesin` and `jax` to float32 rounding; with metatomic
@@ -888,9 +890,12 @@ with `petjax-convert`; example in `examples/clients/petjax`.
   batch one at a time, and each call waits several times for the GPU (pair counts read on the host), ~0.4 ms
   per bead. A single vesin-jax call for a whole batch would remove most of this. The skin does not help on the
   GPU, where vesin synchronizes at every call anyway; it is kept as the default.
-- Installing: pet-jax's `vesin-jax` branch pulls vesin-jax from git, whose wheel requires `jax >=` the version
-  it was built with, so a build in an isolated environment can upgrade a pinned CUDA jax; build with
-  `VESIN_JAX_BUILD_WITH_JAX_VERSION=<installed jax version>` to avoid that.
+  These timings are those of the first vesin-jax API (a flat pair capacity, pair counts read on the host);
+  they were not repeated with the `padded_to` API of vesin-jax 0.6.2, which the driver uses now.
+- Installing: `requirements/petjax.txt` has the versions that are known to work. pet-jax's `vesin-jax` branch
+  pulls vesin-jax from the main branch of vesin (not on PyPI yet; needs cmake and a C++ compiler), which is
+  built against jaxlib 0.10 and requires `jax >=0.10,<0.12`, so installing it downgrades jax 0.12 (the
+  library itself passes the vesin-jax tests with jax 0.12.0 on the CPU).
 
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
