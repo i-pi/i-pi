@@ -814,6 +814,89 @@ bugs pass, and are no longer marked.
   JAX is bound by the host: the compiled call alone takes ~120 / ~137 µs (pure JAX's whole step ~105 / ~121),
   the replay ~20-30 µs of Python, the simulation loop ~10 µs (including a checkpoint every 100 steps).
 
+### GLE, MTS and rotations with PET-MAD (non-conservative forces)
+
+The workflow of `examples/clients/metatomic/input-rotations.xml` and of the cookbook's `pet-mad-nc` recipe: MTS
+`[1,8]` with the conservative forces outside (`[1,0]`) and the non-conservative ones inside (`[-1,1]`), the latter
+rotated by `ffrotations` (random rotation and inversion), and a GLE thermostat. PET-MAD-xs v1.6.0, water, 384 atoms
+with one bead and 96 with eight (PILE_L or PIGLET from `examples/temp/lammps/h2o-piglet.8`), torch on an H100
+(kuma jobs 4859427 and 4859688, same GPU), ms/step, `--jit` (eager in brackets), before -> after the GLE and
+`FFRotations` changes:
+
+| case | 1 bead | 8 beads |
+|---|---|---|
+| Langevin / PILE_L | 11.0 -> 11.0 | 25.1 -> 25.3 |
+| GLE / PIGLET | 12.2 -> 11.2 | 27.9 -> 25.1 (27.5 -> 26.1) |
+| `ffrotations` | 12.3 -> 11.1 | 42.3 -> 34.9 (42.8 -> 39.7) |
+| MTS `[1,8]` | 69.4 -> 69.5 | 152.0 -> 151.3 |
+| MTS + rotations + GLE | 113.9 -> 101.8 | 374.5 -> 320.7 (370.8 -> 348.5) |
+
+- The full workflow is now 10 CUDA graphs per step, with only the 9 model calls between them (it ran eagerly, as
+  GLE was not replayed). The host time outside the model calls went from 13.6 to 1.0 ms (1 bead) and from 72.8 to
+  2.6 ms (8 beads).
+- MTS costs ~0.1 ms per model call outside the model, also before these changes: nothing to fix there.
+- Left: with eight beads the model calls take ~16 ms more per step with `--jit` than eagerly (318 against 302 ms),
+  probably the device time of the replayed graphs, which they wait for (~1.6 ms per segment, more than expected
+  for the integrator and the rotations of 8 x 96 atoms). Not profiled yet.
+- Harness: scratchpad `kuma/nc/bench_nc.py` (one process per case; median of 3 blocks of 10-20 steps after 8
+  warm-up steps; model time from the metatomic `compute`, synchronized).
+
+### pet-jax driver (`ipi/pes/petjax.py`)
+
+PET models (e.g. PET-MAD) run with [pet-jax](https://github.com/lab-cosmo/pet-jax), from checkpoints converted
+with `petjax-convert`; example in `examples/clients/petjax`.
+- `neighbors=vesin` (default): pet-jax's ASE calculator (vesin neighbor lists with a Verlet skin, overflow
+  retries), one calculator per structure of a batch so that each bead keeps its list. Any backend and size; the
+  steps are not compiled with `--jit`.
+- `neighbors=jax`: the neighbor lists are computed by vesin-jax inside JAX (pet-jax's `get_neighbor_list_fn`,
+  currently on the pet-jax `vesin-jax` branch), one list with its own Verlet cache (`skin`) per structure of a
+  batch, so the evaluation depends only on the positions and the cell: `traceable`, and with `--backend jax
+  --jit` the whole step, including the model on all the beads (`vmap`), is one jitted call. The pairs per atom
+  (`padded_to` of vesin-jax 0.6.2: the largest number in the template times `pair_margin`) and `k_sel`
+  (`extra_neighbors`) are fixed at the start from the template; exceeding them stops the run with an error,
+  raised by vesin-jax for the pairs and from a `jax.debug.callback` for `k_sel`. vesin-jax needs the 64-bit
+  mode of JAX, which the driver enables (the model stays in `dtype`). Numpy or JAX backend only; the composition shifts
+  are added in float64 outside the model. (The first version found the pairs by brute force over the cell
+  images, O(N^2 n_images); see the timings below.)
+- Agreement on the water example (PET-MAD-xs v1.6, float32): `vesin` and `jax` to float32 rounding; with metatomic
+  0.002 meV/atom in energy and < 0.05 meV/A in forces, conservative and direct heads.
+- Tests: `ipi_tests/unit_tests/pes/test_petjax.py` (tiny random model; `--ipi-petjax-checkpoint` with
+  `--ipi-metatomic-model` adds the comparison with metatomic).
+- H100 (kuma job 4860570), PET-MAD-xs v1.6 float32, water, NVT, ms/step (model alone, direct driver calls, in
+  brackets):
+
+  | | 384 atoms, 1 bead | 96 atoms, 8 beads |
+  |---|---|---|
+  | metatomic, torch `--jit` | 10.9 (11.2) | 25.0 (25.9) |
+  | pet-jax `vesin`, numpy backend | 8.7 (7.4) | 41.2 (33.7) |
+  | pet-jax `vesin`, jax backend (eager) | 15.3 (10.1) | 52.1 (26.5) |
+  | pet-jax `jax`, jax backend `--jit` | 5.6 | 9.3 |
+
+  With the whole step compiled, pet-jax is 1.9x (1 bead) and 2.7x (8 beads, one batched call) faster than
+  metatomic with CUDA graphs. With `vesin` the beads are evaluated one at a time; the eager jax backend adds ~5
+  ms of integrator per step. The direct calls of the `jax` option (13 ms for 8 beads) pay host transfers and
+  eager indexing that the compiled step does not. Start-up: ~16 s for pet-jax `--jit` (compilation), ~60 s
+  for metatomic (torch.compile of the step functions). The `jax` row used the brute-force neighbor lists.
+- vesin-jax against the brute-force neighbor lists, H100 (kuma job 4861585, two passes agreeing to < 1%),
+  compiled step, ms/step:
+
+  | | brute force | vesin-jax, skin 0.5 | vesin-jax, skin 0 |
+  |---|---|---|---|
+  | 384 atoms, 1 bead | 5.63 | 5.94 | 5.86 |
+  | 96 atoms, 8 beads | 9.37 | 12.56 | 11.72 |
+  | 1536 atoms, 1 bead | 25.36 | 21.65 | 21.54 |
+
+  vesin-jax wins for large systems, and loses with many small structures: vesin-jax runs the structures of a
+  batch one at a time, and each call waits several times for the GPU (pair counts read on the host), ~0.4 ms
+  per bead. A single vesin-jax call for a whole batch would remove most of this. The skin does not help on the
+  GPU, where vesin synchronizes at every call anyway; it is kept as the default.
+  These timings are those of the first vesin-jax API (a flat pair capacity, pair counts read on the host);
+  they were not repeated with the `padded_to` API of vesin-jax 0.6.2, which the driver uses now.
+- Installing: `requirements/petjax.txt` has the versions that are known to work. pet-jax's `vesin-jax` branch
+  pulls vesin-jax from the main branch of vesin (not on PyPI yet; needs cmake and a C++ compiler), which is
+  built against jaxlib 0.10 and requires `jax >=0.10,<0.12`, so installing it downgrades jax 0.12 (the
+  library itself passes the vesin-jax tests with jax 0.12.0 on the CPU).
+
 ### Multiple systems and replica exchange
 - With `interleave='true'` (the default) the systems are stepped in tasks of the scheduler, which interleave
   at the force waits, in one thread (see the first section). Benchmarks with `ipi_tests/profiling/benchmark.py`
