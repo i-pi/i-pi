@@ -36,6 +36,12 @@ class PETJAX_driver(ASEDriver):
     and `extra_neighbors`: the simulation stops with an error if they are
     exceeded.
 
+    Dependencies: pet-jax (`pip install pet-jax`), which installs jax, flax,
+    ase and vesin, and for `neighbors="jax"` a version of pet-jax that uses
+    vesin-jax (0.6.2 or later), which needs jax 0.10 or 0.11 and the 64-bit
+    mode of JAX (enabled by the driver; the model still runs in `dtype`).
+    The versions that are known to work are in `requirements/petjax.txt`.
+
     Command-line:
         i-pi-py_driver -m petjax -o template=init.xyz,checkpoint=pet-mad-xs [...]
 
@@ -50,7 +56,8 @@ class PETJAX_driver(ASEDriver):
         :param neighbors: string, "vesin" (default) or "jax"
         :param skin: float, Verlet skin of the neighbor lists, in angstrom
         :param pair_margin: float, ratio between the number of pairs that the
-            neighbor lists computed in JAX can hold and that of the template
+            neighbor lists computed in JAX can hold for each atom and the
+            largest number of pairs of an atom of the template
         :param extra_neighbors: int, neighbors per atom selected by the model
             beyond those of the template, for `neighbors="jax"`
     """
@@ -92,7 +99,8 @@ class PETJAX_driver(ASEDriver):
         except ImportError as err:
             raise ImportError(
                 "could not import pet-jax, which the petjax driver needs: install it "
-                "with `pip install pet-jax` (see https://github.com/lab-cosmo/pet-jax)"
+                "with `pip install pet-jax` (see https://github.com/lab-cosmo/pet-jax, "
+                "and requirements/petjax.txt for the versions that are known to work)"
             ) from err
 
         # the stress is only computed for periodic structures
@@ -131,17 +139,23 @@ class PETJAX_driver(ASEDriver):
                 "neighbors='jax' needs the numpy or the jax backend of i-PI: use "
                 "neighbors='vesin' with the torch backend"
             )
-        if not hasattr(petjax, "get_neighbor_list_fn"):
+        try:
+            import vesin_jax  # noqa: F401
+
+            if not hasattr(petjax, "get_neighbor_list_fn"):
+                raise ImportError("pet-jax has no `get_neighbor_list_fn`")
+        except ImportError as err:
             raise ImportError(
-                "neighbors='jax' needs a version of pet-jax that computes the "
-                "neighbor lists with vesin-jax (`petjax.get_neighbor_list_fn`)"
-            )
+                "neighbors='jax' needs vesin-jax, and a version of pet-jax that "
+                "computes the neighbor lists with it (`petjax.get_neighbor_list_fn`): "
+                "see requirements/petjax.txt"
+            ) from err
         self.backend_arrays = True
         self.traceable = True
 
-        # the same global settings as the ASE calculator of pet-jax
-        if self.dtype == "float64":
-            jax.config.update("jax_enable_x64", True)
+        # vesin-jax needs the 64-bit mode of JAX, also for a float32 model;
+        # the other global settings are those of the ASE calculator of pet-jax
+        jax.config.update("jax_enable_x64", True)
         jax.config.update("jax_default_matmul_precision", "high")
         self._dtype = jnp.float64 if self.dtype == "float64" else jnp.float32
 
@@ -161,11 +175,13 @@ class PETJAX_driver(ASEDriver):
         self._shift = unit_to_internal("energy", "electronvolt", shift)
 
         # the neighbor lists of the template give the sizes of those
-        # computed in the steps (the last pair is a padding sentinel)
+        # computed in the steps: vesin-jax holds the same number of pairs for
+        # each atom
         structure = petjax.to_structure(
             atoms, self._cutoff, skin=0.0, bucket_strategy=None
         )
-        npairs = int(structure["pair_mask"].sum())
+        centers = np.asarray(structure["centers"])[np.asarray(structure["pair_mask"])]
+        npairs = int(np.bincount(centers, minlength=1).max())
         selection = petjax.select_edges(
             structure,
             model.num_neighbors_adaptive,
@@ -177,7 +193,7 @@ class PETJAX_driver(ASEDriver):
         # an even number of tokens (the neighbors and the central atom) keeps
         # the attention on XLA's fused path
         self._k_sel = k_sel + k_sel % 2
-        self._capacity = int(np.ceil(npairs * self.pair_margin)) + 1
+        self._max_neighbors = max(int(np.ceil(npairs * self.pair_margin)), 1)
         self._natoms = natoms
         self._numbers = np.concatenate([numbers, [0]])
 
@@ -185,12 +201,12 @@ class PETJAX_driver(ASEDriver):
         # a batch (e.g. each bead), created when first needed
         self._neighbor_lists = []
         self._new_neighbor_list = lambda: petjax.get_neighbor_list_fn(
-            self._cutoff, skin=self.skin
+            self._cutoff, self._max_neighbors, skin=self.skin
         )
         self._evaluate = jax.jit(self._evaluate_batch)
         info(
             f" @petjax: neighbor lists computed by vesin-jax: up to "
-            f"{self._capacity - 1} pairs ({npairs} in the template) and "
+            f"{self._max_neighbors} pairs per atom ({npairs} in the template) and "
             f"{self._k_sel} selected neighbors per atom",
             verbosity.low,
         )
@@ -205,7 +221,16 @@ class PETJAX_driver(ASEDriver):
         batched = isinstance(cell, list)
         cells = jnp.stack(cell) if batched else jnp.asarray(cell)[None]
         positions = jnp.stack(pos) if batched else jnp.asarray(pos)[None]
-        energies, forces, virials = self._evaluate(cells, positions)
+        try:
+            energies, forces, virials = self._evaluate(cells, positions)
+        except jax.errors.JaxRuntimeError as err:
+            # vesin-jax fails when an atom has more pairs than the lists hold
+            if "padded_to" not in str(err):
+                raise
+            raise RuntimeError(
+                "petjax: an atom has more pairs within the cutoff than the neighbor "
+                f"lists can hold ({self._max_neighbors}): increase pair_margin"
+            ) from err
         if backend() == "numpy":
             energies, forces, virials = (
                 np.asarray(x, dtype=float) for x in (energies, forces, virials)
@@ -246,19 +271,15 @@ class PETJAX_driver(ASEDriver):
 
         while len(self._neighbor_lists) < nbatch:
             self._neighbor_lists.append(self._new_neighbor_list())
-        neighbors, too_many = zip(
-            *[
-                neighbor_list(p, c, self.pbc, self._capacity)
-                for neighbor_list, p, c in zip(self._neighbor_lists, positions, cells)
-            ]
-        )
+        neighbors = [
+            neighbor_list(p, c, self.pbc)
+            for neighbor_list, p, c in zip(self._neighbor_lists, positions, cells)
+        ]
         neighbors = jax.tree.map(lambda *x: jnp.stack(x), *neighbors)
         energy, forces, virial, overflow = jax.vmap(self._evaluate_one)(
             cells, positions, neighbors
         )
-        jax.debug.callback(
-            self._check_overflow, jnp.stack(too_many).any(), overflow.any()
-        )
+        jax.debug.callback(self._check_overflow, overflow.any())
 
         energy = unit_to_internal("energy", "electronvolt", energy.astype(dtype))
         forces = unit_to_internal("force", "ev/ang", forces.astype(dtype))
@@ -293,15 +314,11 @@ class PETJAX_driver(ASEDriver):
             virial = jnp.zeros((3, 3), dtype=cell.dtype)
         return result["energy"], forces, virial, result["overflow"]
 
-    def _check_overflow(self, pairs, neighbors):
-        """Stops the simulation if the neighbor lists computed in JAX exceed
-        the sizes fixed at the start."""
+    def _check_overflow(self, neighbors):
+        """Stops the simulation if the model selects more neighbors than the
+        size fixed at the start. (vesin-jax stops it if an atom has more pairs
+        within the cutoff than the neighbor lists can hold.)"""
 
-        if pairs:
-            raise RuntimeError(
-                "petjax: there are more pairs within the cutoff than the neighbor "
-                "lists can hold: increase pair_margin"
-            )
         if neighbors:
             raise RuntimeError(
                 "petjax: the model selects more neighbors than the neighbor lists "

@@ -1,0 +1,20 @@
+# Known-compatible dependencies for the i-PI petjax driver, examples and tests.
+#
+# pet-jax pulls in jax, flax, ase, vesin, marathon-train and vesin-jax. The
+# `neighbors:jax` option of the driver (and `--jit`) needs the pet-jax that
+# uses the `padded_to` API of vesin-jax 0.6.2: until it is released, that is
+# the `vesin-jax` branch of pet-jax.
+#
+# vesin-jax is not on PyPI yet: it is built from the vesin repository, which
+# needs cmake and a C++ compiler, and supports jax 0.10 and 0.11 (pip
+# downgrades a newer jax). For a GPU, install the CUDA build of the same jax,
+# e.g. `pip install "jax[cuda12]==0.11.2"`.
+#
+# Converting the PET-MAD checkpoints (examples/clients/petjax/getmodel.sh)
+# also needs `pip install "pet-jax[convert]"` (torch, metatomic, metatrain).
+jax==0.11.2
+jaxlib==0.11.2
+flax==0.12.12
+vesin==0.6.2
+vesin-jax @ git+https://github.com/Luthaf/vesin@8074d9a716fa39e62218020f25ed3533859df843#subdirectory=python/vesin_jax
+pet-jax @ git+https://github.com/lab-cosmo/pet-jax@vesin-jax
