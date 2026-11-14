@@ -389,14 +389,13 @@ def test_interleaved_remd_socket_exit(run):
 
     server = run.ipi("RESTART", "restart")
     wait_for(lambda: os.path.exists("/tmp/ipi_" + address), message="the socket")
-    drivers = [run.py_driver(address, f"driver{i}") for i in range(2)]
+    # one driver: a second one could start after i-PI has finished, and find no socket
+    driver = run.py_driver(address, "driver0")
     wait_exit(server, 60)
-    for driver in drivers:
-        wait_exit(driver, 10)
+    wait_exit(driver, 10)
     log = assert_clean_log(server)
     assert server.returncode == 0, log[-3000:]
-    for driver in drivers:
-        assert driver.returncode == 0, driver.logfile.read_text()[-3000:]
+    assert driver.returncode == 0, driver.logfile.read_text()[-3000:]
 
     assert_continuous(folder, nsteps, natoms=2, prefixes=replicas)
     # the swaps are recorded once per step
