@@ -5,7 +5,8 @@
 # uses the `padded_to` API of vesin-jax 0.6.2: until it is released, that is
 # the `vesin-jax` branch of pet-jax.
 #
-# vesin-jax is not on PyPI yet: it is built from the vesin repository, which
+# vesin-jax is not on PyPI yet: it is built from the main branch of the vesin
+# repository (the URL that pet-jax requires: pip refuses another one), which
 # needs cmake and a C++ compiler, and supports jax 0.10 and 0.11 (pip
 # downgrades a newer jax). For a GPU, install the CUDA build of the same jax,
 # e.g. `pip install "jax[cuda12]==0.11.2"`.
@@ -16,5 +17,5 @@ jax==0.11.2
 jaxlib==0.11.2
 flax==0.12.12
 vesin==0.6.2
-vesin-jax @ git+https://github.com/Luthaf/vesin@8074d9a716fa39e62218020f25ed3533859df843#subdirectory=python/vesin_jax
+vesin-jax @ git+https://github.com/Luthaf/vesin#subdirectory=python/vesin_jax
 pet-jax @ git+https://github.com/lab-cosmo/pet-jax@vesin-jax

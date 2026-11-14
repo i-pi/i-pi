@@ -862,6 +862,10 @@ with `petjax-convert`; example in `examples/clients/petjax`.
   0.002 meV/atom in energy and < 0.05 meV/A in forces, conservative and direct heads.
 - Tests: `ipi_tests/unit_tests/pes/test_petjax.py` (tiny random model; `--ipi-petjax-checkpoint` with
   `--ipi-metatomic-model` adds the comparison with metatomic).
+- CI (`.github/workflows/petjax.yml`, its own environment from `requirements/petjax.txt`): the petjax unit
+  tests, `input.xml` of the example, and `input-jit.xml` with `--backend jax --jit`, which fails unless the step
+  is compiled. PET-MAD-xs is converted in a separate environment (torch, metatomic, metatrain) and cached. The
+  comparison with metatomic is not run (`requirements/metatomic.txt` pins another vesin).
 - H100 (kuma job 4860570), PET-MAD-xs v1.6 float32, water, NVT, ms/step (model alone, direct driver calls, in
   brackets):
 
