@@ -176,6 +176,7 @@ def interpolate_instanton(
 
         new_h_half = new_h[:, 0 : size2 // 2]
         np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
+        out.close()
         # new_h_half = new_h[:, 0:size2 / 2]
         # np.savetxt(out, new_h.reshape(1, new_h.size))
 

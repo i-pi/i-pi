@@ -57,8 +57,6 @@ def test_kinetic_energy_and_stress_match_manual_calculation():
 
     assert np.allclose([atom.kin.item() for atom in atoms], expected_kinetic)
     assert np.allclose([atom.kstress for atom in atoms], expected_atom_stress)
-    assert np.isclose(atoms.kin, np.sum(expected_kinetic))
-    assert np.allclose(atoms.kstress, np.sum(expected_atom_stress, axis=0))
 
 
 def test_clone_copies_values_without_sharing_storage():

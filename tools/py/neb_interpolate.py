@@ -379,7 +379,7 @@ if __name__ == "__main__":
     # =================================================================
     print("Imported structures: %d geometries, %d atoms each." % (nbeads_old, natoms))
     print("Atomic masses:")
-    masses /= Constants.amu
+    masses = masses / Constants.amu
     for mm in masses:
         print(mm)
 
@@ -436,8 +436,8 @@ if __name__ == "__main__":
                 "therefore we keep fixed atoms in their original positions."
             )
         for i in range(nbeads_new):
-            # copy() is necessary, otherwise they all point to the same obj.
-            newpath.append(prototype.copy())
+            # clone() is necessary, otherwise they all point to the same obj.
+            newpath.append(prototype.clone())
             newpath[i].q_[:] = q[i]
             newpath[i].q_[fixmask] = masked_new_q[i]
     else:  # If nbeads changes, we put fixed atoms from the bead 0 to all beads.
@@ -446,7 +446,7 @@ if __name__ == "__main__":
                 "nbeads_new != nbeads_old, therefore we put fixed atoms from bead 0 to all beads."
             )
         for i in range(nbeads_new):
-            newpath.append(prototype.copy())
+            newpath.append(prototype.clone())
             newpath[i].q_[fixmask] = masked_new_q[i]
 
     if args.units != "None":

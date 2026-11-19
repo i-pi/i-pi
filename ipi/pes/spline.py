@@ -86,7 +86,10 @@ class Spline_driver(Dummy_driver):
         x = self.full2oneD(pos)
         force = np.zeros(pos.shape)
         d = 0.001
-        force[0, 0] = -(self.spline_e(x + d) - self.spline_e(x - d)) / (2 * d)
+        # derivative of spline_e(factor_coord * q) with respect to q
+        force[0, 0] = (
+            -factor_coord * (self.spline_e(x + d) - self.spline_e(x - d)) / (2 * d)
+        )
         # force[0, 0] = self.spline_f[0](x) #+ self.spline_f[1](x) + self.spline_f[2](x)
         force[0, 1] = -self.k * pos[0, 1]
         force[0, 2] = -self.k * pos[0, 2]

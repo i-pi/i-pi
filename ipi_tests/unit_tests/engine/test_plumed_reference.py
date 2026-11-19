@@ -6,6 +6,9 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+import ipi.utils.array_backend as ab
+from ipi.engine.atoms import Atoms
+from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFPlumed, ForceRequest
 from ipi.utils.softexit import Softexit
 
@@ -46,25 +49,18 @@ def plumed_field(tmp_path, monkeypatch):
         ff.softexit()
 
 
-@pytest.mark.parametrize(
-    "threaded,step,compute_work", [(False, 0, True), (True, 3, False)]
-)
-def test_plumed_distance_restraint_matches_quadratic(
-    plumed_field, threaded, step, compute_work
-):
+@pytest.mark.parametrize("step,compute_work", [(0, True), (3, False)])
+def test_plumed_distance_restraint_matches_quadratic(plumed_field, step, compute_work):
     ff = plumed_field(
-        threaded=threaded,
         plumed_step=step,
         compute_work=compute_work,
         plumed_extras=["d"],
     )
-    assert not ff.threaded
     assert ff.plumedrestart == (step > 0)
     positions = np.array([0.0, 0.0, 0.0, 1.0, 2.0, -1.0])
     cell = np.eye(3) * 20
     request = ForceRequest(pos=positions, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(request)
-    energy, force, virial, extra = request["result"]
+    energy, force, virial, extra = ff.evaluate(request)
     assert energy == pytest.approx(6, rel=1e-6)
     np.testing.assert_allclose(force, [2, 4, -2, -2, -4, 2], rtol=1e-6)
     np.testing.assert_allclose(
@@ -72,7 +68,6 @@ def test_plumed_distance_restraint_matches_quadratic(
     )
     assert extra["raw"] == ""
     np.testing.assert_allclose(extra["d"], [np.sqrt(6)], rtol=1e-6)
-    assert request._event_done.is_set()
     assert ff.mtd_update(positions, cell) == pytest.approx(0, abs=1e-12)
     assert ff.plumed_step == step + 1
     with pytest.raises(ValueError, match="Size of atom array"):
@@ -80,17 +75,28 @@ def test_plumed_distance_restraint_matches_quadratic(
 
 
 def bias_with_physical_forces(ff):
-    """Results without and with a separate harmonic pair potential U = |r|^2/2."""
+    """Results without and with a separate harmonic pair potential U = |r|^2/2,
+    whose energy, forces and virial are read when the request is queued."""
     q = np.array([0.0, 0.0, 0.0, 1.0, 2.0, -1.0])
-    cell = np.eye(3) * 20
-    first = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(first)
+    atoms = Atoms(2)
+    atoms.q_[:] = ab.xp.asarray(q)
+    cell = Cell(ab.xp.eye(3) * 20)
+
+    def compute():
+        request = ff.queue(atoms, cell)
+        ff.poll()
+        ff.release(request)
+        return request["result"]
+
+    first = compute()
+    # the physical forces are arrays of the backend
+    system = ab.xp.asarray(q)
     ff.system_force = SimpleNamespace(
-        pot=3.0, f=np.concatenate([q[3:], -q[3:]]), vir=-np.outer(q[3:], q[3:])
+        pot=ab.xp.asarray(3.0),
+        f=ab.xp.concat([system[3:], -system[3:]]),
+        vir=-ab.xp.linalg.outer(system[3:], system[3:]),
     )
-    second = ForceRequest(pos=q, cell=(cell, np.linalg.inv(cell)))
-    ff.evaluate(second)
-    return first["result"], second["result"]
+    return first, compute()
 
 
 def test_plumed_returns_only_bias_energy_and_forces(plumed_field):
@@ -99,21 +105,11 @@ def test_plumed_returns_only_bias_energy_and_forces(plumed_field):
         np.testing.assert_allclose(combined[component], alone[component], atol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FFPlumed adds rather than removes the physical virial after changing its sign",
-)
 def test_plumed_returns_only_bias_virial(plumed_field):
     alone, combined = bias_with_physical_forces(plumed_field())
     np.testing.assert_allclose(combined[2], alone[2], atol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="FFPlumed.mtd_update creates a plain dict without the ForceRequest completion event",
-)
 def test_plumed_update_recomputes_bias_after_positions_change(plumed_field):
     ff = plumed_field()
     q = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
@@ -122,6 +118,20 @@ def test_plumed_update_recomputes_bias_after_positions_change(plumed_field):
     # A static restraint does no update work, even if positions have moved.
     assert ff.mtd_update(2 * q, cell) == pytest.approx(0, abs=1e-12)
     np.testing.assert_array_equal(ff.lastq, 2 * q)
+
+
+def test_plumed_with_torch_arrays(plumed_field, select_backend, strict_torch):
+    """The initial structure, the physical forces and the positions passed to
+    mtd_update can be arrays of the torch backend"""
+    expected = bias_with_physical_forces(plumed_field())
+    select_backend("torch")
+    ff = plumed_field()
+    for results, reference in zip(bias_with_physical_forces(ff), expected):
+        for value, ref in zip(results[:3], reference[:3]):
+            np.testing.assert_allclose(value, ref, atol=1e-10)
+    q = ab.xp.asarray([0.0, 0.0, 0.0, 2.0, 0.0, 0.0])
+    assert ff.mtd_update(q, 20 * ab.xp.eye(3)) == pytest.approx(0, abs=1e-12)
+    np.testing.assert_array_equal(ff.lastq, ab.to_numpy(q))
 
 
 def test_plumed_rejects_unsupported_initial_structure_format(plumed_field):

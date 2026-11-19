@@ -94,8 +94,8 @@ class MetaDyn(Smotion):
                     # don't need changes to the forces, only to the bias
                     for fc in s.ensemble.bias.mforces:
                         if fc.ffield == k:
-                            for fb in fc._forces:
-                                # this open-heart surgery on a depend object is fugly
-                                # but can't se a better way
-                                fb.ufvx_._load()[0] -= mtd_work
-                                fb.ufvx_.taint(taintme=False)
+                            # this open-heart surgery on a depend object is fugly
+                            # but can't se a better way: the potentials of all
+                            # the beads are the first item of the results
+                            fc.results_._load()[0] -= mtd_work
+                            fc.results_.taint(taintme=False)

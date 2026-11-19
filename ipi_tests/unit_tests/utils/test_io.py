@@ -150,16 +150,13 @@ def test_corrupt_netstrings_are_rejected(encoded, match):
 
 
 @pytest.mark.parametrize("compressed", [False, True])
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="netstring NPZ writer uses text StringIO for binary NumPy data",
-)
-def test_netstring_roundtrip_preserves_multiple_matrices(compressed):
-    stream = io.StringIO()
-    expected = np.arange(9).reshape(3, 3)
-    netstring_encoded_savez(stream, compressed=compressed, matrix=expected)
-    netstring_encoded_savez(stream, compressed=compressed, matrix=expected.T)
-    stream.seek(0)
-    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected)
-    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected.T)
+def test_netstring_roundtrip_preserves_multiple_matrices(tmp_path, compressed):
+    # a text file, as for the planetary output (newlines are translated)
+    expected = np.arange(-13.0, 50.0).reshape(7, 9) / 7
+    with open(tmp_path / "matrices", "w") as stream:
+        netstring_encoded_savez(stream, compressed=compressed, matrix=expected)
+        netstring_encoded_savez(stream, compressed=compressed, matrix=expected.T)
+    with open(tmp_path / "matrices") as stream:
+        first, second = (netstring_encoded_loadz(stream)["matrix"] for _ in range(2))
+    np.testing.assert_array_equal(first, expected)
+    np.testing.assert_array_equal(second, expected.T)

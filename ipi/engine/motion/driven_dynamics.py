@@ -202,8 +202,6 @@ class BEC:
     # The BEC tensors Z^* can be given to i-PI by an external driver through the extras strings in the forces
     # or they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
-    # asr_threshold = 1e-8 # commenting out this hard-coded line
-
     def __init__(self, cbec=None, bec=None, mode="none", asr_threshold=1e-8):
         self.cbec = cbec
         if bec is None:
@@ -383,8 +381,8 @@ class ElectricDipole:
                             "wrong number of extracted values from the extra string: they should be 3."
                         )
                     else:
-                        dipole[n] = float(factor) * np.asarray(matches)
-                    return dipole
+                        dipole[n] = float(factor) * np.asarray(matches, dtype=float)
+                return dipole
             else:
                 raise ValueError(
                     "Error in '_get_dipole': can not extract dipole from the extra string."

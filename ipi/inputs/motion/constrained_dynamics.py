@@ -51,7 +51,7 @@ class InputConstraintSolver(InputDictionary):
             {
                 "dtype": int,
                 "default": 2,
-                "help": "Order of norm used to determine termination of the Quasi-newton iteration.",
+                "help": "Order of norm used to determine termination of the Quasi-newton iteration (-1 for the infinity norm).",
             },
         ),
     }
@@ -63,7 +63,11 @@ class InputConstraintSolver(InputDictionary):
     def store(self, csolver):
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
-        self.norm_order.store(csolver.norm_order)
+        # the infinity norm is given as -1
+        if csolver.norm_order == float("inf"):
+            self.norm_order.store(-1)
+        else:
+            self.norm_order.store(csolver.norm_order)
 
     def fetch(self):
         return super(InputConstraintSolver, self).fetch()

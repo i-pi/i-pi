@@ -46,7 +46,7 @@ def print_binary(
 def read_binary(filedesc):
     try:
         cell = np.fromfile(filedesc, dtype=float, count=9)
-        cell.shape = (3, 3)
+        cell = cell.reshape(3, 3)
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]
         qatoms = np.fromfile(filedesc, dtype=float, count=3 * nat)
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]

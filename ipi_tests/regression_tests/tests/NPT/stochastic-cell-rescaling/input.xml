@@ -29,7 +29,7 @@
         <timestep units="femtosecond"> 0.5 </timestep>
         <barostat mode="stochastic-rescaling">
           <tau units="femtosecond"> 1000 </tau>
-          <compressibility units="bar^-1"> 4.5e-5 </compressibility>
+          <bulk_modulus units="bar"> 22222.222222222223 </bulk_modulus>
         </barostat>
         <thermostat mode="langevin">
           <tau units="femtosecond"> 100 </tau>

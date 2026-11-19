@@ -10,7 +10,6 @@ import numpy as np
 from ipi.engine.beads import *
 from ipi.utils.inputvalue import *
 from ipi.utils.array_backend import xp
-from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.inputs.atoms import *
 

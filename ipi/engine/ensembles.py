@@ -211,10 +211,11 @@ class Ensemble:
             self.hweights_ = depend_array(
                 name="hweights", value=np.ones(len(self.forces.mforces)), host=True
             )
+        # the bias is non-zero with bias components, or Hamiltonian weights other than 1
         self.has_bias_ = depend_value(
             name="has_bias",
             func=lambda: (
-                len(self.bcomp) > 0 and np.mean((self.hweights - 1) ** 2) < 1e-20
+                len(self.bcomp) > 0 or np.mean((self.hweights - 1) ** 2) > 1e-20
             ),
             dependencies=[self.hweights_],
         )
@@ -223,7 +224,7 @@ class Ensemble:
         for ic in range(len(self.forces.mforces)):
             sfc = ScaledForceComponent(self.forces.mforces[ic], 1.0)
             self.bias.add_component(self.forces.mbeads[ic], self.forces.mrpc[ic], sfc)
-            dcompute(sfc.scaling_, lambda i=ic: self.hweights[i] - 1, [self.hweights_])
+            dsetfunc(sfc.scaling_, lambda i=ic: self.hweights[i] - 1, [self.hweights_])
 
         self._elist = []
 

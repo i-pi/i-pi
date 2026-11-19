@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from scipy.linalg import block_diag
 from ipi.engine.beads import Beads
+from ipi.utils.array_backend import to_numpy
 from ipi.utils.instools import (
     banded_hessian,
     invmul_banded,
@@ -43,6 +44,20 @@ def test_banded_newton_solution_matches_dense_spring_matrix(nbeads, mass_weighte
     np.testing.assert_allclose(
         red2comp(reduced, nbeads, 1), block_diag(*[block] * nbeads)
     )
+
+
+def test_banded_solution_does_not_read_unused_memory():
+    """The symmetric band given to the scipy solver is finite also outside the
+    band, whatever the memory it is allocated in holds."""
+    band = np.zeros((4, 9))
+    band[-1] = 5.0
+    band[0, 3:] = -1.0
+    for _ in range(10):
+        # leaves NaNs in memory that the next arrays of this size may reuse
+        poison = np.full((7, 9), np.nan)
+        del poison
+        answer = to_numpy(invmul_banded(band, np.arange(9) + 1.0))
+        assert np.all(np.isfinite(answer))
 
 
 @pytest.mark.parametrize("nbeads", [1, 4, 7])
@@ -99,11 +114,6 @@ def test_unstable_direction_and_invalid_stable_hessian():
         get_imvector(np.eye(6), np.ones(3))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Interpolated Hessian output remains buffered after the function returns",
-)
 @pytest.mark.parametrize("new_count", [2, 4, 8])
 def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     monkeypatch.chdir(tmp_path)
@@ -132,30 +142,7 @@ def test_interpolation_of_constant_instanton(tmp_path, monkeypatch, new_count):
     )
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        1,
-        2,
-        3,
-        pytest.param(
-            4,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=IndexError,
-                reason="Friction Hessian expansion does not reset inner indices",
-            ),
-        ),
-        pytest.param(
-            5,
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=IndexError,
-                reason="Friction matrix expansion does not reset inner index",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("kind", [1, 2, 3, 4, 5])
 def test_fixed_atom_reduction_and_expansion_roundtrip(kind):
     beads = Beads(2, 3)
     beads.m_[:] = [2, 3]

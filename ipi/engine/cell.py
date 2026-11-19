@@ -52,7 +52,7 @@ class Cell:
         self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
 
     def clone(self):
-        return Cell(xp.asarray(self.h, copy=True))
+        return type(self)(xp.asarray(self.h, copy=True))
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""
@@ -133,29 +133,6 @@ class GenericCell(Cell):
        V: The volume of the cell.
     """
 
-    def __init__(self, h=None):
-        """Initialises base cell class.
-
-        Args:
-           h: Optional array giving the initial lattice vector matrix. The
-              reference cell matrix is set equal to this.
-        """
-
-        if h is None:
-            h = np.zeros((3, 3), float)
-
-        self.h_ = depend_array(name="h", value=h)
-        self.ih_ = depend_array(
-            name="ih",
-            value=np.zeros((3, 3), float),
-            func=self.get_ih,
-            dependencies=[self.h_],
-        )
-        self.V_ = depend_value(name="V", func=self.get_volume, dependencies=[self.h_])
-
-    def clone(self):
-        return GenericCell(xp.asarray(self.h, copy=True))
-
     def get_ih(self):
         """Inverts the lattice vector matrix."""
 
@@ -165,6 +142,3 @@ class GenericCell(Cell):
         """Calculates the volume of the system box."""
 
         return xp.linalg.det(self.h)
-
-
-dproperties(GenericCell, ["h", "ih", "V"])

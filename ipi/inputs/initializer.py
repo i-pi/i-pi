@@ -333,7 +333,7 @@ class InputInitCell(InputInitBase):
                         h[5] * np.pi / 180.0,
                     )
 
-            h.shape = (9,)
+            h = h.reshape(9)
             ibase.value = h
             mode = "manual"
 

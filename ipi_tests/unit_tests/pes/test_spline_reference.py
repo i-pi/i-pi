@@ -27,11 +27,6 @@ def test_tabulated_quadratic_energy_and_transverse_forces(quadratic):
     assert extra == ""
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Spline force omits the coordinate-scale factor in the energy derivative",
-)
 def test_tabulated_quadratic_longitudinal_force(quadratic):
     pos = np.array([[0.3, 0.0, 0.0]])
     assert quadratic.get_forces(pos)[0, 0] == pytest.approx(-2 * pos[0, 0], abs=1e-10)

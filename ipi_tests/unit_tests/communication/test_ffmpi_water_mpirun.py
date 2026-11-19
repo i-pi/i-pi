@@ -4,10 +4,9 @@ Complements test_ffmpi_mpirun.py (harmonic) and test_ffmpi_multi_mpirun.py
 (two tagged drivers) by covering the remaining communication/mpi case: the compiled
 Fortran driver returning forces AND a dipole `extras` string over MPI, with the
 ring-polymer beads sent as one batched request. Needs mpi4py, a working MPI
-runtime (IPI_TEST_MPI=1) and the Fortran driver built with `make MPI=1`.
+runtime (--ipi-mpi) and the Fortran driver built with `make MPI=1`.
 """
 
-import os
 import shutil
 import subprocess
 import importlib.util
@@ -15,9 +14,11 @@ from pathlib import Path
 
 import pytest
 
+from ipi_tests import test_tools
+
 pytestmark = pytest.mark.skipif(
-    importlib.util.find_spec("mpi4py") is None or os.environ.get("IPI_TEST_MPI") != "1",
-    reason="set IPI_TEST_MPI=1 and install mpi4py to run the MPI end-to-end test",
+    importlib.util.find_spec("mpi4py") is None or not test_tools.ipi_mpi,
+    reason="run with --ipi-mpi and install mpi4py to run the MPI end-to-end test",
 )
 
 EXAMPLE = (

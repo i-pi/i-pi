@@ -470,6 +470,20 @@ constant-shape and variable-cell mode.
   `10.1088/0953-8984/23/33/334213 <http://dx.doi.org/10.1088/0953-8984/23/33/334213>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/bib/10.1088/0953-8984/23/33%2F334213>`__
+| G. J. Martyna, D. J. Tobias, M. L. Klein, *“Constant pressure molecular
+  dynamics algorithms”*, J. Chem. Phys. 101(5), 4177 (1994)
+| DOI: `10.1063/1.467468 <http://dx.doi.org/10.1063/1.467468>`__ —
+  BibTeX: `fetch <http://www.doi2bib.org/bib/10.1063%2F1.467468>`__
+| M. Bernetti, G. Bussi, *“Pressure control using stochastic cell
+  rescaling”*, J. Chem. Phys. 153(11), 114107 (2020)
+| DOI: `10.1063/5.0020514 <http://dx.doi.org/10.1063/5.0020514>`__ —
+  BibTeX: `fetch <http://www.doi2bib.org/bib/10.1063%2F5.0020514>`__
+| S. M. J. Rogge, L. Vanduyfhuys, A. Ghysels, M. Waroquier, T. Verstraelen,
+  G. Maurin, V. Van Speybroeck, *“A comparison of barostats for the
+  mechanical characterization of metal–organic frameworks”*, J. Chem. Theory
+  Comput. 11(12), 5583 (2015)
+| DOI: `10.1021/acs.jctc.5b00748 <http://dx.doi.org/10.1021/acs.jctc.5b00748>`__ —
+  BibTeX: `fetch <http://www.doi2bib.org/bib/10.1021%2Facs.jctc.5b00748>`__
 
 Path Integral Langevin Equation Thermostats
 -------------------------------------------

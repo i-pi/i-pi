@@ -3,7 +3,29 @@
 import numpy as np
 import pytest
 
-from ipi.utils.mintools import L_BFGS_nls, min_brent_neb, min_trm, nichols, Powell
+from ipi.utils.array_backend import xp
+from ipi.utils.mintools import (
+    Damped_BFGS,
+    FIRE,
+    _max_atomic_displacement,
+    min_trm,
+    nichols,
+    Powell,
+)
+from ipi.utils.softexit import softexit
+
+
+def test_stuck_fire_requests_a_soft_exit():
+    """FIRE stops with a soft exit when it has gone uphill for more than Nmax steps"""
+
+    softexit.reset()
+    try:
+        # the force opposes the velocity for more than Nmax steps
+        with pytest.raises(SystemExit):
+            FIRE(xp.zeros(3), None, (0.0, xp.ones(3)), v=xp.ones(3), N_up=5, Nmax=5)
+        assert softexit.triggered
+    finally:
+        softexit.reset()
 
 
 @pytest.mark.parametrize("radius", [0.1, 10.0])
@@ -44,45 +66,32 @@ def test_powell_update_satisfies_secant_equation_and_symmetry():
     np.testing.assert_allclose(updated, updated.T, atol=1e-12)
 
 
-@pytest.mark.parametrize("center", [-2.0, 1.5])
-@pytest.mark.parametrize("quartic", [False, True])
-def test_neb_scalar_search_finds_known_minimum(center, quartic):
+def test_damped_bfgs_step_is_measured_on_atoms():
+    """With fixed coordinates, the step of Damped_BFGS is limited by the
+    displacements of the atoms, not of triplets of free coordinates, also
+    with the free coordinates of several beads"""
 
-    def objective(x):
-        d = x - center
-        return 0.0, d * d + (0.2 * d**4 if quartic else 0.0)
-
-    position, value = min_brent_neb(
-        objective, fdf0=objective(0.0)[1], x0=0.0, tol=1e-9, itmax=200, init_step=0.1
-    )
-    assert position == pytest.approx(center, abs=1e-6)
-    assert value < 1e-12
+    # z of the first atom, x and y of the second
+    mask = np.array([False, False, True, True, True, False])
+    assert _max_atomic_displacement(np.array([3.0, 4.0, 0.0]), mask) == 4.0
+    assert _max_atomic_displacement(np.array([3.0, 4.0, 0.0]), np.ones(3, bool)) == 5.0
+    dx = np.array([3.0, 4.0, 0.0, 1.0, 0.0, 2.0])
+    assert _max_atomic_displacement(dx, mask) == 4.0
 
 
-def test_lbfgs_without_line_search_on_quadratic():
+def test_damped_bfgs_at_a_stationary_point():
+    """At a zero gradient, Damped_BFGS stays at the same point and leaves the
+    Hessian unchanged"""
 
-    h = np.diag([1.0, 2.0, 3.0])
-    x = np.array([[0.2, -0.3, 0.4]])
+    positions = []
 
-    def objective(q):
-        return 0.5 * q.ravel() @ h @ q.ravel(), (h @ q.ravel()).reshape(q.shape)
+    def fdf(x):
+        positions.append(np.array(x))
+        return 0.0, np.zeros(3)
 
-    direction = -objective(x)[1]
-    qlist = np.zeros((3, 3))
-    glist = np.zeros((3, 3))
-    for k in range(30):
-        if np.linalg.norm(objective(x)[1]) < 1e-8:
-            break
-        x, value, direction, qlist, glist = L_BFGS_nls(
-            x,
-            direction,
-            objective,
-            qlist,
-            glist,
-            big_step=0.2,
-            init_step=0.05,
-            m=3,
-            k=k,
-        )
-        assert value == pytest.approx(objective(x)[0])
-    np.testing.assert_allclose(x, 0, atol=1e-6)
+    x0 = np.array([[0.1, 0.2, 0.3]])
+    hessian = 2 * np.eye(3)
+    quality = Damped_BFGS(x0, fdf, (0.0, np.zeros(3)), hessian, 0.5, np.ones(3, bool))
+    assert np.isfinite(quality)
+    np.testing.assert_array_equal(hessian, 2 * np.eye(3))
+    np.testing.assert_array_equal(positions[-1], x0)

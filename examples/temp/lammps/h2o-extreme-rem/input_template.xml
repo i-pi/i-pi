@@ -42,7 +42,6 @@
                   <thermostat mode='langevin'>
                     <tau units='femtosecond'> 100</tau>
                   </thermostat>
-                  <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
                 </barostat>
                 <thermostat mode='langevin'>
                   <tau units='femtosecond'> 100 </tau>

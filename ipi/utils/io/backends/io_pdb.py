@@ -46,10 +46,10 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
 
     natoms = beads.natoms
     nbeads = beads.nbeads
+    qs = to_numpy(beads.q) * atoms_conv
+    lab = beads.names
     for j in range(nbeads):
         for i in range(natoms):
-            qs = to_numpy(beads.q) * atoms_conv
-            lab = beads.names
             data = (
                 j * natoms + i + 1,
                 lab[i],

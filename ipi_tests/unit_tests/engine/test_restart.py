@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 
+from ipi.utils.array_backend import to_numpy
 from ipi_tests.unit_tests.engine.inputs import harmonic_input, pressure_input
 
 
@@ -29,6 +30,11 @@ def thermostat_input(mode, nbeads, explicit_covariance=False):
             child = ET.SubElement(bath, "thermostat", mode=child_mode)
             ET.SubElement(child, "tau").text = "0.5"
     return ET.tostring(root, encoding="unicode")
+
+
+def host(x):
+    """A numpy copy of an array or scalar of any backend."""
+    return np.array(to_numpy(x))
 
 
 def assert_same(actual, expected):
@@ -59,10 +65,10 @@ def test_thermostat_restart(restart_states, mode, nbeads, explicit_covariance):
     def snapshot(sim):
         system = sim.syslist[0]
         bath = system.motion.thermostat
-        values = [system.beads.q.copy(), system.beads.p.copy(), bath.ethermo]
+        values = [system.beads.q, system.beads.p, bath.ethermo]
         if mode and "gle" in mode:
-            values.append(bath.s.copy())
-        return values + [system.ensemble.time]
+            values.append(bath.s)
+        return [host(v) for v in values + [system.ensemble.time]]
 
     xml = thermostat_input(mode, nbeads, explicit_covariance)
     expected, actual = restart_states(xml, snapshot, steps=(3, 3))
@@ -77,11 +83,11 @@ def test_barostat_restart(restart_states, barostat, nbeads):
     def snapshot(sim):
         s = sim.syslist[0]
         return [
-            s.beads.q.copy(),
-            s.beads.p.copy(),
-            s.cell.h.copy(),
-            np.asarray(s.motion.barostat.p).copy(),
-            s.motion.barostat.ebaro,
+            host(s.beads.q),
+            host(s.beads.p),
+            host(s.cell.h),
+            host(s.motion.barostat.p),
+            host(s.motion.barostat.ebaro),
         ]
 
     expected, actual = restart_states(pressure_input(barostat, nbeads), snapshot)
@@ -109,13 +115,13 @@ def test_higher_order_and_constrained_centroid_restart(
 
     def snapshot(sim):
         s = sim.syslist[0]
-        return [s.beads.q.copy(), s.beads.p.copy(), s.cell.h.copy(), s.ensemble.econs]
+        return [host(v) for v in [s.beads.q, s.beads.p, s.cell.h, s.ensemble.econs]]
 
     expected, actual = restart_states(xml, snapshot)
     assert_same(actual, expected)
     if mode == "nvt-cc":
         with simulation(xml) as sim:
-            initial_centroid = sim.syslist[0].beads.qc.copy()
+            initial_centroid = host(sim.syslist[0].beads.qc)
         np.testing.assert_allclose(
             expected[0].mean(axis=0), initial_centroid, atol=1e-13
         )
@@ -146,17 +152,17 @@ def test_ramp_restart(simulation, restart_states, kind, attribute, logscale):
     with simulation(xml) as sim:
         for expected in schedule + [1.6, 1.6]:
             sim.run(steps=1, write_outputs=False)
-            assert getattr(sim.syslist[0].ensemble, attribute) == pytest.approx(
+            assert float(getattr(sim.syslist[0].ensemble, attribute)) == pytest.approx(
                 expected
             )
 
     def snapshot(sim):
         s = sim.syslist[0]
         return [
-            s.beads.q.copy(),
-            s.beads.p.copy(),
-            getattr(s.ensemble, attribute),
-            s.ensemble.time,
+            host(s.beads.q),
+            host(s.beads.p),
+            host(getattr(s.ensemble, attribute)),
+            host(s.ensemble.time),
         ]
 
     expected, actual = restart_states(xml, snapshot)
