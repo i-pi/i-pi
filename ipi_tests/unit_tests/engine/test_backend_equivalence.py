@@ -149,6 +149,7 @@ def test_jax_refuses_unsupported_motion(multi, simulation):
         "nvt_svr",
         "pimd_nvt",
         "pimd_pile_g",
+        "pimd_open",
         "pimd_npt",
         "npt_flexible",
     ],

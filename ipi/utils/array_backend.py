@@ -19,7 +19,8 @@ namespace, with the array-creation functions allocating on the selected device,
 and choosing the type of the arrays like numpy does, i.e. with float64 as the
 floating-point type. The global default type of torch is left unchanged, while
 JAX is configured to use 64-bit types. JAX arrays cannot be modified in place:
-the depend objects that store them replace them when they are written.
+the depend objects that store them replace them when they are written, and
+`xp_setitem` writes a part of an array that is not held by a depend object.
 
 Input and output, sockets and forcefields use numpy arrays: `to_numpy` converts
 backend arrays at these boundaries.
@@ -34,9 +35,12 @@ import types
 import numpy as np
 import array_api_compat
 
+from ipi.utils import jaxindexing
+
 __all__ = [
     "xp",
     "xp_size",
+    "xp_setitem",
     "set_backend",
     "backend",
     "device",
@@ -175,6 +179,17 @@ def to_numpy(x):
     if array_api_compat.is_array_api_obj(x):
         x = array_api_compat.to_device(x, "cpu")
     return np.asarray(x)
+
+
+def xp_setitem(a, index, part):
+    """Returns `a` with the part selected by `index` set to `part`. The array is
+    modified in place, except with JAX, whose arrays are immutable: the
+    result must be used in place of `a`."""
+
+    if _current["backend"] == "jax":
+        return jaxindexing.put_eagerly(a, index, part)
+    a[index] = part
+    return a
 
 
 def synchronize():

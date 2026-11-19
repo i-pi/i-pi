@@ -629,8 +629,13 @@ bugs pass, and are no longer marked.
 - Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR, PILE_L,
   PILE_G or GLE thermostat (also `nm_gle` and `nm_gle_g`), and the isotropic (BZP), flexible (MTK) or anisotropic
   (RGB) barostat with no, a Langevin or a GLE thermostat; not replayed (eager, with a warning): stochastic cell
-  rescaling, other thermostats (FFL, CL, multi), fixed atoms, open paths, bosons, multi-system motions other than
-  replica exchange (see "Multiple systems and replica exchange"). Under `--jit`, the systems are stepped one after
+  rescaling, other thermostats (FFL, CL, multi), fixed atoms, bosons, multi-system motions other than
+  replica exchange (see "Multiple systems and replica exchange"). Open paths are replayed: `prop_pq_ms` holds
+  the propagator of the open paths for their atoms (`o_prop_pq_ms` is removed), so that `free_qstep` has no
+  open-path branch, and the transforms write the columns of the open paths with `xp_setitem`
+  (`ipi/utils/array_backend.py`: `a[index] = part` for plain arrays of any backend), indexed by device
+  arrays. numpy, 16 beads, 648 atoms, 64 open paths: `free_qstep` 249 -> 184 us, `vspring` 646 -> 69 us
+  (one gather instead of a loop over the atoms). Under `--jit`, the systems are stepped one after
   the other. The barostats read the temperature and the pressure as host values, so changing them stops a replayed
   run with `JitError`; the external stress of the anisotropic barostat is a device array, and its changes are
   replayed.
@@ -719,10 +724,10 @@ bugs pass, and are no longer marked.
   modes). Motions that write into plain arrays (geometry optimization, NEB, string, phonons, IMF/VSCF, SCP,
   instantons, planetary, Al6xxx KMC, constrained dynamics) set
   `jax_support = False`, and `System.bind` stops with a `ValueError` (also within `multi`); dynamics,
-  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 49 of 77 pass, with
-  the MD restart tests and the PIGLET test (PLUMED is skipped); the others stop at bind (geometry optimizers,
-  NEB, phonons, instantons, constrained dynamics, and their restart tests), or at plain-array writes
-  (bosonic exchange, open paths).
+  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 51 of 77 pass, with
+  the MD restart tests, the PIGLET test and open paths (PLUMED is skipped); the others stop at bind (geometry
+  optimizers, NEB, phonons, instantons, constrained dynamics, and their restart tests), or at plain-array writes
+  (bosonic exchange).
   Eager JAX is slow: ms/step without forces, CPU, numpy / torch / jax, 100 atoms: NVE 0.049 / 0.12 / 0.78,
   NVT 0.11 / 0.29 / 1.8, PIMD-4 0.56 / 1.4 / 11.8, NPT 0.29 / 0.98 / 6.3, NPT flexible 0.93 / 2.6 / 13.4; at
   10000 atoms PIMD-4 28.9 / 26.5 / 34.8. Each eager JAX operation costs 11-16 us (arithmetic), 26 us (reshape), 40-85 us (indexing), 70 us
