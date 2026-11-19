@@ -190,6 +190,36 @@ def test_centroid_positions_and_momenta_follow_free_motion(
         )
 
 
+@pytest.mark.parametrize(
+    "style,freqs", [("rpmd", []), ("pa-cmd", [0.02]), ("wmax-cmd", [0.1, 0.02])]
+)
+def test_kinetic_energy_uses_the_mass_factors_of_open_paths(
+    simulation, style, freqs, monkeypatch
+):
+    """The kinetic energy and stress of the normal modes use the mass factors
+    of the open paths for their atoms, and the quantum kinetic energy
+    estimators warn once that they assume closed paths"""
+    root = ET.fromstring(normal_mode_input(style, freqs, "exact"))
+    ET.SubElement(root.find("system/normal_modes"), "open_paths").text = "[0]"
+    warnings = []
+    monkeypatch.setattr(
+        "ipi.engine.properties.warning", lambda message, *args: warnings.append(message)
+    )
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        system = sim.syslist[0]
+        nm = system.nm
+        system.beads.p_[:] = xp.asarray(np.random.default_rng(7).normal(size=(4, 6)))
+        factors = np.repeat(to_numpy(nm.nm_factor)[:, None], 6, axis=1)
+        factors[:, :3] = to_numpy(nm.o_nm_factor)[:, None]
+        scaled = to_numpy(nm.pnm) / np.sqrt(to_numpy(system.beads.m3) * factors)
+        np.testing.assert_allclose(to_numpy(nm.kins), 0.5 * (scaled**2).sum(axis=1))
+        scaled = scaled.reshape(-1, 3)
+        np.testing.assert_allclose(to_numpy(nm.kstress), scaled.T @ scaled, atol=1e-13)
+        for name in ("kinetic_cv", "kinetic_td", "kinetic_cv"):
+            sim.properties(name)
+        assert len(warnings) == 1 and "open paths" in warnings[0]
+
+
 @pytest.mark.parametrize("paths", ["closed", "open_paths", "bosons"])
 def test_spring_force_is_negative_energy_gradient(simulation, paths):
     """The spring force is minus the gradient of the spring energy for every
@@ -237,8 +267,8 @@ def test_open_and_closed_mode_propagators_match_harmonic_matrix(
                 else:
                     half = dt * generator / 2
                     expected = np.linalg.solve(np.eye(2) - half, np.eye(2) + half)
-                np.testing.assert_allclose(prop[k], expected, atol=1e-12)
-                assert np.linalg.det(prop[k]) == pytest.approx(1.0)
+                np.testing.assert_allclose(prop[:, :, k], expected, atol=1e-12)
+                assert np.linalg.det(prop[:, :, k]) == pytest.approx(1.0)
         cloned = nm.copy()
         assert cloned.mode == nm.mode
         np.testing.assert_array_equal(cloned.nm_freqs, nm.nm_freqs)
