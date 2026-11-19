@@ -316,7 +316,7 @@ class NormalModes:
             name="dynm3",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func=self.get_dynm3,
-            dependencies=[self.nm_factor_, self.beads.m3_],
+            dependencies=[self.nm_factor_, self.o_nm_factor_, self.beads.m3_],
         )
         self.dynomegak_ = depend_array(
             name="dynomegak",
@@ -329,14 +329,14 @@ class NormalModes:
 
         self.prop_pq_ = depend_array(
             name="prop_pq",
-            value=np.zeros((self.beads.nbeads, 2, 2)),
+            value=np.zeros((2, 2, self.beads.nbeads)),
             func=self.get_prop_pq,
             dependencies=[self.omegak_, self.nm_factor_, self.dt_, self.propagator_],
         )
 
         self.o_prop_pq_ = depend_array(
             name="o_prop_pq",
-            value=np.zeros((self.beads.nbeads, 2, 2)),
+            value=np.zeros((2, 2, self.beads.nbeads)),
             func=self.get_o_prop_pq,
             dependencies=[
                 self.o_omegak_,
@@ -360,7 +360,7 @@ class NormalModes:
             name="kins",
             value=np.zeros(self.nbeads, float),
             func=self.get_kins,
-            dependencies=[self.pnm_, self.beads.sm3_, self.nm_factor_],
+            dependencies=[self.pnm_, self.dynm3_],
         )
         self.kin_ = depend_value(
             name="kin", func=self.get_kin, dependencies=[self.kins_]
@@ -369,7 +369,7 @@ class NormalModes:
             name="kstress",
             value=np.zeros((3, 3), float),
             func=self.get_kstress,
-            dependencies=[self.pnm_, self.beads.sm3_, self.nm_factor_],
+            dependencies=[self.pnm_, self.dynm3_],
         )
 
         spring_dependencies = [
@@ -514,7 +514,7 @@ class NormalModes:
         using this matrix.
 
         Returns:
-           An array of the form (nbeads, 2, 2). Each 2*2 array prop_pq[i,:,:]
+           An array of the form (2, 2, nbeads). Each 2*2 array prop_pq[:,:,i]
            gives the exact propagator or Cayley propagator for the i-th normal mode of the
            ring polymer.
         """
@@ -524,7 +524,7 @@ class NormalModes:
     def _propagator_matrices(self, omegak, nm_factor):
         """Exact or Cayley propagators for normal modes with frequencies
         `omegak` and dynamical mass factors `nm_factor`, as an array of shape
-        (nbeads, 2, 2). The centroid is propagated with velocity Verlet."""
+        (2, 2, nbeads). The centroid is propagated with velocity Verlet."""
 
         dt = self.dt
         # Note that the propagator uses mass-scaled momenta.
@@ -540,12 +540,9 @@ class NormalModes:
             diag = xp.cos(dtomegak)
             p_from_q = -xp.sin(dtomegak) * wk * sk
             q_from_p = xp.sin(dtomegak) / (wk * sk)
-        pqk = xp.stack(
-            [xp.stack([diag, p_from_q], axis=-1), xp.stack([q_from_p, diag], axis=-1)],
-            axis=-2,
-        )
-        centroid = xp.asarray([[[1.0, 0.0], [dt, 1.0]]])
-        return xp.concat([centroid, pqk], axis=0)
+        pqk = xp.stack([xp.stack([diag, p_from_q]), xp.stack([q_from_p, diag])])
+        centroid = xp.asarray([[[1.0], [0.0]], [[dt], [1.0]]])
+        return xp.concat([centroid, pqk], axis=-1)
 
     def get_prop_pq_ms(self):
         """Combines the propagator with the atom masses to make a single array
@@ -553,10 +550,10 @@ class NormalModes:
         atoms with open paths have the propagator of the open paths."""
 
         m3 = self.beads.m3
-        pq = xp.permute_dims(self.prop_pq, (1, 2, 0))[:, :, :, None] * xp.ones_like(m3)
+        pq = self.prop_pq[..., None] * xp.ones_like(m3)
         if len(self.open_paths) > 0:
-            o_pq = xp.permute_dims(self.o_prop_pq, (1, 2, 0))[:, :, :, None]
-            pq = xp_setitem(pq, (..., self.open_paths_coords), o_pq)
+            opc = self.open_paths_coords
+            pq = xp_setitem(pq, (..., opc), self.o_prop_pq[..., None])
         # the p-from-q terms are multiplied by the masses, the q-from-p ones divided
         return xp.stack(
             [xp.stack([pq[0, 0], pq[0, 1] * m3]), xp.stack([pq[1, 0] / m3, pq[1, 1]])]
@@ -571,7 +568,7 @@ class NormalModes:
         using this matrix.
 
         Returns:
-           An array of the form (nbeads, 2, 2). Each 2*2 array o_prop_pq[i,:,:]
+           An array of the form (2, 2, nbeads). Each 2*2 array o_prop_pq[:,:,i]
            gives the exact propagator for the i-th normal mode of the
            ring polymer.
         """
@@ -831,11 +828,9 @@ class NormalModes:
            A list of the kinetic energy for each NM.
 
         """
-        # include the partially adiabatic CMD mass scaling
-        pnm = self.pnm / self.beads.sm3
-        kmd = 0.5 * (pnm**2).sum(axis=1) / self.nm_factor
-
-        return kmd
+        # the dynamical masses include the mass scaling of the modes, which
+        # differs between closed and open paths
+        return 0.5 * (self.pnm**2 / self.dynm3).sum(axis=1)
 
     def get_kin(self):
         """Gets the total MD kinetic energy.
@@ -859,8 +854,8 @@ class NormalModes:
            The sum of the MD kinetic stress tensor contributions from each NM.
         """
 
-        # computes mass and nm_scaling-scaled momenta
-        spnm = (self.pnm / xp.sqrt(self.nm_factor[:, None])) / self.beads.sm3
+        # momenta scaled by the dynamical masses
+        spnm = self.pnm / xp.sqrt(self.dynm3)
         spnm = spnm.reshape(-1, 3)  # reshape for quick outer product
         return spnm.T @ spnm
 
