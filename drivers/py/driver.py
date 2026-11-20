@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import socket
 import argparse
 import numpy as np
@@ -99,6 +100,8 @@ def run_driver(
     vir = np.zeros((3, 3), float)
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
+        if not header:
+            raise ConnectionResetError("i-PI has closed the connection")
         if f_verbose:
             print("Received ", header)
         if header == Message("STATUS"):
@@ -140,9 +143,17 @@ def run_driver(
                         .tobytes()
                         .decode("utf-8")
                     )
-                    handle = shared_memory.SharedMemory(name=name)
                     # only attaching: let i-PI own the segment lifetime
-                    resource_tracker.unregister(handle._name, "shared_memory")
+                    try:
+                        handle = shared_memory.SharedMemory(name=name, track=False)
+                    except TypeError:
+                        # before Python 3.13, attaching registers the segment, which
+                        # is then unlinked when this process exits. If i-PI runs in
+                        # this process (segment names start with its pid) the
+                        # registration is i-PI's own, and must be kept.
+                        handle = shared_memory.SharedMemory(name=name)
+                        if not name.startswith(f"ipi_shm_{os.getpid()}_"):
+                            resource_tracker.unregister(handle._name, "shared_memory")
                     shm_handles[kind] = handle
                 shm_views["pos"] = np.ndarray(
                     (batch_n, nat, 3), np.float64, buffer=shm_handles["pos"].buf
@@ -356,7 +367,8 @@ def run_driver_mpi(
 
     import mpi4py
 
-    mpi4py.rc.thread_level = "multiple"
+    # the driver makes its MPI calls one at a time
+    mpi4py.rc.thread_level = "serialized"
     from mpi4py import MPI
 
     world = MPI.COMM_WORLD if comm is None else comm
@@ -558,12 +570,16 @@ if __name__ == "__main__":
             mpi_id=args.mpi_id,
         )
     else:
-        run_driver(
-            unix=args.unix,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-            shm=args.shm,
-        )
+        try:
+            run_driver(
+                unix=args.unix,
+                address=args.address,
+                port=args.port,
+                driver=d_f,
+                f_verbose=args.verbose,
+                sockets_prefix=args.sockets_prefix,
+                shm=args.shm,
+            )
+        except (BrokenPipeError, ConnectionResetError):
+            # i-PI closes the connection when it exits during a calculation
+            print("i-PI has closed the connection. Bye bye!")

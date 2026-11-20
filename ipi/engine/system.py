@@ -10,8 +10,7 @@ forcefields which govern the interaction potential.
 # See the "licenses" directory for full license information.
 
 
-import threading
-
+from ipi.utils.array_backend import backend
 from ipi.utils.depend import dpipe
 from ipi.utils.messages import verbosity, info
 from ipi.engine.forces import Forces
@@ -80,6 +79,15 @@ class System:
 
         self.simul = simul  # keeps a handle to the parent simulation object
 
+        # the motions, also within a multi motion, that cannot run with JAX
+        motions = getattr(self.motion, "mlist", [self.motion])
+        unsupported = [type(m).__name__ for m in motions if not m.jax_support]
+        if backend() == "jax" and unsupported:
+            raise ValueError(
+                f"The motion {', '.join(unsupported)} cannot run with the JAX "
+                "backend: use numpy or torch"
+            )
+
         # binds important computation engines
         info(" @system.bind: Binding the forces ", verbosity.low)
         self.forces.bind(
@@ -109,11 +117,10 @@ class System:
             simul.output_maker,
         )
 
-        dpipe(self.nm._omegan2, self.forces._omegan2)
+        dpipe(self.nm.omegan2_, self.forces.omegan2_)
 
         self.init.init_stage2(self)
 
         # binds output management objects
-        self._propertylock = threading.Lock()
         self.properties.bind(self)
         self.trajs.bind(self)

@@ -106,10 +106,13 @@ class Verbosity(object):
 verbosity = Verbosity()
 
 
-def get_git_info():
+def get_git_info(git_dir=None):
     """
     Retrieves information about the current Git repository, including the branch name,
     last commit hash, and remote URL.
+
+    Args:
+        git_dir: The Git directory. Defaults to that of the i-PI tree.
 
     Returns:
         dict: A dictionary containing:
@@ -122,8 +125,9 @@ def get_git_info():
         None: If the Git directory is not found or if required information cannot be retrieved.
     """
 
-    base_path = os.path.abspath(os.path.join(__file__, "..", "..", "..")) + "/"
-    git_dir = os.path.join(base_path, ".git")
+    if git_dir is None:
+        base_path = os.path.abspath(os.path.join(__file__, "..", "..", "..")) + "/"
+        git_dir = os.path.join(base_path, ".git")
     if not os.path.isdir(git_dir):
         return None
 
@@ -134,6 +138,18 @@ def get_git_info():
                 return file.read().strip()
         except FileNotFoundError:
             return None
+
+    def read_ref(ref):
+        """Returns the commit of a reference, from its own file or, once Git
+        has packed it, from packed-refs."""
+        commit = read_git_file(os.path.join(git_dir, ref))
+        if commit is None:
+            packed = read_git_file(os.path.join(git_dir, "packed-refs")) or ""
+            for line in packed.splitlines():
+                sha, _, name = line.partition(" ")
+                if name == ref:
+                    commit = sha
+        return commit or "unknown"
 
     # Read HEAD to get the current branch or commit hash
     head_content = read_git_file(os.path.join(git_dir, "HEAD"))
@@ -147,9 +163,9 @@ def get_git_info():
     # Parse the current branch name
     try:
         if head_content.startswith("ref:"):
-            ref_path = os.path.join(git_dir, head_content.split(" ")[1])
-            branch_name = os.path.basename(ref_path)
-            last_commit = read_git_file(ref_path)
+            ref = head_content.split(" ")[1]
+            branch_name = ref.removeprefix("refs/heads/")
+            last_commit = read_ref(ref)
         else:
             # Detached HEAD state
             branch_name = "DETACHED"

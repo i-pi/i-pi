@@ -67,11 +67,6 @@ def test_ase_tensor_stress_and_extras(bridge):
         driver.post_process(props, atoms)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=ValueError,
-    reason="ASE bridge rejects its own zero-stress fallback when stress is disabled",
-)
 def test_ase_optional_stress_is_zero(bridge):
     driver, atoms = bridge
     driver.capabilities = ["energy", "forces"]

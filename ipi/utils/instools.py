@@ -3,6 +3,7 @@ import numpy as np
 from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 import ipi.utils.mathtools as mt
 from ipi.utils.softexit import softexit
 
@@ -12,47 +13,18 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     the upper band hessian including the RP terms.
     If masses is True returns hessian otherwise it returns dynmat
     shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies
+    The banded matrix is only used by the scipy banded solvers, so it is
+    built on the host and returned as a numpy array.
     """
     nbeads = sm.fix.fixbeads.nbeads
     natoms = sm.fix.fixbeads.natoms
-    coef = sm.coef  # new_disc
-    m3 = sm.fix.fixbeads.m3
+    h = to_numpy(h)
+    coef = to_numpy(sm.coef)  # new_disc
+    m3 = to_numpy(sm.fix.fixbeads.m3)
     omega2 = sm.omegan**2
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
-
-    href = np.zeros((ndiag, ii))
-
-    # add physical part
-    for i in range(nbeads):
-        h_aux = h[
-            :, i * natoms * 3 : (i + 1) * natoms * 3
-        ]  # Peaks one physical hessian
-        for j in range(1, ndiag):
-            href[j, (ndiag - 1 - j) + i * natoms * 3 : (i + 1) * natoms * 3] = np.diag(
-                h_aux, ndiag - 1 - j
-            )
-
-    # add spring parts
-    if nbeads > 1:
-        # Diagonal
-        if masses:
-            d_corner = m3[0] * omega2
-        else:
-            d_corner = np.ones(m3[0].shape) * omega2
-
-        d_0 = np.array([[d_corner * 2]]).repeat(nbeads - 2, axis=0).flatten()
-        diag_sp = np.concatenate((d_corner, d_0, d_corner))
-        href[-1, :] += diag_sp
-
-        # Non-Diagonal
-        d_out = -d_corner
-        ndiag_sp = np.array([[d_out]]).repeat(nbeads - 1, axis=0).flatten()
-        href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
-
-    # Add safety shift value
-    href[-1, :] += shift
 
     # ------- new Discretization --------------
     hnew = np.zeros((ndiag, ii))
@@ -103,7 +75,9 @@ def sym_band(A):
     u = len(A) - 1
     lu = u
     M = A.shape[1]
-    newA = np.empty((u + lu + 1, M))
+    # the corners outside the band are not used, but must be finite for the
+    # checks of the scipy solvers
+    newA = np.zeros((u + lu + 1, M))
     newA[: u + 1] = A
     for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
@@ -114,7 +88,8 @@ def invmul_banded(A, B, posdef=False):
     """A is in upper banded form
         Solve H.h = -G for Newton - Raphson step, h
     using invmul_banded(H, -G) take step x += h
-    to  find minimum or transition state"""
+    to  find minimum or transition state
+    A is a numpy array, B and the solution are backend arrays."""
 
     try:
         from scipy import linalg
@@ -123,28 +98,28 @@ def invmul_banded(A, B, posdef=False):
     except ImportError:
         raise ValueError(" ")
 
+    B = to_numpy(B)
     if posdef:
-        return linalg.solveh_banded(A, B)
+        return xp.asarray(linalg.solveh_banded(A, B))
     else:
         u = len(A) - 1
         lu = u
         newA = sym_band(A)
-        # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
         # print linalg.eigvals_banded(A)
         # sys.exit(0)
-        return linalg.solve_banded((lu, u), newA, B)
+        return xp.asarray(linalg.solve_banded((lu, u), newA, B))
 
 
 def diag_banded(A, n=2):
-    """A is in upper banded form.
-    Returns the smallest n eigenvalue and its corresponding eigenvector.
+    """Returns the n + 1 smallest eigenvalues of A, given in upper banded form.
+    A and the eigenvalues are numpy arrays.
     """
     try:
         from scipy.linalg import eig_banded
 
         info("Import of scipy successful", verbosity.high)
     except ImportError:
-        raise ValueError(" ")
+        raise ValueError("The banded Hessians of instantons need scipy")
 
     d = eig_banded(
         A, select="i", select_range=(0, n), eigvals_only=True, check_finite=False
@@ -159,10 +134,10 @@ def red2comp(h, nbeads, natoms, coef=None):
     info("\n @Instanton: Creating 'complete' physical hessian \n", verbosity.high)
 
     if coef is None:
-        coef = np.ones(nbeads + 1).reshape(-1, 1)
+        coef = xp.ones(nbeads + 1).reshape(-1, 1)
     i = natoms * 3
     ii = nbeads * i
-    h0 = np.zeros((ii, ii), float)
+    h0 = xp.zeros((ii, ii))
 
     for j in range(nbeads):
         h0[j * i : (j + 1) * i, j * i : (j + 1) * i] = (
@@ -178,28 +153,31 @@ def get_imvector(h, m3):
     OUT    imv    = eigenvector corresponding to the imaginary mode
     """
     info("@get_imvector", verbosity.high)
-    if h.size != m3.size**2:
+    if xp_size(h) != xp_size(m3) ** 2:
         raise ValueError(
             "@Get_imvector. Initial hessian size does not match system size."
         )
     m = 1.0 / (m3**0.5)
-    mm = np.outer(m, m)
-    hm = np.multiply(h, mm)
+    mm = m[:, None] * m[None, :]
+    hm = h * mm
 
     # Simmetrize to use linalg.eigh
     hmT = hm.T
     hm = (hmT + hm) / 2.0
 
-    d, w = np.linalg.eigh(hm)
-    freq = np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)
+    d, w = xp.linalg.eigh(hm)
+    d_host = to_numpy(d)
+    freq = (
+        np.sign(d_host)
+        * np.absolute(d_host) ** 0.5
+        / (2 * np.pi * 3e10 * 2.4188843e-17)
+    )
 
     info(" @GEOP: 1 frequency %4.1f cm^-1" % freq[0], verbosity.low)
     info(" @GEOP: 2 frequency %4.1f cm^-1" % freq[1], verbosity.low)
     info(" @GEOP: 3 frequency %4.1f cm^-1" % freq[2], verbosity.low)
     if freq[0] > -80 and freq[0] < 0:
-        raise ValueError(
-            " @GEOP: Small negative frequency %4.1f cm^-1" % freq, verbosity.low
-        )
+        raise ValueError(" @GEOP: Small negative frequency %4.1f cm^-1" % freq[0])
     elif freq[0] > 0:
         raise ValueError(
             "@GEOP: The smallest frequency is positive. We aren't in a TS. Please check your hessian"
@@ -211,9 +189,9 @@ def get_imvector(h, m3):
     )
 
     imv = w[:, 0] / (m3[:] ** 0.5)
-    imv = imv / np.linalg.norm(imv)
+    imv = imv / xp.linalg.vector_norm(imv)
 
-    return imv.reshape(1, imv.size)
+    return imv.reshape(1, -1)
 
 
 # def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
@@ -224,6 +202,7 @@ def print_instanton_geo(
 ):
     """Alternative (but very useful) output of the instanton geometry and potential energy"""
 
+    q, f, pots = to_numpy(q), to_numpy(f), to_numpy(pots)
     outfile = output_maker.get_output(prefix + "_" + str(step) + ".ener", "w")
     print("#Bead    Energy (eV)", file=outfile)
     for i in range(nbeads):
@@ -290,12 +269,14 @@ def print_instanton_geo(
 def print_instanton_hess(prefix, step, hessian, output_maker):
     """Print physical part of the instanton hessian"""
     outfile = output_maker.get_output(prefix + ".hess_" + str(step), "w")
-    np.savetxt(outfile, hessian.reshape(1, hessian.size))
+    np.savetxt(outfile, to_numpy(hessian).reshape(1, -1))
     outfile.close_stream()
 
 
 def ms_pathway(pos, m3):
-    """Compute mass scaled pathway"""
+    """Compute mass scaled pathway, as a numpy array (it is only used on the
+    host, to select the beads to interpolate and to build the splines)"""
+    pos, m3 = to_numpy(pos), to_numpy(m3)
     dx = list()
     path = np.zeros(pos.shape[0])
     for i in range(1, pos.shape[0]):
@@ -316,15 +297,15 @@ class Fix(object):
             self.nbeads = nbeads
 
         self.fixatoms_dof = fixatoms_dof
-        if len(self.fixatoms_dof) > 0:
-            if np.mod(len(self.fixatoms_dof), 3) == 0:
-                self.fixatoms = np.unique(self.fixatoms_dof // 3)
-            else:
-                softexit.trigger(
-                    message="fixatoms_dof is not yet implemented. please use fixatoms",
-                )
-        else:
-            self.fixatoms = self.fixatoms_dof
+        # only whole atoms can be fixed
+        self.fixatoms = np.unique(np.asarray(self.fixatoms_dof, int) // 3)
+        whole = (3 * self.fixatoms[:, None] + np.arange(3)).ravel()
+        if not np.array_equal(np.sort(self.fixatoms_dof), whole):
+            softexit.trigger(
+                status="bad",
+                message="Instantons can only fix whole atoms: fixatoms_dof must hold "
+                "the three coordinates of each fixed atom",
+            )
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)
@@ -338,9 +319,9 @@ class Fix(object):
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
         self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
-        self.fixbeads.q[:] = self.get_active_vector(beads.clone().q, 1)
-        self.fixbeads.m[:] = self.get_active_vector(beads.clone().m, 0)
-        self.fixbeads.names[:] = self.get_active_vector(beads.clone().names, 0)
+        self.fixbeads.q_[:] = self.get_active_vector(beads.clone().q, 1)
+        self.fixbeads.m_[:] = self.get_active_vector(beads.clone().m, 0)
+        self.fixbeads.names_[:] = self.get_active_vector(beads.clone().names, 0)
 
         mask3a = np.ones(9 * self.natoms, dtype=bool)
         for i in range(9):
@@ -376,7 +357,7 @@ class Fix(object):
                 t = -1
             elif key == "old_x" or key == "old_f" or key == "d":
                 t = 1
-            elif key == "hessian" or "eta0":
+            elif key == "hessian" or key == "eta0":
                 t = 2
             elif key == "qlist" or key == "glist":
                 t = 3
@@ -404,6 +385,8 @@ class Fix(object):
                 type=3 : qlist or glist (corrections, nbeads*dof)
                 type=4 : fric_hessian(nbeads,dof,dof,dof)
                 type=5 : eta(nbeads,dof,dof)
+            friction tensors (types 4 and 5) are numpy arrays, the others
+            are backend arrays
         OUT:
             full_vector  full dimensional vector
         """
@@ -411,13 +394,13 @@ class Fix(object):
             return vector
 
         if t == 1:
-            full_vector = np.zeros((self.nbeads, 3 * self.natoms))
+            full_vector = xp.zeros((self.nbeads, 3 * self.natoms))
             full_vector[:, self.get_mask(1)] = vector
 
             return full_vector
 
         elif t == 2:
-            full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
+            full_vector = xp.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
 
             ii = 0
             for i in self.get_mask(1):
@@ -427,39 +410,22 @@ class Fix(object):
             return full_vector
 
         elif t == 3:
-            full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
-            full_vector[:, self.fix.get_mask(2)] = vector
+            full_vector = xp.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
+            full_vector[:, self.get_mask(2)] = vector
 
             return full_vector
         elif t == 4:
+            m = self.get_mask(1)
             full_vector = np.zeros(
                 (self.nbeads, 3 * self.natoms, 3 * self.natoms, 3 * self.natoms)
             )
-            ii = 0
-            jj = 0
-            kk = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    for k in self.get_mask(1):
-                        full_vector[:, i, j, k] = vector[
-                            :, ii, jj, kk
-                        ]  # Yes, this can be improved
-                        kk += 1
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m, m)] = vector
             return full_vector
 
         elif t == 5:
+            m = self.get_mask(1)
             full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms))
-            ii = 0
-            jj = 0
-            for i in self.get_mask(1):
-                for j in self.get_mask(1):
-                    full_vector[:, i, j] = vector[
-                        :, ii, jj
-                    ]  # Yes, this can be improved
-                    jj += 1
-                ii += 1
+            full_vector[np.ix_(range(self.nbeads), m, m)] = vector
             return full_vector
 
         else:

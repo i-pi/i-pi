@@ -11,7 +11,6 @@ Syntax:
    mergebeadspdb.py prefix
 """
 
-
 import numpy as np
 import sys
 import glob
@@ -55,15 +54,15 @@ def main(prefix, suffix="pos", outprefix="fixcom"):
                     natoms = pos.natoms
                     atoms = Atoms(natoms)
 
-                atoms.q += pos.q
+                atoms.q_ += pos.q
                 atoms.names = pos.names
-                atoms.m += pos.m
+                atoms.m_ += pos.m
             except EOFError:  # finished reading files
                 for ib in range(nbeads):
                     lout[ib].close()
                 sys.exit(0)
-        atoms.q /= nbeads
-        atoms.m /= nbeads
+        atoms.q_ /= nbeads
+        atoms.m_ /= nbeads
         com = np.zeros(3)
         tm = 0
         for i in range(atoms.natoms):
@@ -72,10 +71,10 @@ def main(prefix, suffix="pos", outprefix="fixcom"):
         com /= tm
         for ib in range(nbeads):
             for i in range(allbeads[ib].natoms):
-                allbeads[ib].q[3 * i : 3 * (i + 1)] -= com
+                allbeads[ib].q_[3 * i : 3 * (i + 1)] -= com
             print_file(imode[ib], allbeads[ib], cell, filedesc=lout[ib])
-        atoms.q[:] = 0.0
-        atoms.m[:] = 0.0
+        atoms.q_[:] = 0.0
+        atoms.m_[:] = 0.0
         ifr += 1
 
 

@@ -10,6 +10,7 @@ import ipi.engine.properties as properties_module
 from ipi.engine.motion.driven_dynamics import BEC, DrivenDynamics, ElectricField
 from ipi.engine.properties import getall, help_latex, help_rst
 from ipi.engine.simulation import Simulation
+from ipi.utils.array_backend import to_numpy
 from ipi_tests.unit_tests.engine.inputs import harmonic_input
 from ipi_tests.unit_tests.engine.mathematical_references import polynomial
 
@@ -23,15 +24,19 @@ def harmonic_system():
 @pytest.mark.parametrize("count", [2, 6])
 def test_cell_and_density_outputs(reference_system, count):
     s, r = reference_system(count)
-    assert s.properties["density"][0] == pytest.approx(5 / 120)
-    assert s.properties["volume"][0] == pytest.approx(120)
-    np.testing.assert_allclose(s.properties["cell_h"][0], [6, 5, 4, 1, 0.5, 0.7])
+    assert to_numpy(s.properties["density"][0]) == pytest.approx(5 / 120)
+    assert to_numpy(s.properties["volume"][0]) == pytest.approx(120)
+    np.testing.assert_allclose(
+        to_numpy(s.properties["cell_h"][0]), [6, 5, 4, 1, 0.5, 0.7]
+    )
     lengths = np.linalg.norm(r.h, axis=0)
     angles = [
         np.degrees(np.arccos(np.dot(r.h[:, i], r.h[:, j]) / (lengths[i] * lengths[j])))
         for i, j in [(1, 2), (0, 2), (0, 1)]
     ]
-    np.testing.assert_allclose(s.properties["cell_abcABC"][0], np.r_[lengths, angles])
+    np.testing.assert_allclose(
+        to_numpy(s.properties["cell_abcABC"][0]), np.r_[lengths, angles]
+    )
 
 
 @pytest.mark.parametrize("atom", [0, 1])
@@ -41,10 +46,10 @@ def test_atom_and_centroid_outputs(reference_system, atom):
     columns = slice(3 * atom, 3 * atom + 3)
     velocity = r.p / np.repeat(r.masses, 3)
     np.testing.assert_allclose(
-        s.properties[f"atom_x_path({atom})"][0], r.q[:, columns].ravel()
+        to_numpy(s.properties[f"atom_x_path({atom})"][0]), r.q[:, columns].ravel()
     )
     np.testing.assert_allclose(
-        s.properties[f"atom_f_path({atom})"][0], force[:, columns].ravel()
+        to_numpy(s.properties[f"atom_f_path({atom})"][0]), force[:, columns].ravel()
     )
     for key, values in [("atom_v", velocity), ("atom_p", r.p), ("atom_f", force)]:
         for bead in [-1, 2]:
@@ -52,7 +57,7 @@ def test_atom_and_centroid_outputs(reference_system, atom):
                 values[:, columns].mean(axis=0) if bead < 0 else values[bead, columns]
             )
             np.testing.assert_allclose(
-                s.properties[f"{key}({atom};{bead})"][0], expected
+                to_numpy(s.properties[f"{key}({atom};{bead})"][0]), expected
             )
     for key, values in [
         ("velocities", velocity),
@@ -61,16 +66,17 @@ def test_atom_and_centroid_outputs(reference_system, atom):
         ("p_centroid", r.p.mean(axis=0)),
         ("f_centroid", force.mean(axis=0)),
     ]:
-        np.testing.assert_allclose(s.trajs[key][0], values)
+        np.testing.assert_allclose(to_numpy(s.trajs[key][0]), values)
     for parity, selected in [
         ("even", slice(None, None, 2)),
         ("odd", slice(1, None, 2)),
     ]:
         np.testing.assert_allclose(
-            s.trajs["x_centroid_" + parity][0], r.q[selected].mean(axis=0)
+            to_numpy(s.trajs["x_centroid_" + parity][0]), r.q[selected].mean(axis=0)
         )
         np.testing.assert_allclose(
-            s.trajs["v_centroid_" + parity][0], velocity[selected].mean(axis=0)
+            to_numpy(s.trajs["v_centroid_" + parity][0]),
+            velocity[selected].mean(axis=0),
         )
 
 
@@ -78,18 +84,13 @@ def test_atom_and_centroid_outputs(reference_system, atom):
 def test_centroid_center_of_mass_velocity(harmonic_system, species, indices):
     s = harmonic_system
     momenta = np.arange(24).reshape(4, 2, 3) / 10
-    s.beads.p[:] = momenta.reshape(4, 6)
+    s.beads.p_[:] = momenta.reshape(4, 6)
     expected = (
         momenta.mean(axis=0)[indices].sum(axis=0) / np.array([2.0, 3.0])[indices].sum()
     )
     np.testing.assert_allclose(s.properties.get_vcom(species), expected)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="Bead-specific vcom indexes the Atoms object instead of its momenta",
-)
 def test_single_bead_center_of_mass_velocity(harmonic_system):
     s = harmonic_system
     expected = s.beads.p[2].reshape(2, 3).sum(axis=0) / 5
@@ -115,24 +116,13 @@ def test_driven_field_envelope_and_forces(reference_system, time):
     s.ensemble.time = time
     envelope = np.exp(-0.5 * ((time - 0.6) / 0.3) ** 2)
     field = envelope * np.cos(0.7 * time + 0.2) * np.array([0.2, -0.3, 0.4])
-    assert s.properties["Eenvelope"][0] == pytest.approx(envelope)
-    np.testing.assert_allclose(s.trajs["Eforces"][0], charge @ field, atol=1e-13)
+    assert to_numpy(s.properties["Eenvelope"][0]) == pytest.approx(envelope)
+    np.testing.assert_allclose(
+        to_numpy(s.trajs["Eforces"][0]), charge @ field, atol=1e-13
+    )
 
 
-@pytest.mark.parametrize(
-    "encoding",
-    [
-        "json",
-        pytest.param(
-            "legacy",
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="Legacy dipole parsing returns after the first bead, leaving later beads as NaN",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("encoding", ["json", "legacy"])
 @pytest.mark.parametrize("bead", ["", "2"])
 def test_driven_field_dipole_and_born_charges(harmonic_system, bead, encoding):
     s = harmonic_system
@@ -201,11 +191,6 @@ def test_output_units_and_arguments(harmonic_system):
 
 
 @pytest.mark.parametrize("text", ["potential{electronvolt", "potential}"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=pytest.fail.Exception,
-    reason="Property parser accepts unmatched unit braces",
-)
 def test_parser_rejects_unmatched_unit_braces(text):
     with pytest.raises(ValueError):
         getall(text)

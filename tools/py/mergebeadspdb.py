@@ -11,7 +11,6 @@ Syntax:
    mergebeadspdb.py prefix
 """
 
-
 import sys
 import glob
 from ipi.utils.io import read_file, print_file_path
@@ -40,7 +39,7 @@ def main(prefix, suffix="pos", unitconv="1.0"):
                 if natoms == 0:
                     natoms = pos.natoms
                     beads = Beads(natoms, nbeads)
-                cell.h *= float(unitconv)
+                cell.h_ *= float(unitconv)
                 beads[i].q = pos.q * float(unitconv)
                 beads.names = pos.names
         except EOFError:  # finished reading files

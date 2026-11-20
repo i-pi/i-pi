@@ -17,7 +17,7 @@ class _FinishingMotion(Motion):
 def _make_simulation(motion):
     simulation = Simulation.__new__(Simulation)
     simulation.syslist = [_System(motion)]
-    simulation.threading = False
+    simulation.interleave = False
     simulation.smotion = None
     simulation.finished = False
     simulation.exit_status = "success"

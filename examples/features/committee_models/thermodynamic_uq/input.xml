@@ -12,7 +12,7 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffcommittee name="committee" threaded="False">
+  <ffcommittee name="committee">
     <alpha> 1.0 </alpha>
     <active_output> active </active_output>
     <active_thresh units="electronvolt"> 0.05 </active_thresh>
@@ -38,7 +38,6 @@
           <thermostat mode='langevin'>
             <tau units='femtosecond'> 100</tau>
           </thermostat>
-          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
         </barostat>
         <timestep units='femtosecond'> 0.5 </timestep>
         <thermostat mode='svr'>

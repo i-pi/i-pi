@@ -114,7 +114,7 @@ designed to specify a single bit of data, and has the following syntax:
 
 .. code-block::
 
-   <initialize nbeads=’4’> ... </initialize>
+   <initialize nbeads='4'> ... </initialize>
 
 Note that an attribute forms part of the opening tag, and that the value
 being assigned to it is held within quotation marks. In this case, we
@@ -253,17 +253,17 @@ using the :ref:`cell` tag in three different ways:
 
 .. code-block::
 
-   <cell mode=’manual’ units=’angstrom’> [17.847, 0, 0, 0, 17.847, 0, 0,
+   <cell mode='manual' units='angstrom'> [17.847, 0, 0, 0, 17.847, 0, 0,
    0, 17.847] </cell>
 
 .. code-block::
 
-   <cell mode=’abcABC’ units=’angstrom’> [17.847, 17.847, 17.847, 90,
+   <cell mode='abcABC' units='angstrom'> [17.847, 17.847, 17.847, 90,
    90, 90] </cell>
 
 .. code-block::
 
-   <cell mode=’abc’ units=’angstrom’> [17.847, 17.847, 17.847] </cell>
+   <cell mode='abc' units='angstrom'> [17.847, 17.847, 17.847] </cell>
 
 If the xyz already contains the cell parameters, i-PI will use those
 which are read the last in the config file (if the “cell” tag follows
@@ -337,8 +337,8 @@ specify the temperature using the appropriate tag:
 
   <system>
     ...
-    <motion mode=’dynamics’>
-      <dynamics mode=’nvt’> ... </dynamics>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'> ... </dynamics>
     </motion>
   </system>
 
@@ -354,9 +354,9 @@ femtosecond, giving:
 
   <system>
     ...
-    <dynamics mode=’nvt’>
+    <dynamics mode='nvt'>
          ...
-         <timestep units=’femtosecond’> 1 </timestep>
+         <timestep units='femtosecond'> 1 </timestep>
     </dynamics>
   </system>
 
@@ -400,7 +400,7 @@ The temperature must be specified within the :ref:`ensemble`:
    <system>
        ...
        <ensemble>
-           <temperature units=’kelvin’> 300 </temperature>
+           <temperature units='kelvin'> 300 </temperature>
        </ensemble>
        ...
    </system>
@@ -531,7 +531,7 @@ the “verbosity” attribute of :ref:`simulation`:
 
 .. code-block::
 
-   <simulation verbosity=’high’> ... </simulation>
+   <simulation verbosity='high'> ... </simulation>
 
 By default the verbosity is set to “low”, which only outputs important
 warning messages and information, and some statistical information every
@@ -721,9 +721,8 @@ Now that we have a valid input file, we can run the first part of the tutorial  
 This will start the i-PI simulation, creating the server socket and
 initializing the simulation data. This should at this point print out a
 header message to standard output, followed by a few information
-messages that end with “starting the polling thread main loop”, which
-signifies that the server socket has been opened and is waiting for
-connections from client codes.
+messages, one of which says that the server socket has been created: it
+is then waiting for connections from client codes.
 
 At this point, the driver code is run in a new terminal from the
 “drivers” directory using the command:
@@ -866,8 +865,9 @@ the ensemble:
 Then, we must also specify the constant pressure algorithm, using the
 tag :ref:`barostat` within the dynamics environment. Do not forget to change the mode
 attribute of the dynamics from “nvt” to “npt”.
-This example uses a stochastic barostat to apply pressure
-to an isotropic system, which can be specified with the option “isotropic”.
+This example uses the barostat of Bussi, Zykova-Timan and Parrinello
+:cite:`buss+09jcp` (option “isotropic”), which changes the volume of the cell
+but not its shape.
 See the documentation of the :ref:`barostat` object and the examples to see how to apply
 an anisotropic stress, or to allow for cell shape fluctuations.
 
@@ -884,11 +884,11 @@ freedom, and we will take its time scale to be 250 femtoseconds:
      <ensemble> 
         <pressure> 0 </pressure> 
      </ensemble> 
-     <motion mode=’dynamics’>
-        <dynamics mode=’npt’> 
-            <barostat mode=’isotropic’>
-                 <thermostat mode=’langevin’> 
-                    <tau units=’femtosecond’> 250 </tau>
+     <motion mode='dynamics'>
+        <dynamics mode='npt'> 
+            <barostat mode='isotropic'>
+                 <thermostat mode='langevin'> 
+                    <tau units='femtosecond'> 250 </tau>
                  </thermostat> 
              </barostat> 
              ... 
@@ -907,11 +907,11 @@ also, giving:
      <ensemble> 
         <pressure> 0 </pressure> 
      </ensemble> 
-     <motion mode=’dynamics’>
-        <dynamics mode=’npt’> 
-            <barostat mode=’isotropic’>
-                 <thermostat mode=’langevin’> 
-                    <tau units=’femtosecond’> 250 </tau>
+     <motion mode='dynamics'>
+        <dynamics mode='npt'> 
+            <barostat mode='isotropic'>
+                 <thermostat mode='langevin'> 
+                    <tau units='femtosecond'> 250 </tau>
                  </thermostat> 
                  <tau units='femtosecond'> 250 </tau>
              </barostat> 
@@ -925,21 +925,32 @@ with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as 
 Note that in a *NPT* simulation, we have two thermostats, one applied to the nuclear degrees of freedom and one 
 applied to the volume degrees of freedom.
 
+The mass of the piston is :math:`3 N k_B T \tau^2`, as in the original barostat.
+The period of the volume oscillations is then about :math:`2\pi\tau/\sqrt{3}`
+for an ideal gas, but shorter by :math:`\sqrt{B/\rho k_B T}` for a material of
+bulk modulus :math:`B` and atomic density :math:`\rho`: about :math:`1.6\tau`
+for water and :math:`0.2\tau` for a metal at room temperature, and shorter at
+lower temperatures. Giving an estimate of the bulk modulus, e.g.
+``<bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>`` for water, sets the
+mass to :math:`9 V B (\tau/2\pi)^2` instead, so that the period is about
+:math:`\tau` for any material and temperature. :math:`V` is the initial
+volume, unless a reference volume is given with ``<v0>``.
+
 For classical simulations of liquids, the Bernetti--Bussi stochastic
 cell-rescaling barostat :cite:`bern-buss20jcp` is available as an alternative.
-It requires an estimate of the isothermal compressibility but does not use a
+It requires an estimate of the isothermal bulk modulus but does not use a
 separate cell thermostat:
 
 .. code-block:: xml
 
    <barostat mode='stochastic-rescaling'>
       <tau units='femtosecond'> 1000 </tau>
-      <compressibility units='bar^-1'> 4.5e-5 </compressibility>
+      <bulk_modulus units='gigapascal'> 2.2 </bulk_modulus>
    </barostat>
 
 The implementation uses the standard NPT Trotter integrator with instantaneous
 kinetic pressure. It currently supports classical, one-bead simulations. The
-compressibility controls the relaxation rate and must be supplied for the
+bulk modulus controls the relaxation rate and must be supplied for the
 material and thermodynamic state being simulated.
 
 Initialization from RESTART
@@ -1013,7 +1024,7 @@ to “unix”:
 
 .. code-block::
 
-   <ffsocket mode=’unix’ name="driver"> ... </ffsocket>
+   <ffsocket mode='unix' name="driver"> ... </ffsocket>
 
 We then specify that the client code should connect to a unix socket
 using the -u flag:

@@ -58,6 +58,9 @@ html_title = "i-PI documentation pages"
 html_theme = "furo"
 html_theme_options = {
     "top_of_page_buttons": [],
+    "announcement": "This is the manual of the pre-release of i-PI 4.0. "
+    "The manual of the stable version is at "
+    "<a href='https://docs.ipi-code.org/'>docs.ipi-code.org</a>.",
 }
 html_favicon = "../_static/favicon-ipi.png"
 html_logo = "../figures/ipi-logo.svg"

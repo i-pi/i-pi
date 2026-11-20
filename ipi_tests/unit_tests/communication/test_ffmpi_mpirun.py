@@ -1,12 +1,11 @@
 """End-to-end FFMPI test against a real mpirun launch.
 
 This needs mpi4py and a working MPI runtime, so it is skipped unless mpi4py is
-importable and IPI_TEST_MPI=1 is set in the environment. It launches i-PI and
+importable and pytest runs with --ipi-mpi. It launches i-PI and
 two harmonic driver ranks in a single MPMD job and checks the run completes and
 the forces match the analytic harmonic result.
 """
 
-import os
 import shutil
 import subprocess
 import importlib.util
@@ -15,9 +14,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from ipi_tests import test_tools
+
 pytestmark = pytest.mark.skipif(
-    importlib.util.find_spec("mpi4py") is None or os.environ.get("IPI_TEST_MPI") != "1",
-    reason="set IPI_TEST_MPI=1 and install mpi4py to run the MPI end-to-end test",
+    importlib.util.find_spec("mpi4py") is None or not test_tools.ipi_mpi,
+    reason="run with --ipi-mpi and install mpi4py to run the MPI end-to-end test",
 )
 
 EXAMPLE = (

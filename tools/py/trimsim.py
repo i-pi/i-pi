@@ -19,7 +19,6 @@ Syntax:
    trimsim.py inputfile.xml
 """
 
-
 import sys
 import os
 import numpy as np

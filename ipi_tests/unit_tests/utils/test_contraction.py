@@ -57,11 +57,6 @@ CASES = (
             8,
             [atom],
             id=f"mixed-open{atom}-p3-to-8",
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="nm_rescale.b2tob1 applies the open-path map to closed-path atoms",
-            ),
         )
         for atom in [0, 1]
     ]
@@ -80,3 +75,31 @@ def test_contraction(q, n, open_paths):
     assert_almost_equal(restored, reverse.b1tob2(expanded))
     np.testing.assert_allclose(expanded.mean(axis=0), q.mean(axis=0), atol=2e-14)
     assert not np.shares_memory(q, expanded)
+
+
+def open_coordinate(rescale, method, values):
+    """Rescales each component of `values` as a coordinate of the open path of atom 1."""
+
+    flat = values.reshape(len(values), -1)
+    columns = []
+    for column in flat.T:
+        q = np.zeros((len(values), 6))
+        q[:, 3] = column
+        columns.append(getattr(rescale, method)(q)[:, 3])
+    return np.stack(columns, axis=1).reshape((-1,) + values.shape[1:])
+
+
+@pytest.mark.parametrize("shape", [(), (3, 3)], ids=["potentials", "virials"])
+def test_open_path_contraction_of_bead_properties(shape):
+    """With open paths, per-bead properties that are not positions (potentials,
+    virials) are contracted and expanded with the open-path matrix, which keeps
+    their bead average."""
+    values = np.random.default_rng(17).normal(size=(3,) + shape)
+    rescale = nmtransform.nm_rescale(3, 8, open_paths=[1])
+    expanded = rescale.b1tob2(values)
+    restored = rescale.b2tob1(expanded)
+
+    np.testing.assert_allclose(expanded, open_coordinate(rescale, "b1tob2", values))
+    np.testing.assert_allclose(restored, open_coordinate(rescale, "b2tob1", expanded))
+    np.testing.assert_allclose(restored, values, atol=2e-14)
+    np.testing.assert_allclose(expanded.mean(axis=0), values.mean(axis=0), atol=2e-14)

@@ -7,7 +7,6 @@
 
 from copy import copy
 
-from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 import ipi.engine.outputs as eoutputs
 

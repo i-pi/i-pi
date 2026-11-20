@@ -11,6 +11,7 @@ units from the file, but it can be overridden.
 # See the "licenses" directory for full license information.
 
 
+import base64
 import sys
 import os
 import io
@@ -474,14 +475,15 @@ def open_backup(filename, mode="r", buffering=-1):
 
 
 def netstring_encoded_savez(ofile, compressed=True, **named_objs):
-    output = io.StringIO()
+    output = io.BytesIO()
     if compressed:
         # np.savez_compressed(output,*unnamed_objs,**named_objs)
         np.savez_compressed(output, **named_objs)
     else:
         # np.savez(output,*unnamed_objs,**named_objs)
         np.savez(output, **named_objs)
-    content = output.getvalue()
+    # base64, as the binary data would be altered in a text file
+    content = base64.b64encode(output.getvalue()).decode("ascii")
     ofile.write(str(len(content)) + ":" + content + ",")
 
 
@@ -500,7 +502,7 @@ def netstring_encoded_loadz(ifile):
     if not ifile.read(1) == ",":
         raise ValueError("Invalid netstring delimiter")
 
-    istr = io.StringIO(content)
+    istr = io.BytesIO(base64.b64decode(content))
     npz = np.load(istr)
     rdic = {}
     for a in npz.files:

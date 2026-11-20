@@ -1,11 +1,11 @@
 """Metatomic driver checks with PET-MAD-xs: batching, derivatives, UQ, rotations.
 
-The exported model is read from ``IPI_METATOMIC_MODEL``; otherwise it is exported
-with ``upet``, and the module is skipped when neither is available.
+The exported model is read from the path given with ``--ipi-metatomic-model``;
+otherwise it is exported with ``upet``, and the module is skipped when neither is
+available.
 """
 
 import json
-import os
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("metatomic.torch")
 pytest.importorskip("vesin.metatomic")
 import ase.io
+import torch
 from ase import Atoms as AseAtoms
 from metatomic.torch.ase_calculator import MetatomicCalculator
 
@@ -37,8 +38,8 @@ def ev_ang(x):
 
 
 @pytest.fixture(scope="module")
-def upet_model(tmp_path_factory):
-    path = os.environ.get("IPI_METATOMIC_MODEL")
+def upet_model(tmp_path_factory, request):
+    path = request.config.getoption("--ipi-metatomic-model")
     if path:
         return path
     upet = pytest.importorskip("upet")
@@ -73,7 +74,19 @@ def driver(upet_model, water):
     return MetatomicDriver(water[0], upet_model)
 
 
-@pytest.mark.parametrize("device", ["cpu", "cpu;cpu"])
+# two GPUs, so that the model can run on one that is not the current one
+TWO_GPUS = pytest.mark.skipif(torch.cuda.device_count() < 2, reason="needs 2 GPUs")
+
+
+@pytest.mark.parametrize(
+    "device",
+    [
+        "cpu",
+        "cpu;cpu",
+        pytest.param("cuda:1", marks=TWO_GPUS),
+        pytest.param("cuda:0;cuda:1", marks=TWO_GPUS),
+    ],
+)
 def test_batched_matches_single(upet_model, water, device):
     template, _, cell, pos = water
     driver = MetatomicDriver(template, upet_model, device=device)
@@ -205,7 +218,6 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
             name="pet",
             pes="metatomic",
             pars={"template": template, "model": upet_model},
-            threaded=False,
             batch_size=18,
         ),
         grid_mode="lebedev",
@@ -215,8 +227,9 @@ def test_rotation_average_matches_manual_average(upet_model, water, driver):
     )
     assert len(ff._rotations) == 18
     atoms = Atoms(len(pos))
-    atoms.q[:] = pos.flatten()
+    atoms.q_[:] = pos.flatten()
     request = ff.queue(atoms, Cell(cell))
+    ff.ff.poll()
     ff.poll()
     assert request["status"] == "Done"
     energy, force, virial, extras = request["result"]
