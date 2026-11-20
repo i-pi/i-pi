@@ -87,11 +87,12 @@ def compiled(sim):
             "pimd_nvt",
             (
                 "<motion mode='dynamics'>",
-                "<normal_modes><open_paths>[0]</open_paths></normal_modes>"
+                "<normal_modes propagator='bab'><bosons>[0, 1]</bosons></normal_modes>"
                 "<motion mode='dynamics'>",
             ),
-            "open paths or bosons",
+            "bosons",
         ),
+        ("pimd_open", None, None),
     ],
 )
 def test_unsupported_steps(case, change, reason, simulation):

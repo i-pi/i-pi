@@ -164,6 +164,13 @@ CASES = {
     "pimd_pile_g": (4, "nvt", PILE_G, ""),
     "pimd_nm_gle": (4, "nvt", NM_GLE, ""),
     "pimd_nm_gle_g": (4, "nvt", NM_GLE_G, ""),
+    "pimd_open": (
+        4,
+        "nvt",
+        PILE_L,
+        "",
+        {"system": "<normal_modes><open_paths>[0, 2]</open_paths></normal_modes>"},
+    ),
     "pimd_npt": (4, "npt", PILE_L, ISOTROPIC),
     "pimd_nvt_cc": (4, "nvt-cc", PILE_L, ""),
     "pimd_fixatoms": (
@@ -235,7 +242,7 @@ def write_input(case, forcefield, natoms=8):
     <forces>{forcexml}</forces>
     <ensemble>
       <temperature units='kelvin'>300</temperature>{pressure}{extra.get("ensemble", "")}
-    </ensemble>
+    </ensemble>{extra.get("system", "")}
     <motion mode='dynamics'>{extra.get("motion", "")}
       <dynamics mode='{mode}'>
         <timestep units='femtosecond'>0.5</timestep>{thermostat}{barostat}

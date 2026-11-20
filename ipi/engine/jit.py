@@ -94,8 +94,8 @@ def unsupported(simulation, system):
         return f"the thermostat '{name}' of the barostat"
     if len(motion.fixatoms_dof) > 0:
         return "fixed atoms"
-    if len(system.nm.open_paths) > 0 or len(system.nm.bosons) > 0:
-        return "open paths or bosons"
+    if len(system.nm.bosons) > 0:
+        return "bosons"
     smotions = (Smotion, ReplicaExchange)
     if simulation.smotion is not None and type(simulation.smotion) not in smotions:
         return "a motion of multiple systems"
