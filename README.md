@@ -47,9 +47,15 @@ Last Release:
 pip install -U ipi
 ```
 
+Pre-release of version 4.0 (the `next` branch):
+
+```bash
+pip install -U --pre ipi
+```
+
 ## Documentation 
 
-You can find the online documentation at [https://docs.ipi-code.org](https://docs.ipi-code.org/). Alternatively, you can build it locally by following instructions in the `docs/README.md` file.
+You can find the online documentation at [https://docs.ipi-code.org](https://docs.ipi-code.org/), and that of the 4.0 pre-release at [https://docs.ipi-code.org/next](https://docs.ipi-code.org/next/). Alternatively, you can build it locally by following instructions in the `docs/README.md` file.
 
 ## Source installation
 
