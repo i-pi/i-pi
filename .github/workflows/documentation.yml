@@ -2,10 +2,15 @@ name: Documentation
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
     tags: ["*"]
   pull_request:
     # Check all PR
+
+# deployments run one at a time, as each of them reads the deployed site
+concurrency:
+  group: ${{ github.event_name == 'push' && 'docs-deploy' || format('docs-{0}', github.ref) }}
+  cancel-in-progress: false
 
 jobs:
   build-and-publish:
@@ -27,11 +32,41 @@ jobs:
           tox -e docs
           tox -e docs-pdf
           cp docs/_build/latex/i-pi.pdf docs/_build/html/ipi-manual.pdf
-      - name: deploy to gh-pages
+      - name: choose where to deploy
+        id: target
         if: github.event_name == 'push'
+        run: |
+          # the manual of the next branch goes to next/, that of main and of
+          # the release tags to the root of the site. Pre-release tags are
+          # not deployed
+          if [[ "$GITHUB_REF" == refs/heads/next ]]; then
+            echo "dir=next" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF_NAME" =~ ^v?[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          fi
+      - name: assemble the site
+        if: steps.target.outputs.dir != ''
+        env:
+          TARGET: ${{ steps.target.outputs.dir }}
+        run: |
+          # starts from the deployed site, and replaces only the manual that
+          # was built: next/, or everything else
+          mkdir site
+          if git fetch --depth=1 origin gh-pages; then
+            git archive FETCH_HEAD | tar -x -C site
+          fi
+          if [[ "$TARGET" == next ]]; then
+            rm -rf site/next
+          else
+            find site -mindepth 1 -maxdepth 1 ! -name next -exec rm -rf {} +
+          fi
+          mkdir -p "site/$TARGET"
+          cp -r docs/_build/html/. "site/$TARGET/"
+      - name: deploy to gh-pages
+        if: steps.target.outputs.dir != ''
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/_build/html/
+          publish_dir: ./site
           force_orphan: true
           cname: docs.ipi-code.org
