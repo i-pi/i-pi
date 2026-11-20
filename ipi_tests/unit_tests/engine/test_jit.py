@@ -93,6 +93,7 @@ def compiled(sim):
             "bosons",
         ),
         ("pimd_open", None, None),
+        ("pimd_eco_open", None, None),
     ],
 )
 def test_unsupported_steps(case, change, reason, simulation):

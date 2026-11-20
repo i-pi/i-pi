@@ -176,11 +176,16 @@ def test_eco_open_omegak(eco_open_sim):
     np.testing.assert_allclose(to_numpy(nm.o_nm_factor), np.ones(NBEADS))
 
 
-def test_eco_open_spring_and_kinetic_td(eco_open_sim):
+def test_eco_open_spring_and_kinetic_td(eco_open_sim, monkeypatch):
     """Checks the spring energy of an open+eco system against an explicit
     normal-mode sum (open springs for the open atom, closed for the other),
-    and the consistency of the primitive kinetic energy estimator with it."""
+    and the consistency of the primitive kinetic energy estimator with it.
+    The estimator warns once that it is not meaningful with open paths."""
 
+    warnings = []
+    monkeypatch.setattr(
+        "ipi.engine.properties.warning", lambda message, *args: warnings.append(message)
+    )
     sys = eco_open_sim.syslist[0]
     nm = sys.nm
     qnm = to_numpy(nm.qnm)
@@ -196,6 +201,8 @@ def test_eco_open_spring_and_kinetic_td(eco_open_sim):
     np.testing.assert_allclose(
         ktd, 1.5 * NATOMS * NBEADS * kt - vspring / NBEADS, rtol=1e-10
     )
+    sys.properties["kinetic_td"]
+    assert len(warnings) == 1 and "open paths" in warnings[0]
 
 
 def test_eco_open_dynamics(simulation):

@@ -171,6 +171,16 @@ CASES = {
         "",
         {"system": "<normal_modes><open_paths>[0, 2]</open_paths></normal_modes>"},
     ),
+    "pimd_eco_open": (
+        4,
+        "nvt",
+        PILE_L,
+        "",
+        {
+            "system": "<normal_modes><frequencies style='eco' units='inversecm'>[2500]</frequencies>"
+            "<open_paths>[0, 2]</open_paths></normal_modes>"
+        },
+    ),
     "pimd_npt": (4, "npt", PILE_L, ISOTROPIC),
     "pimd_nvt_cc": (4, "nvt-cc", PILE_L, ""),
     "pimd_fixatoms": (

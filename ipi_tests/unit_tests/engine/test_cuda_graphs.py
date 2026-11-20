@@ -67,6 +67,7 @@ def eager_driver(monkeypatch):
         ("nvt_svr", HARMONIC, 2),
         ("pimd_nvt", DUMMY, 1),
         ("pimd_open", DUMMY, 1),
+        ("pimd_eco_open", DUMMY, 1),
         ("pimd_pile_g", HARMONIC, 2),
         ("nvt_gle", HARMONIC, 2),
         ("pimd_nm_gle", DUMMY, 1),
