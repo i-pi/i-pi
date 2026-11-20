@@ -54,6 +54,7 @@ def assert_same_state(a, b):
         ("nvt_svr", NO_FORCES),
         ("pimd_nvt", DUMMY),
         ("pimd_pile_g", DUMMY),
+        ("pimd_open", DUMMY),
         ("nvt_gle", DUMMY),
         ("pimd_nm_gle", DUMMY),
         ("pimd_nm_gle_g", DUMMY),
