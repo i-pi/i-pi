@@ -9,3 +9,4 @@ Path integral molecular dynamics.
 scpimd:  path integral molecular dynamics with the Suzuki-Chin splitting.
 `eco_pimd`: path integral molecular dynamics with economised ("eco") ring-polymer frequencies, that accelerate convergence with the number of beads by fitting the spring frequencies to reproduce the radii of gyration of harmonic oscillators up to a maximum physical frequency.
 `standard_constant_pressure`: path integral molecular dynamics using the PILE thermostat and MTS for propagating the ring polymer modes in the NPT ensemble.
+`pimd_friction`: path integral molecular dynamics with dissipative term (electronic friction) for propagating the ring polymer modes.

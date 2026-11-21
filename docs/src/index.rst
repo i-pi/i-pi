@@ -31,6 +31,8 @@ This documentation is structured as follows:
    units
    input-files
    input-tags
+   electronic-friction
+   external-mean-field
    output-files
    output-tags
    python

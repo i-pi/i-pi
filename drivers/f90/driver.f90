@@ -352,7 +352,7 @@
             vpars(1) = 1.8323926 ! r0
             vpars(2) = 0.18748511263179304 ! D
             vpars(3) = 1.1562696428501682 ! a
-         ELSEIF ( 2/= par_count) THEN
+         ELSEIF ( par_count /= 3) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For morse potential use -o r0,D,a (in a.u.) "
             STOP "ENDED"

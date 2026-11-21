@@ -1,0 +1,15 @@
+Conservative double-well mean-field regression
+=============================================
+
+This historical 32-bead case checks the mean-field correction with bath_mode=none.
+It does not test dissipative or fluctuating forces. The separate friction unit
+tests and harmonic/double-well statistical benchmarks cover the auxiliary bath.
+
+The saved outputs use the old coupling sqrt(eta0)*g(q), with eta0=5. The current
+DW_friction driver returns g(q) and its derivative, so alpha_scaled_ref.dat is
+exactly 5 times the alpha column of the original alpha_ref.dat. This keeps
+0.5*alpha*F^2 and its force unchanged. The original alpha table and reference
+trajectories are retained. The output property is now called friction_energy_mf.
+
+The explicit bath selection, output-name update and normalization conversion
+reproduce all stored property values at their original output precision.
