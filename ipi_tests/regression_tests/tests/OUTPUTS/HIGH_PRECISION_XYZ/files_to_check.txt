@@ -1,0 +1,3 @@
+        filename                        format
+----------------------------------------------------------
+ref_simulation.pos_high_precision.xyz_high_precision  xyz  0,0,1e-13 1,0,1e-13 2,0,1e-13
