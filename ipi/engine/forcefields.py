@@ -1006,7 +1006,10 @@ class FFPlumed(FFEval):
             )
 
         v = 0.0
-        f = np.zeros((self.natoms, 3))
+        # PLUMED retains this pointer through the subsequent metadynamics update.
+        # flatten() below returns a copy, so the request result does not own it.
+        self.force_buffer = np.zeros((self.natoms, 3))
+        f = self.force_buffer
         vir = np.zeros((3, 3))
 
         self.lastq[:] = r["pos"]
@@ -1048,7 +1051,8 @@ class FFPlumed(FFEval):
         if self.system_force is not None:
             # plumed increments the value of the force, here we need only the correction term
             f[:] -= dstrip(self.system_force.f).flatten()
-            vir[:] -= -dstrip(self.system_force.vir)
+            # The tensor is already back in the i-PI sign convention.
+            vir[:] -= dstrip(self.system_force.vir)
 
         extras = {"raw": ""}
         for x in self.plumed_data:
@@ -1084,7 +1088,9 @@ class FFPlumed(FFEval):
                 "triggering a full PLUMED update.",
                 verbosity.medium,
             )
-            request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            request = ForceRequest(
+                {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
+            )
             self.evaluate(request)
 
         if self.compute_work:

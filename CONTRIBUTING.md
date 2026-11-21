@@ -64,3 +64,17 @@ The package version lives in `ipi/_version.py`, read both at runtime
 
 Publishing the release triggers the `release-pypi` workflow, which builds and
 uploads to PyPI. It fails if the tag does not match `ipi/_version.py`.
+
+PLUMED interface tests
+----------------------
+
+The optional tests in `ipi_tests/unit_tests/engine/test_ffplumed_integration.py`
+require the Python `plumed` binding and a PLUMED kernel with OPES enabled. Set
+`PLUMED_KERNEL` when the kernel is not found automatically. The tests check
+bias energy, force and virial derivatives, scalar extras, OPES update counts
+and restoration of a saved bias. They do not launch an external MD driver.
+
+Run them with `pytest ipi_tests/unit_tests/engine/test_ffplumed_integration.py`.
+They are skipped when the Python binding is absent; a present but unusable
+kernel is reported as a test failure. STATE restoration here checks the bias
+at a fixed configuration, not stochastic trajectory restart continuity.
