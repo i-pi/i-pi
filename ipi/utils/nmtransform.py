@@ -7,7 +7,7 @@
 
 import numpy as np
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.array_backend import xp, backend
+from ipi.utils.array_backend import xp, xp_setitem, backend
 
 __all__ = [
     "nm_noop",
@@ -296,10 +296,12 @@ def _apply(matrix, q):
     return (matrix @ q2).reshape(matrix.shape[0], *q.shape[1:])
 
 
-def _open_columns(open_paths):
-    """Indices of the coordinates of the atoms with open paths."""
+def open_columns(open_paths):
+    """Indices of the coordinates of the atoms with open paths, as an array of
+    the backend."""
 
-    return np.array([3 * io + k for io in open_paths for k in range(3)], int)
+    cols = np.array([3 * io + k for io in open_paths for k in range(3)], int)
+    return xp.asarray(cols)
 
 
 class nm_trans(object):
@@ -324,7 +326,7 @@ class nm_trans(object):
         if open_paths is None:
             open_paths = []
         self._open = open_paths
-        self._open_cols = _open_columns(open_paths)
+        self._open_cols = open_columns(open_paths)
         # definition of the transformation also with the open path matrx
         self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
@@ -340,7 +342,7 @@ class nm_trans(object):
         if len(self._open) > 0:
             # the atoms with open paths use the open-path transformation
             cols = self._open_cols
-            qnm[:, cols] = self._b2o_nm @ q[:, cols]
+            qnm = xp_setitem(qnm, (slice(None), cols), self._b2o_nm @ q[:, cols])
         return qnm
 
     def nm2b(self, qnm):
@@ -353,7 +355,7 @@ class nm_trans(object):
         q = self._nm2b @ qnm
         if len(self._open) > 0:
             cols = self._open_cols
-            q[:, cols] = self._o_nm2b @ qnm[:, cols]
+            q = xp_setitem(q, (slice(None), cols), self._o_nm2b @ qnm[:, cols])
         return q
 
 
@@ -382,7 +384,7 @@ class nm_rescale(object):
         if open_paths is None:
             open_paths = []
         self._open = open_paths
-        self._open_cols = _open_columns(open_paths)
+        self._open_cols = open_columns(open_paths)
 
         self.noop = nbeads1 == nbeads2
         if self.noop:
@@ -417,8 +419,7 @@ class nm_rescale(object):
         # this applies to bead vector properties (e.g. positions, forces)
         q_scal = matrix @ q
         cols = self._open_cols
-        q_scal[:, cols] = o_matrix @ q[:, cols]
-        return q_scal
+        return xp_setitem(q_scal, (slice(None), cols), o_matrix @ q[:, cols])
 
     def b1tob2(self, q):
         """Transforms a matrix from one value of beads to another.
@@ -484,7 +485,7 @@ class nm_fft(object):
         if open_paths is None:
             open_paths = []
         self._open = open_paths
-        self._open_cols = _open_columns(open_paths)
+        self._open_cols = open_columns(open_paths)
         # for atoms with open path we still use the matrix transformation
         self._b2o_nm = xp.asarray(mk_o_nm_matrix(nbeads))
         self._o_nm2b = self._b2o_nm.T
@@ -605,7 +606,7 @@ class nm_fft(object):
             qnm = xp.astype(qnm, q.dtype)
         if len(self._open) > 0:
             cols = self._open_cols
-            qnm[:, cols] = self._b2o_nm @ q[:, cols]
+            qnm = xp_setitem(qnm, (slice(None), cols), self._b2o_nm @ q[:, cols])
         return qnm
 
     def nm2b(self, qnm):
@@ -626,5 +627,5 @@ class nm_fft(object):
         q = self._irfft(re, im)
         if len(self._open) > 0:
             cols = self._open_cols
-            q[:, cols] = self._o_nm2b @ qnm[:, cols]
+            q = xp_setitem(q, (slice(None), cols), self._o_nm2b @ qnm[:, cols])
         return q

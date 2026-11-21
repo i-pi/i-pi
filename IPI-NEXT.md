@@ -99,6 +99,14 @@ or because they were approved explicitly:
 
 - Normal modes: `nm_rescale.b2tob1` with open paths discarded the open-path transformation (for-else bug,
   since ece43207). Affects ring-polymer contraction combined with open paths.
+- Normal modes: with open paths and scaled masses (`manual`, `pa-cmd`, `wmax-cmd`), the kinetic energy and
+  stress of the normal modes used the mass factors of closed paths for all the atoms, while the atoms with open
+  paths move with those of open paths. The conserved quantity drifted (7e-3 instead of 2e-5 over 2000 steps of a
+  harmonic test), and the temperature, `kinetic_md` and `kstress_md` were wrong (359 K reported at 318 K); the
+  sampling was not affected. They are now computed from `dynm3`.
+- Properties: the quantum kinetic energy estimators (`kinetic_cv`, `kinetic_td`, `kinetic_tens`, `kinetic_ij`
+  and the Suzuki-Chin ones) warn once when there are open paths, as they assume closed paths (`kinetic_td`
+  includes the spring that would close the path).
 - Normal modes: the dynamical mass factors (`manual`, `pa-cmd` and `wmax-cmd` frequencies) did not depend
   on the frequencies of the free ring polymer, so they kept the values of the initial temperature when it
   changed, e.g. with replica exchange. Also on main. New unit test. Only these modes, with more than one
@@ -629,8 +637,18 @@ bugs pass, and are no longer marked.
 - Replayed: `Dynamics` with NVE/NVT/NPT/NST integrators (BAOAB and OBABO, MTS, PIMD) with no, Langevin, SVR, PILE_L,
   PILE_G or GLE thermostat (also `nm_gle` and `nm_gle_g`), and the isotropic (BZP), flexible (MTK) or anisotropic
   (RGB) barostat with no, a Langevin or a GLE thermostat; not replayed (eager, with a warning): stochastic cell
-  rescaling, other thermostats (FFL, CL, multi), fixed atoms, open paths, bosons, multi-system motions other than
-  replica exchange (see "Multiple systems and replica exchange"). Under `--jit`, the systems are stepped one after
+  rescaling, other thermostats (FFL, CL, multi), fixed atoms, bosons, multi-system motions other than
+  replica exchange (see "Multiple systems and replica exchange"). Open paths are replayed: `prop_pq_ms` holds
+  the propagator of the open paths for their atoms (`o_prop_pq_ms` is removed), so that `free_qstep` has no
+  open-path branch; `prop_pq` and `o_prop_pq` have the shape (2, 2, nbeads), as the first axes of `prop_pq_ms`
+  (they were (nbeads, 2, 2)), and the transforms write the columns of the open paths with `xp_setitem`
+  (`ipi/utils/array_backend.py`: `a[index] = part` for plain arrays of any backend), indexed by device
+  arrays. numpy, 16 beads, 648 atoms, 64 open paths: `free_qstep` 249 -> 184 us, `vspring` 646 -> 69 us
+  (one gather instead of a loop over the atoms). H100 (job 5004911), PIMD with 16 beads, 648 atoms and the
+  dummy driver, ms/step with 0 / 1 / 64 open paths, matrix transform: torch eager 1.47 / 2.21 / 2.21 ->
+  1.46 / 1.64 / 1.64; torch `--jit` 0.218 / 2.56 / 2.57 (eager, refused) -> 0.218 / 0.250 / 0.265; JAX `--jit`
+  0.143 / failed / failed -> 0.144 / 0.159 / 0.160. With the FFT transform: torch `--jit` 0.301 / 0.334 /
+  0.349, JAX `--jit` 0.335 / 0.353 / 0.356. Under `--jit`, the systems are stepped one after
   the other. The barostats read the temperature and the pressure as host values, so changing them stops a replayed
   run with `JitError`; the external stress of the anisotropic barostat is a device array, and its changes are
   replayed.
@@ -719,10 +737,10 @@ bugs pass, and are no longer marked.
   modes). Motions that write into plain arrays (geometry optimization, NEB, string, phonons, IMF/VSCF, SCP,
   instantons, planetary, Al6xxx KMC, constrained dynamics) set
   `jax_support = False`, and `System.bind` stops with a `ValueError` (also within `multi`); dynamics,
-  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 49 of 77 pass, with
-  the MD restart tests and the PIGLET test (PLUMED is skipped); the others stop at bind (geometry optimizers,
-  NEB, phonons, instantons, constrained dynamics, and their restart tests), or at plain-array writes
-  (bosonic exchange, open paths).
+  replay, ramps, alchemy and atom swaps run. Regression tests with `--ipi-backend jax`: 51 of 77 pass, with
+  the MD restart tests, the PIGLET test and open paths (PLUMED is skipped); the others stop at bind (geometry
+  optimizers, NEB, phonons, instantons, constrained dynamics, and their restart tests), or at plain-array writes
+  (bosonic exchange).
   Eager JAX is slow: ms/step without forces, CPU, numpy / torch / jax, 100 atoms: NVE 0.049 / 0.12 / 0.78,
   NVT 0.11 / 0.29 / 1.8, PIMD-4 0.56 / 1.4 / 11.8, NPT 0.29 / 0.98 / 6.3, NPT flexible 0.93 / 2.6 / 13.4; at
   10000 atoms PIMD-4 28.9 / 26.5 / 34.8. Each eager JAX operation costs 11-16 us (arithmetic), 26 us (reshape), 40-85 us (indexing), 70 us

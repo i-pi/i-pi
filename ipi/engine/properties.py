@@ -1262,6 +1262,8 @@ class Properties:
               for. If not, the system kinetic energy is given.
         """
 
+        self._warn_open_paths()
+
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -1325,6 +1327,8 @@ class Properties:
               for. If not, the system kinetic energy is given.
         """
 
+        self._warn_open_paths()
+
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -1378,6 +1382,19 @@ class Properties:
                 % name
             )
 
+    def _warn_open_paths(self):
+        """Warns, once, that the quantum kinetic energy estimators are derived
+        for closed paths, when they are requested with open paths."""
+
+        if len(self.nm.open_paths) > 0 and not getattr(self, "_open_warned", False):
+            self._open_warned = True
+            warning(
+                "The quantum kinetic energy estimators assume closed paths: "
+                "they are not meaningful for the atoms with open paths, and for "
+                "the totals that include them.",
+                verbosity.low,
+            )
+
     def get_sckintd(self, atom=""):
         """Calculates the Suzuki-Chin thermodynamic quantum centroid virial kinetic energy estimator.
 
@@ -1387,6 +1404,7 @@ class Properties:
         """
 
         self._require_trotter_springs("kinetic_tdsc")
+        self._warn_open_paths()
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -1431,6 +1449,8 @@ class Properties:
            atom: If given, specifies the atom to give the kinetic energy
               for. If not, the system kinetic energy is given.
         """
+
+        self._warn_open_paths()
 
         try:
             # iatom gives the index of the atom to be studied
@@ -1527,6 +1547,7 @@ class Properties:
         """Calculates the quantum centroid virial kinetic energy estimator."""
 
         self._require_trotter_springs("kinetic_prsc")
+        self._warn_open_paths()
         spring = self.nm.vspring / self.beads.nbeads
         PkT32 = (
             1.5
@@ -1723,6 +1744,8 @@ class Properties:
               it should be output.
         """
 
+        self._warn_open_paths()
+
         try:
             # iatom gives the index of the atom to be studied
             iatom = int(atom)
@@ -1784,6 +1807,8 @@ class Properties:
            The contribution to the kinetic energy tensor estimator from
            the interactions between atom i and atom j.
         """
+
+        self._warn_open_paths()
 
         i = int(ni)
         j = int(nj)

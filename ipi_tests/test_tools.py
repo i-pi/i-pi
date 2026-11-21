@@ -196,7 +196,6 @@ JAX_UNSUPPORTED = {
     "GEOP": "geometry optimization",
     "INSTANTON": "instantons",
     "NEB": "NEB",
-    "OPEN": "open paths",
     "PHONONS": "phonons",
 }
 
