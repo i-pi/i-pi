@@ -85,7 +85,7 @@ class InputThermoBase(Input):
             {
                 "dtype": float,
                 "default": 0.0,
-                "help": "The friction coefficient for white noise thermostats.",
+                "help": "The damping time for white noise thermostats. With fixed-bead PILE-L, this is the maximum damping time of any constrained spring mode.",
                 "dimension": "time",
             },
         ),
@@ -94,7 +94,7 @@ class InputThermoBase(Input):
             {
                 "dtype": float,
                 "default": 1.0,
-                "help": "Scaling for the PILE damping relative to the critical damping. (gamma_k=2*lambda*omega_k",
+                "help": "Scaling for PILE damping: gamma_k=2*lambda*omega_k for ordinary ring-polymer modes. With fixed beads, gamma_k=max(lambda*omega_k,1/tau), using constrained spring frequencies.",
             },
         ),
         "pile_centroid_t": (

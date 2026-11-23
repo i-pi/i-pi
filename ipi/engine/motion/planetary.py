@@ -76,12 +76,11 @@ class Planetary(Motion):
         self.fixatoms_dof = np.asarray([])
         self.fixcom = True
 
-        # nvt-cc means contstant-temperature with constrained centroid
-        # this basically is a motion class that will be used to make the
-        # centroid propagation at each time step
+        # Sample internal modes at the current atomic centroid positions.
         self.ccdyn = Dynamics(
             timestep,
-            mode="nvt-cc",
+            mode="nvt",
+            fixcentroid=True,
             thermostat=thermostat,
             nmts=nmts,
             fixcom=fixcom,

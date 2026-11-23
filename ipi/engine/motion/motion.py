@@ -24,12 +24,16 @@ class Motion:
             motion will be constrained or not.
         fixatoms_dof: A list of degrees of freedom  that should be held fixed to their
             initial positions.
+        fixcentroid: Whether every atomic centroid is held at its initial position.
+        fixbeads: Zero-based replica indices held at their initial positions.
 
     Depend objects:
         none
     """
 
-    def __init__(self, fixcom=False, fixatoms_dof=None):
+    def __init__(
+        self, fixcom=False, fixatoms_dof=None, fixcentroid=False, fixbeads=None
+    ):
         """Initialises Motion object.
 
         Args:
@@ -45,6 +49,12 @@ class Motion:
             self.fixatoms_dof = np.zeros(0, int)
         else:
             self.fixatoms_dof = fixatoms_dof
+        self.fixcentroid = bool(fixcentroid)
+        self.fixbeads = np.unique(np.asarray([] if fixbeads is None else fixbeads, int))
+        if self.fixcentroid and len(self.fixbeads):
+            raise ValueError("fixcentroid and fixbeads cannot be used together")
+        if self.fixcentroid or len(self.fixbeads):
+            self.fixcom = False
 
         self.beads = self.cell = self.forces = self.prng = self.nm = self.enstype = None
         self.finished = False

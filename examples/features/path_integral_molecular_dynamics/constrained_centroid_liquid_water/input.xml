@@ -22,7 +22,8 @@
       <force forcefield='qtip4pf'> </force>
     </forces>
     <motion mode='dynamics'>
-      <dynamics mode='nvt-cc'>
+      <fixcentroid>True</fixcentroid>
+      <dynamics mode='nvt'>
         <timestep units='femtosecond'> 0.25 </timestep>
         <thermostat mode='pile_g'> <!-- won't apply a thermo on the centroid -->
           <tau units='femtosecond'> 100 </tau>

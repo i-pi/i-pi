@@ -23,7 +23,8 @@
 	<force forcefield='driver' weight='1'> </force>
     </forces>
     <motion mode='dynamics'>
-      <dynamics mode='nvt-cc'>
+      <fixcentroid>True</fixcentroid>
+      <dynamics mode='nvt'>
         <timestep units='femtosecond'> 0.25 </timestep>
         <thermostat mode='pile_l'>
           <tau units='femtosecond'> 10 </tau>

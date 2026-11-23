@@ -17,6 +17,7 @@ __all__ = [
     "nm_fft",
     "mk_nm_matrix",
     "mk_o_nm_matrix",
+    "mk_fixed_bead_matrix",
     "nm_eva",
     "o_nm_eva",
     "eco_eva",
@@ -54,6 +55,34 @@ def nm_eva(nbeads):
 
 def o_nm_eva(nbeads):
     return 2 * np.array([np.sin(k * np.pi / (2 * nbeads)) for k in range(nbeads)])
+
+
+def mk_fixed_bead_matrix(nbeads, fixed):
+    """Returns free/fixed indices, spring eigenvectors/eigenvalues, and the
+    map from fixed positions to the minimum-energy free positions.
+    """
+
+    fixed = np.unique(np.asarray(fixed, dtype=int))
+    if fixed.size == 0:
+        raise ValueError("At least one fixed bead is required")
+    if np.any(fixed < 0) or np.any(fixed >= nbeads):
+        raise ValueError("Fixed bead index is out of bounds")
+
+    free = np.setdiff1d(np.arange(nbeads), fixed)
+    if free.size == 0:
+        return free, fixed, np.empty((0, 0)), np.empty(0), np.empty((0, fixed.size))
+
+    laplacian = 2.0 * np.eye(nbeads)
+    laplacian[np.arange(nbeads), (np.arange(nbeads) - 1) % nbeads] -= 1.0
+    laplacian[np.arange(nbeads), (np.arange(nbeads) + 1) % nbeads] -= 1.0
+    eigenvalues, eigenvectors = np.linalg.eigh(laplacian[np.ix_(free, free)])
+    return (
+        free,
+        fixed,
+        eigenvectors,
+        eigenvalues,
+        -np.linalg.solve(laplacian[np.ix_(free, free)], laplacian[np.ix_(free, fixed)]),
+    )
 
 
 def _eco_f(x):

@@ -13,6 +13,7 @@ from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
+from ipi.utils.nmtransform import mk_nm_matrix
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.motion.driven_dynamics import DrivenDynamics
 from ipi.utils.softexit import softexit
@@ -1134,15 +1135,31 @@ class Properties:
         )  # this returns the bead-average classical KE
         atom_ids = self.get_atom_ids(atom)
 
+        fixcentroid = getattr(self.motion, "fixcentroid", False)
+        fixbeads = getattr(self.motion, "fixbeads", [])
+        if self.ensemble.temp > 0 and (fixcentroid or len(fixbeads)):
+            # Restore the expected kinetic energy of the constrained directions,
+            # following the existing temperature convention. Account for overlap
+            # with fixed atomic coordinates only once.
+            dof_ids = (3 * atom_ids[:, None] + np.arange(3)).flatten()
+            fixed_atoms = np.isin(dof_ids, self.motion.fixatoms_dof).sum()
+            nbeads = self.beads.nbeads
+            if fixcentroid:
+                fraction = float(int(nm) == 0) if nm != "" else 1.0 / nbeads
+            elif bead != "":
+                fraction = float(int(bead) in fixbeads)
+            elif nm != "":
+                fraction = np.sum(mk_nm_matrix(nbeads)[int(nm), fixbeads] ** 2)
+            else:
+                fraction = len(fixbeads) / nbeads
+            fixed_dof = nbeads * (fixed_atoms + (len(dof_ids) - fixed_atoms) * fraction)
+            kemd += 0.5 * Constants.kb * self.ensemble.temp * fixed_dof
+            return 2.0 * kemd / (Constants.kb * len(dof_ids) * nbeads)
+
         # accounting for constrained dof
         if self.ensemble.temp > 0:
             eff_number_fixed_dof = 0  # the effective number of fixed degrees of freedom for the selected atom(s)
-            if hasattr(self.motion, "enstype") and self.motion.enstype == "nvt-cc":
-                eff_number_fixed_dof = (
-                    len(atom_ids) * 3
-                )  # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
-
-            elif self.motion.fixcom:
+            if self.motion.fixcom:
                 eff_number_fixed_dof = (
                     3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
                 )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
@@ -1163,11 +1180,7 @@ class Properties:
                 dof_ids = np.concatenate(
                     (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
                 )
-                eff_nbeads = (
-                    self.beads.nbeads - 1  # prevent double counting
-                    if self.motion.enstype == "nvt-cc"
-                    else self.beads.nbeads
-                )
+                eff_nbeads = self.beads.nbeads
                 eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
             kemd += (

@@ -90,7 +90,7 @@ def test_barostat_restart(restart_states, barostat, nbeads):
 
 
 @pytest.mark.parametrize(
-    "mode,splitting", [("sc", "obabo"), ("scnpt", "baoab"), ("nvt-cc", "obabo")]
+    "mode,splitting", [("sc", "obabo"), ("scnpt", "baoab"), ("nvt", "obabo")]
 )
 def test_higher_order_and_constrained_centroid_restart(
     simulation, restart_states, mode, splitting
@@ -105,6 +105,8 @@ def test_higher_order_and_constrained_centroid_restart(
     dynamics.set("splitting", splitting)
     if mode == "scnpt":
         dynamics.find("barostat").set("mode", "sc-isotropic")
+    if mode == "nvt":
+        ET.SubElement(root.find("system/motion"), "fixcentroid").text = "True"
     xml = ET.tostring(root, encoding="unicode")
 
     def snapshot(sim):
@@ -113,7 +115,7 @@ def test_higher_order_and_constrained_centroid_restart(
 
     expected, actual = restart_states(xml, snapshot)
     assert_same(actual, expected)
-    if mode == "nvt-cc":
+    if mode == "nvt":
         with simulation(xml) as sim:
             initial_centroid = sim.syslist[0].beads.qc.copy()
         np.testing.assert_allclose(
