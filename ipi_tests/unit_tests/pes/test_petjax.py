@@ -176,6 +176,8 @@ def test_forces_and_virial_are_derivatives_of_the_energy(checkpoint, tmp_path):
     )
     cell, positions = ipi_inputs(STRUCTURES["periodic"], displacement=0.05)
     _, forces, virial = as_numpy(driver.compute(cell, positions))
+    # the adaptive cutoffs are found by bisection: the forces differ from the
+    # derivatives of the energy by up to a few 1e-5 (relative)
     h = 1e-5
 
     def energy(c, p):
@@ -187,7 +189,7 @@ def test_forces_and_virial_are_derivatives_of_the_energy(checkpoint, tmp_path):
         derivative = (energy(cell, positions + dp) - energy(cell, positions - dp)) / (
             2 * h
         )
-        assert forces[atom, axis] == pytest.approx(-derivative, rel=1e-5, abs=1e-8)
+        assert forces[atom, axis] == pytest.approx(-derivative, rel=1e-4, abs=1e-8)
     for a, b in [(0, 0), (0, 1), (2, 1)]:
         strain = np.zeros((3, 3))
         strain[a, b] = strain[b, a] = h
@@ -197,7 +199,7 @@ def test_forces_and_virial_are_derivatives_of_the_energy(checkpoint, tmp_path):
             - energy(minus @ cell, positions @ minus.T)
         ) / (2 * h)
         expected = derivative if a == b else derivative / 2
-        assert virial[a, b] == pytest.approx(-expected, rel=1e-5, abs=1e-8)
+        assert virial[a, b] == pytest.approx(-expected, rel=1e-4, abs=1e-8)
 
 
 def test_exceeded_capacity_stops_the_evaluation(checkpoint, tmp_path):

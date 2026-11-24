@@ -30,7 +30,6 @@ jobs:
           python-version: "3.13"
           cache: pip
 
-      # vesin-jax is built from source, with cmake and the C++ compiler of the runner
       - name: Install i-PI and pet-jax
         run: |
           python -m pip install --upgrade pip

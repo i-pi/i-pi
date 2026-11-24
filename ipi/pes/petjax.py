@@ -38,8 +38,9 @@ class PETJAX_driver(ASEDriver):
 
     Dependencies: pet-jax (`pip install pet-jax`), which installs jax, flax,
     ase and vesin, and for `neighbors="jax"` a version of pet-jax that uses
-    vesin-jax (0.6.2 or later), which needs jax 0.10 or 0.11 and the 64-bit
-    mode of JAX (enabled by the driver; the model still runs in `dtype`).
+    vesin-jax (0.7 or later, `pip install "pet-jax[vesin-jax]"`), which needs
+    jax 0.10 or 0.11. The driver enables the 64-bit mode of JAX, for the
+    float64 arrays of i-PI; the model still runs in `dtype`.
     The versions that are known to work are in `requirements/petjax.txt`.
 
     Command-line:
@@ -141,20 +142,18 @@ class PETJAX_driver(ASEDriver):
             )
         try:
             import vesin_jax  # noqa: F401
-
-            if not hasattr(petjax, "get_neighbor_list_fn"):
-                raise ImportError("pet-jax has no `get_neighbor_list_fn`")
+            from petjax.structure import get_neighbor_list_fn
         except ImportError as err:
             raise ImportError(
                 "neighbors='jax' needs vesin-jax, and a version of pet-jax that "
-                "computes the neighbor lists with it (`petjax.get_neighbor_list_fn`): "
-                "see requirements/petjax.txt"
+                "computes the neighbor lists with it "
+                "(`petjax.structure.get_neighbor_list_fn`): see requirements/petjax.txt"
             ) from err
         self.backend_arrays = True
         self.traceable = True
 
-        # vesin-jax needs the 64-bit mode of JAX, also for a float32 model;
-        # the other global settings are those of the ASE calculator of pet-jax
+        # the arrays of i-PI are float64, also for a float32 model; the other
+        # global settings are those of the ASE calculator of pet-jax
         jax.config.update("jax_enable_x64", True)
         jax.config.update("jax_default_matmul_precision", "high")
         self._dtype = jnp.float64 if self.dtype == "float64" else jnp.float32
@@ -200,7 +199,7 @@ class PETJAX_driver(ASEDriver):
         # one neighbor list, with its own Verlet cache, for each structure of
         # a batch (e.g. each bead), created when first needed
         self._neighbor_lists = []
-        self._new_neighbor_list = lambda: petjax.get_neighbor_list_fn(
+        self._new_neighbor_list = lambda: get_neighbor_list_fn(
             self._cutoff, self._max_neighbors, skin=self.skin
         )
         self._evaluate = jax.jit(self._evaluate_batch)
@@ -221,16 +220,7 @@ class PETJAX_driver(ASEDriver):
         batched = isinstance(cell, list)
         cells = jnp.stack(cell) if batched else jnp.asarray(cell)[None]
         positions = jnp.stack(pos) if batched else jnp.asarray(pos)[None]
-        try:
-            energies, forces, virials = self._evaluate(cells, positions)
-        except jax.errors.JaxRuntimeError as err:
-            # vesin-jax fails when an atom has more pairs than the lists hold
-            if "padded_to" not in str(err):
-                raise
-            raise RuntimeError(
-                "petjax: an atom has more pairs within the cutoff than the neighbor "
-                f"lists can hold ({self._max_neighbors}): increase pair_margin"
-            ) from err
+        energies, forces, virials = self._evaluate(cells, positions)
         if backend() == "numpy":
             energies, forces, virials = (
                 np.asarray(x, dtype=float) for x in (energies, forces, virials)
@@ -271,15 +261,17 @@ class PETJAX_driver(ASEDriver):
 
         while len(self._neighbor_lists) < nbatch:
             self._neighbor_lists.append(self._new_neighbor_list())
-        neighbors = [
-            neighbor_list(p, c, self.pbc)
-            for neighbor_list, p, c in zip(self._neighbor_lists, positions, cells)
-        ]
+        neighbors, pairs = zip(
+            *(
+                neighbor_list(p, c, self.pbc)
+                for neighbor_list, p, c in zip(self._neighbor_lists, positions, cells)
+            )
+        )
         neighbors = jax.tree.map(lambda *x: jnp.stack(x), *neighbors)
-        energy, forces, virial, overflow = jax.vmap(self._evaluate_one)(
+        energy, forces, virial, selected = jax.vmap(self._evaluate_one)(
             cells, positions, neighbors
         )
-        jax.debug.callback(self._check_overflow, overflow.any())
+        jax.debug.callback(self._check_overflow, jnp.stack(pairs).any(), selected.any())
 
         energy = unit_to_internal("energy", "electronvolt", energy.astype(dtype))
         forces = unit_to_internal("force", "ev/ang", forces.astype(dtype))
@@ -314,12 +306,17 @@ class PETJAX_driver(ASEDriver):
             virial = jnp.zeros((3, 3), dtype=cell.dtype)
         return result["energy"], forces, virial, result["overflow"]
 
-    def _check_overflow(self, neighbors):
-        """Stops the simulation if the model selects more neighbors than the
-        size fixed at the start. (vesin-jax stops it if an atom has more pairs
-        within the cutoff than the neighbor lists can hold.)"""
+    def _check_overflow(self, pairs, selected):
+        """Stops the simulation if an atom has more pairs within the cutoff
+        than the neighbor lists can hold, or if the model selects more
+        neighbors than the size fixed at the start."""
 
-        if neighbors:
+        if pairs:
+            raise RuntimeError(
+                "petjax: an atom has more pairs within the cutoff than the neighbor "
+                f"lists can hold ({self._max_neighbors}): increase pair_margin"
+            )
+        if selected:
             raise RuntimeError(
                 "petjax: the model selects more neighbors than the neighbor lists "
                 "can hold: increase extra_neighbors"

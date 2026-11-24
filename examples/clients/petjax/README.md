@@ -19,10 +19,9 @@ Install a CUDA-enabled version of JAX (e.g. `python -m pip install "jax[cuda12]"
 to run on a GPU.
 
 `input-jit.xml` needs a version of pet-jax that computes the neighbor lists
-with [vesin-jax](https://github.com/Luthaf/vesin) (0.6.2 or later), currently
-that of the `vesin-jax` branch. vesin-jax is not on PyPI yet, and is built from
-the vesin repository when pet-jax is installed, which needs `cmake` and a C++
-compiler. It supports jax 0.10 and 0.11: pip downgrades a newer jax. The
+with [vesin-jax](https://github.com/Luthaf/vesin) (0.7 or later, the
+`vesin-jax` extra of pet-jax), currently that of the `vesin-jax` branch.
+vesin-jax supports jax 0.10 and 0.11: pip downgrades a newer jax. The
 versions that are known to work together are in `requirements/petjax.txt`, at
 the root of the i-PI repository:
 
@@ -35,7 +34,7 @@ python -m pip install -r requirements/petjax.txt
 | pet-jax | the `petjax` driver | `vesin-jax` branch for `neighbors:jax` |
 | jax, jaxlib | pet-jax, `--backend jax` | 0.10 or 0.11 with vesin-jax |
 | flax, ase, vesin, marathon-train | pet-jax | installed with pet-jax |
-| vesin-jax | `neighbors:jax` | 0.6.2, from the vesin repository |
+| vesin-jax | `neighbors:jax` (`pet-jax[vesin-jax]`) | 0.7 |
 | torch, metatomic-torch, metatrain | converting the checkpoints (`pet-jax[convert]`) | |
 
 The model is not included in this folder. pet-jax reads its own checkpoints,
@@ -75,8 +74,8 @@ first few steps. The sizes of the neighbor lists (the number of pairs of each
 atom, and of the neighbors that the model selects) are fixed at the start, from
 the template structure, with some margin (the `pair_margin` and
 `extra_neighbors` parameters): i-PI stops with an error if a simulation
-exceeds them. vesin-jax needs the 64-bit mode of JAX, which the driver enables;
-the model still runs in single precision, unless `dtype:float64` is set.
+exceeds them. The driver enables the 64-bit mode of JAX, for the arrays of
+i-PI; the model still runs in single precision, unless `dtype:float64` is set.
 
 The other parameters of the driver are listed in its documentation
 (`ipi/pes/petjax.py`): `non_conservative:True` uses the forces and stress
