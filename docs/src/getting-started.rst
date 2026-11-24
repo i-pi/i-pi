@@ -322,7 +322,7 @@ the replays; otherwise the systems are stepped one after the other. Replica
 exchange is supported, unless the replicas have a barostat or different
 weights of the forces, which are fixed in the graphs. The other simulations
 run as usual, with a warning: other motions, thermostats or barostats, fixed
-atoms, open paths, bosons, and other motions of several systems. ``--jit``
+atoms, bosons, and other motions of several systems. ``--jit``
 needs the torch backend on a CUDA device, or the jax backend: with numpy, or
 torch on the CPU, i-PI stops with an error. The parameters that are fixed in the recorded
 graphs, such as the time step, or the temperature and the pressure with a
@@ -335,7 +335,7 @@ restarted without ``--jit``).
 runs molecular dynamics, replays, ramps and Monte Carlo exchanges of atoms,
 but not yet constrained dynamics, geometry optimization, NEB, string methods,
 phonons, vibrational and SCP analyses, instantons, planetary models, kinetic
-Monte Carlo, bosonic exchange or open paths (i-PI stops
+Monte Carlo or bosonic exchange (i-PI stops
 with an error at the start for the motions it cannot run), and it is
 much slower than numpy, as JAX executes the operations one at a time. With
 ``--jit``, i-PI compiles the MD steps with ``jax.jit`` after the first few

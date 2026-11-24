@@ -183,6 +183,19 @@ def test_jax_types_like_numpy(jax_backend):
     check_types_like_numpy()
 
 
+@pytest.mark.parametrize("name", ["numpy", "torch", "jax"])
+def test_setitem(name, select_backend):
+    """xp_setitem returns the array with a part written, selected by slices or
+    by an array of indices, and modifies it in place unless it is immutable"""
+
+    select_backend(name)
+    a = xp.zeros((2, 4))
+    b = ab.xp_setitem(a, (slice(None), xp.asarray([0, 2])), xp.ones((2, 2)))
+    b = ab.xp_setitem(b, (0, slice(1, 2)), 3.0)
+    assert np.array_equal(ab.to_numpy(b), [[1, 3, 1, 0], [1, 0, 1, 0]])
+    assert (b is a) == (name != "jax")
+
+
 def test_jax_depend_writes(jax_backend):
     """depend_arrays holding JAX arrays are written by replacing the array, and
     the arrays read from them cannot be modified"""
