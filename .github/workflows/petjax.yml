@@ -1,0 +1,88 @@
+name: pet-jax tests and examples
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - next
+
+concurrency:
+  group: petjax-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  petjax:
+    name: petjax driver (PET-MAD on JAX, compiled steps)
+    runs-on: ubuntu-24.04
+    env:
+      COVERAGE_FILE: ${{ github.workspace }}/.coverage-petjax
+      COVERAGE_RCFILE: ${{ github.workspace }}/pyproject.toml
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install i-PI and pet-jax
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]" "coverage>=7.10" -r requirements/petjax.txt
+
+      - name: Cache PET-MAD checkpoint
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: examples/clients/petjax/pet-mad-xs
+          key: petjax-pet-mad-xs-v1.6.0-${{ hashFiles('requirements/petjax.txt', 'examples/clients/petjax/getmodel.sh') }}
+
+      # the conversion needs torch, metatomic and metatrain: they are installed in a
+      # separate environment, so that the tests run in the same one with and without
+      # the cached checkpoint
+      - name: Convert PET-MAD checkpoint
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        working-directory: examples/clients/petjax
+        run: |
+          python -m venv "$RUNNER_TEMP/convert"
+          "$RUNNER_TEMP/convert/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/convert/bin/pip" install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/convert/bin/pip" install -r "$GITHUB_WORKSPACE/requirements/petjax.txt" \
+            metatomic-torch "metatrain>=2026.4"
+          PATH="$RUNNER_TEMP/convert/bin:$PATH" bash getmodel.sh
+
+      - name: Run petjax unit tests
+        run: |
+          python -m coverage run -p --source=ipi -m pytest -v -ra \
+            ipi_tests/unit_tests/pes/test_petjax.py
+
+      - name: Run PET-MAD example (vesin neighbor lists)
+        working-directory: examples/clients/petjax
+        run: python -m coverage run -p --source=ipi "$(command -v i-pi)" input.xml
+
+      - name: Run PET-MAD example compiled with JAX
+        working-directory: examples/clients/petjax
+        run: |
+          python -m coverage run -p --source=ipi "$(command -v i-pi)" \
+            --backend jax --jit input-jit.xml 2>&1 | tee jit.log
+          grep -q "@jaxjit: step compiled" jit.log || {
+            echo "::error::the steps of input-jit.xml were not compiled"
+            exit 1
+          }
+
+      - name: Generate coverage report
+        run: |
+          python -m coverage combine
+          python -m coverage xml -o coverage-petjax.xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-petjax.xml
+          fail_ci_if_error: true

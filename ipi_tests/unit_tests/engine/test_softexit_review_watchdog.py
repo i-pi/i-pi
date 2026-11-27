@@ -389,8 +389,7 @@ def test_interleaved_remd_socket_exit(run):
 
     server = run.ipi("RESTART", "restart")
     wait_for(lambda: os.path.exists("/tmp/ipi_" + address), message="the socket")
-    # one driver: a second one may start after the short run has ended, and
-    # removed the socket
+    # one driver: a second one could start after i-PI has finished, and find no socket
     driver = run.py_driver(address, "driver0")
     wait_exit(server, 60)
     wait_exit(driver, 10)
