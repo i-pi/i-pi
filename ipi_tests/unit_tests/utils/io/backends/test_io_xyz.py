@@ -15,6 +15,7 @@ from ....common import xyz_generator as xyz_gen
 import ipi.utils.io.backends.io_xyz as io_xyz
 import ipi.utils.mathtools as mt
 
+from ipi import ipi_global_settings
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.utils.units import Elements
@@ -158,36 +159,6 @@ def test_read_xyz(create_random_xyz_traj_to_read):
         npt.assert_array_almost_equal(tcell, expected_cell, decimal=precision)
 
 
-@pytest.mark.skipif(True, reason="iter_xyz has been removed")
-def test_iter_xyz(create_random_xyz_traj_to_read):
-    (
-        filedesc,
-        xyz,
-        atom_names,
-        natoms,
-        junk,
-        comment,
-        expected_cell,
-        precision,
-    ) = create_random_xyz_traj_to_read
-
-    _fr = 0
-    for _io in io_xyz.iter_xyz(filedesc):
-        tcomment, tcell, tqatoms, tnames, tmasses = _io
-        assert tcomment.strip() == comment
-        npt.assert_array_almost_equal(
-            tqatoms,
-            xyz[_fr * natoms * 3 : _fr * 3 * natoms + 3 * natoms],
-            decimal=precision,
-        )
-        npt.assert_array_equal(
-            np.array(atom_names[_fr * natoms : _fr * natoms + natoms], dtype="|S4"),
-            tnames,
-        )
-        npt.assert_array_almost_equal(tcell, expected_cell, decimal=precision)
-        _fr += 1
-
-
 #
 # Testing writing xyz #
 #
@@ -233,11 +204,11 @@ def create_random_xyz_traj_to_write(request):
 
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(expected_cell)
 
-    fmt_header = "# CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %s"
+    fmt_header = "# CELL(abcABC): " + "  ".join(["%16.8e"] * 6) + "  %s"
 
-    comment = fmt_header % (a, b, c, alpha, beta, gamma, comment)
+    header = fmt_header % (a, b, c, alpha, beta, gamma, comment)
 
-    filedesc, xyz, atom_names = xyz_gen.xyz_traj_filedesc(natoms, frames, comment)
+    filedesc, xyz, atom_names = xyz_gen.xyz_traj_filedesc(natoms, frames, header)
     filedesc.seek(0)
 
     masses = [Elements.mass(_am) for _am in atom_names]
@@ -248,16 +219,17 @@ def create_random_xyz_traj_to_write(request):
     for _fr in range(frames):
         cell = Cell(expected_cell)
         atoms = Atoms(natoms)
-        atoms.q[:] = xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3]
+        atoms.q_[:] = xyz[_fr * natoms * 3 : (_fr + 1) * natoms * 3]
         atoms.names = atom_names[_fr * natoms : (_fr + 1) * natoms]
-        atoms.m[:] = masses[_fr * natoms : (_fr + 1) * natoms]
+        atoms.m_[:] = masses[_fr * natoms : (_fr + 1) * natoms]
         atoms_list.append(atoms)
         cell_list.append(cell)
 
     return (filedesc, atoms_list, cell_list, comment, precision)
 
 
-def test_print_xyz(create_random_xyz_traj_to_write):
+def test_print_xyz(create_random_xyz_traj_to_write, monkeypatch):
+    monkeypatch.setitem(ipi_global_settings, "floatformat", "%16.8e")
     filedesc, atoms_list, cell_list, title, precision = create_random_xyz_traj_to_write
 
     filedesc_orig = tmp.NamedTemporaryFile(
@@ -274,7 +246,7 @@ def test_print_xyz(create_random_xyz_traj_to_write):
     filedesc_test.flush()
 
     for atoms, cell in zip(atoms_list, cell_list):
-        io_xyz.print_xyz(atoms, cell, filedesc=filedesc_test, title=title[88:])
+        io_xyz.print_xyz(atoms, cell, filedesc=filedesc_test, title=title)
 
     filedesc_orig.close()
     filedesc_test.close()
@@ -299,3 +271,27 @@ def test_print_xyz(create_random_xyz_traj_to_write):
 #         string += spaces
 #         string += spaces.join([str(x) for x in floats.tolist()])
 #         print string
+
+
+def test_xyz_path_floatformat(monkeypatch):
+    from io import StringIO
+    from ipi.engine.beads import Beads
+    from ipi.utils.io import print_file_path
+    from ipi.utils.units import unit_to_user
+
+    monkeypatch.setitem(ipi_global_settings, "floatformat", "%.16e")
+    cell = Cell(np.array([[40.123456789, 1.2, -0.4], [0, 42, 2.3], [0, 0, 43]]))
+    beads = Beads(1, 2)
+    beads.names = ["H"]
+    beads.q = np.array([[30.12345678901234, -0.2, 0.3], [30.12345678901334, -0.2, 0.3]])
+    output = StringIO()
+    print_file_path("xyz", beads, cell, output, units="angstrom", cell_units="angstrom")
+
+    output.seek(0)
+    scale = unit_to_user("length", "angstrom", 1.0)
+    for index in range(2):
+        comment, h, q, names, _ = io_xyz.read_xyz(output)
+        assert f"bead: {index}" in comment
+        npt.assert_array_equal(names, ["H"])
+        npt.assert_array_equal(q, beads.q[index] * scale)
+        npt.assert_allclose(h, cell.h * scale, rtol=0, atol=2e-14)

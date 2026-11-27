@@ -1,6 +1,5 @@
 #!/usr/bin/python
 from ipi.scripting import InteractiveSimulation
-from ipi.utils.depend import dstrip
 import numpy as np
 import ase, ase.io
 
@@ -19,15 +18,15 @@ def my_virial(self):
     # self is a reference to the `properties` object of a system, and
     # provides access to all physical quantities defining the system
     virial = np.dot(
-        dstrip(self.beads.q).flatten(), dstrip(self.beads.p).flatten()
+        self.beads.q.flatten(), self.beads.p.flatten()
     )  # dummy operation to use positions
     return virial * 0.5
 
 
 # and this returns a 3-vector
 def my_virial_xyz(self):
-    q = dstrip(self.beads.q).reshape(-1, 3)
-    p = dstrip(self.beads.p).reshape(-1, 3)
+    q = self.beads.q.reshape(-1, 3)
+    p = self.beads.p.reshape(-1, 3)
     virial = (p * q).sum(axis=0)
 
     return virial

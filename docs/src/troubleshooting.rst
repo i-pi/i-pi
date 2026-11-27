@@ -255,14 +255,20 @@ Socket errors
 -  *Slot number \_\_ out of acceptable range*: The slot number must be
    between 1 and 5. Change the slot number accordingly.
 
--  *’NoneType’ object has no attribute ’Up’*: This is called if an
-   exception is raised during writing the data to output, and so the
-   thread that deals with the socket is terminated uncleanly. Check the
-   stack trace for the original exception, since this will be the actual
-   source of the problem. Also note that, since the socket thread was
-   not cleaned up correctly, the server socket may not have been
-   disconnected properly and you may have to wait for a minute before
-   you can restart a simulation using the same host and port number.
+MPI errors
+----------
+
+-  *mpirun crashes with a segmentation fault and no output*: Some builds
+   of Open MPI 5 with PMIx 5.0.x (e.g. the Ubuntu packages) crash in
+   ``PMIx_Setenv`` when ``mpirun`` starts the second program of an MPMD
+   launch, which is how i-PI and its drivers are started with
+   :ref:`ffmpi-transport`. Even ``mpirun -n 1 true : -n 1 true`` fails.
+   Disabling the ``ompi`` component of PMIx avoids the crash, either on
+   the command line::
+
+      mpirun --pmixmca pmdl ^ompi -n 1 i-pi input.xml : -n 4 i-pi-py_driver --mpi -m harmonic -o 1
+
+   or with the environment variable ``PMIX_MCA_pmdl=^ompi``.
 
 Mathematical errors
 -------------------
@@ -304,10 +310,10 @@ you can try.
    i-PI stores the internal state of the simulation at each step. 
    Particularly for complicated setups, the overhead can be substantial. 
    You can reduce the frequency by which the internal state is stored using
-   the `safe_stride` attribute in the `<simulation>` tag. Note that doing
-   so increases the risk that the RESTART file saved upon soft exit will be
-   inconsistent with the sate of the outputs, so that restarting a simulaiton
-   will leave broken or discontinuous output files. 
+   the `safe_stride` attribute in the `<simulation>` tag. A soft exit in
+   the middle of a step then goes back by up to `safe_stride` steps: the
+   RESTART file and the outputs both return to the last stored state, and
+   the restarted simulation repeats those steps.
 -  *profile i-PI*: if you still think i-PI is being unreasonably slow,
    you can contact the developers - your setup might have revealed some 
    kind of bottleneck. It will help us if you can also generate a profiler

@@ -96,10 +96,11 @@ def Cqp(omega0, dAqp, dDqp):
     # "stabilizes" the calculation by removing the trivial dependence of <a^2> on omega0 until the very end
     dAqp = dAqp.copy()
     dDqp = dDqp.copy()
-    dAqp[:, 0] *= omega0
-    dAqp[0, :] /= omega0
-    dDqp[:, 0] /= omega0
-    dDqp[:, 0] /= omega0
+    # works with q' = omega0 q
+    dAqp[0, :] *= omega0
+    dAqp[:, 0] /= omega0
+    dDqp[0, :] *= omega0
+    dDqp[:, 0] *= omega0
 
     # solve "a la MC thesis" using just numpy
     a, omat = np.linalg.eig(dAqp)

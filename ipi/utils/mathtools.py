@@ -11,6 +11,8 @@ from importlib import resources
 import numpy as np
 
 from ipi.utils.messages import verbosity, warning
+from ipi.utils.array_backend import xp, to_numpy
+from ipi.utils.jit import compiled
 
 __all__ = [
     "matrix_exp",
@@ -20,11 +22,8 @@ __all__ = [
     "abc2h",
     "invert_ut3x3",
     "det_ut3x3",
-    "eigensystem_ut3x3",
-    "exp_ut3x3",
     "root_herm",
     "logsumlog",
-    "sinch",
     "gaussian_inv",
     "get_rotation_quadrature_legendre",
     "get_rotation_quadrature_lebedev",
@@ -48,10 +47,10 @@ def logsumlog(lasa, lbsb):
 
     if la > lb:
         sr = sa
-        lr = la + np.log(1.0 + sb * np.exp(lb - la))
+        lr = la + np.log(1.0 + sa * sb * np.exp(lb - la))
     else:
         sr = sb
-        lr = lb + np.log(1.0 + sa * np.exp(la - lb))
+        lr = lb + np.log(1.0 + sa * sb * np.exp(la - lb))
 
     return (lr, sr)
 
@@ -63,31 +62,32 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
     then squaring the result the appropriate number of times.
 
     Args:
-       M: Matrix to be exponentiated.
+       M: Matrix to be exponentiated, or a stack of matrices with shape
+          (..., n, n), which are exponentiated together.
        ntaylor: Optional integer giving the number of terms in the Taylor series.
-          Defaults to 15.
+          Defaults to 20.
        nsquare: Optional integer giving how many times the original matrix will
-          be halved. Defaults to 15.
+          be halved. Defaults to 10.
 
     Returns:
        The matrix exponential of M.
     """
 
-    n = M.shape[1]
+    n = M.shape[-1]
     tc = np.zeros(ntaylor + 1)
     tc[0] = 1.0
     for i in range(ntaylor):
         tc[i + 1] = tc[i] / (i + 1)
 
-    SM = np.copy(M) / 2.0**nsquare
+    SM = M / 2.0**nsquare
 
-    EM = np.identity(n, float) * tc[ntaylor]
+    identity = xp.eye(n)
+    EM = identity * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
-        EM = np.dot(SM, EM)
-        EM += np.identity(n) * tc[i]
+        EM = SM @ EM + identity * tc[i]
 
     for i in range(nsquare):
-        EM = np.dot(EM, EM)
+        EM = EM @ EM
     return EM
 
 
@@ -109,9 +109,11 @@ def stab_cholesky(M):
        M: The matrix to be decomposed.
     """
 
+    # the matrices are small, and decomposed element by element on the host
+    M = np.array(to_numpy(M), dtype=float)
     n = M.shape[1]
-    D = np.zeros(n, float)
-    L = np.zeros(M.shape, float)
+    D = np.zeros(n)
+    L = np.zeros(M.shape)
     for i in range(n):
         L[i, i] = 1.0
         for j in range(i):
@@ -125,7 +127,7 @@ def stab_cholesky(M):
             D[i] -= L[i, k] * L[i, k] * D[k]
 
     negev = False
-    S = np.zeros(M.shape, float)
+    S = np.zeros(M.shape)
     for i in range(n):
         if D[i] > 0:
             D[i] = math.sqrt(D[i])
@@ -141,12 +143,11 @@ def stab_cholesky(M):
 
     if negev:
         warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(M - np.dot(S, S.T)),
+            "Checking decomposition after negative eigenvalue: \n" + str(M - S @ S.T),
             verbosity.low,
         )
 
-    return S
+    return xp.asarray(S)
 
 
 def h2abc(h):
@@ -169,7 +170,7 @@ def h2abc(h):
     c = math.sqrt(h[0, 2] ** 2 + h[1, 2] ** 2 + h[2, 2] ** 2)
     gamma = math.acos(h[0, 1] / b)
     beta = math.acos(h[0, 2] / c)
-    alpha = math.acos(np.dot(h[:, 1], h[:, 2]) / (b * c))
+    alpha = math.acos(h[:, 1] @ h[:, 2] / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
@@ -189,12 +190,12 @@ def genh2abc(h):
        A list containing the lattice vector lengths and the angles between them.
     """
 
-    a = math.sqrt(np.dot(h[0], h[0]))
-    b = math.sqrt(np.dot(h[1], h[1]))
-    c = math.sqrt(np.dot(h[2], h[2]))
-    gamma = math.acos(np.dot(h[0], h[1]) / (a * b))
-    beta = math.acos(np.dot(h[0], h[2]) / (a * c))
-    alpha = math.acos(np.dot(h[2], h[1]) / (b * c))
+    a = math.sqrt(h[0] @ h[0])
+    b = math.sqrt(h[1] @ h[1])
+    c = math.sqrt(h[2] @ h[2])
+    gamma = math.acos(h[0] @ h[1] / (a * b))
+    beta = math.acos(h[0] @ h[2] / (a * c))
+    alpha = math.acos(h[2] @ h[1] / (b * c))
 
     return a, b, c, alpha, beta, gamma
 
@@ -255,42 +256,11 @@ def invert_ut3x3(h):
        The inverse matrix of h.
     """
 
-    ih = np.zeros((3, 3), float)
-    for i in range(3):
-        ih[i, i] = 1.0 / h[i, i]
-    ih[0, 1] = -ih[0, 0] * h[0, 1] * ih[1, 1]
-    ih[1, 2] = -ih[1, 1] * h[1, 2] * ih[2, 2]
-    ih[0, 2] = -ih[1, 2] * h[0, 1] * ih[0, 0] - ih[0, 0] * h[0, 2] * ih[2, 2]
-    return ih
-
-
-def eigensystem_ut3x3(p):
-    """Finds the eigenvector matrix of a 3*3 upper-triangular matrix.
-
-    Args:
-       p: An upper triangular 3*3 matrix.
-
-    Returns:
-       An array giving the 3 eigenvalues of p, and the eigenvector matrix of p.
-    """
-
-    eigp = np.zeros((3, 3), float)
-    eigvals = np.zeros(3, float)
-
-    for i in range(3):
-        eigp[i, i] = 1
-    eigp[0, 1] = -p[0, 1]
-    if eigp[0, 1] != 0.0:
-        eigp[0, 1] /= p[0, 0] - p[1, 1]
-    eigp[1, 2] = -p[1, 2]
-    if eigp[1, 2] != 0.0:
-        eigp[1, 2] /= p[1, 1] - p[2, 2]
-    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
-    if eigp[1, 2] != 0.0:
-        eigp[1, 2] /= (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
-    for i in range(3):
-        eigvals[i] = p[i, i]
-    return eigvals, eigp
+    # h = d (1 + m), with d diagonal and m strictly upper triangular, so m^3 = 0
+    d = xp.diagonal(h)
+    eye = xp.eye(3)
+    m = h / d[:, None] - eye
+    return (eye - m + m @ m) / d
 
 
 def det_ut3x3(h):
@@ -310,69 +280,6 @@ def det_ut3x3(h):
     return h[0, 0] * h[1, 1] * h[2, 2]
 
 
-MINSERIES = 1e-8
-
-
-def exp_ut3x3(h):
-    """Computes the matrix exponential for a 3x3 upper-triangular matrix.
-
-    Note that for 3*3 upper triangular matrices this is the best method, as
-    it is stable. This is terms which become unstable as the
-    denominator tends to zero are calculated via a Taylor series in this limit.
-
-    Args:
-       h: An upper triangular 3*3 matrix.
-
-    Returns:
-       The matrix exponential of h.
-    """
-    eh = np.zeros((3, 3), float)
-    e00 = math.exp(h[0, 0])
-    e11 = math.exp(h[1, 1])
-    e22 = math.exp(h[2, 2])
-    eh[0, 0] = e00
-    eh[1, 1] = e11
-    eh[2, 2] = e22
-
-    if abs((h[0, 0] - h[1, 1]) / h[0, 0]) > MINSERIES:
-        r01 = (e00 - e11) / (h[0, 0] - h[1, 1])
-    else:
-        r01 = e00 * (1 + (h[0, 0] - h[1, 1]) * (0.5 + (h[0, 0] - h[1, 1]) / 6.0))
-    if abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
-        r12 = (e11 - e22) / (h[1, 1] - h[2, 2])
-    else:
-        r12 = e11 * (1 + (h[1, 1] - h[2, 2]) * (0.5 + (h[1, 1] - h[2, 2]) / 6.0))
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
-        r02 = (e22 - e00) / (h[2, 2] - h[0, 0])
-    else:
-        r02 = e22 * (1 + (h[2, 2] - h[0, 0]) * (0.5 + (h[2, 2] - h[0, 0]) / 6.0))
-
-    eh[0, 1] = h[0, 1] * r01
-    eh[1, 2] = h[1, 2] * r12
-
-    eh[0, 2] = h[0, 2] * r02
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r01 - r12) / (h[0, 0] - h[2, 2])
-    elif abs((h[1, 1] - h[0, 0]) / h[1, 1]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r12 - r02) / (h[1, 1] - h[0, 0])
-    elif abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
-        eh[0, 2] += h[0, 1] * h[0, 2] * (r02 - r01) / (h[2, 2] - h[1, 1])
-    else:
-        eh[0, 2] += (
-            h[0, 1]
-            * h[0, 2]
-            * e00
-            / 24.0
-            * (
-                12.0
-                + 4 * (h[1, 1] + h[2, 2] - 2 * h[0, 0])
-                + (h[1, 1] - h[0, 0]) * (h[2, 2] - h[0, 0])
-            )
-        )
-
-    return eh
-
-
 def root_herm(A):
     """Computes the square root of a positive-definite hermitian matrix.
 
@@ -384,79 +291,26 @@ def root_herm(A):
        original matrix.
     """
 
-    if not (abs(A.T - A) < 1e-10).all():
+    if not bool(xp.all(xp.abs(A.T - A) < 1e-10)):
         raise ValueError("Non-Hermitian matrix passed to root_herm function")
-    eigvals, eigvecs = np.linalg.eigh(A)
-    ndgrs = len(eigvals)
-    diag = np.zeros((ndgrs, ndgrs))
-    negev = False
-    for i in range(ndgrs):
-        if eigvals[i] >= 0:
-            diag[i, i] = math.sqrt(eigvals[i])
-        else:
-            warning(
-                "Zeroing negative %d-th element in matrix square root: %e"
-                % (i, eigvals[i]),
-                verbosity.low,
-            )
-            diag[i, i] = 0
-            negev = True
-    rv = np.dot(eigvecs, np.dot(diag, eigvecs.T))
-    if negev:
+    eigvals, eigvecs = xp.linalg.eigh(A)
+    negative = np.flatnonzero(to_numpy(eigvals) < 0)
+    for i in negative:
         warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(A - np.dot(rv, rv.T)),
+            "Zeroing negative %d-th element in matrix square root: %e"
+            % (i, eigvals[i]),
+            verbosity.low,
+        )
+    # the eigenvectors scaled by the square roots of the (non-negative) eigenvalues
+    roots = xp.sqrt(xp.where(eigvals >= 0, eigvals, xp.zeros_like(eigvals)))
+    rv = (eigvecs * roots) @ eigvecs.T
+    if len(negative) > 0:
+        warning(
+            "Checking decomposition after negative eigenvalue: \n" + str(A - rv @ rv.T),
             verbosity.low,
         )
 
     return rv
-
-
-def _sinch(x):
-    """Computes sinh(x)/x in a way that is stable for x->0.
-
-    Works for complex x too (e.g. complex eigenvalues from a non-symmetric
-    barostat momentum tensor), so the small-argument test uses abs()."""
-
-    x2 = x * x
-    if abs(x2) < 1e-12:
-        return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
-    else:
-        return np.sinh(x) / x
-
-
-sinch = np.vectorize(_sinch)
-
-
-def mat_taylor(x, function):
-    """compute matrix function as direct taylor expansion
-    Args:
-       x: matrix
-       function: the function to be expanded
-    Return:
-       function of matrix.
-    """
-    if not (x.shape[0] == x.shape[1]):
-        warning("input matrix is not squared")
-        return None
-    dim = x.shape[0]
-    I = np.identity(dim)
-    if function == "sinhx/x":
-        # compute sinhx/x by directly taylor
-        x2 = np.linalg.matrix_power(x, 2)
-        return I + np.matmul(
-            x2 / (2.0 * 3.0),
-            (
-                I
-                + np.matmul(
-                    x2 / (4.0 * 5.0),
-                    (I + np.matmul(x2 / (6.0 * 7.0), (I + x2 / (8.0 * 9.0)))),
-                )
-            ),
-        )
-
-    else:
-        warning("function {} not implemented".format(function))
 
 
 def gaussian_inv(x):
@@ -529,31 +383,28 @@ def LT_friction(freqs, spectral_density_over_w, forceit=False):
     return 2 * integral / np.pi
 
 
+@compiled
 def quat2rot(q):
     """
     Convert a normalized quaternion into a 3x3 rotation matrix.
 
     Args:
-    q : list or array-like
+    q : array
         A normalized quaternion [q1, q2, q3, q4] where q1 is the scalar part.
 
     Returns:
-    numpy.ndarray
-        The corresponding 3x3 rotation matrix.
+        The corresponding 3x3 rotation matrix, as an array of the backend.
     """
 
-    q1, q2, q3, q4 = q
+    q1, q2, q3, q4 = xp.unstack(q)
 
     # Compute the rotation matrix elements
-    R = np.array(
-        [
-            [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
-            [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
-            [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
-        ]
-    )
-
-    return R
+    rows = [
+        [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
+        [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
+        [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
+    ]
+    return xp.stack([xp.stack(row) for row in rows])
 
 
 def euler_zxz_to_matrix(theta, v, w):
@@ -640,15 +491,13 @@ def get_rotation_quadrature_lebedev(L):
 
 
 def random_rotation(prng, improper=True):
-    """Generates a (uniform) random rotation matrix"""
+    """Generates a (uniform) random rotation matrix, as an array of the backend,
+    which is improper with probability 1/2 if `improper`. The random numbers
+    are drawn on the device of the backend, without synchronizing with it."""
 
-    quaternion = prng.gvec(shape=(4,))
-    quaternion /= np.sqrt((quaternion**2).sum())
-
-    rot = quat2rot(quaternion)
-
-    # randomly generate an improper rotation
-    if improper and prng.u < 0.5:
-        rot *= -1.0
-
+    g = prng.gvec((5,))
+    rot = quat2rot(g[:4] / xp.sqrt((g[:4] ** 2).sum()))
+    if improper:
+        # improper if the fifth Gaussian number is negative
+        rot = rot * (1.0 - 2.0 * (g[4] < 0))
     return rot

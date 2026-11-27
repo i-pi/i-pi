@@ -163,7 +163,7 @@ class InputGeop(InputDictionary):
             {
                 "dtype": float,
                 "default": input_default(factory=np.eye, args=(0,)),
-                "help": "Approximate Hessian for trm, if known.",
+                "help": "Approximate Hessian for trm and damped_bfgs, if known.",
             },
         ),
         "tr_trm": (
@@ -229,9 +229,9 @@ class InputGeop(InputDictionary):
             self.old_direction.store(geop.d)
             self.ls_options.store(geop.ls_options)
             self.old_force.store(geop.old_f)
-        if geop.mode == "damped_bfgs":
+        elif geop.mode == "damped_bfgs":
             self.old_direction.store(geop.d)
-            self.invhessian_bfgs.store(geop.invhessian)
+            self.hessian_trm.store(geop.hessian)
             self.biggest_step.store(geop.big_step)
 
     def fetch(self):

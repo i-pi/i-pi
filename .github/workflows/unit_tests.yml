@@ -2,13 +2,13 @@ name: Unit tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
   pull_request:
     # Check all PR
 
 concurrency:
   group: unit-tests-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/next' }}
 
 jobs:
   unit-tests:

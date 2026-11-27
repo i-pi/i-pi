@@ -13,6 +13,7 @@ overwrite data given elsewhere.
 
 import numpy as np
 
+from ipi.utils.array_backend import xp, xp_size, to_numpy
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.ensembles import Ensemble
@@ -118,7 +119,6 @@ def init_file(
        a Cell object as read from the final pdb frame.
     """
 
-    rfile = open(filename, "r")
     ratoms = []
 
     info(
@@ -126,16 +126,19 @@ def init_file(
         % (filename, dimension, units, cell_units),
         verbosity.low,
     )
-    while True:
-        # while loop, so that more than one configuration can be given
-        # so multiple beads can be initialized at once.
-        try:
-            ret = read_file(
-                mode, rfile, dimension=dimension, units=units, cell_units=cell_units
-            )
-        except EOFError:
-            break
-        ratoms.append(ret["atoms"])
+    with open(filename, "r") as rfile:
+        while True:
+            # while loop, so that more than one configuration can be given
+            # so multiple beads can be initialized at once.
+            try:
+                ret = read_file(
+                    mode, rfile, dimension=dimension, units=units, cell_units=cell_units
+                )
+            except EOFError:
+                break
+            ratoms.append(ret["atoms"])
+    if not ratoms:
+        raise ValueError(f"Empty initialization file {filename}")
     return ratoms, ret["cell"]  # if multiple frames, the last cell is returned
 
 
@@ -228,7 +231,7 @@ def init_vector(
         ):  # if there is a bead specifier then we return a single bead slice
             nbeads = 1
         natoms = len(rq) // (nbeads * 3)
-        rq.shape = (nbeads, 3 * natoms)
+        rq = rq.reshape(nbeads, 3 * natoms)
 
     return rq
 
@@ -244,13 +247,13 @@ def set_vector(iif, dq, rq):
 
     Args:
        iif: An Initializer object specifying the value of a vector.
-       dq: The vector to be initialized.
+       dq: The depend_array to be initialized.
        rq: The vector to initialize from.
     """
 
     nbeads, natoms = rq.shape
     natoms //= 3
-    dbeads, datoms = dq.shape
+    dbeads, datoms = dq.get().shape
     datoms //= 3
 
     # Check that indices make sense
@@ -283,9 +286,9 @@ def set_vector(iif, dq, rq):
             dq[:, 3 * iif.index : 3 * (iif.index + 1)] = res.b1tob2(rq)
     else:  # we are initializing a specific bead
         if iif.index < 0:
-            dq[iif.bead] = rq
+            dq[iif.bead] = xp.asarray(rq)
         else:
-            dq[iif.bead, 3 * iif.index : 3 * (iif.index + 1)] = rq
+            dq[iif.bead, 3 * iif.index : 3 * (iif.index + 1)] = xp.asarray(rq)
 
 
 class Initializer:
@@ -380,9 +383,9 @@ class Initializer:
                 if fcell:
                     warning("Overwriting previous cell parameters", verbosity.low)
 
-                simul.cell.h = rh
+                simul.cell.h = xp.asarray(rh)
                 if simul.cell.V == 0.0:
-                    ValueError("Cell provided has zero volume")
+                    raise ValueError("Cell provided has zero volume")
 
                 fcell = True
             elif k == "masses":
@@ -403,15 +406,15 @@ class Initializer:
                             "Rescaling momenta to make up for changed mass",
                             verbosity.medium,
                         )
-                        simul.beads.p /= (
+                        simul.beads.p_ /= (
                             simul.beads.sm3
                         )  # go to mass-scaled momenta, that are mass-invariant
                     if v.index < 0:
-                        simul.beads.m = rm
+                        simul.beads.m = xp.asarray(rm)
                     else:  # we are initializing a specific atom
-                        simul.beads.m[v.index : v.index + 1] = rm
+                        simul.beads.m_[v.index : v.index + 1] = xp.asarray(rm)
                     if fmom and fmass:  # finishes correcting the momenta
-                        simul.beads.p *= simul.beads.sm3  # back to normal momenta
+                        simul.beads.p_ *= simul.beads.sm3  # back to normal momenta
                 else:
                     raise ValueError("Cannot change the mass of a single bead")
                 fmass = True
@@ -432,7 +435,7 @@ class Initializer:
                     if v.index < 0:
                         simul.beads.names = rn
                     else:  # we are initializing a specific atom
-                        simul.beads.names[v.index : v.index + 1] = rn
+                        simul.beads.names_[v.index : v.index + 1] = rn
                 else:
                     raise ValueError("Cannot change the label of a single bead")
                 flab = True
@@ -455,7 +458,7 @@ class Initializer:
                         )
                     simul.beads.resize(natoms, self.nbeads)
 
-                set_vector(v, simul.beads.q, rq)
+                set_vector(v, simul.beads.q_, rq)
                 fpos = True
 
             elif (
@@ -496,9 +499,9 @@ class Initializer:
                     rnatoms = simul.beads.natoms
                 rbeads = Beads(rnatoms, simul.beads.nbeads)
                 if v.index < 0:
-                    rbeads.m[:] = simul.beads.m
+                    rbeads.m_[:] = simul.beads.m
                 else:
-                    rbeads.m[:] = simul.beads.m[v.index]
+                    rbeads.m_[:] = simul.beads.m[v.index]
                 rnm = NormalModes(
                     mode=simul.nm.mode,
                     transform_method=simul.nm.transform_method,
@@ -512,14 +515,14 @@ class Initializer:
                 # with (possibly) shifted-frequencies NM
                 rnm.pnm = (
                     simul.prng.gvec((rbeads.nbeads, 3 * rbeads.natoms))
-                    * np.sqrt(rnm.dynm3)
+                    * xp.sqrt(rnm.dynm3)
                     * np.sqrt(rbeads.nbeads * rtemp * Constants.kb)
                 )
 
                 if v.index < 0:
                     simul.beads.p = rbeads.p
                 else:
-                    simul.beads.p[:, 3 * v.index : 3 * (v.index + 1)] = rbeads.p
+                    simul.beads.p_[:, 3 * v.index : 3 * (v.index + 1)] = rbeads.p
                 fmom = True
 
             elif k == "momenta":
@@ -540,8 +543,8 @@ class Initializer:
                         )
                     simul.beads.resize(natoms, self.nbeads)
 
-                rp *= np.sqrt(self.nbeads / nbeads)
-                set_vector(v, simul.beads.p, rp)
+                rp = rp * np.sqrt(self.nbeads / nbeads)
+                set_vector(v, simul.beads.p_, rp)
                 fmom = True
             elif k == "velocities":
                 if fmom:
@@ -563,12 +566,11 @@ class Initializer:
                     verbosity.low,
                 )
                 if v.index >= 0:
-                    rv *= simul.beads.m[v.index]
+                    rv = rv * simul.beads.m[v.index]
                 else:
-                    for ev in rv:
-                        ev *= simul.beads.m3[0]
-                rv *= np.sqrt(self.nbeads / nbeads)
-                set_vector(v, simul.beads.p, rv)
+                    rv = rv * simul.beads.m3[0]
+                rv = rv * np.sqrt(self.nbeads / nbeads)
+                set_vector(v, simul.beads.p_, rv)
                 fmom = True
             elif k == "gle":
                 pass  # thermostats must be initialised in a second stage
@@ -611,22 +613,21 @@ class Initializer:
 
             if k == "gle":
                 # read thermostat parameters from file
-                if not (hasattr(simul.ensemble, "thermostat")):
-                    raise ValueError(
-                        "Ensemble does not have a thermostat to initialize"
-                    )
-                if not (hasattr(simul.ensemble.thermostat, "s")):
+                thermostat = getattr(simul.motion, "thermostat", None)
+                if thermostat is None:
+                    raise ValueError("Motion does not have a thermostat to initialize")
+                if not (hasattr(thermostat, "s")):
                     raise ValueError(
                         "There is nothing to initialize in non-GLE thermostats"
                     )
-                ssimul = simul.ensemble.thermostat.s
+                ssimul = thermostat.s
                 if v.mode == "manual":
                     sinput = v.value.copy()
-                    if sinput.size() != ssimul.size():
+                    if sinput.size != xp_size(ssimul):
                         raise ValueError(
                             "Size mismatch in thermostat initialization data"
                         )
-                    sinput.shape = ssimul.shape
+                    sinput = sinput.reshape(tuple(ssimul.shape))
                 elif v.mode == "chk":
                     rmotion = init_chk(v.value)[2]
                     if not hasattr(rmotion, "thermostat") or not hasattr(
@@ -635,11 +636,11 @@ class Initializer:
                         raise ValueError(
                             "Checkpoint file does not contain usable thermostat data"
                         )
-                    sinput = rmotion.thermostat.s.copy()
-                    if sinput.shape != ssimul.shape:
+                    sinput = to_numpy(rmotion.thermostat.s).copy()
+                    if sinput.shape != tuple(ssimul.shape):
                         raise ValueError(
                             "Shape mismatch in thermostat initialization data"
                         )
 
                 # if all the preliminary checks are good, we can initialize the s's
-                ssimul[:] = sinput
+                thermostat.s = xp.asarray(sinput)

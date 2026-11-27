@@ -26,7 +26,7 @@ def xyz_rand(natoms, comment, names=None):
         comment += "\n"
     output += comment
     for i in range(natoms):
-        output += "%8s %12.5e %12.5e %12.5e\n" % (
+        output += "%8s %16.8e %16.8e %16.8e\n" % (
             at_names[i],
             xyz[i, 0],
             xyz[i, 1],

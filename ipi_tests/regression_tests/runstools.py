@@ -1,3 +1,6 @@
+import re
+from decimal import Decimal
+
 import numpy as np
 from pathlib import Path
 
@@ -8,6 +11,20 @@ try:
     )
 except ImportError:
     from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
+
+
+def _xyz_value_at_reference_precision(observed, reference):
+    """Compare legacy %.5e references at the precision they can represent."""
+    if re.fullmatch(r"[+-]?\d\.\d{5}[eE][+-]\d+", reference):
+        value = Decimal(observed)
+        expected = Decimal(reference)
+        if value.is_finite() and value and expected:
+            # Work in decimal so a printed midpoint admits either neighbor.
+            exponent = min(value.adjusted(), expected.adjusted())
+            half_digit = Decimal("0.5").scaleb(exponent - 5)
+            if abs(value - expected) <= half_digit:
+                return float(reference)
+    return float(observed)
 
 
 class Runner_regression(Runner):
@@ -196,8 +213,7 @@ class Runner_regression(Runner):
                                 ref_natoms + 2
                             ) != 1:
                                 ref_structs.append(ll.split()[1:])
-                    reff = [[float(v) for v in r] for r in ref_structs]
-                    ref_xyz = np.array(reff)
+                    ref_xyz = np.array(ref_structs, dtype=float)
                 except IOError:
                     raise IOError(
                         "Please provide a reference file named {} in {}\n \
@@ -222,7 +238,13 @@ class Runner_regression(Runner):
                     for s, ll in enumerate(f.readlines()):
                         if (s + 1) % (natoms + 2) != 0 and (s + 1) % (natoms + 2) != 1:
                             structs.append(ll.split()[1:])
-                    testt = [[float(v) for v in r] for r in structs]
+                    testt = [
+                        [
+                            _xyz_value_at_reference_precision(value, reference)
+                            for value, reference in zip(row, ref_row, strict=True)
+                        ]
+                        for row, ref_row in zip(structs, ref_structs, strict=True)
+                    ]
                     test_xyz = np.array(testt)
 
                 try:

@@ -5,8 +5,10 @@ import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 import numpy as np
 import pytest
+from ipi.engine.ensembles import ensemble_swap
 from ipi.engine.smotion.remd import ReplicaExchange, motion_scale
-from ipi_tests.unit_tests.engine.inputs import harmonic_input
+from ipi.utils.array_backend import to_numpy
+from ipi_tests.unit_tests.engine.inputs import harmonic_input, pressure_input
 
 
 @pytest.mark.parametrize("accept", [False, True])
@@ -51,7 +53,7 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
     root.append(second)
     with simulation(ET.tostring(root, encoding="unicode")) as sim:
         systems = sim.syslist
-        energies = [s.ensemble.econs for s in systems]
+        energies = [float(s.ensemble.econs) for s in systems]
         # First draw selects the exchange attempt; second tests its probability.
         attempts = iter([0.0, acceptance_draw])
 
@@ -66,17 +68,138 @@ def test_exchange_acceptance_or_rejection_has_consistent_state(
         if accept:
             np.testing.assert_array_equal(remd.repindex, [1, 0])
             for i, s in enumerate(systems):
-                assert s.ensemble.temp == temperatures[1 - i]
+                assert float(s.ensemble.temp) == temperatures[1 - i]
                 factor = (
                     np.sqrt(temperatures[1 - i] / temperatures[i]) if rescale else 1.0
                 )
-                np.testing.assert_allclose(s.beads.p, momenta[i] * factor)
-                assert s.ensemble.econs == pytest.approx(energies[i])
+                np.testing.assert_allclose(to_numpy(s.beads.p), momenta[i] * factor)
+                assert float(s.ensemble.econs) == pytest.approx(energies[i])
         else:
             np.testing.assert_array_equal(remd.repindex, [0, 1])
             for i, s in enumerate(systems):
-                assert s.ensemble.temp == temperatures[i]
-                np.testing.assert_allclose(s.beads.p, momenta[i])
+                assert float(s.ensemble.temp) == temperatures[i]
+                np.testing.assert_allclose(to_numpy(s.beads.p), momenta[i])
+
+
+@pytest.mark.parametrize("accept", [False, True])
+@pytest.mark.parametrize("bulk_modulus", [None, "1e-4"])
+def test_exchanges_rescale_the_cell_momenta(simulation, accept, bulk_modulus):
+    """An accepted exchange keeps the kinetic energy of the cell over kB T, also
+    when its mass does not depend on T (with a bulk modulus); a rejected one
+    restores the momentum of the cell."""
+    temperatures = [0.2, 0.4]
+    root = ET.fromstring(pressure_input("isotropic"))
+    barostat = root.find("system/motion/dynamics/barostat")
+    ET.SubElement(barostat, "p").text = "[0.5]"
+    if bulk_modulus is not None:
+        ET.SubElement(barostat, "bulk_modulus").text = bulk_modulus
+    second = copy.deepcopy(root.find("system"))
+    for system_input, temperature in zip([root.find("system"), second], temperatures):
+        temperature_input = system_input.find("ensemble/temperature")
+        temperature_input.attrib.clear()
+        temperature_input.text = str(temperature)
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        barostats = [s.motion.barostat for s in sim.syslist]
+        momenta = [float(b.p[0]) for b in barostats]
+        reduced = [float(b.kin / b.temp) for b in barostats]
+        # First draw selects the exchange attempt; second accepts or rejects it.
+        attempts = iter([0.0, 0.0 if accept else np.inf])
+
+        class Draws:
+            @property
+            def u(self):
+                return next(attempts)
+
+        remd = ReplicaExchange(krescale=True)
+        remd.bind(sim.syslist, Draws(), sim.output_maker)
+        remd.step(0)
+        np.testing.assert_array_equal(remd.repindex, [1, 0] if accept else [0, 1])
+        for b, p, k in zip(barostats, momenta, reduced):
+            if accept:
+                assert float(b.kin / b.temp) == pytest.approx(k)
+            else:
+                assert float(b.p[0]) == pytest.approx(p)
+
+
+@pytest.mark.parametrize("rescale", [False, True])
+def test_accepted_exchanges_rescale_the_gle_momenta(simulation, rescale):
+    """An accepted exchange keeps s^2 / kB T for the auxiliary momenta of a GLE
+    thermostat, which are mass-scaled with variance kB T."""
+    temperatures = [0.2, 0.4]
+    root = ET.fromstring(harmonic_input(thermostat="langevin"))
+    dynamics = root.find("system/motion/dynamics")
+    dynamics.remove(dynamics.find("thermostat"))
+    gle = ET.SubElement(dynamics, "thermostat", mode="gle")
+    ET.SubElement(gle, "A", shape="(2,2)").text = "[0.2, 1, -1, 0.2]"
+    second = copy.deepcopy(root.find("system"))
+    for system_input, temperature in zip([root.find("system"), second], temperatures):
+        temperature_input = system_input.find("ensemble/temperature")
+        temperature_input.attrib.clear()
+        temperature_input.text = str(temperature)
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        thermostats = [s.motion.thermostat for s in sim.syslist]
+        reduced = [
+            to_numpy(t.s)[1:] / np.sqrt(T) for t, T in zip(thermostats, temperatures)
+        ]
+        # First draw selects the exchange attempt; second accepts it.
+        attempts = iter([0.0, 0.0])
+
+        class Draws:
+            @property
+            def u(self):
+                return next(attempts)
+
+        remd = ReplicaExchange(krescale=rescale)
+        remd.bind(sim.syslist, Draws(), sim.output_maker)
+        remd.step(0)
+        np.testing.assert_array_equal(remd.repindex, [1, 0])
+        for t, T, s in zip(thermostats, temperatures[::-1], reduced):
+            np.testing.assert_allclose(to_numpy(t.s)[1:] / np.sqrt(T), s)
+
+
+def test_hamiltonian_weights_are_exchanged(simulation):
+    """Exchanging the ensembles exchanges the scaling of the forces in the bias."""
+    weights = [0.5, 1.0]
+    root = ET.fromstring(harmonic_input())
+    second = copy.deepcopy(root.find("system"))
+    for system_input, weight in zip([root.find("system"), second], weights):
+        ensemble = system_input.find("ensemble")
+        ET.SubElement(ensemble, "hamiltonian_weights", shape="(1)").text = f"[{weight}]"
+    root.append(second)
+    with simulation(ET.tostring(root, encoding="unicode")) as sim:
+        systems = sim.syslist
+        for s, weight in zip(systems, weights):
+            assert float(s.ensemble.bias.pot) == pytest.approx(
+                (weight - 1) * float(s.forces.pot)
+            )
+        ensemble_swap(systems[0].ensemble, systems[1].ensemble)
+        for s, weight in zip(systems, weights[::-1]):
+            assert s.ensemble.hweights[0] == weight
+            assert float(s.ensemble.bias.pot) == pytest.approx(
+                (weight - 1) * float(s.forces.pot)
+            )
+
+
+def test_hamiltonian_weights_scale_the_dynamics(simulation):
+    """A Hamiltonian weight acts on the dynamics as the same weight of the force."""
+
+    def trajectory(root):
+        with simulation(ET.tostring(root, encoding="unicode")) as sim:
+            s = sim.syslist[0]
+            econs = float(s.ensemble.econs)
+            sim.run(steps=10, write_outputs=False)
+            assert float(s.ensemble.econs) == pytest.approx(econs, abs=1e-6)
+            return to_numpy(s.beads.q), to_numpy(s.beads.p)
+
+    hamiltonian = ET.fromstring(harmonic_input())
+    ensemble = hamiltonian.find("system/ensemble")
+    ET.SubElement(ensemble, "hamiltonian_weights", shape="(1)").text = "[0.5]"
+    force = ET.fromstring(harmonic_input())
+    force.find("system/forces/force").set("weight", "0.5")
+    for weighted, scaled in zip(trajectory(hamiltonian), trajectory(force)):
+        np.testing.assert_allclose(weighted, scaled, rtol=1e-12, atol=1e-14)
 
 
 def test_nested_thermostat_scaling_reaches_all_auxiliary_momenta():

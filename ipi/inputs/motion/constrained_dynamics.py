@@ -51,7 +51,7 @@ class InputConstraintSolver(InputDictionary):
             {
                 "dtype": int,
                 "default": 2,
-                "help": "Order of norm used to determine termination of the Quasi-newton iteration.",
+                "help": "Order of norm used to determine termination of the Quasi-newton iteration (-1 for the infinity norm).",
             },
         ),
     }
@@ -63,7 +63,11 @@ class InputConstraintSolver(InputDictionary):
     def store(self, csolver):
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
-        self.norm_order.store(csolver.norm_order)
+        # the infinity norm is given as -1
+        if csolver.norm_order == float("inf"):
+            self.norm_order.store(-1)
+        else:
+            self.norm_order.store(csolver.norm_order)
 
     def fetch(self):
         return super(InputConstraintSolver, self).fetch()
@@ -129,7 +133,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] // 2, 2)
+                alist = alist.reshape((alist.shape[0] // 2, 2))
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
@@ -139,7 +143,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] // 3, 3)
+                alist = alist.reshape((alist.shape[0] // 3, 3))
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
@@ -148,7 +152,7 @@ class InputConstraintBase(Input):
         elif self.mode.fetch() == "eckart":
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
-            alist.shape = -1
+            alist = alist.reshape(-1)
             if len(dlist) != 3 * len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of list of coordinates do not match"

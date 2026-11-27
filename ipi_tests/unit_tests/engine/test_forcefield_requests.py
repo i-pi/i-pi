@@ -1,4 +1,5 @@
-"""Force requests preserve input snapshots and complete before being released."""
+"""Force requests preserve input snapshots, and are completed by the polls of
+the scheduler."""
 
 import socket
 import tempfile
@@ -18,43 +19,44 @@ from ipi.engine.forcefields import (
     ForceField,
 )
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.utils import scheduler
 from ipi.utils.prng import Random
 from ipi.utils.softexit import Softexit
 
 
+def done(request):
+    return lambda: request["status"] == "Done"
+
+
 @pytest.mark.parametrize("provider", [ForceField, FFEval])
-@pytest.mark.parametrize("threaded", [False, True])
-def test_request_lifecycle(provider, threaded, monkeypatch):
+def test_request_lifecycle(provider, monkeypatch):
     exit_state = Softexit()
     monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
     ff = provider(
-        threaded=threaded,
         offset=0.25,
         dopbc=True,
         active=np.array([1]),
         pars={"label": "reference"},
     )
     atoms = Atoms(2)
-    atoms.q[:] = [11, 0, 0, 0, -12, 0]
+    atoms.q_[:] = [11, 0, 0, 0, -12, 0]
     cell = Cell(np.eye(3) * 10)
     ff.start()
     try:
-        if threaded:
-            with pytest.raises(NameError, match="already started"):
-                ff.start()
         request = ff.queue(atoms, cell, reqid=7, template={"extra": "preserved"})
         duplicate = ff.queue(atoms, cell, reqid=7)
         assert not (request == duplicate)
-        atoms.q[:] = 0
-        cell.h[:] *= 2
-        assert request._event_done.wait(timeout=5)
-        # release must join an evaluation worker before its result is consumed.
+        # the requests hold copies of the positions and of the cell
+        atoms.q_[:] = 0
+        cell.h_[:] *= 2
+        assert request["status"] == "Queued"
+        scheduler.wait(done(request))
         ff.release(request)
         assert ff.requests == [duplicate]
-        assert duplicate._event_done.wait(timeout=5)
+        scheduler.wait(done(duplicate))
         ff.release(duplicate)
         assert not ff.requests
-        ff.release(request, lock=False)  # releasing twice is harmless
+        ff.release(request)  # releasing twice is harmless
         np.testing.assert_allclose(
             request["pos"], [1, 0, 0, 0, -2, 0], rtol=0, atol=3e-15
         )
@@ -69,9 +71,6 @@ def test_request_lifecycle(provider, threaded, monkeypatch):
         assert extras == {"raw": ""}
     finally:
         ff.stop()
-        if ff._thread is not None:
-            ff._thread.join(timeout=5)
-            assert not ff._thread.is_alive()
 
 
 @pytest.mark.parametrize("active", [[2], [0, 1, 2]])
@@ -82,60 +81,47 @@ def test_request_rejects_active_atoms_outside_system(active):
     assert not ff.requests
 
 
+def test_socket_rejects_systems_of_different_sizes():
+    """The active atoms are set at the first request, for one system size."""
+    ff = FFSocket(interface=InterfaceSocket())
+    ff.queue(Atoms(2), Cell(np.eye(3)))
+    with pytest.raises(ValueError, match="systems with 2 and 3 atoms"):
+        ff.queue(Atoms(3), Cell(np.eye(3)))
+
+
 def test_stop_marks_pending_requests_for_exit():
-    ff = ForceField(threaded=True)
+    ff = ForceField()
     request = ff.queue(Atoms(1), Cell(np.eye(3)))
     ff.stop()
-    ff.poll()
+    assert not ff.poll(idle=True)
     assert request["status"] == "Exit"
     assert request["result"] is None
-    assert not request._event_done.is_set()
     ff.release(request)
     assert not ff.requests
 
 
 @pytest.mark.parametrize("kind", ["committee", "rotations"])
-def test_composite_forcefields_complete_threaded_requests(kind, monkeypatch):
+def test_composite_forcefields_complete_requests(kind, monkeypatch):
 
-    exit_state = Softexit()
-    monkeypatch.setattr("ipi.engine.forcefields.softexit", exit_state)
+    monkeypatch.setattr("ipi.engine.forcefields.softexit", Softexit())
     if kind == "committee":
-        members = [
-            FFDirect(pes="harmonic", pars={"k1": k}, threaded=True) for k in [1.0, 3.0]
-        ]
+        members = [FFDirect(pes="harmonic", pars={"k1": k}) for k in [1.0, 3.0]]
         ff = FFCommittee(fflist=members)
     else:
-        member = FFDirect(
-            pes="harmonic", pars={"k1": 1.0, "k2": 2.0, "k3": 3.0}, threaded=True
-        )
+        member = FFDirect(pes="harmonic", pars={"k1": 1.0, "k2": 2.0, "k3": 3.0})
         ff = FFRotations(ffdirect=member, grid_order=3, prng=Random(seed=31))
     ff.bind(None)
     ff.start()
-    try:
-        atoms = Atoms(1)
-        atoms.q[:] = [0.2, -0.3, 0.4]
-        request = ff.queue(atoms, Cell(np.eye(3) * 10))
-        assert request._event_done.wait(timeout=5)
-        assert request["result"][0] == pytest.approx(0.29, abs=1e-12)
-        np.testing.assert_allclose(request["result"][1], [-0.4, 0.6, -0.8], atol=1e-12)
-        ff.release(request)
-    finally:
-        for _, control in exit_state.tlist:
-            control[0] = False
-        for thread, _ in exit_state.tlist:
-            thread.join(timeout=5)
-            assert not thread.is_alive()
+    atoms = Atoms(1)
+    atoms.q_[:] = [0.2, -0.3, 0.4]
+    request = ff.queue(atoms, Cell(np.eye(3) * 10))
+    scheduler.wait(done(request))
+    assert request["result"][0] == pytest.approx(0.29, abs=1e-12)
+    np.testing.assert_allclose(request["result"][1], [-0.4, 0.6, -0.8], atol=1e-12)
+    ff.release(request)
 
 
-def test_batched_socket_rejects_unconsolidated_protocol():
-
-    ff = FFSocket(interface=InterfaceSocket(batch_size=2, consolidate_messages=False))
-    with pytest.raises(ValueError, match="consolidate_messages"):
-        ff.start()
-    assert ff._thread is None
-
-
-def test_socket_forcefield_stops_polling_and_removes_endpoint(monkeypatch):
+def test_socket_forcefield_stops_and_removes_endpoint(monkeypatch):
 
     monkeypatch.setattr("ipi.engine.forcefields.softexit", Softexit())
     # A short path also respects the Unix socket path limit on macOS.
@@ -152,5 +138,5 @@ def test_socket_forcefield_stops_polling_and_removes_endpoint(monkeypatch):
                 client.connect(str(endpoint))
         finally:
             ff.stop()
-        assert not ff._thread.is_alive()
+        assert ff.socket.server is None
         assert not endpoint.exists()

@@ -26,6 +26,11 @@ brief overview of the format of each of these types of files, and some
 of their more common uses, see :ref:`part1`. To give a more in depth
 explanation of each of these files, they will now be considered in turn.
 
+The ``floatformat`` attribute of ``<simulation>`` controls the precision of
+floating-point properties and the coordinates and cell parameters in XYZ
+trajectories. Its default is ``%16.8e``. For 17 significant digits, use
+``<simulation floatformat="%.16e">`` and keep the trajectory format as ``xyz``.
+
 .. _propertyfile:
 
 Properties
@@ -210,6 +215,13 @@ restarted from them without changing the dynamics. Thus if a soft exit
 call is made during a step, then the restart file that is created must
 correspond to the state of the system *before* that step began. To this
 end, the state of the system is saved at the start of every step.
+
+The exit is made as soon as i-PI waits for forces, or at the end of the
+step. The outputs written since the state was saved are then removed, so
+that the restarted simulation writes each of them once. If i-PI itself
+does not respond for 10 s after a request, e.g. because a force
+evaluation in its own process hangs, it writes the RESTART file of the
+last saved state and exits with an error.
 
 In order to restart i-PI from a file named “RESTART" one simply has to
 run

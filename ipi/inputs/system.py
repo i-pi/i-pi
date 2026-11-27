@@ -5,7 +5,6 @@
 # See the "licenses" directory for full license information.
 
 import ipi.engine.system
-from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 from ipi.utils.prng import *

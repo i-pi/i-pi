@@ -12,6 +12,7 @@ import pytest
 from numpy.testing import assert_equal
 
 from ..common.folder import local
+from ipi import ipi_global_settings
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.utils.units import unit_to_internal, unit_to_user
@@ -51,7 +52,8 @@ def test_iter_configurations(mode, positions):
 
 
 @pytest.mark.parametrize("mode,positions", FORMATS)
-def test_print_configurations(tmp_path, mode, positions):
+def test_print_configurations(tmp_path, mode, positions, monkeypatch):
+    monkeypatch.setitem(ipi_global_settings, "floatformat", "%16.8e")
     source = local(f"test.pos_0.{mode}")
     destination = tmp_path / f"test.pos_1.{mode}"
     with open(source) as stream, destination.open("w") as output:
@@ -60,7 +62,7 @@ def test_print_configurations(tmp_path, mode, positions):
             assert len(atoms) == 3
             assert_equal(positions * (index + 1), atoms.q)
             print_file(mode, atoms, frame["cell"], filedesc=output)
-    assert filecmp.cmp(source, destination)
+    assert filecmp.cmp(source, destination, shallow=False)
 
 
 @pytest.mark.parametrize(
@@ -96,8 +98,8 @@ def test_read_output(verbosity, dipoles):
 @pytest.mark.parametrize("units", ["atomic_unit", "angstrom"])
 def test_path_output_roundtrip(mode, units):
     beads = Beads(2, 3)
-    beads.names[:] = ["H", "O"]
-    beads.q[:] = np.arange(18).reshape(3, 6) / 10
+    beads.names_[:] = ["H", "O"]
+    beads.q_[:] = np.arange(18).reshape(3, 6) / 10
     cell = Cell(np.diag([10.0, 12.0, 14.0]))
     stream = io.StringIO()
     print_file_path(
@@ -150,16 +152,13 @@ def test_corrupt_netstrings_are_rejected(encoded, match):
 
 
 @pytest.mark.parametrize("compressed", [False, True])
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="netstring NPZ writer uses text StringIO for binary NumPy data",
-)
-def test_netstring_roundtrip_preserves_multiple_matrices(compressed):
-    stream = io.StringIO()
-    expected = np.arange(9).reshape(3, 3)
-    netstring_encoded_savez(stream, compressed=compressed, matrix=expected)
-    netstring_encoded_savez(stream, compressed=compressed, matrix=expected.T)
-    stream.seek(0)
-    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected)
-    np.testing.assert_array_equal(netstring_encoded_loadz(stream)["matrix"], expected.T)
+def test_netstring_roundtrip_preserves_multiple_matrices(tmp_path, compressed):
+    # a text file, as for the planetary output (newlines are translated)
+    expected = np.arange(-13.0, 50.0).reshape(7, 9) / 7
+    with open(tmp_path / "matrices", "w") as stream:
+        netstring_encoded_savez(stream, compressed=compressed, matrix=expected)
+        netstring_encoded_savez(stream, compressed=compressed, matrix=expected.T)
+    with open(tmp_path / "matrices") as stream:
+        first, second = (netstring_encoded_loadz(stream)["matrix"] for _ in range(2))
+    np.testing.assert_array_equal(first, expected)
+    np.testing.assert_array_equal(second, expected.T)
