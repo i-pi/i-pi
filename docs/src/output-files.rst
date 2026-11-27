@@ -26,6 +26,11 @@ brief overview of the format of each of these types of files, and some
 of their more common uses, see :ref:`part1`. To give a more in depth
 explanation of each of these files, they will now be considered in turn.
 
+The ``floatformat`` attribute of ``<simulation>`` controls the precision of
+floating-point properties and the coordinates and cell parameters in XYZ
+trajectories. Its default is ``%16.8e``. For 17 significant digits, use
+``<simulation floatformat="%.16e">`` and keep the trajectory format as ``xyz``.
+
 .. _propertyfile:
 
 Properties
