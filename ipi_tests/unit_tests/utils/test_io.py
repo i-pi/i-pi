@@ -12,6 +12,7 @@ import pytest
 from numpy.testing import assert_equal
 
 from ..common.folder import local
+from ipi import ipi_global_settings
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.utils.units import unit_to_internal, unit_to_user
@@ -51,7 +52,8 @@ def test_iter_configurations(mode, positions):
 
 
 @pytest.mark.parametrize("mode,positions", FORMATS)
-def test_print_configurations(tmp_path, mode, positions):
+def test_print_configurations(tmp_path, mode, positions, monkeypatch):
+    monkeypatch.setitem(ipi_global_settings, "floatformat", "%16.8e")
     source = local(f"test.pos_0.{mode}")
     destination = tmp_path / f"test.pos_1.{mode}"
     with open(source) as stream, destination.open("w") as output:
@@ -60,7 +62,7 @@ def test_print_configurations(tmp_path, mode, positions):
             assert len(atoms) == 3
             assert_equal(positions * (index + 1), atoms.q)
             print_file(mode, atoms, frame["cell"], filedesc=output)
-    assert filecmp.cmp(source, destination)
+    assert filecmp.cmp(source, destination, shallow=False)
 
 
 @pytest.mark.parametrize(
