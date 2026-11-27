@@ -184,7 +184,7 @@ def isra_deconvolute(omega, y, ker, steps=100, stride=None):
         if np.fmod(i, stride) == 0 and i != 0:
             cnvg = np.asarray(
                 (
-                    np.linalg.norm((np.dot(f, ker) - y)) ** 2,
+                    np.linalg.norm((np.dot(ker, f) - y)) ** 2,
                     np.linalg.norm(np.gradient(np.gradient(f))) ** 2,
                 )
             )
