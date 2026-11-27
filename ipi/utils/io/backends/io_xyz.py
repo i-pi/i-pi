@@ -12,6 +12,7 @@ import re
 
 import numpy as np
 
+from ipi import ipi_global_settings
 from ipi.utils.array_backend import to_numpy
 
 import ipi.utils.mathtools as mt
@@ -20,6 +21,11 @@ from ipi.utils.units import Elements
 __all__ = ["print_xyz_path", "print_xyz", "read_xyz"]
 
 deg2rad = np.pi / 180.0
+
+
+def _xyz_formats():
+    fmt = ipi_global_settings["floatformat"]
+    return "  ".join([fmt] * 6), "%8s " + " ".join([fmt] * 3) + "\n"
 
 
 def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1.0):
@@ -36,9 +42,8 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
 
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(to_numpy(cell.h) * cell_conv)
 
-    fmt_header = (
-        "%d\n# bead: %d CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f \n"
-    )
+    cell_fmt, atom_fmt = _xyz_formats()
+    fmt_header = "%d\n# bead: %d CELL(abcABC): " + cell_fmt + " \n"
     natoms = beads.natoms
     nbeads = beads.nbeads
     qs = to_numpy(beads.q) * atoms_conv
@@ -47,8 +52,7 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
         filedesc.write(fmt_header % (natoms, j, a, b, c, alpha, beta, gamma))
         for i in range(natoms):
             filedesc.write(
-                "%8s %12.5e %12.5e %12.5e\n"
-                % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])
+                atom_fmt % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])
             )
 
 
@@ -67,18 +71,14 @@ def print_xyz(
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(to_numpy(cell.h) * cell_conv)
 
     natoms = atoms.natoms
-    fmt_header = (
-        "%d\n# CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %s\n"
-    )
+    cell_fmt, atom_fmt = _xyz_formats()
+    fmt_header = "%d\n# CELL(abcABC): " + cell_fmt + "  %s\n"
     filedesc.write(fmt_header % (natoms, a, b, c, alpha, beta, gamma, title))
     # direct access to avoid unnecessary slow-down
     qs = to_numpy(atoms.q) * atoms_conv
     lab = atoms.names
     for i in range(natoms):
-        filedesc.write(
-            "%8s %12.5e %12.5e %12.5e\n"
-            % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2])
-        )
+        filedesc.write(atom_fmt % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2]))
 
 
 # Cell type patterns
